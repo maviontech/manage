@@ -1,10 +1,153 @@
-<!doctype html>
-<html>
-<head><title>Dashboard</title></head>
-<body>
-  <h2>Dashboard</h2>
-  <p>Welcome {{ user.full_name }} ({{ user.email }})</p>
-  <p>Tasks assigned to you: {{ assigned_count }}</p>
-  <p><a href="{% url 'logout' %}">Logout</a></p>
-</body>
-</html>
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard | MavionTech{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/base.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+  }
+  .chart-card {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 18px 24px;
+    box-shadow: 0 6px 14px rgba(12, 38, 63, 0.06);
+    border: 1px solid rgba(15, 23, 42, 0.04);
+  }
+  .chart-card h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+  canvas {
+    width: 100% !important;
+    height: 300px !important;
+  }
+</style>
+{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Overview of your projects, teams, and productivity metrics{% endblock %}
+
+{% block content %}
+<div class="welcome-banner">
+  <h2>Welcome Anurag</h2>
+  <p>Your registered email: <strong>{{ user.email }}</strong></p>
+</div>
+
+<div class="dashboard-metrics">
+  <div class="metric">
+    <h3>Tasks Assigned</h3>
+    <div class="value">{{ assigned_count|default:"0" }}</div>
+  </div>
+  <div class="metric">
+    <h3>Active Projects</h3>
+    <div class="value">{{ active_projects|default:"0" }}</div>
+  </div>
+  <div class="metric">
+    <h3>Pending Approvals</h3>
+    <div class="value">{{ pending_approvals|default:"0" }}</div>
+  </div>
+  <div class="metric">
+    <h3>Team Members</h3>
+    <div class="value">{{ team_count|default:"0" }}</div>
+  </div>
+</div>
+
+<!-- CHARTS -->
+<div class="chart-grid">
+  <div class="chart-card">
+    <h3>Project Progress</h3>
+    <canvas id="progressChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Weekly Task Activity</h3>
+    <canvas id="taskChart"></canvas>
+  </div>
+</div>
+
+<div style="margin-top:32px;">
+  <p>
+    <a href="{% url 'logout' %}" class="btn-ghost">Logout</a>
+  </p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Donut Chart: Project Progress
+    const progressCtx = document.getElementById('progressChart');
+    new Chart(progressCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Completed', 'In Progress', 'Pending'],
+        datasets: [{
+          label: 'Project Status',
+          data: [
+            {{ progress_completed|default:60 }},
+            {{ progress_inprogress|default:25 }},
+            {{ progress_pending|default:15 }}
+          ],
+          backgroundColor: ['#16a34a', '#1f86e3', '#eab308'],
+          borderWidth: 1,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        cutout: '65%',
+        plugins: {
+          legend: { position: 'bottom', labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text') } },
+          tooltip: { backgroundColor: 'rgba(0,0,0,0.7)', bodyFont: { size: 13 } }
+        }
+      }
+    });
+
+    // Bar Chart: Weekly Task Activity
+    const taskCtx = document.getElementById('taskChart');
+    new Chart(taskCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+          label: 'Hours Logged',
+          data: [
+            {{ week_mon|default:8 }},
+            {{ week_tue|default:6 }},
+            {{ week_wed|default:7 }},
+            {{ week_thu|default:9 }},
+            {{ week_fri|default:5 }},
+            {{ week_sat|default:3 }},
+            {{ week_sun|default:0 }}
+          ],
+          backgroundColor: '#0b57a4',
+          borderRadius: 6,
+          barThickness: 24
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--muted') } },
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 2, color: getComputedStyle(document.documentElement).getPropertyValue('--muted') },
+            grid: { color: 'rgba(15,23,42,0.05)' }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: 'rgba(0,0,0,0.7)' }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

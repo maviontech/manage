@@ -1,0 +1,318 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
+  <title>{% block title %}MavionTech — Project Management{% endblock %}</title>
+  {% block extra_head %}{% endblock %}
+  <style>
+    /* Ripple micro-interaction */
+    .ripple {
+      position: relative;
+      overflow: hidden;
+    }
+    .ripple:after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      transform: scale(0);
+      opacity: 0.6;
+      background: rgba(255,255,255,0.35);
+      transition: transform 0.4s ease, opacity 0.8s ease;
+      pointer-events: none;
+    }
+    .ripple:active:after {
+      transform: scale(6);
+      opacity: 0;
+      transition: 0s;
+    }
+    /* subtle hover glow */
+    .menu-link:hover, .submenu-link:hover {
+      box-shadow: 0 0 6px rgba(31,134,227,0.18);
+    }
+    .submenu-link svg {
+      width:14px; height:14px; stroke-width:2;
+      margin-right:6px; opacity:0.7;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="app" data-theme="light">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Primary navigation">
+      <div class="brand">
+        <div class="brand-logo">M</div>
+        <div>
+          <div class="brand-title">MavionTech</div>
+          <div class="brand-sub">Momentum with vision</div>
+        </div>
+      </div>
+
+      <nav class="nav" role="menu" aria-label="Main">
+        <ul class="menu-root">
+
+          <!-- Dashboard -->
+          <li class="menu-item {% if page == 'dashboard' %}active{% endif %}">
+            <a href="{% url 'dashboard' %}" class="menu-link ripple">
+              <span class="icon"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M3 13h8V3H3v10zM13 21h8V11h-8v10zM13 3v6h8V3h-8zM3 21h8v-8H3v8z"/></svg></span>
+              <span class="label">Dashboard</span>
+            </a>
+          </li>
+
+          <!-- Projects -->
+          <li class="menu-item has-sub {% if page in 'projects project_create subprojects' %}open{% endif %}">
+            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page in 'projects project_create subprojects' %}true{% else %}false{% endif %}" aria-controls="submenu-projects">
+              <span class="icon"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M3 7h18M3 12h18M3 17h18"/></svg></span>
+              <span class="label">Projects</span>
+              <span class="caret">▸</span>
+            </button>
+            <ul id="submenu-projects" class="submenu">
+              <li class="{% if page == 'projects' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple">
+                  <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/></svg>All Projects
+                </a>
+              </li>
+              <li class="{% if page == 'project_create' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple">
+                  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Create Project
+                </a>
+              </li>
+              <li class="{% if page == 'subprojects' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple">
+                  <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>Subprojects / WBS
+                </a>
+              </li>
+            </ul>
+          </li>
+
+          <!-- Tasks -->
+          <li class="menu-item has-sub {% if page in 'tasks my_tasks unassigned task_board bulk_import' %}open{% endif %}">
+            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page in 'tasks my_tasks unassigned task_board bulk_import' %}true{% else %}false{% endif %}" aria-controls="submenu-tasks">
+              <span class="icon"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M12 2v20M5 7h14"/></svg></span>
+              <span class="label">Tasks</span>
+              <span class="caret">▸</span>
+            </button>
+            <ul id="submenu-tasks" class="submenu">
+              <li class="{% if page == 'my_tasks' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M3 12l5 5L21 5"/></svg>My Tasks</a>
+              </li>
+              <li class="{% if page == 'unassigned' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M12 20v-6M12 4v4"/></svg>Unassigned Tasks</a>
+              </li>
+              <li class="{% if page == 'task_create' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Create Task</a>
+              </li>
+              <li class="{% if page == 'bulk_import' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Bulk Import (CSV)</a>
+              </li>
+              <li class="{% if page == 'task_board' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>Task Board</a>
+              </li>
+            </ul>
+          </li>
+
+          <!-- Time Tracking -->
+          <li class="menu-item has-sub {% if page in 'time_tracking timer time_entries' %}open{% endif %}">
+            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page in 'time_tracking timer time_entries' %}true{% else %}false{% endif %}" aria-controls="submenu-time">
+              <span class="icon"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M12 8v5l3 3"/></svg></span>
+              <span class="label">Time Tracking</span>
+              <span class="caret">▸</span>
+            </button>
+            <ul id="submenu-time" class="submenu">
+              <li class="{% if page == 'timer' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M12 1v4M4.93 4.93l2.83 2.83"/></svg>Start/Stop Timer</a>
+              </li>
+              <li class="{% if page == 'time_entries' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 18 0"/></svg>Time Entries / Approve</a>
+              </li>
+            </ul>
+          </li>
+
+          <!-- Teams -->
+          <li class="menu-item has-sub {% if page in 'people teams roles' %}open{% endif %}">
+            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page in 'people teams roles' %}true{% else %}false{% endif %}" aria-controls="submenu-people">
+              <span class="icon"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-3-3.87M4 21v-2a4 4 0 0 1 3-3.87M16 11a4 4 0 1 1-8 0"/></svg></span>
+              <span class="label">Teams & People</span>
+              <span class="caret">▸</span>
+            </button>
+            <ul id="submenu-people" class="submenu">
+              <li class="{% if page == 'people' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M12 12c2.5 0 4.5-2 4.5-4.5S14.5 3 12 3 7.5 5 7.5 7.5 9.5 12 12 12z"/></svg>People</a>
+              </li>
+              <li class="{% if page == 'teams' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-3-3.87M7 21v-2a4 4 0 0 1 3-3.87M12 7a4 4 0 1 1 0-8"/></svg>Teams</a>
+              </li>
+              <li class="{% if page == 'roles' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M12 1v22M4 7h16M4 17h16"/></svg>Roles & Permissions</a>
+              </li>
+            </ul>
+          </li>
+
+          <!-- Reports -->
+          <li class="menu-item {% if page == 'reports' %}active{% endif %}">
+            <a href="#" class="menu-link ripple">
+              <span class="icon"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M3 3h18v18H3z M7 7v10 M12 7v10 M17 7v10"/></svg></span>
+              <span class="label">Reports</span>
+            </a>
+          </li>
+
+          <!-- Notifications -->
+          <li class="menu-item {% if page == 'notifications' %}active{% endif %}">
+            <a href="#" class="menu-link ripple">
+              <span class="icon"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M15 17h5l-1.405-1.405"/></svg></span>
+              <span class="label">Notifications</span>
+            </a>
+          </li>
+
+          <!-- Settings -->
+          <li class="menu-item has-sub {% if page in 'settings workflows priorities workweek' %}open{% endif %}">
+            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page in 'settings workflows priorities workweek' %}true{% else %}false{% endif %}" aria-controls="submenu-settings">
+              <span class="icon"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M12 15.5A3.5 3.5 0 1 0 12 8.5"/></svg></span>
+              <span class="label">Settings</span>
+              <span class="caret">▸</span>
+            </button>
+            <ul id="submenu-settings" class="submenu">
+              <li class="{% if page == 'workflows' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>Workflows</a>
+              </li>
+              <li class="{% if page == 'priorities' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M12 2L3 22h18z"/></svg>Priorities</a>
+              </li>
+              <li class="{% if page == 'workweek' %}active{% endif %}">
+                <a href="#" class="submenu-link ripple"><svg viewBox="0 0 24 24"><path d="M8 7V3h8v4M3 11h18M5 19h14"/></svg>Work Week</a>
+              </li>
+            </ul>
+          </li>
+
+          {% if request.session.role and 'PDL' in request.session.role %}
+          <li class="menu-item {% if page == 'admin' %}active{% endif %}">
+            <a href="#" class="menu-link ripple">
+              <span class="icon"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M12 2l2 7h7l-5.5 4 2 7L12 16"/></svg></span>
+              <span class="label">Admin</span>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+
+      <div style="margin-top:auto; padding:10px">
+        <div class="small muted">Signed in as</div>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
+          <div class="avatar">
+            {% if request.session.cn %}
+              {{ request.session.cn|slice:":1" }}
+            {% else %}
+              {{ request.user.username|first|default:"M" }}
+            {% endif %}
+          </div>
+          <div style="flex:1">
+            <div style="font-weight:700; font-size:13px">
+              {% if request.session.cn %}{{ request.session.cn }}{% else %}{{ request.user.username }}{% endif %}
+            </div>
+            <div class="small muted">{% if request.session.role %}{{ request.session.role }}{% endif %}</div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px">
+          <a class="btn-ghost" href="#">Profile</a>
+          <a class="btn-ghost" href="{% url 'logout' %}">Log out</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- HEADER -->
+    <header class="header" role="banner">
+      <div class="header-left">
+        <button id="menu-toggle" class="btn-ghost menu-btn" aria-label="Toggle menu" title="Toggle menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12h18M3 6h18M3 18h18"/>
+          </svg>
+        </button>
+        <div class="search-wrapper" role="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="search-icon">
+            <path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/>
+          </svg>
+          <input id="global-search" placeholder="Search projects, people, tickets..." aria-label="Search" />
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="theme-toggle" class="btn-ghost" aria-label="Toggle theme" title="Toggle theme">
+          <svg id="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 3v1M12 20v1M4.2 4.2l.7.7M19.1 19.1l.7.7M1 12h1M22 12h1M4.2 19.8l.7-.7M19.1 4.9l.7-.7M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/>
+          </svg>
+        </button>
+        <button id="notifications" class="btn-ghost" aria-label="Notifications" title="Notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6 6 0 0 0-5-5.917V4a2 2 0 1 0-4 0v1.083A6 6 0 0 0 4 11v3.159c0 .538-.214 1.055-.595 1.436L2 17h5m8 0a3 3 0 0 1-6 0"/>
+          </svg>
+          <span id="notif-badge" class="badge" style="display:none">0</span>
+        </button>
+        <div class="user-mini">
+          <div class="avatar-sm">
+            {% if request.session.cn %}
+              {{ request.session.cn|slice:":1" }}
+            {% else %}
+              {{ request.user.username|first|default:"U" }}
+            {% endif %}
+          </div>
+          <div class="user-name">
+            {% if request.session.cn %}
+              {{ request.session.cn }}
+            {% else %}
+              {{ request.user.username }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main" role="main">
+      <div class="container">
+        <div class="page-title">
+          <div>
+            <h2 style="margin:0; font-size:18px">{% block page_title %}Page Title{% endblock %}</h2>
+            <div class="breadcrumbs muted">{% block page_subtitle %}{% endblock %}</div>
+          </div>
+          <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
+            {% block actions %}{% endblock %}
+          </div>
+        </div>
+        {% block content %}{% endblock %}
+        <footer class="footer">
+          <div>© {{ now|date:"Y" }} MavionTech</div>
+          <div class="small muted">Project Management • Version 0.1</div>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function(){
+      const app=document.getElementById('app'),sidebar=document.getElementById('sidebar'),menuToggle=document.getElementById('menu-toggle'),themeToggle=document.getElementById('theme-toggle'),notifBadge=document.getElementById('notif-badge');
+      const savedTheme=localStorage.getItem('mavion_theme');
+      const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const initialTheme=savedTheme||(prefersDark?'dark':'light');
+      document.documentElement.setAttribute('data-theme',initialTheme);app.setAttribute('data-theme',initialTheme);
+      function setTheme(t){document.documentElement.setAttribute('data-theme',t);app.setAttribute('data-theme',t);localStorage.setItem('mavion_theme',t);}
+      themeToggle.addEventListener('click',()=>{const cur=document.documentElement.getAttribute('data-theme')||'light';setTheme(cur==='light'?'dark':'light');});
+      menuToggle.addEventListener('click',()=>{if(window.innerWidth<=880){sidebar.classList.toggle('open');}else{document.body.classList.toggle('sidebar-collapsed');}});
+      document.addEventListener('click',function(e){if(window.innerWidth<=880){if(sidebar.classList.contains('open')&&!sidebar.contains(e.target)&&!menuToggle.contains(e.target)){sidebar.classList.remove('open');}}});
+      const notifCount=parseInt("{{ notifications_count|default:'0' }}",10)||0;if(notifCount>0){notifBadge.style.display='inline-block';notifBadge.textContent=notifCount;}
+      // Submenu controller
+      const SIDEBAR_KEY="mavion_sidebar_state_v1";let saved={};try{saved=JSON.parse(localStorage.getItem(SIDEBAR_KEY)||"{}");}catch(e){saved={};}
+      sidebar.querySelectorAll('.sub-toggle').forEach(btn=>{
+        const li=btn.closest('.menu-item');const id=btn.getAttribute('aria-controls');if(saved[id]){li.classList.add('open');btn.setAttribute('aria-expanded','true');}
+        btn.addEventListener('click',e=>{e.preventDefault();const open=li.classList.toggle('open');btn.setAttribute('aria-expanded',open);saved[id]=open;localStorage.setItem(SIDEBAR_KEY,JSON.stringify(saved));});
+        btn.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();btn.click();}});
+      });
+    })();
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
