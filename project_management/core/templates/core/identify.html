@@ -1,12 +1,264 @@
 <!doctype html>
-<html>
-<head><title>Identify</title></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Identify — Sign in</title>
+
+  <!-- Optional: change font or remove -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --card:#ffffff;
+      --primary:#0b57a4;
+      --accent:#1f86e3;
+      --muted:#6b7280;
+      --success:#16a34a;
+      --danger:#dc2626;
+      --radius:12px;
+      --shadow: 0 6px 18px rgba(13, 38, 63, 0.08);
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(180deg, #eef6ff 0%, var(--bg) 100%);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px;
+      color:#0f172a;
+    }
+
+    .card{
+      width:100%;
+      max-width:520px;
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:28px;
+      border:1px solid rgba(15,23,42,0.04);
+    }
+
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-bottom:18px;
+    }
+    .logo {
+      width:48px;
+      height:48px;
+      border-radius:10px;
+      background:linear-gradient(135deg,var(--primary),var(--accent));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:white;
+      font-weight:700;
+      font-size:18px;
+      box-shadow: 0 6px 14px rgba(15,23,42,0.06);
+    }
+    .brand h1{
+      font-size:18px;
+      margin:0;
+      letter-spacing:0.2px;
+    }
+    .brand p{ margin:0;font-size:13px;color:var(--muted) }
+
+    .step {
+      margin: 12px 0 20px;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    form{ display:block; margin-top:6px; }
+    label{ display:block; font-size:14px; margin-bottom:8px; font-weight:600; }
+    .field {
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    input[type="email"]{
+      flex:1;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid rgba(15,23,42,0.09);
+      font-size:15px;
+      outline:none;
+      transition: box-shadow .12s, border-color .12s;
+    }
+    input[type="email"]:focus{
+      box-shadow: 0 6px 18px rgba(31, 134, 227, 0.12);
+      border-color:var(--accent);
+    }
+    button.submit {
+      padding:10px 16px;
+      background:linear-gradient(90deg,var(--primary),var(--accent));
+      color:white;
+      border:none;
+      border-radius:10px;
+      font-weight:600;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      transition: transform .06s;
+    }
+    button.submit:active{ transform:translateY(1px) }
+    button[disabled]{ opacity:0.65; cursor:not-allowed; }
+
+    .hint{font-size:13px;color:var(--muted); margin-top:10px}
+    .error-box{
+      background:#fff5f5;
+      border:1px solid rgba(220,38,38,0.12);
+      color:var(--danger);
+      padding:10px 12px;
+      border-radius:8px;
+      margin-bottom:12px;
+      font-size:14px;
+    }
+    .inline-error{ color:var(--danger); font-size:13px; margin-top:8px; display:none; }
+    .visually-hidden{ position:absolute!important; height:1px; width:1px; overflow:hidden; clip: rect(1px,1px,1px,1px); white-space:nowrap; border:0; padding:0; margin:-1px; }
+
+    @media (max-width:480px){
+      .card{ padding:18px; border-radius:10px; }
+      .brand h1{ font-size:16px }
+      input[type="email"]{ font-size:14px }
+    }
+  </style>
+</head>
 <body>
-  <h2>Enter your email</h2>
-  {% if error %}<p style="color:red">{{error}}</p>{% endif %}
-  <form method="post">{% csrf_token %}
-    <input name="email" placeholder="you@company.com" value="{{request.POST.email|default:''}}" style="width:300px"/>
-    <button type="submit">Next</button>
-  </form>
+  <main class="card" role="main" aria-labelledby="identify-title">
+    <header class="brand" aria-hidden="false">
+      <div class="logo" aria-hidden="true">M</div>
+      <div>
+        <h1 id="identify-title">Sign in to MavionTech</h1>
+        <p>Enter your corporate email to continue</p>
+      </div>
+    </header>
+
+    <div class="step">Step 1 of 2 — Verify identity</div>
+
+    <!-- Server-side error -->
+    {% if error %}
+      <div class="error-box" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form id="identify-form" method="post" novalidate>
+      {% csrf_token %}
+
+      <label for="email">Work email</label>
+
+      <div class="field" aria-live="polite">
+        <input
+          id="email"
+          name="email"
+          type="email"
+          inputmode="email"
+          placeholder="you@company.com"
+          aria-describedby="email-help email-error"
+          value="{{request.POST.email|default:''}}"
+          required
+        />
+        <button type="submit" class="submit" id="submit-btn" aria-label="Continue">
+          <span id="btn-text">Next</span>
+          <svg id="btn-spinner" class="visually-hidden" width="18" height="18" viewBox="0 0 50 50" aria-hidden="true">
+            <circle cx="25" cy="25" r="20" stroke="white" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="31.4 31.4"></circle>
+          </svg>
+        </button>
+      </div>
+
+      <div id="email-error" class="inline-error" role="alert"></div>
+      <p id="email-help" class="hint">Use your company email (we'll send a verification link).</p>
+    </form>
+
+    <p style="margin-top:18px;font-size:13px;color:var(--muted)">
+      By continuing you agree to our <a href="#" style="color:var(--accent); text-decoration:none">Terms</a> and <a href="#" style="color:var(--accent); text-decoration:none">Privacy Policy</a>.
+    </p>
+  </main>
+
+  <script>
+    (function(){
+      const form = document.getElementById('identify-form');
+      const emailInput = document.getElementById('email');
+      const emailError = document.getElementById('email-error');
+      const submitBtn = document.getElementById('submit-btn');
+      const btnText = document.getElementById('btn-text');
+      const btnSpinner = document.getElementById('btn-spinner');
+
+      // Simple, permissive corporate email regex:
+      const corporateEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+      // Helper: show inline error
+      function showError(msg){
+        emailError.textContent = msg;
+        emailError.style.display = msg ? 'block' : 'none';
+        emailInput.setAttribute('aria-invalid', !!msg);
+      }
+
+      // Real-time validation
+      emailInput.addEventListener('input', () => {
+        const v = emailInput.value.trim();
+        if(!v){
+          showError('');
+          return;
+        }
+        if(!corporateEmailRegex.test(v)){
+          showError('Enter a valid email address (example: you@company.com).');
+        } else {
+          showError('');
+        }
+      });
+
+      form.addEventListener('submit', (e) => {
+        // Prevent default to run client validations first
+        if(!validateBeforeSubmit()){
+          e.preventDefault();
+          return;
+        }
+
+        // If validation OK, disable controls and allow submission to server
+        // show spinner
+        submitBtn.disabled = true;
+        btnText.style.display = 'none';
+        btnSpinner.classList.remove('visually-hidden');
+        // let form submit normally (no e.preventDefault)
+      });
+
+      function validateBeforeSubmit(){
+        const value = emailInput.value.trim();
+
+        if(!value){
+          showError('Email is required.');
+          emailInput.focus();
+          return false;
+        }
+        if(!corporateEmailRegex.test(value)){
+          showError('Please provide a valid email address.');
+          emailInput.focus();
+          return false;
+        }
+
+        // Optional: disallow personal domains (example)
+        const personalDomains = ['gmail.com','yahoo.com','hotmail.com','outlook.com'];
+        const domain = value.split('@')[1].toLowerCase();
+        if(personalDomains.includes(domain)){
+          showError('Please use your company email address, not a personal one.');
+          emailInput.focus();
+          return false;
+        }
+
+        showError('');
+        return true;
+      }
+
+      // Accessibility: press Enter on input triggers submit; browser will handle it.
+      // If you want to re-enable button after server response (on error), the server-rendered page will show again.
+    })();
+  </script>
 </body>
 </html>

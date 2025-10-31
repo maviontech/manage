@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<head><title>Create Tenant</title></head>
+<body>
+  <h2>Create New Tenant</h2>
+  {% for msg in messages %}<p style="color:green">{{ msg }}</p>{% endfor %}
+  <form method="post">{% csrf_token %}
+    <p><input name="client_name" placeholder="Client Name (e.g. Zenith Tech)" required /></p>
+    <p><input name="domain" placeholder="Domain (without @) e.g. zenith.com" required /></p>
+    <p><input name="db_name" placeholder="Database name (e.g. tenant_zenith)" required /></p>
+    <button type="submit">Add Tenant</button>
+  </form>
+</body>
+</html>
