@@ -1,5 +1,6 @@
 /* core/static/core/css/base.css
    Polished layout rules for MavionTech Project Management
+   (updated: sidebar footer + avatar + caret + submenu + accessibility & polish)
 */
 
 :root{
@@ -101,9 +102,10 @@ body{
 /* Brand + nav items */
 .brand{ display:flex; gap:12px; align-items:center; padding:6px 8px; margin-bottom:4px; }
 .brand-logo{ width:42px; height:42px; border-radius:10px; background:linear-gradient(135deg,var(--primary),var(--accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:18px; box-shadow: 0 6px 14px rgba(15,23,42,0.06); }
-.brand-title{ font-weight:700; font-size:15px; margin:0; }
+.brand-title{ font-weight:700; font-size:15px; margin:0; color: var(--text) }
 .brand-sub{ font-size:12px; color:var(--muted); margin:0 }
 
+/* navigation */
 .nav{ margin-top:6px; overflow:auto; padding-right:6px; }
 .nav-section{ margin-top:8px; padding-top:8px; border-top:1px dashed rgba(15,23,42,0.04); }
 .nav-item{ display:flex; gap:12px; align-items:center; padding:10px 10px; border-radius:8px; color:var(--text); cursor:pointer; font-weight:600; margin:6px 2px; text-decoration:none; }
@@ -112,8 +114,42 @@ body{
 .nav-item:hover{ background: linear-gradient(90deg, rgba(31,134,227,0.05), rgba(11,87,164,0.02)); }
 .nav-item.active{ background: linear-gradient(90deg,var(--primary),var(--accent)); color:white; box-shadow: 0 6px 18px rgba(11,87,164,0.09); }
 
+/* caret */
+.caret{ margin-left:8px; color:var(--muted); transition: transform .18s ease; font-size:12px; }
+.menu-item.open > .menu-link .caret, .menu-item.open > .menu-link .caret, .menu-item.open > button .caret { transform: rotate(90deg); color:var(--primary); }
+
+/* Avatar / profile */
+.avatar, .avatar-sm {
+  width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,var(--primary),var(--accent));
+  color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;
+  box-shadow: 0 6px 12px rgba(11,87,164,0.08);
+}
+.avatar-sm { width:28px; height:28px; border-radius:50%; font-size:13px; background:#fff; color:var(--primary); box-shadow:none; }
+.sidebar-profile { display:flex; gap:10px; align-items:center; padding:10px 0; }
+.sidebar-profile .meta { flex:1 }
+.sidebar-profile .meta .name { font-weight:700; font-size:13px; color:var(--text) }
+.sidebar-profile .meta .role { font-size:12px; color:var(--muted) }
+
+/* Sidebar footer / signed-in area */
+.sidebar-footer {
+  margin-top:auto;
+  padding:14px;
+  border-top:1px solid rgba(15,23,42,0.03);
+  background: linear-gradient(180deg, rgba(255,255,255,0.00), rgba(255,255,255,0.02));
+  border-radius: 10px;
+}
+.signed-label { font-size:12px; color:var(--muted); margin-bottom:8px; }
+.profile-actions{ display:flex; gap:8px; margin-top:10px; }
+.btn-ghost{
+  background:transparent; border:0; padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--muted); text-decoration:none;
+  font-weight:600; transition: background .14s ease, color .14s ease, transform .08s;
+}
+.btn-ghost:hover{ background: rgba(31,134,227,0.06); color:var(--primary); transform:translateY(-1px); }
+
+/* new small pill link */
+.link-pill { padding:6px 10px; border-radius:999px; font-size:13px; border:1px solid rgba(15,23,42,0.04); background:transparent; color:var(--primary); text-decoration:none; }
+
 /* small utilities */
-.btn-ghost{ background:transparent; border:0; padding:8px; border-radius:8px; cursor:pointer; color:var(--muted) }
 .badge{ background:var(--danger); color:white; padding:2px 8px; border-radius:999px; font-size:12px }
 .muted{ color:var(--muted) }
 .small{ font-size:12px; color:var(--muted) }
@@ -146,10 +182,27 @@ body{
 .chart-card h3{ margin:0 0 12px; font-size:15px; color:var(--text) }
 .chart-card canvas{ width:100% !important; height:320px !important; }
 
-/* Footer */
-.footer{ margin-top:28px; padding:16px; font-size:13px; color:var(--muted); border-top:1px solid rgba(15,23,42,0.03); display:flex; justify-content:space-between; gap:12px; }
+/* Footer (main content) */
+.footer{
+  margin-top:28px;
+  padding:16px 18px;
+  font-size:13px;
+  color:var(--muted);
+  border-top:1px solid rgba(15,23,42,0.03);
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  background:transparent;
+  border-radius:8px;
+}
 
-/* responsive/mobile */
+/* refined footer layout for small screens */
+@media (max-width:640px){
+  .footer{ flex-direction:column; align-items:flex-start; gap:6px; }
+}
+
+/* Responsive/mobile */
 @media (max-width:880px){
   .app{ grid-template-columns: 1fr; grid-template-rows: var(--header-height) 1fr; }
   .sidebar{ position:fixed; left:-100%; top:0; bottom:0; width:var(--sidebar-width); z-index:40; transition:left .22s ease; }
@@ -162,6 +215,7 @@ body{
 .sidebar-collapsed .sidebar{ width:var(--sidebar-collapsed-width) !important; min-width:var(--sidebar-collapsed-width) !important; padding-left:8px; padding-right:8px; }
 .sidebar-collapsed .nav-item .label{ display:none }
 .sidebar-collapsed .brand-title, .sidebar-collapsed .brand-sub{ display:none }
+
 /* ---------- HEADER Polishing ---------- */
 
 .header {
@@ -318,6 +372,7 @@ body{
   transition: max-height .25s ease, opacity .18s ease !important;
   margin-left: 8px !important;
   border-left: 2px solid rgba(15,23,42,0.03) !important;
+  padding-left: 6px !important;
 }
 
 /* when open show submenu */
@@ -363,8 +418,23 @@ body{
 .ripple { position: relative !important; overflow: hidden !important; }
 
 /* ensure no default anchor blue color in sidebar */
-.sidebar a { color: inherit !important; }
+.sidebar a { color: inherit !important; text-decoration: none !important; }
 
 /* debug helper: (uncomment if you want temporary visible borders)
 .sidebar { outline: 0px dashed rgba(0,0,0,0.05) !important; }
 */
+/* Font Awesome sizing/alignment for sidebar icons */
+.sidebar .icon i,
+.submenu-link i,
+.menu-link i {
+  font-size: 16px;
+  width: 18px;
+  display: inline-block;
+  text-align: center;
+  line-height: 1;
+  color: inherit;          /* match surrounding text color */
+  vertical-align: middle;
+}
+
+/* ensure icon-only layout in collapsed sidebar */
+.sidebar-collapsed .icon { display:flex; justify-content:center; }

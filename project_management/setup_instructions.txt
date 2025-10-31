@@ -1,0 +1,24 @@
+Run the commands below in My SQL interface to create teh base environment :
+
+CREATE DATABASE IF NOT EXISTS master_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE master_db;
+
+CREATE TABLE IF NOT EXISTS clients_master (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  client_name VARCHAR(255),
+  domain_postfix VARCHAR(100),
+  db_name VARCHAR(255),
+  db_host VARCHAR(100),
+  db_user VARCHAR(100),
+  db_password VARCHAR(255),
+  db_engine VARCHAR(50) DEFAULT 'mysql',
+  db_port INT DEFAULT 3306,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+for a default seeding of a tenant client:
+--------------------------------------------
+INSERT INTO clients_master (client_name, domain_postfix, db_name, db_host, db_engine)
+VALUES ('ACME Corp', '@acme.com', 'tenant_acme', '127.0.0.1', 'mysql');
+
+C:\projects\manage\project_management> python -m core.db_initializer
