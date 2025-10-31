@@ -89,6 +89,44 @@ TENANT_DDL = [
       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """
+    """
+    CREATE TABLE IF NOT EXISTS members (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      email VARCHAR(255) NOT NULL,
+      first_name VARCHAR(120),
+      last_name VARCHAR(120),
+      phone VARCHAR(50),
+      meta JSON DEFAULT NULL,
+      created_by INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_member_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """
+    """
+    CREATE TABLE IF NOT EXISTS teams (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      slug VARCHAR(255) UNIQUE,
+      description TEXT,
+      team_lead_id INT DEFAULT NULL,   -- FK to members.id for team lead
+      created_by INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (team_lead_id) REFERENCES members(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """
+    """
+    CREATE TABLE IF NOT EXISTS team_memberships (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      team_id INT NOT NULL,
+      member_id INT NOT NULL,
+      team_role VARCHAR(50) DEFAULT 'Member', -- Member, Lead, etc.
+      added_by INT,
+      added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_team_member (team_id, member_id),
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """
 ]
 
 def random_password(length=18):

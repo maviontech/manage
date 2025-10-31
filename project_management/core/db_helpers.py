@@ -1,31 +1,284 @@
 # core/db_helpers.py
+"""
+Multi-tenant DB helpers for tenant-per-database architecture.
+
+Usage (existing code compatibility):
+    conn, cur = get_tenant_conn_and_cursor(request)
+    try:
+        cur.execute("SELECT ...", (param,))
+        rows = cur.fetchall()
+    finally:
+        cur.close()   # keep connection cached, close cursor
+    # Do NOT close conn unless you explicitly want to remove it from cache.
+
+Recommended (context-managed):
+    conn = get_tenant_conn(request)
+    with conn.cursor() as cur:
+        cur.execute(...)
+        rows = cur.fetchall()
+
+Notes:
+ - This tries to resolve tenant credentials from request.session first (same keys your older code uses).
+ - If session does not contain the DB info, it attempts to resolve by host or from the central clients_master table using the Django default DB.
+ - Caches connections per-thread to reduce overhead. If you run in async or green-thread environment, adapt caching strategy.
+"""
+
+import threading
+import time
 import pymysql
+import pymysql.cursors
 from django.conf import settings
+from django.db import connection as default_connection
+from django.http import HttpRequest
 
-# Replace this with your real tenant resolver: for example, get DB name/user/password from session
-def resolve_tenant_credentials(request):
-    """
-    Resolve tenant DB credentials from session.
-    """
-    tenant_conf = request.session.get('tenant_config', {})
+# Thread-local cache for tenant connections
+_tlocal = threading.local()
+# default max age for cached connections (seconds)
+_CONN_MAX_AGE = getattr(settings, "TENANT_CONN_MAX_AGE", 300)  # 5 minutes
 
+# Session keys / fallback keys your existing code uses
+_SESSION_TENANT_KEYS = (
+    "tenant_config",          # dict with full creds (preferred)
+    "tenant_db_name",         # explicit db name
+    "tenant_db_user",
+    "tenant_db_password",
+    "tenant_db_host",
+    "tenant_db_port",
+    "tenant",                 # generic tenant key
+    "client",                 # alternative session key
+)
+
+
+def _get_thread_cache():
+    if not hasattr(_tlocal, "tenant_cache"):
+        _tlocal.tenant_cache = {}
+    return _tlocal.tenant_cache
+
+
+def _get_tenant_row_from_master(tenant_key):
+    """
+    Query central clients_master table on default Django DB for tenant credential row.
+    Adjust the SELECT columns if your clients_master uses different names.
+
+    Expected columns: db_name, db_host, db_user, db_password, db_port (optional), domain_postfix or client_name
+    """
+    if not tenant_key:
+        return None
+
+    # Try several matching columns: domain_postfix, db_name, client_name
+    q = """
+        SELECT id, client_name, domain_postfix, db_name, db_host, db_user, db_password, IFNULL(db_port, 3306) as db_port
+        FROM clients_master
+        WHERE domain_postfix = %s OR db_name = %s OR client_name = %s
+        LIMIT 1
+    """
+    with default_connection.cursor() as cur:
+        cur.execute(q, [tenant_key, tenant_key, tenant_key])
+        row = cur.fetchone()
+        if not row:
+            return None
+        cols = [c[0] for c in cur.description]
+        return dict(zip(cols, row))
+
+
+def resolve_tenant_key_from_request(request: HttpRequest):
+    """
+    Resolve a tenant key (string) from request/session/host. This key is used to look up clients_master.
+    Order:
+      1) session['tenant'] or session['client'] or other session keys
+      2) host header (full host, e.g. tenant.example.com or example.com)
+      3) settings.DEFAULT_TENANT_KEY fallback
+    """
+    # 1) session explicit keys
+    if request is not None:
+        for k in ("tenant", "client", "tenant_db_name", "tenant_config"):
+            v = request.session.get(k)
+            if v:
+                # If tenant_config is present and has db_name, return that db_name
+                if k == "tenant_config" and isinstance(v, dict):
+                    # prefer db_name if available
+                    dbn = v.get("db_name")
+                    if dbn:
+                        return dbn
+                    # else try domain_postfix inside tenant_config
+                    dp = v.get("domain_postfix")
+                    if dp:
+                        return dp
+                else:
+                    return v
+
+        # 2) host header (use whole host)
+        host = (request.get_host() or "").split(":")[0].lower()
+        if host:
+            return host
+
+    # 3) fallback
+    return getattr(settings, "DEFAULT_TENANT_KEY", None)
+
+
+def resolve_tenant_credentials(request: HttpRequest = None, tenant_key: str = None):
+    """
+    Resolve tenant DB credentials as a dict for pymysql.connect.
+    Priority:
+      1) request.session['tenant_config'] (a dict containing db_*)
+      2) explicit session keys tenant_db_* used by older code
+      3) if tenant_key or host derived, try clients_master lookup
+      4) settings.DEFAULT_TENANT_CREDENTIALS (optional)
+    Returns dict with keys: host, port, user, password, database, cursorclass, autocommit
+    """
+    # 1) if tenant_config present in session, use it
+    if request is not None:
+        tc = request.session.get("tenant_config")
+        if isinstance(tc, dict) and tc.get("db_name"):
+            return {
+                "host": tc.get("db_host", "127.0.0.1"),
+                "port": int(tc.get("db_port", 3306)),
+                "user": tc.get("db_user"),
+                "password": tc.get("db_password"),
+                "database": tc.get("db_name"),
+                "cursorclass": pymysql.cursors.DictCursor,
+                "autocommit": True,
+            }
+
+        # 2) older session keys fallback
+        dbname = request.session.get("tenant_db_name") or request.session.get("tenant")
+        dbuser = request.session.get("tenant_db_user")
+        dbpass = request.session.get("tenant_db_password")
+        dbhost = request.session.get("tenant_db_host") or "127.0.0.1"
+        dbport = int(request.session.get("tenant_db_port") or 3306)
+        if dbname and dbuser:
+            return {
+                "host": dbhost,
+                "port": dbport,
+                "user": dbuser,
+                "password": dbpass,
+                "database": dbname,
+                "cursorclass": pymysql.cursors.DictCursor,
+                "autocommit": True,
+            }
+
+    # 3) if tenant_key provided or resolvable from request, try clients_master
+    if tenant_key is None and request is not None:
+        tenant_key = resolve_tenant_key_from_request(request)
+
+    if tenant_key:
+        tenant_row = _get_tenant_row_from_master(tenant_key)
+        if tenant_row:
+            return {
+                "host": tenant_row.get("db_host") or "127.0.0.1",
+                "port": int(tenant_row.get("db_port") or 3306),
+                "user": tenant_row.get("db_user"),
+                "password": tenant_row.get("db_password"),
+                "database": tenant_row.get("db_name"),
+                "cursorclass": pymysql.cursors.DictCursor,
+                "autocommit": True,
+            }
+
+    # 4) application-level default credentials (optional)
+    fallback = getattr(settings, "DEFAULT_TENANT_CREDENTIALS", None)
+    if isinstance(fallback, dict) and fallback.get("database"):
+        # ensure port is int and cursorclass present
+        return {
+            "host": fallback.get("host", "127.0.0.1"),
+            "port": int(fallback.get("port", 3306)),
+            "user": fallback.get("user"),
+            "password": fallback.get("password"),
+            "database": fallback.get("database"),
+            "cursorclass": pymysql.cursors.DictCursor,
+            "autocommit": fallback.get("autocommit", True),
+        }
+
+    # nothing found
     return {
-        "host": tenant_conf.get("db_host") or request.session.get("tenant_db_host", "127.0.0.1"),
-        "port": int(tenant_conf.get("db_port") or request.session.get("tenant_db_port", 3306)),
-        "user": tenant_conf.get("db_user") or request.session.get("tenant_db_user"),
-        "password": tenant_conf.get("db_password") or request.session.get("tenant_db_password"),
-        "database": tenant_conf.get("db_name") or request.session.get("tenant_db_name"),
-        "cursorclass": pymysql.cursors.DictCursor,
-        "autocommit": True,
+        "host": None, "port": None, "user": None, "password": None, "database": None,
+        "cursorclass": pymysql.cursors.DictCursor, "autocommit": True
     }
 
 
-def get_tenant_conn_and_cursor(request):
-    creds = resolve_tenant_credentials(request)
+def _open_tenant_connection(creds):
+    """
+    Create a pymysql connection from credentials dict.
+    """
+    return pymysql.connect(
+        host=creds["host"],
+        port=int(creds.get("port") or 3306),
+        user=creds["user"],
+        password=creds.get("password") or "",
+        database=creds["database"],
+        charset="utf8mb4",
+        cursorclass=creds.get("cursorclass", pymysql.cursors.DictCursor),
+        autocommit=creds.get("autocommit", True),
+        connect_timeout=5,
+    )
+
+
+def get_tenant_conn(request: HttpRequest = None, tenant_key: str = None):
+    """
+    Return a pymysql.Connection for the tenant. Cached per-thread.
+
+    Use get_tenant_conn_and_cursor(request) if you want conn, cursor pair.
+    """
+    if tenant_key is None and request is not None:
+        tenant_key = resolve_tenant_key_from_request(request)
+
+    if not tenant_key:
+        raise RuntimeError("Could not resolve tenant key from request and no tenant_key provided.")
+
+    cache = _get_thread_cache()
+    now = time.time()
+
+    cached = cache.get(tenant_key)
+    if cached:
+        conn = cached.get("conn")
+        opened_at = cached.get("opened_at", 0)
+        age = now - opened_at
+        try:
+            if conn and conn.open and age < _CONN_MAX_AGE:
+                # ping to ensure it's alive; reconnect if needed
+                conn.ping(reconnect=True)
+                return conn
+        except Exception:
+            # connection dead or ping failed; close and remove
+            try:
+                conn.close()
+            except Exception:
+                pass
+            cache.pop(tenant_key, None)
+
+    # Not cached or stale: open new connection
+    creds = resolve_tenant_credentials(request=request, tenant_key=tenant_key)
     if not creds["database"] or not creds["user"]:
-        raise RuntimeError("Tenant DB not resolved on request; ensure tenant middleware sets tenant_db_* on request")
-    conn = pymysql.connect(host=creds["host"], port=creds["port"], user=creds["user"],
-                           password=creds["password"], database=creds["database"],
-                           cursorclass=creds["cursorclass"], autocommit=creds["autocommit"])
+        raise RuntimeError("Tenant DB credentials could not be resolved. Ensure session or clients_master is set.")
+
+    conn = _open_tenant_connection(creds)
+    cache[tenant_key] = {"conn": conn, "opened_at": now}
+    return conn
+
+
+def get_tenant_conn_and_cursor(request: HttpRequest = None, tenant_key: str = None):
+    """
+    Backwards-compatible helper: returns (conn, cursor) matching old code signature.
+
+    Example:
+        conn, cur = get_tenant_conn_and_cursor(request)
+        cur.execute(...)
+        rows = cur.fetchall()
+        cur.close()   # keep conn cached
+    """
+    conn = get_tenant_conn(request=request, tenant_key=tenant_key)
     cur = conn.cursor()
     return conn, cur
+
+
+def close_all_thread_conns():
+    """
+    Close and clear all cached tenant connections for this thread.
+    Call this in management commands or on worker shutdown if desired.
+    """
+    cache = _get_thread_cache()
+    for k, v in list(cache.items()):
+        try:
+            v["conn"].close()
+        except Exception:
+            pass
+        cache.pop(k, None)

@@ -1,0 +1,103 @@
+<!-- people.html -->
+{% extends "core/base.html" %}
+{% block content %}
+<div class="page-grid">
+  <div class="card">
+    <div class="card-header">
+      <h3>People</h3>
+      <button id="btn-new-member" class="btn primary">Add Member</button>
+    </div>
+    <div class="card-body">
+      <input id="people-search" placeholder="Search by name or email" class="input" />
+      <table class="zebra" id="people-table">
+        <thead>
+          <tr><th>Avatar</th><th>First</th><th>Last</th><th>Email</th><th>Phone</th><th>Actions</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- modal create member -->
+<div id="modal-member" class="modal hidden">
+  <form id="form-member">
+    <h4>Add / Update Member</h4>
+    <label>Email</label>
+    <input name="email" type="email" required />
+    <label>First name</label>
+    <input name="first_name" />
+    <label>Last name</label>
+    <input name="last_name" />
+    <label>Phone</label>
+    <input name="phone" />
+    <label><input type="checkbox" name="create_user" checked /> Create user account</label>
+    <div class="modal-actions">
+      <button type="submit" class="btn primary">Save</button>
+      <button type="button" id="modal-close" class="btn">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<script>
+async function api(path, opts={}) {
+  opts.headers = opts.headers || {};
+  if (!opts.method) opts.method = 'GET';
+  return fetch(path, opts).then(r => r.json());
+}
+
+async function loadPeople() {
+  const r = await api('/api/people/list');
+  const tbody = document.querySelector('#people-table tbody');
+  tbody.innerHTML = '';
+  r.members.forEach(m=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${m.first_name ? m.first_name[0] : m.email[0]}</td>
+      <td>${m.first_name||''}</td><td>${m.last_name||''}</td>
+      <td>${m.email}</td><td>${m.phone||''}</td>
+      <td>
+        <button class="btn small" data-email="${m.email}" onclick="editMember('${m.email}')">Edit</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function showModal() { document.getElementById('modal-member').classList.remove('hidden'); }
+function hideModal(){ document.getElementById('modal-member').classList.add('hidden'); }
+
+document.getElementById('btn-new-member').addEventListener('click', ()=> {
+  document.getElementById('form-member').reset();
+  showModal();
+});
+document.getElementById('modal-close').addEventListener('click', hideModal);
+
+document.getElementById('form-member').addEventListener('submit', async (ev)=>{
+  ev.preventDefault();
+  const form = ev.target;
+  const data = {
+    email: form.email.value,
+    first_name: form.first_name.value,
+    last_name: form.last_name.value,
+    phone: form.phone.value,
+    create_user: form.create_user.checked
+  };
+  const r = await api('/api/people/create', { method:'POST', body: JSON.stringify(data), headers:{'Content-Type':'application/json'}});
+  if (r.ok) {
+    hideModal();
+    loadPeople();
+    if (r.password) {
+      alert('User created. Temporary password: ' + r.password + '\nPlease instruct user to change it.');
+    }
+  } else alert('Error: ' + (r.error||'unknown'));
+});
+
+async function editMember(email) {
+  // find member in table and populate
+  // simply open modal and set email - real app should fetch details
+  document.getElementById('form-member').email.value = email;
+  showModal();
+}
+
+document.addEventListener('DOMContentLoaded', loadPeople);
+</script>
+{% endblock %}

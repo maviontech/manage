@@ -1,0 +1,177 @@
+<!-- teams.html -->
+{% extends "core/base.html" %}
+{% block content %}
+<div class="page-grid columns">
+  <div class="left-col card">
+    <div class="card-header">
+      <h3>Teams</h3>
+      <button id="btn-create-team" class="btn primary">Create Team</button>
+    </div>
+    <div class="card-body">
+      <ul id="teams-list" class="compact-list"></ul>
+    </div>
+  </div>
+
+  <div class="right-col card">
+    <div class="card-body" id="team-details">
+      <h3 id="team-name">Select a team</h3>
+      <p id="team-desc"></p>
+      <div>
+        <button id="btn-add-member" class="btn">Add member</button>
+      </div>
+      <table class="zebra" id="team-members">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- create team modal -->
+<div id="modal-create-team" class="modal hidden">
+  <form id="form-create-team">
+    <h4>Create Team</h4>
+    <label>Team name</label>
+    <input name="name" required />
+    <label>Description</label>
+    <textarea name="description"></textarea>
+    <label>Team lead (email)</label>
+    <input name="lead_email" placeholder="lead@example.com" />
+    <div class="modal-actions">
+      <button type="submit" class="btn primary">Create</button>
+      <button type="button" id="create-team-cancel" class="btn">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<!-- add member modal -->
+<div id="modal-add-member" class="modal hidden">
+  <form id="form-add-member">
+    <h4>Add Member to Team</h4>
+    <label>Member Email</label>
+    <input name="email" required />
+    <label>Role in team</label>
+    <select name="team_role"><option>Member</option><option>Lead</option></select>
+    <div class="modal-actions">
+      <button type="submit" class="btn primary">Add</button>
+      <button type="button" id="add-member-cancel" class="btn">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<script>
+let selectedTeamId = null;
+async function api(path, opts={}) {
+  opts.headers = opts.headers || {};
+  if (!opts.method) opts.method = 'GET';
+  return fetch(path, opts).then(r => r.json());
+}
+
+async function loadTeams(){
+  const r = await api('/api/teams/list');
+  const list = document.getElementById('teams-list');
+  list.innerHTML = '';
+  r.teams.forEach(t=>{
+    const li = document.createElement('li');
+    li.className = 'list-item';
+    li.innerHTML = `<a href="#" data-id="${t.id}">${t.name} <small>(${t.member_count})</small></a>`;
+    li.querySelector('a').onclick = (e)=>{ e.preventDefault(); loadTeamDetails(t.id); };
+    list.appendChild(li);
+  });
+}
+
+async function loadTeamDetails(id){
+  selectedTeamId = id;
+  const r = await api('/api/teams/'+id+'/members');
+  if (!r.ok) return alert('Team load error');
+  document.getElementById('team-name').textContent = r.team.name;
+  document.getElementById('team-desc').textContent = r.team.description || '';
+  const tbody = document.querySelector('#team-members tbody');
+  tbody.innerHTML = '';
+  r.members.forEach(m=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${m.first_name||''} ${m.last_name||''}</td>
+      <td>${m.email}</td>
+      <td>
+        <select data-member="${m.member_id}" class="role-sel">
+          <option ${m.team_role=='Lead'?'selected':''}>Lead</option>
+          <option ${m.team_role=='Member'?'selected':''}>Member</option>
+        </select>
+      </td>
+      <td><button class="btn small" data-member="${m.member_id}" onclick="removeMember(${m.member_id})">Remove</button></td>`;
+    tbody.appendChild(tr);
+  });
+  // attach change handlers for role change
+  document.querySelectorAll('.role-sel').forEach(sel=>{
+    sel.onchange = async ()=> {
+      const member_id = sel.getAttribute('data-member');
+      const newRole = sel.value;
+      await api('/api/teams/'+selectedTeamId+'/add_member', {
+        method:'POST',
+        body: JSON.stringify({member_id: member_id, team_role: newRole}),
+        headers: {'Content-Type':'application/json'}
+      });
+      loadTeamDetails(selectedTeamId);
+    };
+  });
+}
+
+async function removeMember(member_id){
+  if(!confirm('Remove this member from team?')) return;
+  await api('/api/teams/'+selectedTeamId+'/remove_member', {
+    method:'POST', body: JSON.stringify({member_id}), headers:{'Content-Type':'application/json'}
+  });
+  loadTeamDetails(selectedTeamId);
+}
+
+// create team modal flows
+document.getElementById('btn-create-team').addEventListener('click', ()=>document.getElementById('modal-create-team').classList.remove('hidden'));
+document.getElementById('create-team-cancel').addEventListener('click', ()=>document.getElementById('modal-create-team').classList.add('hidden'));
+document.getElementById('form-create-team').addEventListener('submit', async (ev)=>{
+  ev.preventDefault();
+  const form = ev.target;
+  const lead_email = form.lead_email.value.trim();
+  // optional: find member id by email
+  let lead_id = null;
+  if (lead_email) {
+    // quick create member if not exists
+    const createResp = await api('/api/people/create', {method:'POST', body: JSON.stringify({email:lead_email, create_user:false}), headers:{'Content-Type':'application/json'}});
+    // fetch member list to get id
+    const people = await api('/api/people/list');
+    const m = people.members.find(x=>x.email===lead_email);
+    if (m) lead_id = m.id;
+  }
+  const data = { name: form.name.value, description: form.description.value, team_lead_id: lead_id };
+  const r = await api('/api/teams/create', { method:'POST', body: JSON.stringify(data), headers:{'Content-Type':'application/json'}});
+  if (r.ok) {
+    document.getElementById('modal-create-team').classList.add('hidden');
+    loadTeams();
+  } else alert('error creating team');
+});
+
+// add member modal flows
+document.getElementById('btn-add-member').addEventListener('click', ()=>document.getElementById('modal-add-member').classList.remove('hidden'));
+document.getElementById('add-member-cancel').addEventListener('click', ()=>document.getElementById('modal-add-member').classList.add('hidden'));
+document.getElementById('form-add-member').addEventListener('submit', async (ev)=>{
+  ev.preventDefault();
+  const form = ev.target;
+  const email = form.email.value.trim();
+  if(!email) return alert('email required');
+  // ensure member exists (create if not)
+  const createResp = await api('/api/people/create', { method:'POST', body: JSON.stringify({ email: email, create_user:false }), headers:{'Content-Type':'application/json'}});
+  // find member id
+  const people = await api('/api/people/list');
+  const member = people.members.find(x => x.email === email);
+  if (!member) return alert('failed to create/find member');
+  const r = await api('/api/teams/'+selectedTeamId+'/add_member', { method:'POST', body: JSON.stringify({ member_id: member.id, team_role: form.team_role.value }), headers:{'Content-Type':'application/json'}});
+  if (r.ok) {
+    document.getElementById('modal-add-member').classList.add('hidden');
+    loadTeamDetails(selectedTeamId);
+  } else alert('error adding member');
+});
+
+document.addEventListener('DOMContentLoaded', ()=> {
+  loadTeams();
+});
+</script>
+{% endblock %}

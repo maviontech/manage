@@ -172,12 +172,12 @@
         </button>
         <ul id="submenu-people" class="submenu" role="menu" aria-label="Teams and people submenu">
           <li role="none" class="{% if page == 'people' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
+            <a href="{% url 'people_page' %}" class="submenu-link ripple" role="menuitem">
               <i class="fa-solid fa-user"></i> People
             </a>
           </li>
           <li role="none" class="{% if page == 'teams' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
+            <a href="{% url 'teams_page' %}" class="submenu-link ripple" role="menuitem">
               <i class="fa-solid fa-user-friends"></i> Teams
             </a>
           </li>
