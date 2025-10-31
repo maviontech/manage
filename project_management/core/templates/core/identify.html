@@ -1,0 +1,12 @@
+<!doctype html>
+<html>
+<head><title>Identify</title></head>
+<body>
+  <h2>Enter your email</h2>
+  {% if error %}<p style="color:red">{{error}}</p>{% endif %}
+  <form method="post">{% csrf_token %}
+    <input name="email" placeholder="you@company.com" value="{{request.POST.email|default:''}}" style="width:300px"/>
+    <button type="submit">Next</button>
+  </form>
+</body>
+</html>
