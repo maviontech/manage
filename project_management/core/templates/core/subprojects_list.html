@@ -1,0 +1,143 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Subprojects — {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="mavion-container">
+
+  <div class="top-row d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+    <div class="title-block w-100">
+      <h1 class="page-title mb-1">Subprojects (WBS) — <span class="text-primary">{{ project.name }}</span></h1>
+      <p class="text-muted small mb-3">Manage the Work Breakdown Structure for this project. Add subprojects and maintain mapping to MDM/BG codes.</p>
+
+      <form method="get" class="search-form d-flex align-items-center gap-2" role="search">
+        <div class="input-group search-group">
+          <span class="input-icon" aria-hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </span>
+          <input name="q" class="form-control search-input" placeholder="Search subprojects..." value="{{ q|default:'' }}" aria-label="Search subprojects">
+          <button type="submit" class="btn btn-outline-primary btn-search">Search</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="actions ms-md-3 d-flex align-items-center gap-2">
+      <a href="{% url 'subproject_create' project.id %}" class="btn btn-primary btn-create d-flex align-items-center">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="me-1" aria-hidden><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add Subproject
+      </a>
+    </div>
+  </div>
+
+  <div class="projects-card mb-4">
+    <div class="list-grid">
+      {% for s in subprojects %}
+      <div class="list-item d-flex justify-content-between align-items-start">
+        <div class="left">
+          <div class="item-title fw-semibold">{{ s.name }}</div>
+          <div class="item-meta small text-muted">{{ s.description|default:"—" }}</div>
+          <div class="item-sub small text-muted mt-3 d-flex gap-4">
+            {% if s.mdm_code %}<span class="code-tag">MDM: <strong>{{ s.mdm_code }}</strong></span>{% endif %}
+            {% if s.bg_code %}<span class="code-tag">BG: <strong>{{ s.bg_code }}</strong></span>{% endif %}
+            {% if not s.mdm_code and not s.bg_code %}<span class="text-warning">No codes mapped</span>{% endif %}
+          </div>
+        </div>
+
+        <div class="right text-end d-flex flex-column align-items-end">
+          <div class="small text-muted mb-2">Created: {{ s.created_at|date:"d M Y"|default:"—" }}</div>
+          <div class="btn-row d-flex gap-2">
+            <a href="{% url 'subproject_edit' project.id s.id %}" class="btn btn-sm btn-outline-secondary action-icon-btn" title="Edit Subproject">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 21l3-1 11-11 2 2-11 11-1 3H3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </a>
+            <a href="#" class="btn btn-sm btn-outline-info action-icon-btn" title="Navigation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2v6M12 22v-6M4 12h6M20 12h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="list-empty text-center text-muted py-6">
+        <div style="font-size:32px;">🗂️</div>
+        <div class="fw-semibold mt-3 mb-1 text-dark">No subprojects yet</div>
+        <div class="small">Click <a href="{% url 'subproject_create' project.id %}">Add Subproject</a> to create the first Work Breakdown Structure item.</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if pages|default:0 > 1 %}
+  <nav aria-label="Subprojects pagination" class="d-flex justify-content-center">
+    <ul class="pagination mavion-pagination">
+      {% if page > 1 %}
+      <li class="page-item"><a class="page-link" href="?page={{ page|add:-1 }}{% if q %}&q={{ q }}{% endif %}">Previous</a></li>
+      {% endif %}
+      {% for i in page_range %}
+      <li class="page-item {% if i == page %}active{% endif %}"><a class="page-link" href="?page={{ i }}{% if q %}&q={{ q }}{% endif %}">{{ i }}</a></li>
+      {% endfor %}
+      {% if page < pages %}
+      <li class="page-item"><a class="page-link" href="?page={{ page|add:1 }}{% if q %}&q={{ q }}{% endif %}">Next</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+</div>
+
+<style>
+/* scoped styling for subprojects list (safe to paste) */
+.mavion-container { max-width:1200px; margin:0 auto; padding:1.6rem 1rem; }
+
+/* header */
+.page-title { font-size:1.5rem; font-weight: 700; color:#0f1724; } /* Bolder title */
+.title-block p { margin-bottom: .6rem; color:#6b7280; font-size:0.95rem; }
+
+/* search */
+.search-group { display:flex; align-items:center; border-radius:10px; background:#fff; border:1px solid rgba(16,24,40,0.08); box-shadow:0 6px 18px rgba(16,24,40,0.03); overflow:hidden; }
+.input-icon { padding:0 10px; color:#6b7280; display:flex; align-items:center; }
+.search-input { border:0; padding:.65rem .8rem; min-width:300px; }
+.btn-search { border-radius:0 8px 8px 0; padding:0 1rem; }
+
+/* add button */
+.btn-create { padding:.6rem 1rem; border-radius:10px; font-weight: 600; box-shadow:0 8px 28px rgba(13,110,253,0.08); }
+
+/* card & list grid */
+.projects-card { padding:.5rem; border:0; } /* Removed card styling, keeping container for consistency */
+.list-grid { display:flex; flex-direction:column; gap:16px; padding:0; } /* Increased gap */
+
+/* list item (now card-like) */
+.list-item { background:#fff; border-radius:12px; padding:18px 20px; display:flex; align-items:start; justify-content:space-between; box-shadow:0 6px 16px rgba(16,24,40,0.04); border: 1px solid rgba(16,24,40,0.06); transition: all .2s ease; }
+.list-item:hover { transform: translateY(-3px); box-shadow:0 10px 28px rgba(16,24,40,0.08); border-color: rgba(13,110,253,0.2); }
+.item-title { font-weight:700; color:#0f1724; font-size:1.1rem; }
+.item-meta { margin-top:6px; color:#4b5563; max-width:720px; font-size:0.95rem; }
+.item-sub { margin-top:8px; color:#6b7280; }
+.code-tag { background: #f3f4f6; padding: 4px 10px; border-radius: 6px; font-size:0.85rem; font-weight: 500; }
+.code-tag strong { color:#0f1724; }
+
+/* actions */
+.action-icon-btn { min-width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; }
+.btn-outline-secondary { border-color: rgba(16,24,40,0.1); color: #4b5563; }
+.btn-outline-info { color: #0d6efd; border-color: rgba(13,110,253,0.15); }
+.btn-outline-secondary:hover { background: rgba(16,24,40,0.05); }
+.btn-outline-info:hover { background: rgba(13,110,253,0.08); }
+
+/* empty */
+.list-empty { background:#fff; border-radius:12px; padding:40px; box-shadow:0 6px 14px rgba(16,24,40,0.03); border:1px solid rgba(16,24,40,0.06); }
+
+/* pagination - kept consistent */
+.mavion-pagination .page-link { min-width:44px; border-radius:8px; margin:0 .12rem; }
+.mavion-pagination .page-item.active .page-link { background:#0d6efd; color:#fff; border-color:#0d6efd; }
+
+/* responsive adjustments */
+@media (max-width:767px) {
+  .top-row { gap:1rem; }
+  .title-block { width:100%; }
+  .actions { width:100%; justify-content:flex-start; }
+  .list-item { flex-direction:column; gap:.8rem; padding:14px; }
+  .right { width:100%; display:flex; justify-content:space-between; align-items:center; flex-direction: row !important; }
+  .right > div:first-child { order: 2; }
+  .right .btn-row { order: 1; }
+  .item-sub { flex-direction: column; gap: 0.5rem; }
+  .search-input { min-width:unset; }
+}
+</style>
+{% endblock %}

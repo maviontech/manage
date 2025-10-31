@@ -1,0 +1,146 @@
+{% extends "core/base.html" %}
+{% block title %}{% if editing %}Edit{% else %}Create{% endif %} Project{% endblock %}
+
+{% block content %}
+<div class="mavion-container">
+  <div class="form-shell card shadow-lg">
+    <div class="form-header d-flex justify-content-between align-items-start mb-4">
+      <div>
+        <h2 class="form-title mb-0">{% if editing %}Edit Project Details{% else %}Create New Project{% endif %}</h2>
+        <p class="form-sub text-muted small mb-0">Provide the essential project details. Fields marked * are required.</p>
+      </div>
+      <div class="text-end">
+        <a href="{% url 'projects_list' %}" class="back-link" title="Back to projects">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="me-1" aria-hidden>
+            <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Back to Projects
+        </a>
+      </div>
+    </div>
+
+    <form method="post" novalidate class="project-form" autocomplete="off">
+      {% csrf_token %}
+
+      <div class="mb-4">
+        <label class="form-label required">{{ form.name.label }}</label>
+        {{ form.name }}
+        {% if form.name.errors %}
+          <div class="form-text text-danger mt-1">{{ form.name.errors.as_text }}</div>
+        {% else %}
+          <div class="form-text text-muted mt-1">Give a short descriptive project name (e.g., Q3 Website Redesign).</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">{{ form.description.label }}</label>
+        {{ form.description }}
+        {% if form.description.errors %}
+          <div class="form-text text-danger mt-1">{{ form.description.errors.as_text }}</div>
+        {% else %}
+          <div class="form-text text-muted mt-1">Optional — a short summary about project scope (will be shown in lists).</div>
+        {% endif %}
+      </div>
+
+      <div class="row gx-4 gy-4 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label">{{ form.start_date.label }}</label>
+          {{ form.start_date }}
+          {% if form.start_date.errors %}<div class="form-text text-danger mt-1">{{ form.start_date.errors.as_text }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">{{ form.end_date.label }}</label>
+          {{ form.end_date }}
+          {% if form.end_date.errors %}<div class="form-text text-danger mt-1">{{ form.end_date.errors.as_text }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label required">{{ form.status.label }}</label>
+          {{ form.status }}
+          {% if form.status.errors %}<div class="form-text text-danger mt-1">{{ form.status.errors.as_text }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="mt-5 d-flex align-items-center gap-3">
+        <button type="submit" class="btn btn-primary btn-lg">{% if editing %}Update Project{% else %}Create Project{% endif %}</button>
+        <a href="{% url 'projects_list' %}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+/* Scoped styles for the create form page - safe to paste inline */
+/* container */
+.mavion-container { max-width:920px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+/* form shell (centered card) */
+.form-shell { border-radius:14px; padding: 2rem; background: #fff; border: 1px solid rgba(16,24,40,0.06); box-shadow:0 10px 30px rgba(16,24,40,0.06); } /* Enhanced shadow and border */
+
+/* header */
+.form-title { font-size:1.5rem; font-weight:700; color:#0f1724; } /* Bolder title */
+.form-sub { margin-top:0.15rem; color:#6b7280; font-size:0.95rem; }
+
+/* back link */
+.back-link { color:#4b5563; font-size:0.9rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px; transition: color .15s ease; }
+.back-link:hover { color: #0d6efd; }
+
+/* form controls - enforce consistent sizing & visuals */
+.project-form .form-control,
+.project-form textarea,
+.project-form select,
+.project-form input[type="date"] {
+  width:100%;
+  padding: .75rem .95rem; /* Increased padding */
+  border-radius: 10px; /* Softer corners */
+  border: 1px solid rgba(16,24,40,0.1);
+  box-sizing: border-box;
+  font-size: 1rem;
+  color: #0f1724;
+  background: #f9fafb; /* Light background for input */
+  height: 48px; /* Standardized height */
+  transition: all .15s ease;
+}
+
+.project-form .form-control:focus,
+.project-form select:focus,
+.project-form input[type="date"]:focus,
+.project-form textarea:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13,110,253,0.15); /* Clearer focus ring */
+  background: #fff;
+}
+
+/* textarea height */
+.project-form textarea { min-height:140px; padding-top:.75rem; padding-bottom:.75rem; height:auto; }
+
+/* label */
+.project-form .form-label { display:block; font-weight:600; margin-bottom:.4rem; color:#0f1724; font-size:.95rem; }
+.project-form .form-label.required:after { content: ' *'; color: #dc3545; } /* Required indicator */
+
+/* helper text and validation */
+.form-text { font-size:.875rem; color:#6b7280; }
+.form-text.text-danger { color:#b91c1c; font-weight: 500;}
+
+/* buttons */
+.btn-lg { padding:.7rem 1.4rem; border-radius:10px; font-size:1rem; font-weight: 600; }
+.btn-primary { background: #0d6efd; border-color: #0d6efd; box-shadow: 0 8px 28px rgba(13,110,253,0.12); color:#fff; }
+.btn-primary:hover { background: #0a58ca; border-color: #0a58ca; }
+.btn-outline-secondary { border: 1px solid rgba(16,24,40,0.15); color:#4b5563; background:transparent; }
+
+/* grid spacing (makes fields aligned) */
+.row.gx-4 > [class*="col-"] { padding-left: .75rem; padding-right:.75rem; }
+
+/* small screens: stack fields */
+@media (max-width: 767px) {
+  .mavion-container { padding: 1rem; }
+  .form-shell { padding: 1.5rem; }
+  .project-form .form-control, .project-form select, .project-form input[type="date"] { height:46px; }
+  .btn-lg { width:100%; }
+  .mt-5 { margin-top: 1.5rem !important; }
+  .mt-5 .btn + .btn { margin-top:.5rem; }
+  .form-header { flex-direction: column; gap: 1rem; align-items: flex-start !important; }
+}
+</style>
+{% endblock %}

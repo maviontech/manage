@@ -93,20 +93,16 @@
         </button>
         <ul id="submenu-projects" class="submenu" role="menu" aria-label="Projects submenu">
           <li role="none" class="{% if page == 'projects' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
+            <a href="{% url 'projects_list' %}" class="submenu-link ripple" role="menuitem">
               <i class="fa-solid fa-list"></i> All Projects
             </a>
           </li>
           <li role="none" class="{% if page == 'project_create' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
-              <i class="fa-solid fa-plus-circle"></i> Create Project
+            <a href="{% url 'project_create' %}" class="submenu-link ripple" role="menuitem">
+              <i class="fa-solid fa-plus-circle"></i> Projects/Subprojects
             </a>
           </li>
-          <li role="none" class="{% if page == 'subprojects' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
-              <i class="fa-solid fa-project-diagram"></i> Subprojects / WBS
-            </a>
-          </li>
+
         </ul>
       </li>
 

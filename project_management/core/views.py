@@ -31,24 +31,42 @@ def login_password_view(request):
     if request.method == 'GET':
         if not request.session.get('tenant_config') or not request.session.get('ident_email'):
             return redirect('identify')
-        return render(request, 'core/login.html', {'email': request.session.get('ident_email'), 'domain': request.session['tenant_config'].get('domain_postfix')})
+        return render(request, 'core/login.html', {
+            'email': request.session.get('ident_email'),
+            'domain': request.session['tenant_config'].get('domain_postfix')
+        })
+
     email = request.session.get('ident_email')
     tenant_conf = request.session.get('tenant_config')
-    password = request.POST.get('password','')
+    password = request.POST.get('password', '')
+
     if not email or not tenant_conf:
         return redirect('identify')
+
     try:
         user = authenticate(email, password, tenant_conf)
     except Exception as e:
         return render(request, 'core/login.html', {'email': email, 'error': 'Auth error: ' + str(e)})
+
     if not user:
         return render(request, 'core/login.html', {'email': email, 'error': 'Invalid credentials'})
-    # auth success
+
+    # ✅ Auth success
     request.session['user'] = user
-    # ensure tenant_config present
+
+    # ✅ Ensure tenant_config present
     request.session['tenant_config'] = tenant_conf
     set_current_tenant(tenant_conf)
+
+    # ✅ Add explicit tenant connection info for db_helpers.py
+    request.session['tenant_db_name'] = tenant_conf.get('db_name')
+    request.session['tenant_db_user'] = tenant_conf.get('db_user')
+    request.session['tenant_db_password'] = tenant_conf.get('db_password')
+    request.session['tenant_db_host'] = tenant_conf.get('db_host', '127.0.0.1')
+    request.session['tenant_db_port'] = tenant_conf.get('db_port', 3306)
+
     return redirect('dashboard')
+
 
 def logout_view(request):
     request.session.flush()

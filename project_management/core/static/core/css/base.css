@@ -438,3 +438,6 @@ body{
 
 /* ensure icon-only layout in collapsed sidebar */
 .sidebar-collapsed .icon { display:flex; justify-content:center; }
+.card { background: #fff; border-radius: 0.75rem; box-shadow: 0 6px 18px rgba(20,20,50,0.06); padding: 1rem; }
+.table-hover tbody tr:hover { background: rgba(0,0,0,0.02); }
+.btn-sm { padding: .3rem .6rem; }

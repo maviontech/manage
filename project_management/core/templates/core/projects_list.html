@@ -1,0 +1,208 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}All Projects{% endblock %}
+
+{% block content %}
+<div class="mavion-container">
+
+  <div class="top-row d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+    <div class="title-and-search w-100">
+      <div class="d-flex align-items-start gap-3 flex-column flex-md-row">
+        <div class="title-block">
+          <h1 class="page-title">Project Directory</h1>
+          <p class="text-muted small mb-0">Manage and track projects across your organization</p>
+        </div>
+
+        <form method="get" class="search-form ms-md-4 mt-3 mt-md-0" role="search" aria-label="Search projects">
+          <div class="input-group search-group">
+            <span class="input-icon" aria-hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2"/>
+                <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <input id="projects-search" name="q" class="form-control search-input" placeholder="Search projects..." value="{{ q|default:'' }}" aria-label="Search projects">
+            <button class="btn btn-primary search-btn" type="submit">Search</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="action-col ms-md-3 d-flex align-items-center">
+      <a href="{% url 'project_create' %}" class="btn btn-primary btn-create">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="me-1" aria-hidden>
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Create New Project
+      </a>
+    </div>
+  </div>
+
+  <div class="card projects-card mb-4">
+    <div class="table-responsive">
+      <table class="table projects-table mb-0">
+        <thead>
+          <tr class="thead-row">
+            <th scope="col" style="min-width: 240px;">Project</th>
+            <th scope="col" style="min-width: 320px;">Description</th>
+            <th scope="col" class="d-none d-lg-table-cell" style="width: 120px;">Start</th>
+            <th scope="col" class="d-none d-lg-table-cell" style="width: 120px;">End</th>
+            <th scope="col" class="text-center" style="width: 100px;">Status</th>
+            <th scope="col" class="d-none d-md-table-cell" style="width: 160px;">Created By</th>
+            <th scope="col" class="text-end" style="width: 100px;">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for p in projects %}
+          <tr class="project-row">
+            <td class="project-col">
+              <div class="project-name">{{ p.name }}</div>
+              <div class="project-meta small text-muted">#{{ p.id }}</div>
+            </td>
+
+            <td class="text-muted desc-col">{{ p.description|default:"—"|truncatechars:120 }}</td>
+            <td class="d-none d-lg-table-cell">{{ p.start_date|date:"d M Y"|default:"—" }}</td>
+            <td class="d-none d-lg-table-cell">{{ p.end_date|date:"d M Y"|default:"—" }}</td>
+
+            <td class="text-center">
+              {% if p.status == "Active" %}
+                <span class="badge status status-active">Active</span>
+              {% elif p.status == "Completed" %}
+                <span class="badge status status-completed">Completed</span>
+              {% elif p.status == "On Hold" %}
+                <span class="badge status status-onhold">On Hold</span>
+              {% else %}
+                <span class="badge status status-unknown">{{ p.status|default:"—" }}</span>
+              {% endif %}
+            </td>
+
+            <td class="d-none d-md-table-cell">{{ p.created_by_name|default:"—" }}</td>
+            <td class="text-end actions-col">
+              <a href="{% url 'subprojects_list' p.id %}" class="icon-btn" title="Subprojects" aria-label="Open subprojects">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2v6M12 22v-6M4 12h6M20 12h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </a>
+              <a href="{% url 'project_edit' p.id %}" class="icon-btn" title="Edit" aria-label="Edit project">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 21l3-1 11-11 2 2-11 11-1 3H3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-6 text-muted">
+              <div class="empty-emoji mb-2" aria-hidden>📁</div>
+              <div class="fw-semibold mb-1">No projects found</div>
+              <div class="small">Click <a href="{% url 'project_create' %}">Create New Project</a> to add your first project.</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if pages|default:0 > 1 %}
+  <nav aria-label="Projects pagination" class="d-flex justify-content-center">
+    <ul class="pagination mavion-pagination">
+      {% if page > 1 %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page|add:-1 }}{% if q %}&q={{ q }}{% endif %}">Previous</a>
+      </li>
+      {% endif %}
+
+      {% for i in page_range %}
+      <li class="page-item {% if i == page %}active{% endif %}">
+        <a class="page-link" href="?page={{ i }}{% if q %}&q={{ q }}{% endif %}">{{ i }}</a>
+      </li>
+      {% endfor %}
+
+      {% if page < pages %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page|add:1 }}{% if q %}&q={{ q }}{% endif %}">Next</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+</div>
+
+<style>
+/* ---------- container ---------- */
+.mavion-container {
+  max-width: 1200px; /* Slightly wider container */
+  margin: 0 auto;
+  padding: 1.6rem 1rem;
+}
+
+/* ---------- header ---------- */
+.page-title { font-size: 1.5rem; font-weight: 700; margin: 0; color: #0f1724; } /* Stronger title */
+.title-and-search { display:flex; align-items:center; gap:1rem; }
+
+/* search group */
+.search-group { display:flex; border-radius:10px; background:#fff; box-shadow:0 4px 14px rgba(16,24,40,0.04); overflow:hidden; border:1px solid rgba(16,24,40,0.04); }
+.input-icon { display:flex; align-items:center; padding:0 12px; color:#6b7280; }
+.search-input { border:0; padding:.65rem .8rem; min-width:280px; outline:none; }
+.search-input:focus { box-shadow:none; }
+.search-btn { border-radius:0 8px 8px 0; padding:0 1rem; }
+
+/* create button */
+.btn-create { display:inline-flex; align-items:center; gap:.5rem; padding:.6rem 1rem; border-radius:10px; font-weight: 600; box-shadow:0 8px 26px rgba(13,110,253,0.08); }
+
+/* ---------- card & table ---------- */
+.projects-card { border-radius:12px; background:var(--bs-body-bg); box-shadow:0 6px 24px rgba(13,110,253,0.04); padding:.5rem; border:0; }
+.projects-table { border-collapse:separate; border-spacing:0; width:100%; }
+.thead-row th { color:#6b7280; font-size:.82rem; padding:12px 16px; border-bottom:1px solid rgba(16,24,40,0.05); text-transform:uppercase; letter-spacing:0.02em; font-weight: 600;} /* Stronger header */
+
+/* table body rows (zebra + card-like) */
+.project-row { transition:all .15s ease; border-bottom:1px solid rgba(16,24,40,0.03); } /* Added soft bottom border for separation */
+.project-row td { padding: 14px 16px; vertical-align: middle; } /* More padding */
+.project-row:nth-child(odd) { background:#ffffff; }
+.project-row:nth-child(even) { background:#f9fafb; } /* Lighter even row color */
+.project-row:hover { background:rgba(13,110,253,0.06); transform:translateY(-2px); box-shadow:0 8px 18px rgba(16,24,40,0.08); z-index: 10; } /* Enhanced hover */
+.projects-table tbody tr:last-child { border-bottom: none; }
+
+.project-col { min-width:220px; }
+.project-name { font-weight:700; color:#0f1724; font-size:1rem; } /* Bolder name */
+.project-meta { margin-top:.18rem; color:#94a3b8; font-size:0.85rem; } /* Lighter ID */
+
+.desc-col { max-width:420px; color: #4b5563; font-size:0.9rem;} /* Better description color/size */
+
+/* status badges */
+.badge.status { display:inline-block; padding:.35rem .7rem; border-radius:999px; font-weight:600; font-size:.75rem; text-transform: uppercase; } /* Slight size/style change */
+.status-active { background:#ecfdf5; color:#065f46; border: 1px solid #a7f3d0; }
+.status-completed { background:#eff6ff; color:#1d4ed8; border: 1px solid #bfdbfe; }
+.status-onhold { background:#fff7ed; color:#b45309; border: 1px solid #fed7aa; }
+.status-unknown { background:#f3f4f6; color:#4b5563; border: 1px solid #d1d5db; }
+
+/* actions */
+.icon-btn { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:8px; border:1px solid rgba(16,24,40,0.08); background:#f9fafb; color:#0d6efd; margin-left:.5rem; }
+.icon-btn:hover { background:rgba(13,110,253,0.1); border-color: rgba(13,110,253,0.2); }
+
+/* empty state */
+.empty-emoji { font-size:32px; }
+.projects-table tr td.py-6 { padding-top:3rem !important; padding-bottom:3rem !important; }
+
+/* pagination - kept consistent */
+.mavion-pagination .page-link { min-width:44px; border-radius:8px; margin:0 .12rem; }
+.mavion-pagination .page-item.active .page-link { background:#0d6efd; color:#fff; border-color:#0d6efd; }
+
+/* responsive behavior */
+@media (max-width:767px) {
+  .top-row { flex-direction: column; align-items: center; }
+  .title-block { text-align: center; }
+  .search-form { width: 100%; margin-left: 0 !important; }
+  .action-col { width:100%; justify-content:center; }
+  .search-input { min-width:unset; width: 100%; }
+  .search-group { width: 100%; }
+  .btn-create { width:100%; justify-content:center; }
+  .desc-col { display:block; }
+  .projects-table thead { display:none; }
+  .project-row { display:block; margin-bottom:12px; border-radius:10px; padding:10px 14px; box-shadow:0 6px 18px rgba(16,24,40,0.03); border:1px solid rgba(16,24,40,0.06); }
+  .project-row td { display:block; padding:6px 0; }
+  .project-row:nth-child(even) { background: #fff; } /* Mobile rows are always white */
+  .actions-col { text-align:right; padding-top: 10px; }
+  .project-row:hover { transform: translateY(-1px); }
+}
+</style>
+{% endblock %}
