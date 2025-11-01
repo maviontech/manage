@@ -5,8 +5,9 @@
   --accent-500:#2b82ea;
   --accent-600:#225fc1;
   --panel-shadow:0 8px 20px rgba(36,60,90,0.06);
-  --sidebar-bg-start:#071225;
-  --sidebar-bg-end:#0f2b3d;
+--sidebar-bg-start:#00223E;
+--sidebar-bg-end:#005C97;
+
   --sidebar-text:#e6eef7;
   --sidebar-muted:rgba(230,238,247,0.72);
   --sidebar-width:260px;
@@ -128,6 +129,23 @@ body.sidebar-collapsed .submenu-link{padding-left:10px;padding-right:10px;justif
 .search-wrapper{display:flex;align-items:center;background:rgba(255,255,255,0.08);padding:8px 12px;border-radius:999px;min-width:420px;gap:10px}
 body.sidebar-collapsed .search-wrapper{min-width:220px}
 .search-wrapper input{border:0;outline:none;background:transparent;color:#fff;width:100%;font-size:14px}
+/* Make placeholder (help text) white inside the search input */
+.search-wrapper input::placeholder {
+  color: rgba(255, 255, 255, 0.9);  /* pure white: use #fff if you want brighter */
+  opacity: 1;                       /* override browser default opacity */
+}
+
+/* Safari / Edge compatibility */
+.search-wrapper input::-webkit-input-placeholder {
+  color: rgba(255, 255, 255, 0.9);
+}
+.search-wrapper input:-ms-input-placeholder {
+  color: rgba(255, 255, 255, 0.9);
+}
+.search-wrapper input::-ms-input-placeholder {
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .search-icon{opacity:0.9}
 
 /* header right */
