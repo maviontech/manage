@@ -8,6 +8,12 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from .tenant_context import get_current_tenant , set_current_tenant
 from .db_helpers import get_tenant_conn
+from math import ceil
+from django.shortcuts import render, redirect
+from django.utils import timezone
+
+# Adjust these imports to match your project utilities (names used earlier in this project)
+
 
 def identify_view(request):
     if request.method == 'GET':
@@ -76,15 +82,6 @@ def logout_view(request):
     request.session.flush()
     return redirect('identify')
 
-
-from math import ceil
-from django.shortcuts import render, redirect
-from django.utils import timezone
-
-# Adjust these imports to match your project utilities (names used earlier in this project)
-# e.g. get_current_tenant, get_connection_from_config or get_tenant_conn
-from core.tenant_context import get_current_tenant
-from core.db_connector import get_connection_from_config
 
 
 # If your project uses get_tenant_conn(request) instead, swap usage accordingly.
