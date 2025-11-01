@@ -2,50 +2,161 @@
 {% load static %}
 {% block content %}
 <div class="container-fluid py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-start mb-3 gap-3">
     <div>
-      <h4 class="fw-bold text-gradient"><i class="fa-solid fa-user-clock me-2"></i> Unassigned Tasks</h4>
-      <p class="text-muted small mb-0">Assign tasks quickly to team members or teams.</p>
+      <h4 class="fw-bold text-gradient mb-1"><i class="fa-solid fa-user-clock me-2"></i> Unassigned Tasks</h4>
+      <p class="text-muted small mb-0">Assign tasks quickly to individual members or teams. Use search and filters to narrow results.</p>
     </div>
-    <div>
+
+    <div class="d-flex gap-2">
       <a href="{% url 'create_task' %}" class="btn btn-gradient"><i class="fa-solid fa-plus me-1"></i> New Task</a>
+      <a href="{% url 'task_board' %}" class="btn btn-outline-gradient"><i class="fa-solid fa-th-large me-1"></i> Task Board</a>
     </div>
   </div>
 
-  {% if tasks %}
-  <div class="row g-3">
-    {% for t in tasks %}
-    <div class="col-xl-4 col-lg-6">
-      <div class="task-card p-3">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <div class="me-2">
-            <h6 class="fw-semibold mb-0 text-truncate" title="{{ t.title }}">{{ t.title }}</h6>
-            <div class="text-muted small mt-1">{{ t.project_name|default:"—" }}</div>
+  <!-- Main layout: left = task list, right = controls -->
+  <div class="row g-4">
+    <!-- LEFT: Task list -->
+    <div class="col-lg-8">
+      <div class="card soft-card p-3 mb-3">
+        <!-- Search + filters -->
+        <div class="row g-2 align-items-center">
+          <div class="col-md-6">
+            <div class="position-relative">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input id="unassignedSearch" class="form-control search-input" placeholder="Search by title, project, priority..." aria-label="Search unassigned tasks">
+            </div>
           </div>
-          <div class="text-end">
-            <span class="badge priority {{ t.priority|lower }}">{{ t.priority }}</span>
-          </div>
-        </div>
 
-        <div class="d-flex justify-content-between align-items-center mt-3">
-          <small class="text-muted"><i class="fa-regular fa-calendar me-1"></i>{{ t.due_date|default:"No due date" }}</small>
-          <div>
-            <button data-task="{{ t.id }}" class="btn btn-sm btn-outline-gradient assign-btn"><i class="fa-solid fa-user-plus me-1"></i>Assign</button>
+          <div class="col-md-6 d-flex gap-2">
+            <select id="filterPriority" class="form-select">
+              <option value="">All priorities</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Normal">Normal</option>
+              <option value="Low">Low</option>
+            </select>
+
+            {% if projects %}
+            <select id="filterProject" class="form-select">
+              <option value="">All projects</option>
+              {% for p in projects %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+            {% endif %}
+
           </div>
         </div>
       </div>
+
+      <!-- Bulk actions toolbar -->
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" value="" id="selectAllTasks">
+          <label class="form-check-label small text-muted" for="selectAllTasks">Select all on page</label>
+        </div>
+
+        <button id="bulkAssignBtn" class="btn btn-sm btn-outline-gradient" disabled>
+          <i class="fa-solid fa-user-plus me-1"></i> Assign Selected
+        </button>
+
+        <div class="ms-auto small text-muted" id="itemsCount">{{ tasks|length }} tasks</div>
+      </div>
+
+      <!-- Tasks grid -->
+      <div id="tasksList" class="row g-3">
+        {% if tasks %}
+          {% for t in tasks %}
+          <div class="col-12">
+            <div class="task-row d-flex align-items-start p-3 bg-white rounded shadow-sm">
+              <div class="me-3 d-flex align-items-start">
+                <input class="form-check-input task-checkbox mt-1" type="checkbox" value="{{ t.id }}" data-task-id="{{ t.id }}">
+              </div>
+
+              <div class="flex-fill">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <div class="task-title fw-semibold">{{ t.title }}</div>
+                    <div class="small text-muted mt-1">
+                      {{ t.project_name|default:"—" }} • ID: {{ t.id }}
+                    </div>
+                  </div>
+                  <div class="text-end">
+                    <span class="badge priority {{ t.priority|lower }}">{{ t.priority|default:"Normal" }}</span>
+                    <div class="small text-muted mt-2">{{ t.due_date|default:"No due date" }}</div>
+                  </div>
+                </div>
+
+                <div class="mt-2 d-flex gap-2">
+                  <a href="{% url 'task_detail' t.id %}" class="btn btn-sm btn-light">View</a>
+                  <button class="btn btn-sm btn-outline-primary assign-row-btn" data-task="{{ t.id }}">Assign</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="col-12">
+            <div class="text-center py-5 text-muted">
+              <i class="fa-solid fa-circle-info fa-2x mb-3"></i>
+              <div class="fw-semibold mb-1">No unassigned tasks found.</div>
+              <div class="small">Create a task or import tasks using CSV to get started.</div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Pagination placeholder (if you later wire pagination) -->
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="small text-muted">Showing <span id="visibleCount">{{ tasks|length }}</span> tasks</div>
+        <nav id="tasksPagination" aria-label="Tasks pages"></nav>
+      </div>
     </div>
-    {% endfor %}
+
+    <!-- RIGHT: Controls -->
+    <div class="col-lg-4">
+      <div class="card soft-card p-3 mb-3">
+        <div class="fw-semibold mb-2">Assign Task</div>
+
+        <form id="singleAssignForm">
+          <input type="hidden" name="task_id" id="single_task_id">
+
+          <label class="form-label small">Assign to</label>
+          <select id="single_assignee" name="assignee" class="form-select mb-3" required>
+            <option value="">-- choose member or team --</option>
+            <optgroup label="Members">
+              {% for m in members %}
+                <option value="member:{{ m.id }}">{{ m.first_name }} {{ m.last_name }} — {{ m.email }}</option>
+              {% endfor %}
+            </optgroup>
+            <optgroup label="Teams">
+              {% for t in teams %}
+                <option value="team:{{ t.id }}">Team: {{ t.name }}</option>
+              {% endfor %}
+            </optgroup>
+          </select>
+
+          <button id="singleAssignBtn" type="submit" class="btn btn-gradient w-100">
+            <i class="fa-solid fa-check me-1"></i> Assign
+          </button>
+        </form>
+      </div>
+
+      <div class="card soft-card p-3">
+        <div class="fw-semibold mb-2">Quick Tips</div>
+        <ul class="small text-muted mb-0">
+          <li>Use the checkboxes to assign multiple tasks at once.</li>
+          <li>Assigned tasks will disappear from this list immediately.</li>
+          <li>Use the search box to locate tasks quickly.</li>
+        </ul>
+      </div>
+    </div>
   </div>
-  {% else %}
-  <div class="p-5 text-center text-muted">
-    <i class="fa-solid fa-circle-info fa-2x mb-3 d-block"></i>
-    No unassigned tasks found.
-  </div>
-  {% endif %}
 </div>
 
-<!-- Assign Modal -->
+<!-- Assign Modal (kept for row-level quick assign) -->
 <div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <form id="assignForm" class="modal-content">
@@ -77,46 +188,188 @@
   </div>
 </div>
 
+<!-- Styles -->
 <style>
-.task-card { background:#fff; border-radius:12px; box-shadow:0 6px 18px rgba(13,38,71,0.04); transition:transform .18s ease, box-shadow .18s ease; }
-.task-card:hover { transform:translateY(-4px); box-shadow:0 10px 30px rgba(13,38,71,0.06); }
-.priority.low { background:#adb5bd; color:#fff; } .priority.normal { background:#0dcaf0; color:#05292b; } .priority.high { background:#ffc107; color:#000; } .priority.critical { background:#dc3545; color:#fff; }
-.btn-outline-gradient { border:1px solid #38bdf8; color:#0b57a4; border-radius:8px; }
+/* Theme tokens */
+.text-gradient { background:linear-gradient(90deg,#0b57a4,#38bdf8); -webkit-background-clip:text; color:transparent; }
+.soft-card { border-radius:12px; box-shadow:0 6px 18px rgba(13,38,71,0.04); border:none; background:#fff; }
+.btn-gradient { background:linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border:none; border-radius:8px; padding:8px 12px; }
+.btn-outline-gradient { border:1px solid #38bdf8; color:#0b57a4; border-radius:8px; padding:6px 10px; }
+
+/* search */
+.search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#6c757d; }
+.search-input { padding-left:36px; border-radius:8px; border:1px solid #dee2e6; }
+
+/* tasks list */
+.task-row { border-radius:10px; }
+.task-title { font-size:1rem; }
+.priority.low { background:#adb5bd; color:#fff; padding:6px 8px; border-radius:6px; }
+.priority.normal { background:#0dcaf0; color:#05292b; padding:6px 8px; border-radius:6px; }
+.priority.high { background:#ffc107; color:#000; padding:6px 8px; border-radius:6px; }
+.priority.critical { background:#dc3545; color:#fff; padding:6px 8px; border-radius:6px; }
+.assign-row-btn { border-radius:8px; }
+
+/* responsive adjustments */
+@media (max-width: 991px) {
+  .col-lg-8, .col-lg-4 { flex: 0 0 100%; max-width: 100%; }
+  .task-row { padding:14px; }
+}
 </style>
 
+<!-- Scripts: search, assign modal, bulk assign -->
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  const assignModalEl = document.getElementById('assignModal');
-  const bsModal = new bootstrap.Modal(assignModalEl);
-  document.querySelectorAll('.assign-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=> {
-      document.getElementById('modal_task_id').value = btn.dataset.task;
+document.addEventListener('DOMContentLoaded', function() {
+  // Helpers
+  const csrf = '{{ csrf_token }}';
+
+  // Row-level assign button -> open modal
+  document.querySelectorAll('.assign-row-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const taskId = btn.dataset.task;
+      document.getElementById('modal_task_id').value = taskId;
+      const bsModal = new bootstrap.Modal(document.getElementById('assignModal'));
       bsModal.show();
     });
   });
 
-  document.getElementById('assignForm').addEventListener('submit', async (ev) => {
+  // Modal assign (single)
+  document.getElementById('assignForm')?.addEventListener('submit', async function(ev) {
     ev.preventDefault();
-    const form = ev.target;
-    const fd = new FormData(form);
+    const fd = new FormData(this);
     try {
       const res = await fetch("{% url 'api_assign_task' %}", {
         method: 'POST',
-        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        headers: { 'X-CSRFToken': csrf },
         body: fd
       });
       const data = await res.json();
-      if (data.ok) {
-        bsModal.hide();
-        location.reload();
-      } else {
-        alert('Assign failed. Try again.');
-      }
+      if (data.ok) { location.reload(); } else { alert('Assign failed'); }
     } catch (err) {
-      console.error(err);
-      alert('Network error.');
+      console.error(err); alert('Network error');
     }
   });
+
+  // Single assign panel (right)
+  document.getElementById('singleAssignForm')?.addEventListener('submit', async function(ev) {
+    ev.preventDefault();
+    const taskId = document.getElementById('single_task_id').value;
+    const assignee = document.getElementById('single_assignee').value;
+    if(!assignee) { alert('Choose assignee'); return; }
+    const fd = new FormData();
+    fd.append('task_id', taskId);
+    fd.append('assignee', assignee);
+    try {
+      const res = await fetch("{% url 'api_assign_task' %}", { method:'POST', headers:{ 'X-CSRFToken': csrf }, body: fd });
+      const data = await res.json();
+      if(data.ok){ location.reload(); } else { alert('Assign failed'); }
+    } catch(err){ console.error(err); alert('Network error'); }
+  });
+
+  // Populate right panel when clicking a task title (optional)
+  document.querySelectorAll('.task-title').forEach(el => {
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', () => {
+      const row = el.closest('.task-row');
+      const cb = row.querySelector('.task-checkbox');
+      if(cb) {
+        document.getElementById('single_task_id').value = cb.value;
+      }
+    });
+  });
+
+  // Bulk selection logic
+  const selectAll = document.getElementById('selectAllTasks');
+  const bulkBtn = document.getElementById('bulkAssignBtn');
+
+  function updateBulkState() {
+    const selected = document.querySelectorAll('.task-checkbox:checked');
+    bulkBtn.disabled = (selected.length === 0);
+    document.getElementById('itemsCount').textContent = selected.length + ' selected';
+  }
+
+  selectAll?.addEventListener('change', function() {
+    const checked = this.checked;
+    document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = checked);
+    updateBulkState();
+  });
+
+  document.querySelectorAll('.task-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateBulkState);
+  });
+
+  // Bulk assign flow
+  bulkBtn?.addEventListener('click', () => {
+    // open assign modal and pre-select nothing; modal will use selected checkboxes
+    const bsModal = new bootstrap.Modal(document.getElementById('assignModal'));
+    document.getElementById('modal_task_id').value = ''; // empty -> we will handle multiple in submit
+    bsModal.show();
+  });
+
+  // When assign modal is submitted, if modal_task_id is empty => bulk assign
+  document.getElementById('assignForm')?.addEventListener('submit', async function(ev) {
+    ev.preventDefault();
+    const modalTaskId = document.getElementById('modal_task_id').value;
+    const assignee = document.getElementById('modal_assignee').value;
+    if(!assignee){ alert('Please choose assignee'); return; }
+
+    // If modal_task_id present -> single assign (handled earlier). Otherwise get selected checkboxes.
+    let taskIds = [];
+    if(modalTaskId) taskIds.push(modalTaskId);
+    else {
+      document.querySelectorAll('.task-checkbox:checked').forEach(cb => taskIds.push(cb.value));
+      if(taskIds.length === 0) { alert('Please select tasks to assign'); return; }
+    }
+
+    try {
+      // Call assign API per task (simple loop). For large sets, implement batch endpoint.
+      for(const id of taskIds) {
+        const fd = new FormData();
+        fd.append('task_id', id);
+        fd.append('assignee', assignee);
+        const res = await fetch("{% url 'api_assign_task' %}", { method:'POST', headers:{ 'X-CSRFToken': csrf }, body: fd });
+        const json = await res.json();
+        if(!json.ok) throw new Error('Assign failed for id ' + id);
+      }
+      location.reload();
+    } catch(err) {
+      console.error(err); alert('Assign failed. Try again.');
+    }
+  });
+
+  // Search and filter (client-side)
+  const searchInput = document.getElementById('unassignedSearch');
+  const filterPriority = document.getElementById('filterPriority');
+  const filterProject = document.getElementById('filterProject');
+
+  function applyFilters() {
+    const q = searchInput?.value.trim().toLowerCase() || '';
+    const p = filterPriority?.value || '';
+    const proj = filterProject?.value || '';
+
+    const rows = document.querySelectorAll('#tasksList > div.col-12');
+    let visible = 0;
+    rows.forEach(row => {
+      // if empty state row, skip
+      const title = (row.querySelector('.task-title')?.textContent || '').toLowerCase();
+      const project = (row.querySelector('.text-muted')?.textContent || '').toLowerCase();
+      const priority = (row.querySelector('.badge')?.textContent || '').trim();
+
+      let match = true;
+      if(q && !(title.includes(q) || project.includes(q) || priority.toLowerCase().includes(q))) match = false;
+      if(p && priority !== p) match = false;
+      if(proj && !project.includes(proj)) match = false;
+
+      if(match) { row.style.display = ''; visible++; } else { row.style.display = 'none'; }
+    });
+
+    document.getElementById('visibleCount').textContent = visible;
+  }
+
+  [searchInput, filterPriority, filterProject].forEach(el => {
+    if(el) el.addEventListener('input', applyFilters);
+    if(el) el.addEventListener('change', applyFilters);
+  });
+
 });
 </script>
 {% endblock %}
