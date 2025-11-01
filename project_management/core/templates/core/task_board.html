@@ -1,84 +1,296 @@
 {% extends "core/base.html" %}
 {% block content %}
-<div class="container-fluid py-3">
-  <div class="d-flex justify-content-between mb-3">
-    <h4>Task Board</h4>
+<div class="container-fluid py-4">
+
+  <!-- ===== Header Section ===== -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
     <div>
-      <a class="btn btn-sm btn-outline-secondary" href="{% url 'create_task' %}">New Task</a>
-      <a class="btn btn-sm btn-outline-primary" href="{% url 'unassigned_tasks' %}">Unassigned</a>
+      <h4 class="fw-bold text-gradient mb-0">
+        <i class="fa-solid fa-table-columns me-2"></i> Task Board
+      </h4>
+      <p class="small text-muted mb-0">Drag & drop tasks between columns. Click a card to view details.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'create_task' %}" class="btn btn-gradient">
+        <i class="fa-solid fa-plus me-1"></i> New Task
+      </a>
+      <a href="{% url 'unassigned_tasks' %}" class="btn btn-outline-gradient">
+        <i class="fa-solid fa-user-clock me-1"></i> Unassigned
+      </a>
     </div>
   </div>
 
-  <div class="row g-2">
-    {% for col in status_columns %}
-      <div class="col-sm-6 col-lg-2">
-        <div class="card" style="min-height:400px;">
-          <div class="card-header bg-white">
-            <strong>{{ col }}</strong>
-          </div>
-          <div class="card-body board-column" data-status="{{ col }}" id="col-{{ col|slugify }}">
-            <!-- cards injected by JS -->
-          </div>
+  <!-- ===== Search Bar ===== -->
+  <div class="card mb-4 border-0 shadow-sm search-card">
+    <div class="card-body py-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="position-relative flex-fill">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="taskSearch" class="form-control search-input" placeholder="Search tasks by title, assignee or priority...">
         </div>
       </div>
-    {% endfor %}
+    </div>
+  </div>
 
+  <!-- ===== Kanban Columns ===== -->
+  <div class="row g-3 board-row">
+    {% for col in status_columns %}
+    <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+      <div class="kanban-column p-2">
+        <div class="kanban-header">{{ col }}</div>
+        <div class="kanban-body" data-status="{{ col }}" id="col-{{ col|slugify }}"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ===== Pagination ===== -->
+  <div class="d-flex flex-column align-items-center mt-3">
+    <div id="boardSummary" class="small text-muted mb-1"></div>
+    <nav aria-label="Task board pages">
+      <ul class="pagination mb-0" id="boardPagination"></ul>
+    </nav>
   </div>
 </div>
 
+<!-- ===== Styling ===== -->
+<style>
+.text-gradient {
+  background:linear-gradient(90deg,#0b57a4,#38bdf8);
+  -webkit-background-clip:text;
+  color:transparent;
+}
+.btn-gradient {
+  background:linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8);
+  color:#fff; border:none; border-radius:8px; padding:8px 14px; font-weight:500;
+}
+.btn-gradient:hover { opacity:0.9; }
+.btn-outline-gradient {
+  border:1px solid #38bdf8; color:#0b57a4; border-radius:8px; padding:8px 14px; font-weight:500;
+}
+.search-card { border-radius:10px; }
+.search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#6c757d; }
+.search-input {
+  padding-left:36px; border-radius:8px; border:1px solid #dee2e6; box-shadow:none;
+}
+.kanban-column {
+  background:#f8fafc; border-radius:12px; min-height:70vh;
+  box-shadow:0 4px 12px rgba(13,38,71,0.06); padding-bottom:16px;
+}
+.kanban-header {
+  background:linear-gradient(90deg,#0b57a4,#38bdf8);
+  color:#fff; text-align:center; border-radius:8px; font-weight:600;
+  padding:8px; margin-bottom:10px; letter-spacing:0.3px;
+}
+.kanban-body { padding:8px; transition:background-color .3s ease; }
+.task-card {
+  background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  padding:12px 14px; margin-bottom:12px; cursor:grab;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.task-card:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,0.08); }
+.task-title { font-weight:600; font-size:0.95rem; margin-bottom:2px; }
+.task-meta { font-size:0.8rem; color:#667084; margin-top:2px; }
+.assignee-name { font-size:0.8rem; font-weight:500; color:#0b57a4; margin-top:6px; }
+.dragging { opacity:0.6; transform:scale(.98); }
+.drag-over { background:rgba(56,189,248,0.08)!important; border-radius:10px; }
+.board-row { margin-bottom:40px; }
+
+/* Pagination look */
+.pagination .page-item.active .page-link {
+  background-color:#0b57a4; border-color:#0b57a4;
+}
+.pagination .page-link {
+  color:#0b57a4;
+  border-radius:6px;
+}
+</style>
+
+<!-- ===== JS Logic ===== -->
 <script>
-// fetch board data and render cards
-async function loadBoard(){
-  const res = await fetch("{% url 'board_data' %}");
-  const data = await res.json();
-  const tasks = data.tasks;
-  document.querySelectorAll('.board-column').forEach(c => c.innerHTML = '');
-  tasks.forEach(t=>{
-    const col = document.querySelector(`[data-status="${t.status}"]`) || document.querySelector('.board-column');
-    const card = document.createElement('div');
-    card.className = 'card mb-2 task-card';
-    card.setAttribute('draggable','true');
-    card.dataset.id = t.id;
-    card.innerHTML = `<div class="card-body p-2">
-      <div class="d-flex justify-content-between">
-        <div><strong class="small">${escapeHtml(t.title)}</strong><div class="small text-muted">${t.priority}${t.due_date? ' • Due '+t.due_date : ''}</div></div>
-        <div class="small text-end">${t.assigned_to||''}</div>
-      </div>
-    </div>`;
-    col.appendChild(card);
-  });
+let CURRENT_BOARD_PAGE = 1;
+const PER_PAGE = 10;
+let ALL_TASKS = [];
+
+/* === Load board data, render cards, drag-drop, pagination, and search filter === */
+async function loadBoard(page=1){
+  try {
+    CURRENT_BOARD_PAGE = page;
+    const res = await fetch("{% url 'board_data' %}?page=" + page);
+    const payload = await res.json();
+    const tasks = payload.tasks || [];
+    ALL_TASKS = tasks;
+    const pageNum = payload.page || 1;
+    const totalPages = payload.total_pages || 1;
+    const totalCount = payload.total_count || tasks.length;
+
+    renderAllColumns(tasks);
+    renderPagination(pageNum, totalPages);
+    updateSummary(pageNum, totalCount, totalPages);
+  } catch (err) {
+    console.error("Board load failed", err);
+  }
+}
+
+function renderAllColumns(tasks){
+  document.querySelectorAll(".kanban-body").forEach(c => c.innerHTML = "");
+  tasks.forEach(t => renderCard(t));
   initDragDrop();
+  initSearch(ALL_TASKS);
 }
 
-function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function renderCard(t){
+  const col = document.querySelector(`[data-status="${t.status}"]`) || document.querySelector(".kanban-body");
+  const card = document.createElement("div");
+  card.className = "task-card";
+  card.setAttribute("draggable", "true");
+  card.dataset.id = t.id;
 
-// basic HTML5 drag & drop
+  let displayAssignee = "";
+  if (t.assigned_to_display) displayAssignee = t.assigned_to_display;
+  else if (t.assigned_to && t.assigned_to.startsWith("member:"))
+    displayAssignee = "Member " + t.assigned_to.split(":")[1];
+  else if (t.assigned_to && t.assigned_to.startsWith("team:"))
+    displayAssignee = "Team " + t.assigned_to.split(":")[1];
+
+  card.innerHTML = `
+    <div>
+      <div class="task-title">${escapeHtml(t.title)}</div>
+      <div class="task-meta">
+        ${escapeHtml(t.priority)}${t.due_date ? ' • Due ' + escapeHtml(t.due_date) : ''}
+      </div>
+      ${displayAssignee ? `<div class="assignee-name"><i class="fa-solid fa-user me-1"></i>${escapeHtml(displayAssignee)}</div>` : ''}
+    </div>
+  `;
+
+  // click to open detail (optional)
+  card.addEventListener("click", e => {
+    if (card.dataset.dragging === "1") return;
+    if (typeof TASK_DETAIL_URL_TEMPLATE !== "undefined") {
+      const url = TASK_DETAIL_URL_TEMPLATE.replace("__ID__", t.id);
+      window.location = url;
+    }
+  });
+  col.appendChild(card);
+}
+
+function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 function initDragDrop(){
-  document.querySelectorAll('.task-card').forEach(card=>{
-    card.addEventListener('dragstart', e=>{
-      e.dataTransfer.setData('text/plain', card.dataset.id);
-      card.classList.add('dragging');
+  document.querySelectorAll(".task-card").forEach(card=>{
+    card.addEventListener("dragstart", e=>{
+      e.dataTransfer.setData("text/plain", card.dataset.id);
+      card.dataset.dragging = "1";
+      card.classList.add("dragging");
     });
-    card.addEventListener('dragend', e=> card.classList.remove('dragging'));
+    card.addEventListener("dragend", e=>{
+      card.dataset.dragging = "0";
+      card.classList.remove("dragging");
+    });
   });
 
-  document.querySelectorAll('.board-column').forEach(col=>{
-    col.addEventListener('dragover', e=> { e.preventDefault(); col.classList.add('drag-over'); });
-    col.addEventListener('dragleave', e=> col.classList.remove('drag-over'));
-    col.addEventListener('drop', async e=>{
-      e.preventDefault(); col.classList.remove('drag-over');
-      const id = e.dataTransfer.getData('text/plain');
+  document.querySelectorAll(".kanban-body").forEach(col=>{
+    col.addEventListener("dragover", e=>{ e.preventDefault(); col.classList.add("drag-over"); });
+    col.addEventListener("dragleave", e=>{ col.classList.remove("drag-over"); });
+    col.addEventListener("drop", async e=>{
+      e.preventDefault(); col.classList.remove("drag-over");
+      const id = e.dataTransfer.getData("text/plain");
       const newStatus = col.dataset.status;
-      // call API to update task status
-      const fd = new FormData(); fd.append('task_id', id); fd.append('status', newStatus);
-      const res = await fetch("{% url 'api_update_status' %}", {method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'}, body: fd});
-      const json = await res.json();
-      if(json.ok) { loadBoard(); } else { alert('Status update failed'); }
+      try {
+        const fd = new FormData();
+        fd.append("task_id", id);
+        fd.append("status", newStatus);
+        const res = await fetch("{% url 'api_update_status' %}", {
+          method: "POST",
+          headers: { "X-CSRFToken": "{{ csrf_token }}" },
+          body: fd
+        });
+        const json = await res.json();
+        if(json.ok){ loadBoard(CURRENT_BOARD_PAGE); } else { alert("Status update failed"); }
+      } catch (err) { console.error(err); alert("Network error."); }
     });
   });
 }
 
-// on page load
-document.addEventListener('DOMContentLoaded', loadBoard);
+/* === Search Filter === */
+function initSearch(allTasks){
+  const searchInput = document.getElementById("taskSearch");
+  if (!searchInput) return;
+  searchInput.oninput = e => {
+    const term = e.target.value.toLowerCase();
+    document.querySelectorAll(".task-card").forEach(card => card.style.display = "none");
+    allTasks.forEach(t => {
+      const match =
+        (t.title && t.title.toLowerCase().includes(term)) ||
+        (t.priority && t.priority.toLowerCase().includes(term)) ||
+        (t.assigned_to_display && t.assigned_to_display.toLowerCase().includes(term));
+      if (term === "" || match) {
+        const cardEl = document.querySelector(`.task-card[data-id="${t.id}"]`);
+        if (cardEl) cardEl.style.display = "";
+      }
+    });
+  };
+}
+
+/* === Pagination === */
+function renderPagination(current, total){
+  const container = document.getElementById("boardPagination");
+  if(!container) return;
+  container.innerHTML = "";
+
+  function pageItem(label, page, disabled=false, active=false){
+    const li = document.createElement("li");
+    li.className = "page-item" + (disabled ? " disabled" : "") + (active ? " active" : "");
+    const a = document.createElement("a");
+    a.className = "page-link";
+    a.href = "#";
+    a.textContent = label;
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      if(disabled || page === current) return;
+      loadBoard(page);
+    });
+    li.appendChild(a);
+    return li;
+  }
+
+  // Prev
+  container.appendChild(pageItem("Prev", Math.max(1, current-1), current<=1));
+
+  const pages = new Set();
+  pages.add(1);
+  pages.add(total);
+  for(let p=current-2; p<=current+2; p++) if(p>1 && p<total) pages.add(p);
+  const pagesArr = Array.from(pages).sort((a,b)=>a-b);
+
+  let last = 0;
+  pagesArr.forEach(p=>{
+    if(last && p - last > 1){
+      const ell = document.createElement("li");
+      ell.className = "page-item disabled";
+      ell.innerHTML = '<span class="page-link">…</span>';
+      container.appendChild(ell);
+    }
+    container.appendChild(pageItem(p, p, false, p===current));
+    last = p;
+  });
+
+  // Next
+  container.appendChild(pageItem("Next", Math.min(total, current+1), current>=total));
+}
+
+/* === Summary (X–Y of total) === */
+function updateSummary(page, totalCount, totalPages){
+  const summary = document.getElementById("boardSummary");
+  if(!summary) return;
+  const start = (page-1)*PER_PAGE + 1;
+  const end = Math.min(page*PER_PAGE, totalCount);
+  summary.textContent = `Showing ${start}-${end} of ${totalCount} tasks`;
+}
+
+/* === Init === */
+document.addEventListener("DOMContentLoaded", function(){
+  loadBoard(1);
+});
 </script>
 {% endblock %}

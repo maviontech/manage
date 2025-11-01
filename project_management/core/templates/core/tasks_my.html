@@ -3,84 +3,70 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-  <!-- Page Header -->
+
+  <!-- HEADER -->
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-semibold text-primary">
-      <i class="fa-solid fa-clipboard-list me-2"></i> My Tasks
-    </h4>
     <div>
-      <a href="{% url 'create_task' %}" class="btn btn-sm btn-outline-primary me-2">
+      <h4 class="fw-bold mb-1 text-gradient">
+        <i class="fa-solid fa-clipboard-list me-2"></i> My Tasks
+      </h4>
+      <p class="text-muted small mb-0">View, track and manage your assigned work items.</p>
+    </div>
+    <div>
+      <a href="{% url 'create_task' %}" class="btn btn-gradient me-2">
         <i class="fa-solid fa-plus"></i> New Task
       </a>
-      <a href="{% url 'task_board' %}" class="btn btn-sm btn-primary">
-        <i class="fa-solid fa-th-large"></i> Task Board
+      <a href="{% url 'task_board' %}" class="btn btn-outline-gradient">
+        <i class="fa-solid fa-th-large"></i> Board View
       </a>
     </div>
   </div>
 
-  <!-- Task Table -->
-  <div class="card shadow-sm border-0">
+  <!-- TABLE CARD -->
+  <div class="card soft-card">
     <div class="card-body p-0">
       {% if tasks %}
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
+        <table class="table align-middle mb-0 table-hover modern-table">
+          <thead>
             <tr>
-              <th style="width:5%">#</th>
-              <th style="width:30%">Title</th>
-              <th style="width:15%">Priority</th>
-              <th style="width:15%">Status</th>
-              <th style="width:15%">Due Date</th>
-              <th style="width:20%" class="text-end">Actions</th>
+              <th>#</th>
+              <th>Title</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Due</th>
+              <th class="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
             {% for t in tasks %}
-            <tr class="hover-highlight">
+            <tr>
               <td class="text-muted small">{{ forloop.counter }}</td>
               <td>
-                <div class="fw-semibold">{{ t.title }}</div>
-                <div class="text-muted small">Task ID: {{ t.id }}</div>
+                <div class="fw-semibold text-truncate">{{ t.title }}</div>
+                <small class="text-muted">#{{ t.id }}</small>
               </td>
               <td>
-                {% if t.priority == "Critical" %}
-                  <span class="badge bg-danger">{{ t.priority }}</span>
-                {% elif t.priority == "High" %}
-                  <span class="badge bg-warning text-dark">{{ t.priority }}</span>
-                {% elif t.priority == "Low" %}
-                  <span class="badge bg-secondary">{{ t.priority }}</span>
-                {% else %}
-                  <span class="badge bg-info text-dark">{{ t.priority }}</span>
-                {% endif %}
+                <span class="badge priority {{ t.priority|lower }}">{{ t.priority }}</span>
               </td>
               <td>
-                {% if t.status == "Closed" %}
-                  <span class="badge bg-success"><i class="fa-solid fa-check"></i> {{ t.status }}</span>
-                {% elif t.status == "In Progress" %}
-                  <span class="badge bg-primary"><i class="fa-solid fa-spinner fa-spin"></i> {{ t.status }}</span>
-                {% elif t.status == "Blocked" %}
-                  <span class="badge bg-dark"><i class="fa-solid fa-ban"></i> {{ t.status }}</span>
-                {% elif t.status == "Review" %}
-                  <span class="badge bg-warning text-dark"><i class="fa-solid fa-eye"></i> {{ t.status }}</span>
-                {% else %}
-                  <span class="badge bg-secondary"><i class="fa-solid fa-hourglass-start"></i> {{ t.status }}</span>
-                {% endif %}
+                <span class="badge status {{ t.status|slugify }}">
+                  <i class="fa-solid fa-circle me-1"></i> {{ t.status }}
+                </span>
               </td>
               <td>
                 {% if t.due_date %}
-                  {% if t.due_date < today %}
-                    <span class="text-danger fw-semibold"><i class="fa-solid fa-clock"></i> {{ t.due_date }}</span>
-                  {% else %}
-                    <span class="text-muted">{{ t.due_date }}</span>
-                  {% endif %}
+                  <span class="{% if t.due_date < today %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+                    <i class="fa-regular fa-clock me-1"></i>{{ t.due_date }}
+                  </span>
                 {% else %}
                   <span class="text-muted">—</span>
                 {% endif %}
               </td>
               <td class="text-end">
-                <a href="#" class="btn btn-sm btn-light border"><i class="fa-solid fa-eye"></i></a>
-                <a href="#" class="btn btn-sm btn-light border"><i class="fa-solid fa-pen"></i></a>
-                <a href="#" class="btn btn-sm btn-light border text-danger"><i class="fa-solid fa-trash"></i></a>
+                <a href="{% url 'task_detail' t.id %}" class="btn btn-sm btn-light action-btn" title="View"><i class="fa-solid fa-eye"></i></a>
+                <a href="{% url 'task_edit' t.id %}" class="btn btn-sm btn-light action-btn" title="Edit"><i class="fa-solid fa-pen"></i></a>
+                <button class="btn btn-sm btn-light action-btn text-danger" title="Delete"><i class="fa-solid fa-trash"></i></button>
               </td>
             </tr>
             {% endfor %}
@@ -88,9 +74,9 @@
         </table>
       </div>
       {% else %}
-      <div class="text-center p-5 text-muted">
-        <i class="fa-solid fa-circle-info fa-2x mb-3 d-block"></i>
-        No tasks assigned to you yet.
+      <div class="p-5 text-center text-muted">
+        <i class="fa-regular fa-circle-check fa-2x mb-3"></i><br>
+        You have no assigned tasks.
       </div>
       {% endif %}
     </div>
@@ -98,20 +84,14 @@
 </div>
 
 <style>
-/* Custom Table Styling */
-.table-hover tbody tr:hover {
-  background-color: rgba(56,189,248,0.05);
-}
-.hover-highlight td {
-  transition: background-color 0.3s ease;
-}
-.badge {
-  font-size: 0.8rem;
-  padding: 0.4em 0.65em;
-  border-radius: 0.5rem;
-}
-.btn-sm i {
-  font-size: 0.85rem;
-}
+/* Visual tokens */
+.text-gradient { background: linear-gradient(90deg,#0b57a4,#38bdf8); -webkit-background-clip:text; color:transparent; }
+.btn-gradient { background: linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border:none; border-radius:8px; padding:8px 14px; }
+.btn-outline-gradient { border:1px solid #38bdf8; color:#0b57a4; border-radius:8px; padding:6px 12px; }
+.soft-card { border-radius:12px; box-shadow:0 6px 18px rgba(13,38,71,0.06); border:none; }
+.modern-table thead { background: linear-gradient(90deg, rgba(11,87,164,0.06), rgba(31,134,227,0.04)); color:#0b57a4; font-weight:600; }
+.priority.low { background:#adb5bd; color:#fff; } .priority.normal { background:#0dcaf0; color:#00303f; } .priority.high { background:#ffc107; color:#1f1f1f; } .priority.critical { background:#dc3545; color:#fff; }
+.status.closed { background:#198754; color:#fff; } .status.blocked { background:#212529; color:#fff; } .status.review { background:#ffc107; } .status.in-progress { background:#0b57a4; color:#fff; }
+.action-btn { border-radius:8px; border:1px solid rgba(0,0,0,0.04); }
 </style>
 {% endblock %}

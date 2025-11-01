@@ -12,6 +12,10 @@ from core.db_helpers import get_tenant_conn
 #  CREATE TASK  (GET / POST)
 # ==============================
 def create_task_view(request):
+    """
+    Creates a new task and saves to DB. Supports member/team polymorphic assignment.
+    Requires `assigned_type` column in `tasks` table (ENUM('member','team')).
+    """
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
@@ -23,29 +27,47 @@ def create_task_view(request):
         description = data.get("description")
         due_date = data.get("due_date") or None
         priority = data.get("priority") or "Normal"
-        assigned_to = data.get("assigned_to") or None
         status = data.get("status") or "Open"
         created_by = request.session.get("user_id")
 
+        # --- NEW FIX ---
+        assigned_raw = data.get("assigned_to") or None
+        assigned_to, assigned_type = None, None
+        if assigned_raw:
+            if ":" in assigned_raw:
+                assigned_type, assigned_to = assigned_raw.split(":", 1)
+            else:
+                assigned_type, assigned_to = "member", assigned_raw
+
+        # --- INSERT ---
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, created_by, due_date, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
-            (project_id, subproject_id, title, description, status,
-             priority, assigned_to, created_by, due_date)
+                assigned_to, assigned_type, created_by, due_date, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+            (
+                project_id,
+                subproject_id,
+                title,
+                description,
+                status,
+                priority,
+                assigned_to,
+                assigned_type,
+                created_by,
+                due_date,
+            ),
         )
         task_id = cur.lastrowid
 
-        # log activity
+        # Log activity
         cur.execute(
             "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
-            ("task", task_id, "created", created_by)
+            ("task", task_id, "created", created_by),
         )
+
         conn.commit()
         cur.close()
-
-        # redirect to board or my tasks
         return redirect("task_board")
 
     # --- GET ---
@@ -72,10 +94,11 @@ def my_tasks_view(request):
     cur = conn.cursor()
     user_id = request.session.get("user_id")
 
+    # Match both assigned_to and assigned_type='member'
     cur.execute(
         """SELECT id, title, status, priority, due_date
            FROM tasks
-           WHERE assigned_to = %s
+           WHERE assigned_type='member' AND assigned_to = %s
            ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
                     due_date IS NULL, due_date ASC""",
         (user_id,),
@@ -83,7 +106,8 @@ def my_tasks_view(request):
     tasks = cur.fetchall()
     cur.close()
 
-    return render(request, "core/tasks_my.html", {"tasks": tasks, "page": "my_tasks"})
+    today = datetime.date.today()
+    return render(request, "core/tasks_my.html", {"tasks": tasks, "page": "my_tasks", "today": today})
 
 
 # ==============================
@@ -95,13 +119,23 @@ def unassigned_tasks_view(request):
     sql = """SELECT t.id, t.title, t.priority, t.due_date, p.name AS project_name, t.created_at
              FROM tasks t
              LEFT JOIN projects p ON p.id = t.project_id
-             WHERE t.assigned_to IS NULL
+             WHERE t.assigned_to IS NULL OR t.assigned_type IS NULL
              ORDER BY t.priority DESC, t.due_date IS NULL, t.due_date ASC, t.created_at DESC"""
     cur.execute(sql)
     rows = cur.fetchall()
+
+    # also needed for modal dropdown
+    cur.execute("SELECT id, email, first_name, last_name FROM members ORDER BY first_name")
+    members = cur.fetchall()
+    cur.execute("SELECT id, name FROM teams ORDER BY name")
+    teams = cur.fetchall()
     cur.close()
 
-    return render(request, "core/unassigned_tasks.html", {"tasks": rows, "page": "unassigned_tasks"})
+    return render(
+        request,
+        "core/unassigned_tasks.html",
+        {"tasks": rows, "members": members, "teams": teams, "page": "unassigned_tasks"},
+    )
 
 
 # ==============================
@@ -109,23 +143,91 @@ def unassigned_tasks_view(request):
 # ==============================
 def task_board_view(request):
     status_columns = ["Open", "In Progress", "Review", "Blocked", "Closed"]
-    return render(request, "core/task_board.html", {"page": "task_board", "status_columns": status_columns})
+    return render(
+        request,
+        "core/task_board.html",
+        {"page": "task_board", "status_columns": status_columns},
+    )
 
 
+from math import ceil
+from django.http import JsonResponse
 
 def board_data_api(request):
-    """Return JSON payload for Kanban board"""
+    """
+    Paginated task data for the Kanban board.
+    Compatible with both dict and tuple-returning cursors.
+    """
     conn = get_tenant_conn(request)
     cur = conn.cursor()
-    cur.execute(
-        """SELECT id, title, status, priority, assigned_to, due_date
-           FROM tasks
-           ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
-                    priority DESC, due_date IS NULL, due_date ASC"""
-    )
-    tasks = cur.fetchall()
+
+    # ---- Pagination ----
+    try:
+        page = int(request.GET.get("page", "1"))
+    except Exception:
+        page = 1
+    if page < 1:
+        page = 1
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    # ---- Total count (works for dict or tuple) ----
+    cur.execute("SELECT COUNT(*) AS total FROM tasks")
+    row = cur.fetchone()
+    if isinstance(row, dict):
+        total_count = row.get("total", 0)
+    elif isinstance(row, (list, tuple)):
+        total_count = row[0]
+    else:
+        total_count = 0
+    total_pages = ceil(total_count / per_page) if total_count else 1
+
+    # ---- Main query ----
+    cur.execute(f"""
+        SELECT
+            t.id,
+            COALESCE(t.title, '(Untitled)') AS title,
+            COALESCE(t.status, 'Open') AS status,
+            COALESCE(t.priority, 'Normal') AS priority,
+            t.due_date,
+            CONCAT_WS(':', t.assigned_type, t.assigned_to) AS assigned_to,
+            CASE
+                WHEN t.assigned_type='member' THEN (
+                    SELECT CONCAT(m.first_name, ' ', m.last_name)
+                    FROM members m WHERE m.id=t.assigned_to
+                )
+                WHEN t.assigned_type='team' THEN (
+                    SELECT tm.name FROM teams tm WHERE tm.id=t.assigned_to
+                )
+                ELSE NULL
+            END AS assigned_to_display
+        FROM tasks t
+        ORDER BY
+            FIELD(t.status,'Open','In Progress','Review','Blocked','Closed'),
+            FIELD(t.priority,'Critical','High','Normal','Low'),
+            t.due_date IS NULL ASC, t.due_date ASC, t.created_at DESC
+        LIMIT %s OFFSET %s
+    """, (per_page, offset))
+
+    # ---- Convert rows to list of dicts ----
+    rows = cur.fetchall()
+    if not rows:
+        tasks = []
+    elif isinstance(rows[0], dict):
+        tasks = rows
+    else:
+        cols = [desc[0] for desc in cur.description]
+        tasks = [dict(zip(cols, r)) for r in rows]
+
     cur.close()
-    return JsonResponse({"tasks": tasks})
+    return JsonResponse({
+        "tasks": tasks,
+        "page": page,
+        "per_page": per_page,
+        "total_count": total_count,
+        "total_pages": total_pages
+    })
+
 
 
 # ==============================
@@ -142,7 +244,16 @@ def assign_task_api(request):
     if not task_id or not assignee:
         return HttpResponseBadRequest("Missing parameters")
 
-    cur.execute("UPDATE tasks SET assigned_to=%s, updated_at=NOW() WHERE id=%s", (assignee, task_id))
+    assigned_type, assigned_to = None, None
+    if ":" in assignee:
+        assigned_type, assigned_to = assignee.split(":", 1)
+    else:
+        assigned_type, assigned_to = "member", assignee
+
+    cur.execute(
+        "UPDATE tasks SET assigned_to=%s, assigned_type=%s, updated_at=NOW() WHERE id=%s",
+        (assigned_to, assigned_type, task_id),
+    )
     cur.execute(
         "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
         ("task", task_id, f"assigned_to:{assignee}", assigned_by),
@@ -190,16 +301,23 @@ def bulk_import_csv_view(request):
         f = request.FILES["csv_file"]
         text = f.read().decode("utf-8")
         reader = csv.DictReader(io.StringIO(text))
-        inserted = 0
-        errors = []
+        inserted, errors = 0, []
 
         for i, row in enumerate(reader, start=1):
             try:
+                assigned_raw = row.get("assigned_to") or None
+                assigned_to, assigned_type = None, None
+                if assigned_raw:
+                    if ":" in assigned_raw:
+                        assigned_type, assigned_to = assigned_raw.split(":", 1)
+                    else:
+                        assigned_type, assigned_to = "member", assigned_raw
+
                 cur.execute(
                     """INSERT INTO tasks
                        (project_id, subproject_id, title, description, status, priority,
-                        assigned_to, created_by, due_date, created_at)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                        assigned_to, assigned_type, created_by, due_date, created_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
                     (
                         row.get("project_id") or None,
                         row.get("subproject_id") or None,
@@ -207,7 +325,8 @@ def bulk_import_csv_view(request):
                         row.get("description"),
                         row.get("status") or "Open",
                         row.get("priority") or "Normal",
-                        row.get("assigned_to") or None,
+                        assigned_to,
+                        assigned_type,
                         request.session.get("user_id"),
                         row.get("due_date") or None,
                     ),
@@ -218,7 +337,6 @@ def bulk_import_csv_view(request):
 
         conn.commit()
         cur.close()
-
         context.update({"inserted": inserted, "errors": errors})
         return render(request, "core/tasks_bulk_import_result.html", context)
 

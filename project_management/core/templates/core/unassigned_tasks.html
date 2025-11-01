@@ -1,61 +1,93 @@
 {% extends "core/base.html" %}
+{% load static %}
 {% block content %}
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>Unassigned Tasks</h4>
-    <a href="{% url 'create_task' %}" class="btn btn-sm btn-success">Create Task</a>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold text-gradient"><i class="fa-solid fa-user-clock me-2"></i> Unassigned Tasks</h4>
+      <p class="text-muted small mb-0">Assign tasks quickly to team members or teams.</p>
+    </div>
+    <div>
+      <a href="{% url 'create_task' %}" class="btn btn-gradient"><i class="fa-solid fa-plus me-1"></i> New Task</a>
+    </div>
   </div>
 
-  <div class="list-group shadow-sm">
+  {% if tasks %}
+  <div class="row g-3">
     {% for t in tasks %}
-    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
-      <div>
-        <h6 class="mb-1">{{ t.title }}</h6>
-        <small class="text-muted">{{ t.project_name|default:"—" }} • Created {{ t.created_at }}</small>
-        <div class="mt-1"><span class="badge bg-secondary">{{ t.priority }}</span>
-          {% if t.due_date %}<small class="ms-2 text-danger">Due {{ t.due_date }}</small>{% endif %}
+    <div class="col-xl-4 col-lg-6">
+      <div class="task-card p-3">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="me-2">
+            <h6 class="fw-semibold mb-0 text-truncate" title="{{ t.title }}">{{ t.title }}</h6>
+            <div class="text-muted small mt-1">{{ t.project_name|default:"—" }}</div>
+          </div>
+          <div class="text-end">
+            <span class="badge priority {{ t.priority|lower }}">{{ t.priority }}</span>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <small class="text-muted"><i class="fa-regular fa-calendar me-1"></i>{{ t.due_date|default:"No due date" }}</small>
+          <div>
+            <button data-task="{{ t.id }}" class="btn btn-sm btn-outline-gradient assign-btn"><i class="fa-solid fa-user-plus me-1"></i>Assign</button>
+          </div>
         </div>
       </div>
-      <div class="text-end">
-        <button class="btn btn-sm btn-outline-primary assign-btn" data-task="{{ t.id }}">Assign</button>
-      </div>
     </div>
-    {% empty %}
-    <div class="p-4 text-muted">No unassigned tasks found.</div>
     {% endfor %}
   </div>
+  {% else %}
+  <div class="p-5 text-center text-muted">
+    <i class="fa-solid fa-circle-info fa-2x mb-3 d-block"></i>
+    No unassigned tasks found.
+  </div>
+  {% endif %}
 </div>
 
-<!-- small assign modal -->
-<div class="modal fade" id="assignModal" tabindex="-1">
-  <div class="modal-dialog">
+<!-- Assign Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
     <form id="assignForm" class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Assign Task</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-header">
+        <h5 class="modal-title">Assign Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
       <div class="modal-body">
         <input type="hidden" name="task_id" id="modal_task_id">
-        <label class="form-label">Assign to</label>
-        <select name="assignee" class="form-select" id="modal_assignee">
-          <option value="">-- choose --</option>
+        <label class="form-label small">Assign to</label>
+        <select id="modal_assignee" name="assignee" class="form-select" required>
+          <option value="">-- choose member or team --</option>
           <optgroup label="Members">
             {% for m in members %}
-              <option value="member:{{m.id}}">{{ m.first_name }} {{m.last_name}}</option>
+              <option value="member:{{ m.id }}">{{ m.first_name }} {{ m.last_name }} — {{ m.email }}</option>
             {% endfor %}
           </optgroup>
           <optgroup label="Teams">
             {% for t in teams %}
-              <option value="team:{{t.id}}">Team: {{t.name}}</option>
+              <option value="team:{{ t.id }}">Team: {{ t.name }}</option>
             {% endfor %}
           </optgroup>
         </select>
       </div>
-      <div class="modal-footer"><button type="submit" class="btn btn-primary">Assign</button></div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-gradient w-100"><i class="fa-solid fa-check me-1"></i> Assign</button>
+      </div>
     </form>
   </div>
 </div>
 
+<style>
+.task-card { background:#fff; border-radius:12px; box-shadow:0 6px 18px rgba(13,38,71,0.04); transition:transform .18s ease, box-shadow .18s ease; }
+.task-card:hover { transform:translateY(-4px); box-shadow:0 10px 30px rgba(13,38,71,0.06); }
+.priority.low { background:#adb5bd; color:#fff; } .priority.normal { background:#0dcaf0; color:#05292b; } .priority.high { background:#ffc107; color:#000; } .priority.critical { background:#dc3545; color:#fff; }
+.btn-outline-gradient { border:1px solid #38bdf8; color:#0b57a4; border-radius:8px; }
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-  const bsModal = new bootstrap.Modal(document.getElementById('assignModal'));
+  const assignModalEl = document.getElementById('assignModal');
+  const bsModal = new bootstrap.Modal(assignModalEl);
   document.querySelectorAll('.assign-btn').forEach(btn=>{
     btn.addEventListener('click', ()=> {
       document.getElementById('modal_task_id').value = btn.dataset.task;
@@ -63,12 +95,27 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 
-  document.getElementById('assignForm').addEventListener('submit', async (ev)=>{
+  document.getElementById('assignForm').addEventListener('submit', async (ev) => {
     ev.preventDefault();
-    let form = new FormData(ev.target);
-    let res = await fetch("{% url 'api_assign_task' %}", {method:"POST", headers:{'X-CSRFToken': '{{ csrf_token }}' }, body: form});
-    let data = await res.json();
-    if(data.ok){ location.reload(); } else { alert('Assign failed'); }
+    const form = ev.target;
+    const fd = new FormData(form);
+    try {
+      const res = await fetch("{% url 'api_assign_task' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: fd
+      });
+      const data = await res.json();
+      if (data.ok) {
+        bsModal.hide();
+        location.reload();
+      } else {
+        alert('Assign failed. Try again.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error.');
+    }
   });
 });
 </script>
