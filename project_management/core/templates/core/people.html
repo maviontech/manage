@@ -1,103 +1,378 @@
-<!-- people.html -->
 {% extends "core/base.html" %}
 {% block content %}
-<div class="page-grid">
-  <div class="card">
-    <div class="card-header">
-      <h3>People</h3>
-      <button id="btn-new-member" class="btn primary">Add Member</button>
+<style>
+/* Scoped styling for People page - keep small and non-invasive */
+.people-page { max-width: 1200px; margin: 18px auto; padding: 0 16px; }
+.page-hero { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+.page-title { font-size:24px; font-weight:700; color: #1f3f6b; }
+.page-sub { color:#5f6b7a; font-size:13px; }
+
+.grid { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
+
+/* cards */
+.card { background:#fff; border-radius:12px; box-shadow: 0 6px 18px rgba(20,30,60,0.06); padding:18px; }
+.form-card { flex: 1 1 380px; min-width:320px; }
+.list-card { flex: 2 1 680px; min-width:360px; }
+
+/* form */
+.form-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+.form-row .field { flex: 1 1 180px; min-width:140px; }
+.label { font-size:13px; color:#333; margin-bottom:6px; display:block; }
+.input, .select { width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:14px; background:#fcfdff; }
+.checkbox-inline { display:inline-flex; align-items:center; gap:6px; font-size:14px; color:#444; }
+
+/* buttons */
+.btn { padding:8px 12px; border-radius:8px; border: none; cursor:pointer; font-weight:600; }
+.btn.primary { background:#1976d2; color:#fff; box-shadow: 0 4px 10px rgba(25,118,210,0.12); }
+.btn.ghost { background:transparent; border:1px solid #d1d9e6; color:#2b3a4a; }
+.btn.small { padding:6px 8px; font-size:13px; }
+
+/* people table */
+.table { width:100%; border-collapse:collapse; font-size:14px; }
+.table th, .table td { padding:10px 12px; text-align:left; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.table th { color:#4b5563; font-weight:700; background:transparent; font-size:13px; }
+.avatar { width:36px; height:36px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; background:#1976d2; }
+
+/* pagination */
+.pager { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:12px; }
+.page-num { padding:6px 8px; border-radius:6px; cursor:pointer; border:1px solid transparent; }
+.page-num.active { background:#1976d2; color:#fff; border-color:#1976d2; }
+
+/* small helpers */
+.search-box { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.empty { color:#6b7280; padding:18px 0; text-align:center; }
+@media (max-width:900px) {
+  .page-hero { flex-direction:column; align-items:flex-start; gap:8px;}
+  .pager { justify-content:flex-start; }
+}
+</style>
+
+<div class="people-page">
+  <div class="page-hero">
+    <div>
+      <div class="page-title">People &amp; Directory</div>
+      <div class="page-sub">Manage your organization's members — add, invite, and assign team membership.</div>
     </div>
-    <div class="card-body">
-      <input id="people-search" placeholder="Search by name or email" class="input" />
-      <table class="zebra" id="people-table">
-        <thead>
-          <tr><th>Avatar</th><th>First</th><th>Last</th><th>Email</th><th>Phone</th><th>Actions</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <div>
+      <button id="btn-open-form" class="btn primary">Add Member</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Add / Update Member form (inline by default) -->
+    <div class="card form-card" id="add-member-card" aria-hidden="false">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h4 style="margin:0">Add / Update Member</h4>
+        <button id="btn-close-form" class="btn ghost" title="Hide form" style="display:none">Close</button>
+      </div>
+
+      <form id="form-member" autocomplete="off">
+        <div class="form-row">
+          <div class="field">
+            <label class="label">Email</label>
+            <input class="input" name="email" type="email" placeholder="user@company.com" required />
+          </div>
+          <div class="field">
+            <label class="label">First name</label>
+            <input class="input" name="first_name" placeholder="First name" />
+          </div>
+          <div class="field">
+            <label class="label">Last name</label>
+            <input class="input" name="last_name" placeholder="Last name" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label class="label">Phone</label>
+            <input class="input" name="phone" placeholder="+91 99999 99999" />
+          </div>
+          <div style="flex:0 0 auto; display:flex; align-items:center;">
+            <label class="checkbox-inline"><input type="checkbox" name="create_user" checked /> Create user account</label>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:6px;">
+          <button type="submit" class="btn primary">Save Member</button>
+          <button type="button" id="btn-reset" class="btn ghost">Reset</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- People list -->
+    <div class="card list-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h4 style="margin:0">People</h4>
+        <div class="search-box">
+          <input id="people-search" class="input" placeholder="Search by name or email" />
+          <select id="page-size" class="select" style="padding:8px 10px; border-radius:6px;">
+            <option value="10">10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="overflow:auto;">
+        <table class="table" id="people-table" aria-live="polite">
+          <thead>
+            <tr><th style="width:64px">Avatar</th><th>Name</th><th>Email</th><th>Phone</th><th style="width:120px">Actions</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+        <div id="list-stats" class="page-sub">0 members</div>
+        <div class="pager" id="pager"></div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- modal create member -->
-<div id="modal-member" class="modal hidden">
-  <form id="form-member">
-    <h4>Add / Update Member</h4>
-    <label>Email</label>
-    <input name="email" type="email" required />
-    <label>First name</label>
-    <input name="first_name" />
-    <label>Last name</label>
-    <input name="last_name" />
-    <label>Phone</label>
-    <input name="phone" />
-    <label><input type="checkbox" name="create_user" checked /> Create user account</label>
-    <div class="modal-actions">
-      <button type="submit" class="btn primary">Save</button>
-      <button type="button" id="modal-close" class="btn">Cancel</button>
-    </div>
-  </form>
-</div>
-
 <script>
-async function api(path, opts={}) {
-  opts.headers = opts.headers || {};
-  if (!opts.method) opts.method = 'GET';
-  return fetch(path, opts).then(r => r.json());
+/* People page JS
+   - Loads /api/people/list
+   - Renders table with client-side pagination and search
+   - Keeps existing POST to /api/people/create for form submission
+*/
+
+const API = {
+  list: '/api/people/list',
+  create: '/api/people/create'
+};
+
+let PEOPLE_DATA = [];    // full dataset from server
+let FILTERED = [];      // filtered rows after search
+let CURRENT_PAGE = 1;
+let PAGE_SIZE = 10;
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? decodeURIComponent(v.pop()) : '';
+}
+
+const DEFAULT_HEADERS = {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')};
+
+async function apiFetch(path, opts = {}) {
+  opts.headers = Object.assign({}, DEFAULT_HEADERS, opts.headers || {});
+  return fetch(path, opts).then(res => res.json());
 }
 
 async function loadPeople() {
-  const r = await api('/api/people/list');
+  try {
+    const res = await apiFetch(API.list);
+    if (!res.ok) {
+      console.error('Failed to load people', res);
+      PEOPLE_DATA = [];
+      renderTable();
+      return;
+    }
+    PEOPLE_DATA = res.members || [];
+    // normalize: ensure first_name/last_name keys exist
+    PEOPLE_DATA = PEOPLE_DATA.map(r => ({
+      id: r.id,
+      email: r.email || '',
+      first_name: r.first_name || '',
+      last_name: r.last_name || '',
+      phone: r.phone || ''
+    }));
+    applyFilterAndRender();
+  } catch (err) {
+    console.error('loadPeople error', err);
+    PEOPLE_DATA = [];
+    renderTable();
+  }
+}
+
+function applyFilterAndRender() {
+  const q = document.getElementById('people-search').value.trim().toLowerCase();
+  if (q) {
+    FILTERED = PEOPLE_DATA.filter(p =>
+      (p.email || '').toLowerCase().includes(q) ||
+      ((p.first_name || '') + ' ' + (p.last_name || '')).toLowerCase().includes(q)
+    );
+  } else {
+    FILTERED = PEOPLE_DATA.slice();
+  }
+  PAGE_SIZE = parseInt(document.getElementById('page-size').value, 10) || 10;
+  CURRENT_PAGE = 1;
+  renderTable();
+}
+
+function renderTable() {
   const tbody = document.querySelector('#people-table tbody');
   tbody.innerHTML = '';
-  r.members.forEach(m=>{
+  const total = FILTERED.length;
+  document.getElementById('list-stats').textContent = `${total} member${total !== 1 ? 's' : ''}`;
+
+  if (total === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">No members found. Add a member using the form.</td></tr>`;
+    document.getElementById('pager').innerHTML = '';
+    return;
+  }
+
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(Math.max(1, CURRENT_PAGE), pages);
+  const start = (page - 1) * PAGE_SIZE;
+  const chunk = FILTERED.slice(start, start + PAGE_SIZE);
+
+  for (const p of chunk) {
+    const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || '-';
+    const avatarChar = (p.first_name || p.email || '?').charAt(0).toUpperCase();
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.first_name ? m.first_name[0] : m.email[0]}</td>
-      <td>${m.first_name||''}</td><td>${m.last_name||''}</td>
-      <td>${m.email}</td><td>${m.phone||''}</td>
+    tr.innerHTML = `
+      <td><div class="avatar">${avatarChar}</div></td>
+      <td><div style="font-weight:600">${name}</div></td>
+      <td>${p.email}</td>
+      <td>${p.phone || ''}</td>
       <td>
-        <button class="btn small" data-email="${m.email}" onclick="editMember('${m.email}')">Edit</button>
+        <button class="btn small ghost" data-email="${p.email}" onclick="onEdit('${p.email}')">Edit</button>
       </td>`;
     tbody.appendChild(tr);
-  });
+  }
+
+  renderPager(pages, page);
 }
 
-function showModal() { document.getElementById('modal-member').classList.remove('hidden'); }
-function hideModal(){ document.getElementById('modal-member').classList.add('hidden'); }
+function renderPager(totalPages, current) {
+  const pager = document.getElementById('pager');
+  pager.innerHTML = '';
+  // prev
+  const prev = document.createElement('button');
+  prev.className = 'page-num';
+  prev.textContent = 'Prev';
+  prev.disabled = current <= 1;
+  prev.onclick = () => changePage(current - 1);
+  pager.appendChild(prev);
 
-document.getElementById('btn-new-member').addEventListener('click', ()=> {
-  document.getElementById('form-member').reset();
-  showModal();
-});
-document.getElementById('modal-close').addEventListener('click', hideModal);
+  // show a few page numbers
+  const windowSize = 5;
+  let start = Math.max(1, current - Math.floor(windowSize/2));
+  let end = Math.min(totalPages, start + windowSize - 1);
+  if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
 
-document.getElementById('form-member').addEventListener('submit', async (ev)=>{
+  for (let i = start; i <= end; i++) {
+    const b = document.createElement('button');
+    b.className = 'page-num' + (i === current ? ' active' : '');
+    b.textContent = i;
+    b.onclick = () => changePage(i);
+    pager.appendChild(b);
+  }
+
+  // next
+  const next = document.createElement('button');
+  next.className = 'page-num';
+  next.textContent = 'Next';
+  next.disabled = current >= totalPages;
+  next.onclick = () => changePage(current + 1);
+  pager.appendChild(next);
+}
+
+function changePage(p) {
+  CURRENT_PAGE = p;
+  renderTable();
+}
+
+function onEdit(email) {
+  // simple behavior: populate form with email and show it
+  const member = PEOPLE_DATA.find(x => x.email === email);
+  if (member) {
+    const form = document.getElementById('form-member');
+    form.email.value = member.email || '';
+    form.first_name.value = member.first_name || '';
+    form.last_name.value = member.last_name || '';
+    form.phone.value = member.phone || '';
+    // ensure form visible
+    showForm();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+/* Form handlers */
+document.getElementById('form-member').addEventListener('submit', async function (ev) {
   ev.preventDefault();
-  const form = ev.target;
-  const data = {
-    email: form.email.value,
-    first_name: form.first_name.value,
-    last_name: form.last_name.value,
-    phone: form.phone.value,
-    create_user: form.create_user.checked
+  const f = ev.target;
+  const payload = {
+    email: f.email.value.trim(),
+    first_name: f.first_name.value.trim(),
+    last_name: f.last_name.value.trim(),
+    phone: f.phone.value.trim(),
+    create_user: !!f.create_user.checked
   };
-  const r = await api('/api/people/create', { method:'POST', body: JSON.stringify(data), headers:{'Content-Type':'application/json'}});
-  if (r.ok) {
-    hideModal();
-    loadPeople();
-    if (r.password) {
-      alert('User created. Temporary password: ' + r.password + '\nPlease instruct user to change it.');
+  try {
+    const r = await apiFetch(API.create, { method: 'POST', body: JSON.stringify(payload) });
+    if (r && r.ok) {
+      // success
+      showToast('Member saved');
+      // clear form or keep values (we keep)
+      await loadPeople();
+      // if backend returned a temporary password, show it (only for dev/testing)
+      if (r.password) {
+        alert('Temporary password for new user: ' + r.password + '\nPlease share securely.');
+      }
+    } else {
+      console.error('Save failed', r);
+      showToast('Save failed: ' + (r && r.error ? r.error : 'unknown'));
     }
-  } else alert('Error: ' + (r.error||'unknown'));
+  } catch (err) {
+    console.error('Save error', err);
+    showToast('Server error while saving member');
+  }
 });
 
-async function editMember(email) {
-  // find member in table and populate
-  // simply open modal and set email - real app should fetch details
-  document.getElementById('form-member').email.value = email;
-  showModal();
+document.getElementById('btn-reset').addEventListener('click', function () {
+  document.getElementById('form-member').reset();
+});
+
+document.getElementById('people-search').addEventListener('input', () => {
+  applyFilterAndRender();
+});
+
+document.getElementById('page-size').addEventListener('change', () => {
+  applyFilterAndRender();
+});
+
+/* Show / hide form */
+function showForm() {
+  document.getElementById('add-member-card').style.display = 'block';
+  const closeBtn = document.getElementById('btn-close-form');
+  closeBtn.style.display = 'inline-block';
+}
+function hideForm() {
+  document.getElementById('add-member-card').style.display = 'none';
+  document.getElementById('btn-close-form').style.display = 'none';
 }
 
-document.addEventListener('DOMContentLoaded', loadPeople);
+document.getElementById('btn-open-form').addEventListener('click', () => {
+  showForm();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+document.getElementById('btn-close-form').addEventListener('click', () => {
+  hideForm();
+});
+
+/* Simple toast (non-blocking) */
+function showToast(msg) {
+  const d = document.createElement('div');
+  d.textContent = msg;
+  d.style.position = 'fixed';
+  d.style.right = '18px';
+  d.style.bottom = '18px';
+  d.style.background = '#111827';
+  d.style.color = '#fff';
+  d.style.padding = '10px 14px';
+  d.style.borderRadius = '8px';
+  d.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 2600);
+}
+
+/* Init */
+document.addEventListener('DOMContentLoaded', () => {
+  // keep form visible initially (we want Add member first)
+  showForm();
+  loadPeople();
+});
 </script>
 {% endblock %}

@@ -1,177 +1,603 @@
-<!-- teams.html -->
 {% extends "core/base.html" %}
 {% block content %}
-<div class="page-grid columns">
-  <div class="left-col card">
-    <div class="card-header">
-      <h3>Teams</h3>
-      <button id="btn-create-team" class="btn primary">Create Team</button>
+<style>
+/* Scoped styling - keep consistent with people page */
+.teams-page { max-width: 1200px; margin: 18px auto; padding: 0 16px; }
+.page-hero { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+.page-title { font-size:24px; font-weight:700; color: #1f3f6b; }
+.page-sub { color:#5f6b7a; font-size:13px; }
+
+.container { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
+
+/* cards */
+.card { background:#fff; border-radius:12px; box-shadow: 0 6px 18px rgba(20,30,60,0.06); padding:18px; }
+.left-card { flex: 0 0 320px; min-width:260px; }
+.right-card { flex: 1 1 740px; min-width:360px; }
+
+/* team list */
+.team-item { display:flex; align-items:center; justify-content:space-between; padding:10px 8px; border-radius:8px; cursor:pointer; gap:8px; }
+.team-item:hover { background:#f4f8ff; }
+.team-item.active { background:#e8f0ff; border-left:4px solid #1976d2; }
+.team-name { font-weight:600; color:#1f3f6b; }
+.team-meta { color:#6b7280; font-size:13px; }
+
+.form-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+.field { flex: 1 1 180px; min-width:140px; }
+.label { font-size:13px; color:#333; margin-bottom:6px; display:block; }
+.input, .select { width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:14px; background:#fcfdff; }
+
+/* buttons */
+.btn { padding:8px 12px; border-radius:8px; border: none; cursor:pointer; font-weight:600; }
+.btn.primary { background:#1976d2; color:#fff; box-shadow: 0 4px 10px rgba(25,118,210,0.12); }
+.btn.ghost { background:transparent; border:1px solid #d1d9e6; color:#2b3a4a; }
+.btn.small { padding:6px 8px; font-size:13px; }
+
+/* members table */
+.table { width:100%; border-collapse:collapse; font-size:14px; }
+.table th, .table td { padding:10px 12px; text-align:left; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.table th { color:#4b5563; font-weight:700; background:transparent; font-size:13px; }
+
+/* avatar */
+.avatar { width:36px; height:36px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; background:#1976d2; }
+
+/* pagination */
+.pager { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:12px; }
+.page-num { padding:6px 8px; border-radius:6px; cursor:pointer; border:1px solid transparent; }
+.page-num.active { background:#1976d2; color:#fff; border-color:#1976d2; }
+
+.empty { color:#6b7280; padding:18px 0; text-align:center; }
+
+/* Autocomplete dropdown (simple) */
+.autocomplete-wrapper { position:relative; }
+.autocomplete-list { position:absolute; left:0; right:0; top:100%; background:#fff; border:1px solid #e6eefc; max-height:240px; overflow:auto; z-index:1400; border-radius:6px; box-shadow:0 8px 30px rgba(20,30,60,0.08); }
+.autocomplete-item { padding:8px 10px; cursor:pointer; display:flex; justify-content:space-between; gap:8px; }
+.autocomplete-item:hover { background:#f4f8ff; }
+.autocomplete-muted { color:#6b7280; font-size:13px; }
+
+@media (max-width:900px) {
+  .page-hero { flex-direction:column; align-items:flex-start; gap:8px;}
+}
+</style>
+
+<div class="teams-page">
+  <div class="page-hero">
+    <div>
+      <div class="page-title">Teams &amp; Collaboration</div>
+      <div class="page-sub">Create teams, assign members, and manage team leads.</div>
     </div>
-    <div class="card-body">
-      <ul id="teams-list" class="compact-list"></ul>
+    <div>
+      <button id="btn-new-team" class="btn primary">New Team</button>
     </div>
   </div>
 
-  <div class="right-col card">
-    <div class="card-body" id="team-details">
-      <h3 id="team-name">Select a team</h3>
-      <p id="team-desc"></p>
-      <div>
-        <button id="btn-add-member" class="btn">Add member</button>
+  <div class="container">
+    <!-- left: teams list -->
+    <div class="card left-card" id="teams-list-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong style="font-size:15px">Teams</strong>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input id="team-search" class="input" placeholder="Search teams" style="width:150px; padding:6px 8px;" />
+          <select id="teams-page-size" class="select" style="padding:6px 8px; border-radius:6px;">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+        </div>
       </div>
-      <table class="zebra" id="team-members">
-        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
+
+      <div id="teams-list" style="display:flex; flex-direction:column; gap:6px; max-height:520px; overflow:auto;">
+        <!-- dynamic items -->
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+        <div class="pager" id="teams-pager"></div>
+      </div>
+    </div>
+
+    <!-- right: team details -->
+    <div class="card right-card" id="team-details-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div>
+          <h3 id="team-title" style="margin:0">Select a team</h3>
+          <div id="team-desc" style="color:#6b7280; font-size:13px; margin-top:4px"></div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="btn-add-member" class="btn ghost">Add Member</button>
+          <button id="btn-set-lead" class="btn ghost" style="display:none">Set Lead</button>
+        </div>
+      </div>
+
+      <div id="team-meta" style="margin-bottom:12px; color:#4b5563; font-size:14px;"></div>
+
+      <div style="overflow:auto;">
+        <table class="table" id="team-members-table">
+          <thead><tr><th style="width:64px">Avatar</th><th>Name</th><th>Email</th><th>Role</th><th style="width:120px">Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+        <div id="team-member-count" class="page-sub">0 members</div>
+        <div class="pager" id="members-pager"></div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- create team modal -->
-<div id="modal-create-team" class="modal hidden">
-  <form id="form-create-team">
-    <h4>Create Team</h4>
-    <label>Team name</label>
-    <input name="name" required />
-    <label>Description</label>
-    <textarea name="description"></textarea>
-    <label>Team lead (email)</label>
-    <input name="lead_email" placeholder="lead@example.com" />
-    <div class="modal-actions">
-      <button type="submit" class="btn primary">Create</button>
-      <button type="button" id="create-team-cancel" class="btn">Cancel</button>
+<!-- Create team modal (inline but hidden) -->
+<div id="modal-create-team" style="display:none; position:fixed; left:0; right:0; top:0; bottom:0; align-items:center; justify-content:center; background:rgba(8,12,20,0.45); z-index:1200;">
+  <div style="width:520px; max-width:95%; margin:auto;">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h4 style="margin:0">Create Team</h4>
+        <button id="modal-create-team-close" class="btn ghost">Close</button>
+      </div>
+      <form id="form-create-team">
+        <div class="form-row">
+          <div class="field">
+            <label class="label">Team name</label>
+            <input class="input" name="name" placeholder="e.g., Platform Team" required />
+          </div>
+          <div class="field">
+            <label class="label">Team lead email (optional)</label>
+            <input class="input" name="lead_email" placeholder="lead@company.com" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field" style="flex:1 1 100%;">
+            <label class="label">Description</label>
+            <input class="input" name="description" placeholder="Short description" />
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button type="submit" class="btn primary">Create</button>
+          <button type="button" id="btn-create-cancel" class="btn ghost">Cancel</button>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
 </div>
 
-<!-- add member modal -->
-<div id="modal-add-member" class="modal hidden">
-  <form id="form-add-member">
-    <h4>Add Member to Team</h4>
-    <label>Member Email</label>
-    <input name="email" required />
-    <label>Role in team</label>
-    <select name="team_role"><option>Member</option><option>Lead</option></select>
-    <div class="modal-actions">
-      <button type="submit" class="btn primary">Add</button>
-      <button type="button" id="add-member-cancel" class="btn">Cancel</button>
+<!-- Add member modal (updated: autocomplete + dropdown) -->
+<div id="modal-add-member" style="display:none; position:fixed; left:0; right:0; top:0; bottom:0; align-items:center; justify-content:center; background:rgba(8,12,20,0.45); z-index:1200;">
+  <div style="width:520px; max-width:95%; margin:auto;">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h4 style="margin:0">Add Member to Team</h4>
+        <button id="modal-add-member-close" class="btn ghost">Close</button>
+      </div>
+      <form id="form-add-member" autocomplete="off">
+        <div class="form-row">
+          <div class="field autocomplete-wrapper" style="position:relative">
+            <label class="label">Select member (search email or name)</label>
+            <!-- visible input used for search & selection -->
+            <input class="input" id="member-picker" name="member_picker" placeholder="Type to search existing members or type email to create" />
+            <!-- hidden input keeps selected member id if chosen -->
+            <input type="hidden" id="member-id" name="member_id" />
+            <!-- dropdown list will be populated dynamically -->
+            <div id="member-autocomplete" class="autocomplete-list" style="display:none"></div>
+            <div class="autocomplete-muted" style="margin-top:6px; font-size:13px;">Tip: pick from the list or type a new email to create a member.</div>
+          </div>
+
+          <div class="field">
+            <label class="label">Role in team</label>
+            <select class="select" name="team_role">
+              <option>Member</option>
+              <option>Lead</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button type="submit" class="btn primary">Add</button>
+          <button type="button" id="btn-add-cancel" class="btn ghost">Cancel</button>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
 </div>
 
 <script>
-let selectedTeamId = null;
-async function api(path, opts={}) {
-  opts.headers = opts.headers || {};
-  if (!opts.method) opts.method = 'GET';
+/* Teams page JS - updated to support member autocomplete for add-member modal
+   Keeps existing APIs intact:
+    - GET /api/teams/list
+    - POST /api/teams/create
+    - GET /api/teams/<id>/members
+    - POST /api/teams/<id>/add_member
+    - POST /api/teams/<id>/remove_member
+    - POST /api/people/create
+    - GET /api/people/list
+*/
+
+const API = {
+  teams_list: '/api/teams/list',
+  create_team: '/api/teams/create',
+  people_list: '/api/people/list',
+  people_create: '/api/people/create'
+};
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? decodeURIComponent(v.pop()) : '';
+}
+const DEFAULT_HEADERS = {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')};
+
+async function apiFetch(path, opts={}) {
+  opts.headers = Object.assign({}, DEFAULT_HEADERS, opts.headers || {});
   return fetch(path, opts).then(r => r.json());
 }
 
-async function loadTeams(){
-  const r = await api('/api/teams/list');
-  const list = document.getElementById('teams-list');
-  list.innerHTML = '';
-  r.teams.forEach(t=>{
-    const li = document.createElement('li');
-    li.className = 'list-item';
-    li.innerHTML = `<a href="#" data-id="${t.id}">${t.name} <small>(${t.member_count})</small></a>`;
-    li.querySelector('a').onclick = (e)=>{ e.preventDefault(); loadTeamDetails(t.id); };
-    list.appendChild(li);
-  });
-}
+/* State for people used by autocomplete */
+let PEOPLE_CACHE = []; // full list of members {id, email, first_name, last_name, phone}
 
-async function loadTeamDetails(id){
-  selectedTeamId = id;
-  const r = await api('/api/teams/'+id+'/members');
-  if (!r.ok) return alert('Team load error');
-  document.getElementById('team-name').textContent = r.team.name;
-  document.getElementById('team-desc').textContent = r.team.description || '';
-  const tbody = document.querySelector('#team-members tbody');
-  tbody.innerHTML = '';
-  r.members.forEach(m=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.first_name||''} ${m.last_name||''}</td>
-      <td>${m.email}</td>
-      <td>
-        <select data-member="${m.member_id}" class="role-sel">
-          <option ${m.team_role=='Lead'?'selected':''}>Lead</option>
-          <option ${m.team_role=='Member'?'selected':''}>Member</option>
-        </select>
-      </td>
-      <td><button class="btn small" data-member="${m.member_id}" onclick="removeMember(${m.member_id})">Remove</button></td>`;
-    tbody.appendChild(tr);
-  });
-  // attach change handlers for role change
-  document.querySelectorAll('.role-sel').forEach(sel=>{
-    sel.onchange = async ()=> {
-      const member_id = sel.getAttribute('data-member');
-      const newRole = sel.value;
-      await api('/api/teams/'+selectedTeamId+'/add_member', {
-        method:'POST',
-        body: JSON.stringify({member_id: member_id, team_role: newRole}),
-        headers: {'Content-Type':'application/json'}
-      });
-      loadTeamDetails(selectedTeamId);
-    };
-  });
-}
-
-async function removeMember(member_id){
-  if(!confirm('Remove this member from team?')) return;
-  await api('/api/teams/'+selectedTeamId+'/remove_member', {
-    method:'POST', body: JSON.stringify({member_id}), headers:{'Content-Type':'application/json'}
-  });
-  loadTeamDetails(selectedTeamId);
-}
-
-// create team modal flows
-document.getElementById('btn-create-team').addEventListener('click', ()=>document.getElementById('modal-create-team').classList.remove('hidden'));
-document.getElementById('create-team-cancel').addEventListener('click', ()=>document.getElementById('modal-create-team').classList.add('hidden'));
-document.getElementById('form-create-team').addEventListener('submit', async (ev)=>{
-  ev.preventDefault();
-  const form = ev.target;
-  const lead_email = form.lead_email.value.trim();
-  // optional: find member id by email
-  let lead_id = null;
-  if (lead_email) {
-    // quick create member if not exists
-    const createResp = await api('/api/people/create', {method:'POST', body: JSON.stringify({email:lead_email, create_user:false}), headers:{'Content-Type':'application/json'}});
-    // fetch member list to get id
-    const people = await api('/api/people/list');
-    const m = people.members.find(x=>x.email===lead_email);
-    if (m) lead_id = m.id;
+/* load people once (used for autocomplete); called on init */
+async function loadPeopleCache() {
+  try {
+    const res = await apiFetch(API.people_list);
+    if (!res.ok) {
+      PEOPLE_CACHE = [];
+      return;
+    }
+    PEOPLE_CACHE = (res.members || []).map(m => ({
+      id: m.id,
+      email: m.email || '',
+      first_name: m.first_name || '',
+      last_name: m.last_name || '',
+      display: ((m.first_name || '') + ' ' + (m.last_name || '')).trim() || m.email || ''
+    }));
+  } catch (err) {
+    console.error('Failed to load people cache', err);
+    PEOPLE_CACHE = [];
   }
-  const data = { name: form.name.value, description: form.description.value, team_lead_id: lead_id };
-  const r = await api('/api/teams/create', { method:'POST', body: JSON.stringify(data), headers:{'Content-Type':'application/json'}});
-  if (r.ok) {
-    document.getElementById('modal-create-team').classList.add('hidden');
-    loadTeams();
-  } else alert('error creating team');
+}
+
+/* Helper: search people by query (email or name) */
+function searchPeople(q) {
+  q = (q || '').toLowerCase();
+  if (!q) return PEOPLE_CACHE.slice(0, 25);
+  return PEOPLE_CACHE.filter(p =>
+    (p.email || '').toLowerCase().includes(q) ||
+    (p.display || '').toLowerCase().includes(q)
+  ).slice(0, 50);
+}
+
+/* UI: autocomplete for member-picker */
+const picker = document.getElementById('member-picker');
+const pickerHidden = document.getElementById('member-id');
+const acList = document.getElementById('member-autocomplete');
+
+let acTimeout = null;
+function showAutocomplete(items) {
+  if (!items || items.length === 0) {
+    acList.style.display = 'none';
+    acList.innerHTML = '';
+    return;
+  }
+  acList.innerHTML = '';
+  items.forEach(it => {
+    const el = document.createElement('div');
+    el.className = 'autocomplete-item';
+    el.innerHTML = `<div>
+                      <div style="font-weight:600">${it.display}</div>
+                      <div class="autocomplete-muted">${it.email}</div>
+                    </div>`;
+    el.onclick = () => {
+      // select this item
+      picker.value = `${it.display} <${it.email}>`;
+      pickerHidden.value = it.id;
+      acList.style.display = 'none';
+    };
+    acList.appendChild(el);
+  });
+  acList.style.display = 'block';
+}
+
+/* type handler for picker: debounce and show matches */
+picker.addEventListener('input', (ev) => {
+  pickerHidden.value = ''; // clear selected id when user types
+  const q = ev.target.value.trim();
+  if (acTimeout) clearTimeout(acTimeout);
+  acTimeout = setTimeout(() => {
+    const items = searchPeople(q);
+    showAutocomplete(items);
+  }, 180);
 });
 
-// add member modal flows
-document.getElementById('btn-add-member').addEventListener('click', ()=>document.getElementById('modal-add-member').classList.remove('hidden'));
-document.getElementById('add-member-cancel').addEventListener('click', ()=>document.getElementById('modal-add-member').classList.add('hidden'));
-document.getElementById('form-add-member').addEventListener('submit', async (ev)=>{
+/* hide autocomplete when clicking outside */
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('.autocomplete-wrapper')) {
+    acList.style.display = 'none';
+  }
+});
+
+/* Teams logic (unchanged) */
+let TEAMS = [];
+let FILTERED_TEAMS = [];
+let CURRENT_TEAMS_PAGE = 1;
+let TEAMS_PAGE_SIZE = 10;
+let SELECTED_TEAM_ID = null;
+let SELECTED_TEAM = null;
+let TEAM_MEMBERS = [];
+let MEMBERS_PAGE = 1;
+let MEMBERS_PAGE_SIZE = 10;
+
+async function loadTeams() {
+  try {
+    const res = await apiFetch(API.teams_list);
+    if (!res.ok) {
+      console.error('Failed to load teams', res);
+      TEAMS = [];
+      renderTeamsList();
+      return;
+    }
+    TEAMS = res.teams || [];
+    TEAMS = TEAMS.map(t => ({
+      id: t.id, name: t.name, description: t.description || '', member_count: t.member_count || 0, lead_email: t.lead_email || ''
+    }));
+    applyTeamFilter();
+  } catch (err) {
+    console.error('loadTeams error', err);
+    TEAMS = [];
+    renderTeamsList();
+  }
+}
+
+function applyTeamFilter() {
+  const q = document.getElementById('team-search').value.trim().toLowerCase();
+  if (q) {
+    FILTERED_TEAMS = TEAMS.filter(t => (t.name||'').toLowerCase().includes(q) || (t.description||'').toLowerCase().includes(q));
+  } else FILTERED_TEAMS = TEAMS.slice();
+  TEAMS_PAGE_SIZE = parseInt(document.getElementById('teams-page-size').value, 10) || 10;
+  CURRENT_TEAMS_PAGE = 1;
+  renderTeamsList();
+}
+
+function renderTeamsList() {
+  const container = document.getElementById('teams-list');
+  container.innerHTML = '';
+  const total = FILTERED_TEAMS.length;
+  if (total === 0) {
+    container.innerHTML = '<div class="empty">No teams found</div>';
+    document.getElementById('teams-pager').innerHTML = '';
+    return;
+  }
+  const pages = Math.max(1, Math.ceil(total / TEAMS_PAGE_SIZE));
+  const page = Math.min(Math.max(1, CURRENT_TEAMS_PAGE), pages);
+  const start = (page - 1) * TEAMS_PAGE_SIZE;
+  const chunk = FILTERED_TEAMS.slice(start, start + TEAMS_PAGE_SIZE);
+  chunk.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'team-item' + (SELECTED_TEAM_ID === t.id ? ' active' : '');
+    el.innerHTML = `<div style="display:flex;gap:10px;align-items:center">
+                      <div style="width:40px;height:40px;border-radius:999px;background:#1976d2;color:white;display:flex;align-items:center;justify-content:center;font-weight:700">${(t.name||'?').charAt(0).toUpperCase()}</div>
+                      <div>
+                        <div class="team-name">${t.name}</div>
+                        <div class="team-meta">${t.member_count} member${t.member_count !== 1 ? 's' : ''}</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                      <button class="btn small ghost" onclick="selectTeam(${t.id})">Open</button>
+                    </div>`;
+    container.appendChild(el);
+  });
+  renderPager('teams-pager', pages, page, (p)=> { CURRENT_TEAMS_PAGE = p; renderTeamsList(); });
+}
+
+/* Select team and load members */
+async function selectTeam(id) {
+  SELECTED_TEAM_ID = id;
+  renderTeamsList();
+  try {
+    const r = await apiFetch(`/api/teams/${id}/members`);
+    if (!r.ok) { console.error('Failed to load team members', r); return; }
+    SELECTED_TEAM = r.team || { name: 'Unknown', description: '' };
+    TEAM_MEMBERS = r.members || [];
+    MEMBERS_PAGE = 1;
+    document.getElementById('team-title').textContent = SELECTED_TEAM.name || 'Team';
+    document.getElementById('team-desc').textContent = SELECTED_TEAM.description || '';
+    document.getElementById('team-meta').textContent = `Lead: ${SELECTED_TEAM.lead_email || '-'}`;
+    renderTeamMembers();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+/* Render members table (client-side paging) */
+function renderTeamMembers() {
+  const tbody = document.querySelector('#team-members-table tbody');
+  tbody.innerHTML = '';
+  const total = TEAM_MEMBERS.length;
+  document.getElementById('team-member-count').textContent = `${total} member${total !== 1 ? 's' : ''}`;
+  if (total === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">No members in this team</td></tr>`;
+    document.getElementById('members-pager').innerHTML = '';
+    return;
+  }
+  const pages = Math.max(1, Math.ceil(total / MEMBERS_PAGE_SIZE));
+  const page = Math.min(Math.max(1, MEMBERS_PAGE), pages);
+  const start = (page - 1) * MEMBERS_PAGE_SIZE;
+  const chunk = TEAM_MEMBERS.slice(start, start + MEMBERS_PAGE_SIZE);
+  for (const m of chunk) {
+    const name = `${m.first_name||''} ${m.last_name||''}`.trim() || '-';
+    const avatar = (m.first_name||m.email||'?').charAt(0).toUpperCase();
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><div class="avatar">${avatar}</div></td>
+      <td style="font-weight:600">${name}</td>
+      <td>${m.email}</td>
+      <td>${m.team_role || 'Member'}</td>
+      <td>
+        <button class="btn small ghost" onclick="removeMember(${m.member_id})">Remove</button>
+      </td>`;
+    tbody.appendChild(tr);
+  }
+  renderPager('members-pager', pages, page, (p)=> { MEMBERS_PAGE = p; renderTeamMembers(); });
+}
+
+/* Pager helper */
+function renderPager(elementId, totalPages, current, onChange) {
+  const pager = document.getElementById(elementId);
+  pager.innerHTML = '';
+  const prev = document.createElement('button');
+  prev.className = 'page-num';
+  prev.textContent = 'Prev';
+  prev.disabled = current <= 1;
+  prev.onclick = () => onChange(current - 1);
+  pager.appendChild(prev);
+
+  const windowSize = 5;
+  let start = Math.max(1, current - Math.floor(windowSize/2));
+  let end = Math.min(totalPages, start + windowSize - 1);
+  if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+
+  for (let i = start; i <= end; i++) {
+    const b = document.createElement('button');
+    b.className = 'page-num' + (i === current ? ' active' : '');
+    b.textContent = i;
+    b.onclick = () => onChange(i);
+    pager.appendChild(b);
+  }
+
+  const next = document.createElement('button');
+  next.className = 'page-num';
+  next.textContent = 'Next';
+  next.disabled = current >= totalPages;
+  next.onclick = () => onChange(current + 1);
+  pager.appendChild(next);
+}
+
+/* Create team flow */
+document.getElementById('btn-new-team').addEventListener('click', ()=> document.getElementById('modal-create-team').style.display = 'flex');
+document.getElementById('modal-create-team-close').addEventListener('click', ()=> document.getElementById('modal-create-team').style.display = 'none');
+document.getElementById('btn-create-cancel').addEventListener('click', ()=> document.getElementById('modal-create-team').style.display = 'none');
+
+document.getElementById('form-create-team').addEventListener('submit', async function(ev){
   ev.preventDefault();
-  const form = ev.target;
-  const email = form.email.value.trim();
-  if(!email) return alert('email required');
-  // ensure member exists (create if not)
-  const createResp = await api('/api/people/create', { method:'POST', body: JSON.stringify({ email: email, create_user:false }), headers:{'Content-Type':'application/json'}});
-  // find member id
-  const people = await api('/api/people/list');
-  const member = people.members.find(x => x.email === email);
-  if (!member) return alert('failed to create/find member');
-  const r = await api('/api/teams/'+selectedTeamId+'/add_member', { method:'POST', body: JSON.stringify({ member_id: member.id, team_role: form.team_role.value }), headers:{'Content-Type':'application/json'}});
-  if (r.ok) {
-    document.getElementById('modal-add-member').classList.add('hidden');
-    loadTeamDetails(selectedTeamId);
-  } else alert('error adding member');
+  const f = ev.target;
+  const payload = { name: f.name.value.trim(), description: f.description.value.trim() };
+  const leadEmail = f.lead_email.value.trim();
+  if (leadEmail) {
+    await apiFetch(API.people_create, { method: 'POST', body: JSON.stringify({ email: leadEmail, create_user:false }), });
+    payload.team_lead_id = null;
+  }
+  const r = await apiFetch(API.create_team, { method: 'POST', body: JSON.stringify(payload) });
+  if (r && r.ok) {
+    document.getElementById('modal-create-team').style.display = 'none';
+    loadTeams();
+    showToast('Team created');
+  } else {
+    showToast('Failed to create team');
+    console.error('create team failed', r);
+  }
 });
 
+/* Open add member modal */
+document.getElementById('btn-add-member').addEventListener('click', ()=> {
+  if (!SELECTED_TEAM_ID) return alert('Select a team first');
+  document.getElementById('modal-add-member').style.display = 'flex';
+  // refresh people cache to ensure latest members are searchable
+  loadPeopleCache();
+});
+document.getElementById('modal-add-member-close').addEventListener('click', ()=> document.getElementById('modal-add-member').style.display = 'none');
+document.getElementById('btn-add-cancel').addEventListener('click', ()=> document.getElementById('modal-add-member').style.display = 'none');
+
+document.getElementById('form-add-member').addEventListener('submit', async function(ev){
+  ev.preventDefault();
+  if (!SELECTED_TEAM_ID) return alert('Select a team first');
+  const f = ev.target;
+  const typed = document.getElementById('member-picker').value.trim();
+  let memberId = document.getElementById('member-id').value || null;
+  const team_role = f.team_role.value;
+
+  try {
+    // If a memberId was selected via autocomplete, use it directly
+    if (!memberId) {
+      // try find by email or by display text in PEOPLE_CACHE
+      const found = PEOPLE_CACHE.find(p =>
+        p.email.toLowerCase() === typed.toLowerCase() ||
+        (p.display || '').toLowerCase() === typed.toLowerCase() ||
+        (`${p.display} <${p.email}>`).toLowerCase() === typed.toLowerCase()
+      );
+      if (found) memberId = found.id;
+    }
+
+    // If still not found and typed looks like an email, create member record
+    const looksLikeEmail = /\S+@\S+\.\S+/.test(typed);
+    if (!memberId && looksLikeEmail) {
+      // Create member (preserve existing behavior)
+      const createResp = await apiFetch(API.people_create, { method: 'POST', body: JSON.stringify({ email: typed, create_user:false }), });
+      if (!createResp.ok) throw new Error(createResp.error || 'create-member-failed');
+      // refresh cache and get new id
+      await loadPeopleCache();
+      const f2 = PEOPLE_CACHE.find(p => p.email.toLowerCase() === typed.toLowerCase());
+      if (f2) memberId = f2.id;
+    }
+
+    if (!memberId) {
+      return showToast('Please choose an existing member or type a valid email to create one.');
+    }
+
+    // add to team using memberId
+    const r = await apiFetch(`/api/teams/${SELECTED_TEAM_ID}/add_member`, {
+      method: 'POST',
+      body: JSON.stringify({ member_id: memberId, team_role }),
+    });
+    if (r && r.ok) {
+      document.getElementById('modal-add-member').style.display = 'none';
+      // clear inputs
+      document.getElementById('member-picker').value = '';
+      document.getElementById('member-id').value = '';
+      selectTeam(SELECTED_TEAM_ID);
+      showToast('Member added to team');
+    } else {
+      console.error('add member failed', r);
+      showToast('Failed to add member');
+    }
+  } catch (err) {
+    console.error('error adding member', err);
+    showToast('Error while adding member');
+  }
+});
+
+/* Remove member */
+async function removeMember(member_id) {
+  if (!confirm('Remove this member from the team?')) return;
+  const r = await apiFetch(`/api/teams/${SELECTED_TEAM_ID}/remove_member`, { method: 'POST', body: JSON.stringify({ member_id }), });
+  if (r && r.ok) {
+    selectTeam(SELECTED_TEAM_ID);
+    showToast('Member removed');
+  } else {
+    console.error('remove failed', r);
+    showToast('Failed to remove member');
+  }
+}
+
+/* Search and paging handlers */
+document.getElementById('team-search').addEventListener('input', applyTeamFilter);
+document.getElementById('teams-page-size').addEventListener('change', ()=>{ TEAMS_PAGE_SIZE = parseInt(document.getElementById('teams-page-size').value,10); applyTeamFilter(); });
+
+/* Small toast */
+function showToast(msg) {
+  const d = document.createElement('div');
+  d.textContent = msg;
+  d.style.position = 'fixed';
+  d.style.right = '18px';
+  d.style.bottom = '18px';
+  d.style.background = '#111827';
+  d.style.color = '#fff';
+  d.style.padding = '10px 14px';
+  d.style.borderRadius = '8px';
+  d.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 2600);
+}
+
+/* Init */
 document.addEventListener('DOMContentLoaded', ()=> {
+  TEAMS_PAGE_SIZE = parseInt(document.getElementById('teams-page-size').value, 10) || 10;
+  MEMBERS_PAGE_SIZE = 10;
   loadTeams();
+  // preload people cache lightly (optional)
+  loadPeopleCache();
 });
 </script>
 {% endblock %}

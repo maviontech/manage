@@ -152,79 +152,171 @@ def api_create_member(request):
     return JsonResponse({'ok': True, 'member_id': member_id, 'user_id': user_id, 'password': generated_password})
 
 
-# ---------- Teams APIs ----------
 @require_http_methods(["GET"])
 def api_teams_list(request):
-    cur = get_tenant_cursor()
-    # get team + lead email + member_count
-    cur.execute("""
-        SELECT t.id, t.name, t.description, t.team_lead_id,
-               m.email AS lead_email,
-               (SELECT COUNT(*) FROM team_memberships tm WHERE tm.team_id = t.id) as member_count
-        FROM teams t
-        LEFT JOIN members m ON m.id = t.team_lead_id
-        ORDER BY t.name;
-    """)
-    rows = fetchall_dicts(cur)
+    """
+    Returns a list of teams with lead email and member count for the current tenant.
+    """
+    try:
+        conn = get_tenant_conn(request)
+    except Exception as e:
+        return JsonResponse(
+            {'ok': False, 'error': 'tenant-resolve-failed', 'detail': str(e)},
+            status=500
+        )
+
+    try:
+        with conn.cursor() as cur:
+            # get team + lead email + member_count
+            cur.execute("""
+                SELECT t.id,
+                       t.name,
+                       t.description,
+                       t.team_lead_id,
+                       m.email AS lead_email,
+                       (
+                           SELECT COUNT(*)
+                           FROM team_memberships tm
+                           WHERE tm.team_id = t.id
+                       ) AS member_count
+                FROM teams t
+                LEFT JOIN members m ON m.id = t.team_lead_id
+                ORDER BY t.name;
+            """)
+            rows = cur.fetchall()  # DictCursor already returns list[dict]
+    except Exception as e:
+        import logging
+        logging.exception("Error in api_teams_list")
+        return JsonResponse(
+            {'ok': False, 'error': 'db-query-failed', 'detail': str(e)},
+            status=500
+        )
+
+    # Convert any datetime fields to ISO strings (JsonResponse-safe)
+    for r in rows:
+        for k, v in r.items():
+            if hasattr(v, 'isoformat'):
+                r[k] = v.isoformat()
+
     return JsonResponse({'ok': True, 'teams': rows})
+
+
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse, HttpResponseBadRequest
+import json
+import logging
+from core.db_helpers import get_tenant_conn  # make sure the path is correct
+
+logger = logging.getLogger(__name__)
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_create_team(request):
-    if not require_admin(request):
-        return JsonResponse({'ok': False, 'error': 'forbidden'}, status=403)
+    """
+    Create a new team in the current tenant DB.
+    Uses get_tenant_conn(request) to obtain tenant connection.
+    """
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
         return HttpResponseBadRequest("invalid-json")
 
-    name = data.get('name', '').strip()
-    desc = data.get('description', '')
+    name = (data.get('name') or '').strip()
+    desc = data.get('description', '') or ''
     team_lead_id = data.get('team_lead_id')  # optional
     if not name:
         return JsonResponse({'ok': False, 'error': 'name required'}, status=400)
 
     slug = name.lower().replace(' ', '-')
-    cur = get_tenant_cursor()
-    cur.execute("""
-        INSERT INTO teams (name, slug, description, created_by, team_lead_id)
-        VALUES (%s,%s,%s,%s,%s)
-    """, [name, slug, desc, request.session.get('user_id'), team_lead_id])
-    cur.execute("SELECT LAST_INSERT_ID()")
-    row = cur.fetchone()
-    team_id = row[0] if row else None
+
+    try:
+        conn = get_tenant_conn(request)
+    except Exception as e:
+        logger.exception("Tenant resolve failed in api_create_team")
+        return JsonResponse({'ok': False, 'error': 'tenant-resolve-failed', 'detail': str(e)}, status=500)
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO teams (name, slug, description, created_by, team_lead_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (name, slug, desc, request.session.get('user_id'), team_lead_id))
+
+            # Use lastrowid to get the inserted id
+            team_id = getattr(cur, 'lastrowid', None)
+            # fallback: SELECT LAST_INSERT_ID()
+            if not team_id:
+                cur.execute("SELECT LAST_INSERT_ID() AS id")
+                row = cur.fetchone()
+                team_id = row.get('id') if row else None
+
+    except Exception as ex:
+        logger.exception("DB error in api_create_team")
+        return JsonResponse({'ok': False, 'error': 'db_error', 'detail': str(ex)}, status=500)
+
     return JsonResponse({'ok': True, 'team_id': team_id})
+
 
 @require_http_methods(["GET"])
 def api_team_members(request, team_id):
-    cur = get_tenant_cursor()
-    cur.execute("SELECT id, name, description, team_lead_id FROM teams WHERE id=%s", [team_id])
-    team = None
-    row = cur.fetchone()
-    if row:
-        # description of result depends on driver - row[0..] style
-        # use fetchall_dicts below for members
-        cur_desc = cur.description
-        cols = [c[0] for c in cur_desc]
-        team = dict(zip(cols, row))
-    else:
-        return JsonResponse({'ok': False, 'error': 'team not found'}, status=404)
+    """
+    Return team info and its members for the current tenant.
+    Uses get_tenant_conn(request) to obtain tenant connection.
+    """
+    try:
+        conn = get_tenant_conn(request)
+    except Exception as e:
+        logger.exception("Tenant resolve failed in api_team_members")
+        return JsonResponse({'ok': False, 'error': 'tenant-resolve-failed', 'detail': str(e)}, status=500)
 
-    cur.execute("""
-        SELECT mem.id as member_id, mem.email, mem.first_name, mem.last_name, tm.team_role, tm.added_at
-        FROM team_memberships tm
-        JOIN members mem ON mem.id = tm.member_id
-        WHERE tm.team_id = %s
-        ORDER BY tm.added_at DESC
-    """, [team_id])
-    members = fetchall_dicts(cur)
-    return JsonResponse({'ok': True, 'team': team, 'members': members})
+    try:
+        with conn.cursor() as cur:
+            # fetch team row (DictCursor => dict)
+            cur.execute("SELECT id, name, description, team_lead_id FROM teams WHERE id=%s", (team_id,))
+            team_row = cur.fetchone()
+            if not team_row:
+                return JsonResponse({'ok': False, 'error': 'team not found'}, status=404)
+
+            # fetch members
+            cur.execute("""
+                SELECT mem.id as member_id,
+                       mem.email,
+                       mem.first_name,
+                       mem.last_name,
+                       tm.team_role,
+                       tm.added_at
+                FROM team_memberships tm
+                JOIN members mem ON mem.id = tm.member_id
+                WHERE tm.team_id = %s
+                ORDER BY tm.added_at DESC
+            """, (team_id,))
+            members = cur.fetchall() or []
+
+    except Exception as ex:
+        logger.exception("DB error in api_team_members")
+        return JsonResponse({'ok': False, 'error': 'db_error', 'detail': str(ex)}, status=500)
+
+    # Ensure datetimes are JSON serializable (convert any added_at)
+    for m in members:
+        for k, v in list(m.items()):
+            if hasattr(v, 'isoformat'):
+                m[k] = v.isoformat()
+
+    # team_row is already a dict; sanitize any datetimes there as well
+    for k, v in list(team_row.items()):
+        if hasattr(v, 'isoformat'):
+            team_row[k] = v.isoformat()
+
+    return JsonResponse({'ok': True, 'team': team_row, 'members': members})
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_team_add_member(request, team_id):
-    if not require_admin(request):
-        return JsonResponse({'ok': False, 'error': 'forbidden'}, status=403)
+    """Add or update a member in a team (idempotent)."""
+
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -235,50 +327,90 @@ def api_team_add_member(request, team_id):
     if not member_id:
         return JsonResponse({'ok': False, 'error': 'member_id required'}, status=400)
 
-    cur = get_tenant_cursor()
-    cur.execute("""
-        INSERT INTO team_memberships (team_id, member_id, team_role, added_by)
-        VALUES (%s,%s,%s,%s)
-        ON DUPLICATE KEY UPDATE team_role=VALUES(team_role), added_at=CURRENT_TIMESTAMP
-    """, [team_id, member_id, team_role, request.session.get('user_id')])
+    try:
+        conn = get_tenant_conn(request)
+    except Exception as e:
+        logger.exception("Tenant resolve failed in api_team_add_member")
+        return JsonResponse({'ok': False, 'error': 'tenant-resolve-failed', 'detail': str(e)}, status=500)
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO team_memberships (team_id, member_id, team_role, added_by)
+                VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE team_role=VALUES(team_role), added_at=CURRENT_TIMESTAMP
+            """, (team_id, member_id, team_role, request.session.get('user_id')))
+    except Exception as ex:
+        logger.exception("DB error in api_team_add_member")
+        return JsonResponse({'ok': False, 'error': 'db_error', 'detail': str(ex)}, status=500)
+
     return JsonResponse({'ok': True})
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_team_remove_member(request, team_id):
-    if not require_admin(request):
-        return JsonResponse({'ok': False, 'error': 'forbidden'}, status=403)
+    """Remove a member from a team."""
+
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
         return HttpResponseBadRequest("invalid-json")
+
     member_id = data.get('member_id')
     if not member_id:
         return JsonResponse({'ok': False, 'error': 'member_id required'}, status=400)
-    cur = get_tenant_cursor()
-    cur.execute("DELETE FROM team_memberships WHERE team_id=%s AND member_id=%s", [team_id, member_id])
+
+    try:
+        conn = get_tenant_conn(request)
+    except Exception as e:
+        logger.exception("Tenant resolve failed in api_team_remove_member")
+        return JsonResponse({'ok': False, 'error': 'tenant-resolve-failed', 'detail': str(e)}, status=500)
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM team_memberships WHERE team_id=%s AND member_id=%s", (team_id, member_id))
+    except Exception as ex:
+        logger.exception("DB error in api_team_remove_member")
+        return JsonResponse({'ok': False, 'error': 'db_error', 'detail': str(ex)}, status=500)
+
     return JsonResponse({'ok': True})
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_team_set_lead(request, team_id):
-    if not require_admin(request):
-        return JsonResponse({'ok': False, 'error': 'forbidden'}, status=403)
+    """Set a team lead (updates team_lead_id and ensures membership)."""
+
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
         return HttpResponseBadRequest("invalid-json")
+
     member_id = data.get('member_id')
     if not member_id:
         return JsonResponse({'ok': False, 'error': 'member_id required'}, status=400)
 
-    cur = get_tenant_cursor()
-    # ensure membership exists
-    cur.execute("""
-        INSERT INTO team_memberships (team_id, member_id, team_role, added_by)
-        VALUES (%s,%s,%s,%s)
-        ON DUPLICATE KEY UPDATE team_role = VALUES(team_role)
-    """, [team_id, member_id, 'Lead', request.session.get('user_id')])
+    try:
+        conn = get_tenant_conn(request)
+    except Exception as e:
+        logger.exception("Tenant resolve failed in api_team_set_lead")
+        return JsonResponse({'ok': False, 'error': 'tenant-resolve-failed', 'detail': str(e)}, status=500)
 
-    cur.execute("UPDATE teams SET team_lead_id=%s WHERE id=%s", [member_id, team_id])
+    try:
+        with conn.cursor() as cur:
+            # ensure member exists in team as Lead
+            cur.execute("""
+                INSERT INTO team_memberships (team_id, member_id, team_role, added_by)
+                VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE team_role = VALUES(team_role)
+            """, (team_id, member_id, 'Lead', request.session.get('user_id')))
+
+            # update the team's lead reference
+            cur.execute("UPDATE teams SET team_lead_id=%s WHERE id=%s", (member_id, team_id))
+    except Exception as ex:
+        logger.exception("DB error in api_team_set_lead")
+        return JsonResponse({'ok': False, 'error': 'db_error', 'detail': str(ex)}, status=500)
+
     return JsonResponse({'ok': True})
+
