@@ -2,106 +2,89 @@
 {% load static %}
 
 {% block title %}Dashboard | MavionTech{% endblock %}
-
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  /* Layout */
   .welcome-banner {
     background: linear-gradient(90deg,#0b57a4,#1f86e3);
-    color: #fff;
-    padding: 18px 22px;
-    border-radius: 12px;
-    margin-bottom: 18px;
+    color: #fff; padding: 16px 20px; border-radius: 10px; margin-bottom: 14px;
     box-shadow: 0 8px 30px rgba(11,87,164,0.08);
   }
-  .welcome-banner h2 { margin:0 0 4px; font-weight:700; }
-  .welcome-banner p { margin:0; opacity:0.92; }
+  .dashboard-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 16px; margin-top: 14px; }
+  .metric-card { background:var(--panel); border-radius:10px; padding:14px; box-shadow:0 6px 18px rgba(12,38,63,0.05); }
+  .metric-card .label { color:var(--muted); font-weight:600; margin-bottom:6px; }
+  .metric-card .value { font-size:26px; font-weight:700; color:var(--accent); }
+  .charts-row { display:grid; grid-template-columns: 1fr 420px; gap:18px; margin-top:18px; }
+  @media (max-width:1000px){ .charts-row{ grid-template-columns: 1fr; } }
+  .chart-card { background:var(--panel); border-radius:12px; padding:14px; box-shadow:0 6px 16px rgba(12,38,63,0.05); }
+  .chart-card h3 { margin:0 0 8px; font-size:16px; color:var(--text); }
 
-  .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 18px;
-    margin-top: 18px;
-  }
+  /* donut reduced size */
+  #progressChart { max-width:420px; margin: 0 auto; display:block; height:260px !important; }
 
-  .metric-card {
-    background: var(--panel);
-    border-radius: 10px;
-    padding: 18px;
-    box-shadow: 0 6px 18px rgba(12,38,63,0.05);
-    border: 1px solid rgba(15,23,42,0.03);
-    display:flex; flex-direction:column; justify-content:center;
-  }
-  .metric-card .label { color:var(--muted); font-weight:600; margin-bottom:8px; }
-  .metric-card .value { font-size:28px; font-weight:700; color:var(--accent); }
+  /* stacked horizontal bars */
+  #priorityChart { width:100%; height:300px !important; }
 
-  .charts-row {
-    display:grid;
-    grid-template-columns: 1fr 420px;
-    gap: 22px;
-    margin-top: 22px;
-  }
-  @media (max-width: 1000px) {
-    .charts-row { grid-template-columns: 1fr; }
-    canvas { height: 320px !important; }
-  }
+  /* Team view button / logout */
+  .top-actions { display:flex; gap:10px; align-items:center; }
+  .btn-team { background:#fff; border:1px solid #1f86e3; color:#0b57a4; padding:8px 12px; border-radius:8px; font-weight:600; }
+  .btn-logout { background:transparent; color:var(--muted); border:none; padding:6px 10px; }
 
-  .chart-card {
-    background: var(--panel);
-    border-radius: 12px;
-    padding: 18px;
-    box-shadow: 0 6px 16px rgba(12,38,63,0.05);
-    border: 1px solid rgba(15,23,42,0.03);
-  }
-  .chart-card h3 { margin:0 0 10px; font-size:16px; color:var(--text); }
-
-  /* small legend under donut */
-  .donut-legend { display:flex; gap:14px; margin-top:12px; align-items:center; flex-wrap:wrap; }
-  .donut-legend .item { display:flex; gap:8px; align-items:center; font-size:13px; color:var(--muted); }
+  /* modal tweaks */
+  .team-modal .modal-dialog { max-width:900px; }
+  .team-table { width:100%; border-collapse:collapse; }
+  .team-table th, .team-table td { padding:8px 10px; text-align:left; border-bottom:1px solid rgba(0,0,0,0.04); }
+  .team-chart { width:100%; height:160px; }
+  .donut-legend { display:flex; gap:12px; margin-top:12px; align-items:center; flex-wrap:wrap; font-size:13px; color:var(--muted); }
   .dot { width:14px; height:10px; border-radius:3px; display:inline-block; }
-
-  /* top-right simple footer row */
-  .dash-footer { margin-top:28px; color:var(--muted); font-size:13px; }
 </style>
 {% endblock %}
 
 {% block page_title %}Dashboard{% endblock %}
-{% block page_subtitle %}Overview of your projects, tasks and productivity{% endblock %}
+{% block page_subtitle %}Overview of your projects and tasks{% endblock %}
 
 {% block content %}
 <div class="welcome-banner">
-  <h2>Welcome {{ user.first_name|default:user.email|default:"User" }}</h2>
-  <p>Your registered email: <strong>{{ user.email }}</strong></p>
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h3 style="margin:0;">Welcome {{ user.first_name|default:user.email }}</h3>
+      <div style="opacity:0.9;font-size:13px;">Your registered email: <strong>{{ user.email }}</strong></div>
+    </div>
+
+    <div class="top-actions">
+      {% if is_team_lead %}
+        <button id="teamViewBtn" class="btn-team" title="Team view (if you are a team lead)">Team View</button>
+      {% endif %}
+      <form method="post" action="{% url 'logout' %}" style="display:inline;">
+        {% csrf_token %}
+        <button class="btn-logout" type="submit">Logout</button>
+      </form>
+    </div>
+  </div>
 </div>
 
-<!-- Top metrics -->
 <div class="dashboard-grid">
   <div class="metric-card">
     <div class="label">Total Tasks Assigned</div>
     <div class="value">{{ assigned_count|default:0 }}</div>
   </div>
-
   <div class="metric-card">
     <div class="label">Active Projects</div>
     <div class="value">{{ active_projects|default:0 }}</div>
   </div>
-
   <div class="metric-card">
     <div class="label">Tasks Completed</div>
     <div class="value">{{ tasks_completed|default:0 }}</div>
   </div>
-
   <div class="metric-card">
     <div class="label">Tasks Pending</div>
     <div class="value">{{ tasks_pending|default:0 }}</div>
   </div>
 </div>
 
-<!-- Charts area -->
 <div class="charts-row">
-  <!-- Donut: project / task distribution -->
+  <!-- Donut (smaller) -->
   <div class="chart-card">
     <h3>My Task Breakdown</h3>
     <canvas id="progressChart"></canvas>
@@ -112,86 +95,202 @@
     </div>
   </div>
 
-  <!-- Horizontal bar: priorities -->
+  <!-- Stacked horizontal bar: open vs closed per priority -->
   <div class="chart-card">
-    <h3>Tasks by Priority</h3>
+    <h3>Tasks by Priority (Open vs Closed)</h3>
     <canvas id="priorityChart"></canvas>
-    <div style="margin-top:12px;color:var(--muted);font-size:13px;">Shows number of tasks in each priority bucket for your assignments.</div>
+    <div style="margin-top:10px;color:var(--muted);font-size:13px;">
+      Bars are stacked: <strong>Open</strong> (not closed) + <strong>Closed</strong>.
+    </div>
   </div>
 </div>
 
-<div class="dash-footer">
-  <a href="{% url 'logout' %}" class="btn-ghost">Logout</a>
+{# Team modal only rendered for team leads #}
+{% if is_team_lead %}
+<div class="modal fade team-modal" id="teamModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Team Summary</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">Summary for team: <strong id="teamNameLabel">—</strong></p>
+
+        <div class="table-responsive mb-3">
+          <table class="team-table">
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Assigned</th>
+                <th>Completed</th>
+                <th>Pending</th>
+                <th>Priority (C/H/N/L)</th>
+                <th class="text-end">Details</th>
+              </tr>
+            </thead>
+            <tbody id="teamRows">
+              <!-- filled by JS when team modal opens -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h3 class="mb-2">Team Task Breakdown</h3>
+              <canvas id="teamProgressChart" class="team-chart"></canvas>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h3 class="mb-2">Team Priority (Open vs Closed)</h3>
+              <canvas id="teamPriorityChart" class="team-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-gradient" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  // Donut chart: task breakdown
-  const progressCtx = document.getElementById('progressChart').getContext('2d');
-  new Chart(progressCtx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Completed','In Progress','Pending'],
-      datasets: [{
-        data: [
-          {{ progress_completed|default:0 }},
-          {{ progress_inprogress|default:0 }},
-          {{ progress_pending|default:0 }}
-        ],
-        backgroundColor: ['#16a34a', '#1f86e3', '#eab308'],
-        hoverOffset: 8,
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      cutout: '65%',
-      plugins: {
-        legend: { display: false },
-        tooltip: { backgroundColor: 'rgba(0,0,0,0.7)' }
-      }
-    }
-  });
-
-  // Horizontal bar: tasks by priority
-  const prCtx = document.getElementById('priorityChart').getContext('2d');
-  new Chart(prCtx, {
-    type: 'bar',
-    data: {
-      labels: ['Critical','High','Normal','Low'],
-      datasets: [{
-        label: 'Tasks',
-        data: [
-          {{ pri_critical|default:0 }},
-          {{ pri_high|default:0 }},
-          {{ pri_normal|default:0 }},
-          {{ pri_low|default:0 }}
-        ],
-        backgroundColor: ['#c026d3','#ef4444','#0b57a4','#6b7280'],
-        borderRadius: 6,
-        barThickness: 22
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      scales: {
-        x: {
-          beginAtZero: true,
-          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--muted') }
-        },
-        y: {
-          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text') }
-        }
+  // Donut chart
+  const progressCtx = document.getElementById('progressChart')?.getContext('2d');
+  if (progressCtx) {
+    new Chart(progressCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Completed','In Progress','Pending'],
+        datasets: [{
+          data: [{{ progress_completed|default:0 }}, {{ progress_inprogress|default:0 }}, {{ progress_pending|default:0 }}],
+          backgroundColor: ['#16a34a', '#1f86e3', '#eab308'],
+          hoverOffset: 6, borderWidth: 0
+        }]
       },
-      plugins: {
-        legend: { display: false },
-        tooltip: { backgroundColor: 'rgba(0,0,0,0.7)' }
+      options: { responsive:true, cutout:'60%', plugins:{ legend:{display:false} } }
+    });
+  }
+
+  // Stacked priority chart (open vs closed)
+  const priCtx = document.getElementById('priorityChart')?.getContext('2d');
+  if (priCtx) {
+    const openArr = [
+      {{ pri_critical_open|default:0 }},
+      {{ pri_high_open|default:0 }},
+      {{ pri_normal_open|default:0 }},
+      {{ pri_low_open|default:0 }}
+    ];
+    const closedArr = [
+      {{ pri_critical_closed|default:0 }},
+      {{ pri_high_closed|default:0 }},
+      {{ pri_normal_closed|default:0 }},
+      {{ pri_low_closed|default:0 }}
+    ];
+    new Chart(priCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Critical','High','Normal','Low'],
+        datasets: [
+          { label: 'Open', data: openArr, backgroundColor: '#ef4444', stack: 'a', borderRadius: 6 },
+          { label: 'Closed', data: closedArr, backgroundColor: '#16a34a', stack: 'a', borderRadius: 6 }
+        ]
+      },
+      options: { indexAxis: 'y', responsive: true, scales: { x: { beginAtZero: true } }, plugins: { legend: { position: 'top' } } }
+    });
+  }
+
+  // Team View -- only attach handler if button exists (rendered only for team leads)
+  const teamBtn = document.getElementById('teamViewBtn');
+  if (teamBtn) {
+    teamBtn.addEventListener('click', async function() {
+      try {
+        const res = await fetch("{% url 'api_team_list' %}");
+        if (!res.ok) throw new Error('no teams');
+        const payload = await res.json();
+        if (!payload.teams || payload.teams.length === 0) {
+          alert('You are not a team lead or have no teams.');
+          return;
+        }
+        const team = payload.teams[0];
+        document.getElementById('teamNameLabel').textContent = team.name || team.id || 'Team';
+        const modalEl = document.getElementById('teamModal');
+        const bsModal = new bootstrap.Modal(modalEl);
+        await loadTeamSummary(team.id);
+        bsModal.show();
+      } catch (err) {
+        console.error(err);
+        alert('Team view not available.');
       }
+    });
+  }
+
+  // load team summary and render
+  async function loadTeamSummary(team_id) {
+    try {
+      const res = await fetch("{% url 'api_team_summary' %}?team_id=" + encodeURIComponent(team_id));
+      if (!res.ok) throw new Error('no data');
+      const data = await res.json();
+
+      // fill table rows
+      const tbody = document.getElementById('teamRows');
+      tbody.innerHTML = '';
+      (data.members || []).forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(m.name || m.email || '—')}</td>
+          <td>${m.assigned_count||0}</td>
+          <td>${m.completed||0}</td>
+          <td>${m.pending||0}</td>
+          <td>${(m.priorities ? [m.priorities.Critical||0, m.priorities.High||0, m.priorities.Normal||0, m.priorities.Low||0].join(' / ') : '0 / 0 / 0 / 0')}</td>
+          <td class="text-end"><button class="btn btn-outline-gradient btn-sm" data-member="${m.id}">View</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // team donut
+      const tProgCtx = document.getElementById('teamProgressChart').getContext('2d');
+      const tProgData = [ data.totals.completed||0, data.totals.inprogress||0, data.totals.pending||0 ];
+      if (window.teamProgChart) window.teamProgChart.destroy();
+      window.teamProgChart = new Chart(tProgCtx, {
+        type:'doughnut',
+        data:{ labels:['Completed','In Progress','Pending'], datasets:[{ data:tProgData, backgroundColor:['#16a34a','#1f86e3','#eab308']}]},
+        options:{ cutout:'58%', plugins:{legend:{display:false}}}
+      });
+
+      // team priority stacked horizontal
+      const tPriCtx = document.getElementById('teamPriorityChart').getContext('2d');
+      const openArr = [ data.totals.priorities?.Critical_open||0, data.totals.priorities?.High_open||0, data.totals.priorities?.Normal_open||0, data.totals.priorities?.Low_open||0 ];
+      const closeArr = [ data.totals.priorities?.Critical_closed||0, data.totals.priorities?.High_closed||0, data.totals.priorities?.Normal_closed||0, data.totals.priorities?.Low_closed||0 ];
+      if (window.teamPriChart) window.teamPriChart.destroy();
+      window.teamPriChart = new Chart(tPriCtx, {
+        type:'bar',
+        data:{ labels:['Critical','High','Normal','Low'],
+          datasets:[
+            { label:'Open', data: openArr, backgroundColor:'#ef4444', stack:'a' },
+            { label:'Closed', data: closeArr, backgroundColor:'#16a34a', stack:'a' }
+          ]
+        },
+        options:{ indexAxis:'y', responsive:true, scales:{ x:{ beginAtZero:true } } }
+      });
+
+    } catch (err) {
+      console.error(err);
+      alert('Failed loading team data.');
     }
-  });
+  }
+
+  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 });
 </script>
 {% endblock %}

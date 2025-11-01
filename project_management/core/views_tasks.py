@@ -5,7 +5,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 
 # helper: get connection for current tenant
-from core.db_helpers import get_tenant_conn
+from .db_helpers import get_tenant_conn
 
 
 # ==============================

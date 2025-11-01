@@ -41,7 +41,8 @@ urlpatterns = [
     path("tasks/create/", views_tasks.create_task_view, name="create_task"),
     path("tasks/bulk-import/", views_tasks.bulk_import_csv_view, name="bulk_import"),
     path("tasks/board/", views_tasks.task_board_view, name="task_board"),
-
+    path("tasks/api/team-list/", views.api_team_list, name="api_team_list"),
+    path("tasks/api/team-summary/", views.api_team_summary, name="api_team_summary"),
     # APIs
     path("tasks/api/assign/", views_tasks.assign_task_api, name="api_assign_task"),
     path("tasks/api/update-status/", views_tasks.api_update_status, name="api_update_status"),
