@@ -5,6 +5,7 @@ from . import views_tenants
 from . import views_passwordreset
 from . import views_projects as projects
 from . import views_teams as people
+from . import views_tasks as views_tasks
 
 urlpatterns = [
     path('identify/', views.identify_view, name='identify'),
@@ -35,4 +36,14 @@ urlpatterns = [
     path('api/teams/<int:team_id>/add_member', people.api_team_add_member, name='api_team_add_member'),
     path('api/teams/<int:team_id>/remove_member', people.api_team_remove_member, name='api_team_remove_member'),
     path('api/teams/<int:team_id>/set_lead', people.api_team_set_lead, name='api_team_set_lead'),
+    path("tasks/my/", views_tasks.my_tasks_view, name="my_tasks"),
+    path("tasks/unassigned/", views_tasks.unassigned_tasks_view, name="unassigned_tasks"),
+    path("tasks/create/", views_tasks.create_task_view, name="create_task"),
+    path("tasks/bulk-import/", views_tasks.bulk_import_csv_view, name="bulk_import"),
+    path("tasks/board/", views_tasks.task_board_view, name="task_board"),
+
+    # APIs
+    path("tasks/api/assign/", views_tasks.assign_task_api, name="api_assign_task"),
+    path("tasks/api/update-status/", views_tasks.api_update_status, name="api_update_status"),
+    path("tasks/api/board-data/", views_tasks.board_data_api, name="board_data"),
 ]

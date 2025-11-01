@@ -1,0 +1,75 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Unassigned Tasks</h4>
+    <a href="{% url 'create_task' %}" class="btn btn-sm btn-success">Create Task</a>
+  </div>
+
+  <div class="list-group shadow-sm">
+    {% for t in tasks %}
+    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+      <div>
+        <h6 class="mb-1">{{ t.title }}</h6>
+        <small class="text-muted">{{ t.project_name|default:"—" }} • Created {{ t.created_at }}</small>
+        <div class="mt-1"><span class="badge bg-secondary">{{ t.priority }}</span>
+          {% if t.due_date %}<small class="ms-2 text-danger">Due {{ t.due_date }}</small>{% endif %}
+        </div>
+      </div>
+      <div class="text-end">
+        <button class="btn btn-sm btn-outline-primary assign-btn" data-task="{{ t.id }}">Assign</button>
+      </div>
+    </div>
+    {% empty %}
+    <div class="p-4 text-muted">No unassigned tasks found.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- small assign modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="assignForm" class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Assign Task</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" name="task_id" id="modal_task_id">
+        <label class="form-label">Assign to</label>
+        <select name="assignee" class="form-select" id="modal_assignee">
+          <option value="">-- choose --</option>
+          <optgroup label="Members">
+            {% for m in members %}
+              <option value="member:{{m.id}}">{{ m.first_name }} {{m.last_name}}</option>
+            {% endfor %}
+          </optgroup>
+          <optgroup label="Teams">
+            {% for t in teams %}
+              <option value="team:{{t.id}}">Team: {{t.name}}</option>
+            {% endfor %}
+          </optgroup>
+        </select>
+      </div>
+      <div class="modal-footer"><button type="submit" class="btn btn-primary">Assign</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const bsModal = new bootstrap.Modal(document.getElementById('assignModal'));
+  document.querySelectorAll('.assign-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> {
+      document.getElementById('modal_task_id').value = btn.dataset.task;
+      bsModal.show();
+    });
+  });
+
+  document.getElementById('assignForm').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    let form = new FormData(ev.target);
+    let res = await fetch("{% url 'api_assign_task' %}", {method:"POST", headers:{'X-CSRFToken': '{{ csrf_token }}' }, body: form});
+    let data = await res.json();
+    if(data.ok){ location.reload(); } else { alert('Assign failed'); }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between mb-3">
+    <h4>Task Board</h4>
+    <div>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'create_task' %}">New Task</a>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'unassigned_tasks' %}">Unassigned</a>
+    </div>
+  </div>
+
+  <div class="row g-2">
+    {% for col in status_columns %}
+      <div class="col-sm-6 col-lg-2">
+        <div class="card" style="min-height:400px;">
+          <div class="card-header bg-white">
+            <strong>{{ col }}</strong>
+          </div>
+          <div class="card-body board-column" data-status="{{ col }}" id="col-{{ col|slugify }}">
+            <!-- cards injected by JS -->
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+
+  </div>
+</div>
+
+<script>
+// fetch board data and render cards
+async function loadBoard(){
+  const res = await fetch("{% url 'board_data' %}");
+  const data = await res.json();
+  const tasks = data.tasks;
+  document.querySelectorAll('.board-column').forEach(c => c.innerHTML = '');
+  tasks.forEach(t=>{
+    const col = document.querySelector(`[data-status="${t.status}"]`) || document.querySelector('.board-column');
+    const card = document.createElement('div');
+    card.className = 'card mb-2 task-card';
+    card.setAttribute('draggable','true');
+    card.dataset.id = t.id;
+    card.innerHTML = `<div class="card-body p-2">
+      <div class="d-flex justify-content-between">
+        <div><strong class="small">${escapeHtml(t.title)}</strong><div class="small text-muted">${t.priority}${t.due_date? ' • Due '+t.due_date : ''}</div></div>
+        <div class="small text-end">${t.assigned_to||''}</div>
+      </div>
+    </div>`;
+    col.appendChild(card);
+  });
+  initDragDrop();
+}
+
+function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// basic HTML5 drag & drop
+function initDragDrop(){
+  document.querySelectorAll('.task-card').forEach(card=>{
+    card.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/plain', card.dataset.id);
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', e=> card.classList.remove('dragging'));
+  });
+
+  document.querySelectorAll('.board-column').forEach(col=>{
+    col.addEventListener('dragover', e=> { e.preventDefault(); col.classList.add('drag-over'); });
+    col.addEventListener('dragleave', e=> col.classList.remove('drag-over'));
+    col.addEventListener('drop', async e=>{
+      e.preventDefault(); col.classList.remove('drag-over');
+      const id = e.dataTransfer.getData('text/plain');
+      const newStatus = col.dataset.status;
+      // call API to update task status
+      const fd = new FormData(); fd.append('task_id', id); fd.append('status', newStatus);
+      const res = await fetch("{% url 'api_update_status' %}", {method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'}, body: fd});
+      const json = await res.json();
+      if(json.ok) { loadBoard(); } else { alert('Status update failed'); }
+    });
+  });
+}
+
+// on page load
+document.addEventListener('DOMContentLoaded', loadBoard);
+</script>
+{% endblock %}

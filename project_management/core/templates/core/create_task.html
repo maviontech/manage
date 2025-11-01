@@ -1,0 +1,72 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h4 class="card-title">Create Task</h4>
+      <form method="post">
+        {% csrf_token %}
+        <div class="row">
+          <div class="col-md-8">
+            <div class="mb-3">
+              <label class="form-label">Title</label>
+              <input name="title" required class="form-control" placeholder="Short, descriptive title">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea name="description" class="form-control" rows="6" placeholder="Detailed description"></textarea>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Project</label>
+                <select name="project_id" class="form-select">
+                  <option value="">-- choose project --</option>
+                  {% for p in projects %}<option value="{{p.id}}">{{p.name}}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Subproject</label>
+                <select name="subproject_id" class="form-select">
+                  <option value="">-- optional subproject --</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Priority</label>
+              <select name="priority" class="form-select">
+                <option>Low</option><option selected>Normal</option><option>High</option><option>Critical</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Due date</label>
+              <input type="date" name="due_date" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Assign to</label>
+              <select name="assigned_to" class="form-select">
+                <option value="">Unassigned</option>
+                <optgroup label="Members">
+                  {% for m in members %}
+                    <option value="member:{{m.id}}">{{ m.first_name }} {{m.last_name}} — {{ m.email }}</option>
+                  {% endfor %}
+                </optgroup>
+                <optgroup label="Teams">
+                  {% for t in teams %}
+                    <option value="team:{{t.id}}">Team: {{t.name}}</option>
+                  {% endfor %}
+                </optgroup>
+              </select>
+            </div>
+            <div class="d-grid">
+              <button class="btn btn-primary">Create Task</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

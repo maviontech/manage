@@ -115,31 +115,36 @@
         </button>
         <ul id="submenu-tasks" class="submenu" role="menu" aria-label="Tasks submenu">
           <li role="none" class="{% if page == 'my_tasks' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
+            <a href="{% url 'my_tasks' %}" class="submenu-link ripple" role="menuitem">
               <i class="fa-solid fa-clipboard-list"></i> My Tasks
             </a>
           </li>
+
           <li role="none" class="{% if page == 'unassigned' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
+            <a href="{% url 'unassigned_tasks' %}" class="submenu-link ripple" role="menuitem">
               <i class="fa-solid fa-user-clock"></i> Unassigned Tasks
             </a>
           </li>
+
           <li role="none" class="{% if page == 'task_create' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
+            <a href="{% url 'create_task' %}" class="submenu-link ripple" role="menuitem">
               <i class="fa-solid fa-plus"></i> Create Task
             </a>
           </li>
+
           <li role="none" class="{% if page == 'bulk_import' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
+            <a href="{% url 'bulk_import' %}" class="submenu-link ripple" role="menuitem">
               <i class="fa-solid fa-file-csv"></i> Bulk Import (CSV)
             </a>
           </li>
+
           <li role="none" class="{% if page == 'task_board' %}active{% endif %}">
-            <a href="#" class="submenu-link ripple" role="menuitem">
+            <a href="{% url 'task_board' %}" class="submenu-link ripple" role="menuitem">
               <i class="fa-solid fa-th-large"></i> Task Board
             </a>
           </li>
         </ul>
+
       </li>
 
       <!-- Time Tracking -->
