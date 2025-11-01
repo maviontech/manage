@@ -7,147 +7,191 @@
 <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  .chart-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-    gap: 24px;
-    margin-top: 32px;
+  /* Layout */
+  .welcome-banner {
+    background: linear-gradient(90deg,#0b57a4,#1f86e3);
+    color: #fff;
+    padding: 18px 22px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 30px rgba(11,87,164,0.08);
   }
+  .welcome-banner h2 { margin:0 0 4px; font-weight:700; }
+  .welcome-banner p { margin:0; opacity:0.92; }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-top: 18px;
+  }
+
+  .metric-card {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(12,38,63,0.05);
+    border: 1px solid rgba(15,23,42,0.03);
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .metric-card .label { color:var(--muted); font-weight:600; margin-bottom:8px; }
+  .metric-card .value { font-size:28px; font-weight:700; color:var(--accent); }
+
+  .charts-row {
+    display:grid;
+    grid-template-columns: 1fr 420px;
+    gap: 22px;
+    margin-top: 22px;
+  }
+  @media (max-width: 1000px) {
+    .charts-row { grid-template-columns: 1fr; }
+    canvas { height: 320px !important; }
+  }
+
   .chart-card {
     background: var(--panel);
     border-radius: 12px;
-    padding: 18px 24px;
-    box-shadow: 0 6px 14px rgba(12, 38, 63, 0.06);
-    border: 1px solid rgba(15, 23, 42, 0.04);
+    padding: 18px;
+    box-shadow: 0 6px 16px rgba(12,38,63,0.05);
+    border: 1px solid rgba(15,23,42,0.03);
   }
-  .chart-card h3 {
-    font-size: 16px;
-    margin-bottom: 12px;
-    color: var(--text);
-  }
-  canvas {
-    width: 100% !important;
-    height: 300px !important;
-  }
+  .chart-card h3 { margin:0 0 10px; font-size:16px; color:var(--text); }
+
+  /* small legend under donut */
+  .donut-legend { display:flex; gap:14px; margin-top:12px; align-items:center; flex-wrap:wrap; }
+  .donut-legend .item { display:flex; gap:8px; align-items:center; font-size:13px; color:var(--muted); }
+  .dot { width:14px; height:10px; border-radius:3px; display:inline-block; }
+
+  /* top-right simple footer row */
+  .dash-footer { margin-top:28px; color:var(--muted); font-size:13px; }
 </style>
 {% endblock %}
 
 {% block page_title %}Dashboard{% endblock %}
-{% block page_subtitle %}Overview of your projects, teams, and productivity metrics{% endblock %}
+{% block page_subtitle %}Overview of your projects, tasks and productivity{% endblock %}
 
 {% block content %}
 <div class="welcome-banner">
-  <h2>Welcome Anurag</h2>
+  <h2>Welcome {{ user.first_name|default:user.email|default:"User" }}</h2>
   <p>Your registered email: <strong>{{ user.email }}</strong></p>
 </div>
 
-<div class="dashboard-metrics">
-  <div class="metric">
-    <h3>Tasks Assigned</h3>
-    <div class="value">{{ assigned_count|default:"0" }}</div>
+<!-- Top metrics -->
+<div class="dashboard-grid">
+  <div class="metric-card">
+    <div class="label">Total Tasks Assigned</div>
+    <div class="value">{{ assigned_count|default:0 }}</div>
   </div>
-  <div class="metric">
-    <h3>Active Projects</h3>
-    <div class="value">{{ active_projects|default:"0" }}</div>
+
+  <div class="metric-card">
+    <div class="label">Active Projects</div>
+    <div class="value">{{ active_projects|default:0 }}</div>
   </div>
-  <div class="metric">
-    <h3>Pending Approvals</h3>
-    <div class="value">{{ pending_approvals|default:"0" }}</div>
+
+  <div class="metric-card">
+    <div class="label">Tasks Completed</div>
+    <div class="value">{{ tasks_completed|default:0 }}</div>
   </div>
-  <div class="metric">
-    <h3>Team Members</h3>
-    <div class="value">{{ team_count|default:"0" }}</div>
+
+  <div class="metric-card">
+    <div class="label">Tasks Pending</div>
+    <div class="value">{{ tasks_pending|default:0 }}</div>
   </div>
 </div>
 
-<!-- CHARTS -->
-<div class="chart-grid">
+<!-- Charts area -->
+<div class="charts-row">
+  <!-- Donut: project / task distribution -->
   <div class="chart-card">
-    <h3>Project Progress</h3>
+    <h3>My Task Breakdown</h3>
     <canvas id="progressChart"></canvas>
+    <div class="donut-legend">
+      <div class="item"><span class="dot" style="background:#16a34a"></span> Completed ({{ progress_completed|default:0 }})</div>
+      <div class="item"><span class="dot" style="background:#1f86e3"></span> In Progress ({{ progress_inprogress|default:0 }})</div>
+      <div class="item"><span class="dot" style="background:#eab308"></span> Pending ({{ progress_pending|default:0 }})</div>
+    </div>
   </div>
+
+  <!-- Horizontal bar: priorities -->
   <div class="chart-card">
-    <h3>Weekly Task Activity</h3>
-    <canvas id="taskChart"></canvas>
+    <h3>Tasks by Priority</h3>
+    <canvas id="priorityChart"></canvas>
+    <div style="margin-top:12px;color:var(--muted);font-size:13px;">Shows number of tasks in each priority bucket for your assignments.</div>
   </div>
 </div>
 
-<div style="margin-top:32px;">
-  <p>
-    <a href="{% url 'logout' %}" class="btn-ghost">Logout</a>
-  </p>
+<div class="dash-footer">
+  <a href="{% url 'logout' %}" class="btn-ghost">Logout</a>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
-    // Donut Chart: Project Progress
-    const progressCtx = document.getElementById('progressChart');
-    new Chart(progressCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Completed', 'In Progress', 'Pending'],
-        datasets: [{
-          label: 'Project Status',
-          data: [
-            {{ progress_completed|default:60 }},
-            {{ progress_inprogress|default:25 }},
-            {{ progress_pending|default:15 }}
-          ],
-          backgroundColor: ['#16a34a', '#1f86e3', '#eab308'],
-          borderWidth: 1,
-          hoverOffset: 8
-        }]
-      },
-      options: {
-        responsive: true,
-        cutout: '65%',
-        plugins: {
-          legend: { position: 'bottom', labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text') } },
-          tooltip: { backgroundColor: 'rgba(0,0,0,0.7)', bodyFont: { size: 13 } }
-        }
+document.addEventListener("DOMContentLoaded", function() {
+  // Donut chart: task breakdown
+  const progressCtx = document.getElementById('progressChart').getContext('2d');
+  new Chart(progressCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Completed','In Progress','Pending'],
+      datasets: [{
+        data: [
+          {{ progress_completed|default:0 }},
+          {{ progress_inprogress|default:0 }},
+          {{ progress_pending|default:0 }}
+        ],
+        backgroundColor: ['#16a34a', '#1f86e3', '#eab308'],
+        hoverOffset: 8,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: 'rgba(0,0,0,0.7)' }
       }
-    });
-
-    // Bar Chart: Weekly Task Activity
-    const taskCtx = document.getElementById('taskChart');
-    new Chart(taskCtx, {
-      type: 'bar',
-      data: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        datasets: [{
-          label: 'Hours Logged',
-          data: [
-            {{ week_mon|default:8 }},
-            {{ week_tue|default:6 }},
-            {{ week_wed|default:7 }},
-            {{ week_thu|default:9 }},
-            {{ week_fri|default:5 }},
-            {{ week_sat|default:3 }},
-            {{ week_sun|default:0 }}
-          ],
-          backgroundColor: '#0b57a4',
-          borderRadius: 6,
-          barThickness: 24
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--muted') } },
-          y: {
-            beginAtZero: true,
-            ticks: { stepSize: 2, color: getComputedStyle(document.documentElement).getPropertyValue('--muted') },
-            grid: { color: 'rgba(15,23,42,0.05)' }
-          }
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: 'rgba(0,0,0,0.7)' }
-        }
-      }
-    });
+    }
   });
+
+  // Horizontal bar: tasks by priority
+  const prCtx = document.getElementById('priorityChart').getContext('2d');
+  new Chart(prCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Critical','High','Normal','Low'],
+      datasets: [{
+        label: 'Tasks',
+        data: [
+          {{ pri_critical|default:0 }},
+          {{ pri_high|default:0 }},
+          {{ pri_normal|default:0 }},
+          {{ pri_low|default:0 }}
+        ],
+        backgroundColor: ['#c026d3','#ef4444','#0b57a4','#6b7280'],
+        borderRadius: 6,
+        barThickness: 22
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--muted') }
+        },
+        y: {
+          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text') }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: 'rgba(0,0,0,0.7)' }
+      }
+    }
+  });
+});
 </script>
 {% endblock %}
