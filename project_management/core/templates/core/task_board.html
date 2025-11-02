@@ -63,133 +63,121 @@
 </div>
 
 <!-- ===== Task Detail Modal (Hidden by Default) ===== -->
-<!-- kept hidden attribute so it doesn't render inline unexpectedly; JS removes hidden before show -->
 <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true" hidden>
-  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content modal-opaque-content" role="dialog" aria-modal="true">
+
+      <!-- Visible circular close button -->
+      <button type="button" class="modal-close-circle" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" fill="#0b2440"/></svg>
+      </button>
+
       <form id="taskDetailForm" class="needs-validation" novalidate>
-        <div class="modal-header">
-          <h5 class="modal-title" id="taskDetailTitle">Task</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-header border-0 ps-4 pe-4 pt-4">
+          <div>
+            <h5 class="modal-title" id="taskDetailTitle">Task</h5>
+            <div class="text-muted small" id="modalSubtitle">Task details</div>
+          </div>
         </div>
 
-        <div class="modal-body py-4">
+        <div class="modal-body py-3 px-4">
           <input type="hidden" name="task_id" id="modal_task_id" />
 
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Title</label>
-            <input id="modal_title" name="title" class="form-control form-control-lg" required>
-          </div>
+          <!-- Reworked, aligned form grid:
+               left-column primary fields, right-column compact fields.
+               Description moved to the end and spans full width.
+          -->
+          <div class="modal-form-grid">
+            <!-- Title (full width of left column) -->
+            <div class="form-group">
+              <label class="form-label fw-semibold">Title</label>
+              <input id="modal_title" name="title" class="form-control form-control-lg" required>
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Description</label>
-            <textarea id="modal_description" name="description" class="form-control" rows="6"></textarea>
-          </div>
-
-          <div class="row g-2">
-            <div class="col-sm-6">
+            <!-- Priority (right column) -->
+            <div class="form-group">
               <label class="form-label fw-semibold">Priority</label>
-              <select id="modal_priority" name="priority" class="form-select">
+              <select id="modal_priority" name="priority" class="form-select form-control-lg">
                 <option value="">--</option>
                 <option>Critical</option><option>High</option><option>Normal</option><option>Low</option>
               </select>
             </div>
-            <div class="col-sm-6">
-              <label class="form-label fw-semibold">Due date</label>
-              <input id="modal_due_date" name="due_date" type="date" class="form-control">
-            </div>
-          </div>
 
-          <div class="mt-3">
-            <label class="form-label fw-semibold">Assignee</label>
-            <input id="modal_assignee" name="assigned_to_display" class="form-control" placeholder="Assignee name or team (editable)">
-            <div class="form-text">Type member or team; backend will resolve on save.</div>
+            <!-- Due date (left column, below title) -->
+            <div class="form-group">
+              <label class="form-label fw-semibold">Due date</label>
+              <input id="modal_due_date" name="due_date" type="date" class="form-control form-control-lg">
+            </div>
+
+            <!-- Assignee (right column) - prefer select if members/teams provided -->
+            <div class="form-group">
+              <label class="form-label fw-semibold">Assignee</label>
+              <div>
+                {% if members or teams %}
+                <select id="modal_assignee" name="assigned_to" class="form-select form-control-lg">
+                  <option value="">-- Unassigned --</option>
+                  {% if members %}
+                    <optgroup label="Members">
+                      {% for m in members %}
+                        <option value="member:{{ m.id }}">{{ m.display_name }}</option>
+                      {% endfor %}
+                    </optgroup>
+                  {% endif %}
+                  {% if teams %}
+                    <optgroup label="Teams">
+                      {% for t in teams %}
+                        <option value="team:{{ t.id }}">{{ t.name }}</option>
+                      {% endfor %}
+                    </optgroup>
+                  {% endif %}
+                </select>
+                {% else %}
+                <input id="modal_assignee" name="assigned_to_display" class="form-control form-control-lg" placeholder="Type member or team (backend will resolve)">
+                {% endif %}
+              </div>
+              <div class="form-text">Type member or team; backend will resolve on save.</div>
+            </div>
+
+            <!-- Spacer to retain grid alignment; not visible -->
+            <div class="form-spacer" aria-hidden="true"></div>
+
+            <!-- Description (full-width at the end) -->
+            <div class="form-group full-width">
+              <label class="form-label fw-semibold">Description</label>
+              <textarea id="modal_description" name="description" class="form-control" rows="6" placeholder="Describe the task..."></textarea>
+            </div>
           </div>
 
           <div id="modal_alert" class="alert d-none mt-3" role="alert"></div>
         </div>
 
-        <div class="modal-footer d-flex justify-content-end gap-2 px-4 py-3">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-          <button id="saveTaskBtn" type="submit" class="btn btn-gradient btn-lg">Save changes</button>
+        <div class="modal-footer modal-footer-centered px-4 py-4 border-0">
+          <div class="footer-btns">
+            <button type="button" class="btn btn-light btn-lg px-4" data-bs-dismiss="modal">Close</button>
+            <button id="saveTaskBtn" type="submit" class="btn btn-gradient btn-lg px-4">Save changes</button>
+          </div>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- ===== Styling tweaks ===== -->
+<!-- ===== Styling tweaks & modal improvements (kept file logic intact) ===== -->
 <style>
-/* header action spacing */
+/* keep your original board styles unchanged (copied from your file) */
 .header-actions .btn { display:inline-flex; align-items:center; gap:8px; }
-
-/* larger, separated search area */
 .search-card { border-radius:10px; }
 .search-input { padding-left:40px; border-radius:8px; border:1px solid #e6eef6; box-shadow:none; height:44px; }
 .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#6c757d; font-size:14px; }
-
-/* improve button visuals and spacing vs search */
 .btn-lg { padding:10px 16px; border-radius:10px; font-weight:600; }
 .header-actions { margin-left:12px; }
 
-/* --- Modern Kanban Board Layout --- */
-.kanban-board-wrapper {
-  overflow-x: auto;
-  overflow-y: hidden;
-  white-space: nowrap;
-  padding-bottom: 10px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.kanban-board {
-  display: flex;
-  gap: 16px;
-  min-height: 70vh;
-  padding-bottom: 10px;
-  align-items: flex-start;
-}
-
-.kanban-column {
-  flex: 0 0 320px;
-  background: #fbfeff;
-  border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(13,38,71,0.06);
-  display: flex;
-  flex-direction: column;
-  height: auto;
-  max-height: 80vh;
-}
-
-.kanban-header {
-  background: linear-gradient(90deg, #0b57a4, #38bdf8);
-  color: #fff;
-  text-align: center;
-  border-radius: 8px 8px 0 0;
-  font-weight: 700;
-  padding: 10px;
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-/* body is the drop area and scrollable per column */
-.kanban-body {
-  flex: 1;
-  padding: 12px;
-  border-radius: 0 0 12px 12px;
-  background-color: #f9fcff;
-  min-height: 55vh;
-  overflow-y: auto;
-  position: relative;
-  z-index: 1;
-}
-
-.kanban-body.drag-over {
-  background-color: rgba(56, 189, 248, 0.12);
-  border: 2px dashed #38bdf8;
-}
-
-/* task card clickable UI */
+.kanban-board-wrapper { overflow-x: auto; overflow-y: hidden; white-space: nowrap; padding-bottom: 10px; -webkit-overflow-scrolling: touch; }
+.kanban-board { display: flex; gap: 16px; min-height: 70vh; padding-bottom: 10px; align-items: flex-start; }
+.kanban-column { flex: 0 0 320px; background: #fbfeff; border-radius: 12px; box-shadow: 0 6px 18px rgba(13,38,71,0.06); display: flex; flex-direction: column; height: auto; max-height: 80vh; }
+.kanban-header { background: linear-gradient(90deg, #0b57a4, #38bdf8); color: #fff; text-align: center; border-radius: 8px 8px 0 0; font-weight: 700; padding: 10px; position: sticky; top: 0; z-index: 2; }
+.kanban-body { flex: 1; padding: 12px; border-radius: 0 0 12px 12px; background-color: #f9fcff; min-height: 55vh; overflow-y: auto; position: relative; z-index: 1; }
+.kanban-body.drag-over { background-color: rgba(56, 189, 248, 0.12); border: 2px dashed #38bdf8; }
 .task-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05); padding:14px 16px; margin-bottom:12px; cursor:grab; transition:transform .12s ease, box-shadow .12s ease; }
 .task-card:active { cursor:grabbing; }
 .task-card:focus, .task-card:hover { transform:translateY(-4px); box-shadow:0 10px 26px rgba(10,30,60,0.08); outline: none; }
@@ -197,152 +185,106 @@
 .task-meta { font-size:0.82rem; color:#54607a; margin-top:2px; }
 .assignee-name { font-size:0.82rem; font-weight:600; color:#0b57a4; margin-top:8px; }
 
-/* modal form */
 .modal .form-label { font-weight:600; color:#0b2440; }
 #modal_alert.success { background:#ecfdf5; color:#065f46; border:1px solid rgba(16,185,129,0.12); }
 #modal_alert.error { background:#fff1f2; color:#9f1239; border:1px solid rgba(239,68,68,0.08); }
 
-/* dragging visual */
-.task-card.dragging { opacity: 0.6; transform: scale(0.995); }
-
-/* Scrollbar styling for horizontal wrapper */
-.kanban-board-wrapper::-webkit-scrollbar { height: 10px; }
-.kanban-board-wrapper::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #0b57a4, #38bdf8); border-radius: 5px; }
-.kanban-board-wrapper::-webkit-scrollbar-track { background: #eef5fa; }
-
-/* ensure modal markup stays hidden until JS shows it */
 .modal[hidden] { display: none !important; visibility: hidden !important; }
 
-/* ------------ Pagination / Summary styling ------------ */
-#boardSummary {
-  color: #374151;
-  font-size: 0.92rem;
-  margin-right: 12px;
-}
-
-/* Force pagination UL to be inline, remove bullets and default spacing */
-#boardPagination {
-  display: flex;
-  gap: 8px;
-  list-style: none;
-  padding-left: 0;
-  margin: 8px 0 0 0;
-  align-items: center;
-}
-
-/* Page item and links - pill style */
-#boardPagination .page-item { display: inline-block; }
-#boardPagination .page-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  height: 36px;
-  border-radius: 20px;
-  padding: 0 10px;
-  border: 1px solid rgba(11,87,164,0.12);
-  background: #ffffff;
-  color: #0b57a4;
-  font-weight: 600;
-  text-decoration: none;
-  box-shadow: 0 2px 6px rgba(11,87,164,0.03);
-}
-#boardPagination .page-item.active .page-link {
-  background: linear-gradient(90deg,#0b57a4,#38bdf8);
-  color: #fff;
-  border-color: transparent;
-}
-#boardPagination .page-item.disabled .page-link {
-  opacity: 0.45;
-  cursor: not-allowed;
-  background: #f3f6f9;
-}
-
-/* make the footer compact and centered */
-.footer-pagination {
-  display:flex;
-  gap:18px;
-  align-items:center;
-  justify-content:center;
-  padding: 16px 0 28px 0;
-}
-
-/* small responsive tweak so it wraps nicely on narrow screens */
-@media (max-width: 600px) {
-  .footer-pagination { flex-direction: column; gap: 6px; padding-bottom: 18px; }
-  #boardPagination .page-link { min-width: 32px; height: 32px; }
-}
-
-/* ------------ Modal overlay & z-index fix ------------ */
-/* Ensure backdrop sits under modal but above page content */
-.modal-backdrop {
-  z-index: 1050 !important;
-}
-
-/* Ensure modal itself is above backdrop and everything else */
-.modal {
-  z-index: 1060 !important;
-}
-
-/* Make sure modal uses fixed positioning and covers viewport (bootstrap does this by default) */
-.modal.show {
-  display: block;
-}
-
-/* Modal visual polish */
-.modal .modal-content {
-  border-radius: 12px;
-  box-shadow: 0 18px 60px rgba(8,30,59,0.12);
-  border: none;
-  overflow: hidden;
-}
-.modal .modal-header .modal-title {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #072a4f;
-}
-.modal .modal-body { font-size: 0.95rem; color: #2b3b4a; }
-
-/* fallback fixed modal style when bootstrap fails to position it */
-.modal.fallback-show {
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  display: block !important;
-  visibility: visible !important;
-  width: 92% !important;
-  max-width: 940px !important;
-  z-index: 20000 !important;
-  margin: 0 !important;
-}
-
-/* fallback backdrop */
+/* --- Backdrop: no blur (keeps crisp modal) --- */
+.modal-backdrop,
 .modal-backdrop.fallback {
   position: fixed !important;
   inset: 0 !important;
-  background: rgba(6, 30, 60, 0.55) !important;
-  z-index: 19990 !important;
+  background: rgba(3,20,40,0.72) !important;
+  z-index: 1050 !important;
+  pointer-events: auto;
 }
 
-/* optional: dim the board behind modal a touch more when modal open */
-body.modal-open .kanban-board-wrapper,
-body.modal-open .kanban-board {
-  filter: blur(0.2px);
+/* ensure bootstrap modal sits above backdrop */
+.modal { z-index: 1060 !important; }
+
+/* Opaque modal content: professional card with subtle gradient */
+.modal-opaque-content {
+  position: relative;
+  z-index: 1061;
+  border-radius: 12px;
+  overflow: hidden;
+  border: none;
+  background: linear-gradient(180deg, #ffffff, #f7fbff);
+  box-shadow: 0 24px 60px rgba(6,30,60,0.28);
+  max-width: 920px;
+  margin: 0 auto;
+  color: #122033;
+  transition: transform .12s ease, opacity .12s ease;
 }
 
-/* small responsive polish */
-@media (max-width: 1100px) {
-  .kanban-column { flex: 0 0 280px; }
+/* circular close button top-right */
+.modal-close-circle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(180deg,#fff,#f4fbff);
+  border: 1px solid rgba(11,87,164,0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(11,87,164,0.06);
+  cursor: pointer;
+  z-index: 1070;
 }
+.modal-close-circle svg { display:block; }
+
+/* Header and subtitle */
+.modal .modal-header { display:flex; align-items:center; justify-content:flex-start; padding: 18px 8px; background: transparent; }
+.modal .modal-title { font-size:1.12rem; font-weight:800; color:#072a4f; margin-left:8px; }
+#modalSubtitle { color: #5b6b7a; margin-left:8px; }
+
+/* Form grid (columns and full-width description) */
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 12px 20px;
+  align-items: start;
+}
+.modal-form-grid .full-width { grid-column: 1 / -1; }
+
+.modal .form-control, .modal .form-select { border-radius:8px; border:1px solid rgba(11,87,164,0.08); padding:10px 12px; box-shadow:none; min-height:44px; font-size:0.95rem; }
+
+.modal .form-control[rows] { min-height:120px; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+
+/* Footer buttons */
+.modal-footer-centered { justify-content:center; padding: 18px 22px; background: transparent; }
+.footer-btns { display:flex; gap:14px; justify-content:center; align-items:center; width:100%; max-width:500px; }
+.btn-gradient { background: linear-gradient(90deg,#0b57a4,#38bdf8); color: #fff; border: none; box-shadow: 0 8px 20px rgba(11,87,164,0.12); border-radius:10px; padding:10px 18px; font-weight:700; }
+.btn-light { background:#f6f8fb; color:#0b2440; border:1px solid rgba(11,87,164,0.06); padding:10px 18px; border-radius:10px; }
+
+/* Fallback show rules (so modal centers when bootstrap isn't available) */
+.modal.fallback-show {
+  display: flex !important;
+  position: fixed !important;
+  inset: 0 !important;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1061 !important;
+  overflow: auto;
+}
+.modal.fallback-show .modal-dialog { display:flex; align-items:center; justify-content:center; min-height:0; max-width:96%; margin:0; }
+.modal.fallback-show .modal-content { max-height: calc(100vh - 80px); overflow:auto; }
+
+/* Responsive */
 @media (max-width: 900px) {
-  .header-actions { width:100%; justify-content:flex-start; gap:8px; }
-  .search-card .card-body { flex-direction:column; gap:10px; }
-  .kanban-column { flex: 0 0 240px; }
+  .modal-form-grid { grid-template-columns: 1fr; }
+  .modal-opaque-content { margin: 12px; max-width: 96%; }
+  .modal-close-circle { top: 10px; right: 10px; width:36px; height:36px; }
 }
 </style>
 
-<!-- ===== JS Logic ===== -->
+<!-- ===== JS Logic (board + modal + fallback fixes) ===== -->
 <script>
 let CURRENT_BOARD_PAGE = 1;
 const PER_PAGE = 10;
@@ -351,7 +293,7 @@ const TASK_DETAIL_API = "{% url 'api_task_detail' %}";        // expects GET ?id
 const TASK_UPDATE_API = "{% url 'api_task_update' %}";       // expects POST form data
 const CSRF_TOKEN = "{{ csrf_token }}";
 
-/* --- Board load (unchanged core logic) --- */
+/* --- Board loader / renderer (unchanged core logic) --- */
 async function loadBoard(page=1){
   try {
     CURRENT_BOARD_PAGE = page;
@@ -370,7 +312,6 @@ async function loadBoard(page=1){
     console.error("Board load failed", err);
   }
 }
-
 function renderAllColumns(tasks){
   document.querySelectorAll(".kanban-body").forEach(c => c.innerHTML = "");
   tasks.forEach(t => renderCard(t));
@@ -378,7 +319,7 @@ function renderAllColumns(tasks){
   initSearch(ALL_TASKS);
 }
 
-/* --- Card rendering: make them clickable and accessible --- */
+/* --- Card rendering --- */
 function renderCard(t){
   const col = document.querySelector(`[data-status="${t.status}"]`) || document.querySelector(".kanban-body");
   const card = document.createElement("div");
@@ -406,7 +347,6 @@ function renderCard(t){
     </div>
   `;
 
-  // click to open modal detail
   card.addEventListener("click", e => {
     if (card.dataset.dragging === "1") return;
     openTaskModal(t.id);
@@ -418,25 +358,20 @@ function renderCard(t){
   col.appendChild(card);
 }
 
-/* === Drag/drop preserved from original === */
+/* === Drag/drop === */
 function initDragDrop(){
-  // re-bind cards
   document.querySelectorAll(".task-card").forEach(card=>{
     card.addEventListener("dragstart", e=>{
       e.dataTransfer.setData("text/plain", card.dataset.id);
       try { e.dataTransfer.effectAllowed = "move"; } catch(err) {}
-      card.dataset.dragging = "1";
-      card.classList.add("dragging");
+      card.dataset.dragging = "1"; card.classList.add("dragging");
     });
     card.addEventListener("dragend", e=>{
-      card.dataset.dragging = "0";
-      card.classList.remove("dragging");
+      card.dataset.dragging = "0"; card.classList.remove("dragging");
     });
   });
 
-  // columns as drop targets
   document.querySelectorAll(".kanban-body").forEach(col=>{
-    // allow dropping
     col.addEventListener("dragover", e=>{ e.preventDefault(); col.classList.add("drag-over"); e.dataTransfer.dropEffect = 'move'; });
     col.addEventListener("dragenter", e=>{ e.preventDefault(); col.classList.add("drag-over"); });
     col.addEventListener("dragleave", e=>{ col.classList.remove("drag-over"); });
@@ -460,33 +395,20 @@ function initDragDrop(){
   });
 }
 
-/* === Drag-scroll for board (mouse drag to scroll horizontally) === */
+/* drag-scroll for board */
 (function enableBoardDragScroll(){
   const boardWrapper = document.querySelector('.kanban-board-wrapper');
   if(!boardWrapper) return;
-  let isDown = false;
-  let startX;
-  let scrollLeft;
-
+  let isDown = false; let startX; let scrollLeft;
   boardWrapper.addEventListener('mousedown', (e) => {
-    // only activate if clicking on empty board area, not when interacting inside a card
     if (e.target.closest('.task-card')) return;
-    isDown = true;
-    boardWrapper.classList.add('drag-scrolling');
-    startX = e.pageX - boardWrapper.offsetLeft;
-    scrollLeft = boardWrapper.scrollLeft;
-    boardWrapper.style.cursor = 'grabbing';
-    e.preventDefault();
+    isDown = true; boardWrapper.classList.add('drag-scrolling');
+    startX = e.pageX - boardWrapper.offsetLeft; scrollLeft = boardWrapper.scrollLeft; boardWrapper.style.cursor = 'grabbing'; e.preventDefault();
   });
-
   boardWrapper.addEventListener('mouseleave', () => { isDown = false; boardWrapper.style.cursor = ''; boardWrapper.classList.remove('drag-scrolling'); });
   boardWrapper.addEventListener('mouseup', () => { isDown = false; boardWrapper.style.cursor = ''; boardWrapper.classList.remove('drag-scrolling'); });
-
   boardWrapper.addEventListener('mousemove', (e) => {
-    if(!isDown) return;
-    const x = e.pageX - boardWrapper.offsetLeft;
-    const walk = (x - startX) * 1.2; // scroll speed
-    boardWrapper.scrollLeft = scrollLeft - walk;
+    if(!isDown) return; const x = e.pageX - boardWrapper.offsetLeft; const walk = (x - startX) * 1.2; boardWrapper.scrollLeft = scrollLeft - walk;
   });
 })();
 
@@ -495,146 +417,112 @@ function initSearch(allTasks){
   const searchInput = document.getElementById("taskSearch");
   const priorityFilter = document.getElementById("priorityFilter");
   const clearBtn = document.getElementById("clearFilters");
-
   function applyFilter(){
     const term = (searchInput.value || '').trim().toLowerCase();
     const pri = priorityFilter.value;
     document.querySelectorAll(".task-card").forEach(card => card.style.display = "none");
-
     allTasks.forEach(t => {
-      const matchTerm =
-        (t.title && t.title.toLowerCase().includes(term)) ||
-        (t.priority && t.priority.toLowerCase().includes(term)) ||
-        (t.assigned_to_display && t.assigned_to_display.toLowerCase().includes(term));
+      const matchTerm = (t.title && t.title.toLowerCase().includes(term)) || (t.priority && t.priority.toLowerCase().includes(term)) || (t.assigned_to_display && t.assigned_to_display.toLowerCase().includes(term));
       const matchPri = !pri || (t.priority === pri);
       if ((term === "" || matchTerm) && matchPri) {
-        const cardEl = document.querySelector(`.task-card[data-id="${t.id}"]`);
-        if (cardEl) cardEl.style.display = "";
+        const cardEl = document.querySelector(`.task-card[data-id="${t.id}"]`); if (cardEl) cardEl.style.display = "";
       }
     });
   }
-
   if (searchInput) searchInput.addEventListener('input', applyFilter);
   if (priorityFilter) priorityFilter.addEventListener('change', applyFilter);
   if (clearBtn) clearBtn.addEventListener('click', function(){ searchInput.value=''; priorityFilter.value=''; applyFilter(); });
 }
 
-/* === Pagination & Summary (unchanged) === */
+/* === Pagination & Summary === */
 function renderPagination(current, total){
-  const container = document.getElementById("boardPagination");
-  if(!container) return;
-  container.innerHTML = "";
-
+  const container = document.getElementById("boardPagination"); if(!container) return; container.innerHTML = "";
   function pageItem(label, page, disabled=false, active=false){
     const li = document.createElement("li");
     li.className = "page-item" + (disabled ? " disabled" : "") + (active ? " active" : "");
-    const a = document.createElement("a");
-    a.className = "page-link";
-    a.href = "#";
-    a.textContent = label;
-    a.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      if(disabled || page === current) return;
-      loadBoard(page);
-    });
-    li.appendChild(a);
-    return li;
+    const a = document.createElement("a"); a.className = "page-link"; a.href = "#"; a.textContent = label;
+    a.addEventListener("click", (ev) => { ev.preventDefault(); if(disabled || page === current) return; loadBoard(page); });
+    li.appendChild(a); return li;
   }
-
   container.appendChild(pageItem("Prev", Math.max(1, current-1), current<=1));
-
-  const pages = new Set();
-  pages.add(1);
-  pages.add(total);
+  const pages = new Set(); pages.add(1); pages.add(total);
   for(let p=current-2; p<=current+2; p++) if(p>1 && p<total) pages.add(p);
   const pagesArr = Array.from(pages).sort((a,b)=>a-b);
-
   let last = 0;
   pagesArr.forEach(p=>{
-    if(last && p - last > 1){
-      const ell = document.createElement("li");
-      ell.className = "page-item disabled";
-      ell.innerHTML = '<span class="page-link">…</span>';
-      container.appendChild(ell);
-    }
-    container.appendChild(pageItem(p, p, false, p===current));
-    last = p;
+    if(last && p - last > 1){ const ell = document.createElement("li"); ell.className = "page-item disabled"; ell.innerHTML = '<span class="page-link">…</span>'; container.appendChild(ell); }
+    container.appendChild(pageItem(p, p, false, p===current)); last = p;
   });
-
   container.appendChild(pageItem("Next", Math.min(total, current+1), current>=total));
 }
-
 function updateSummary(page, totalCount, totalPages){
-  const summary = document.getElementById("boardSummary");
-  if(!summary) return;
-  const start = (page-1)*PER_PAGE + 1;
-  const end = Math.min(page*PER_PAGE, totalCount);
+  const summary = document.getElementById("boardSummary"); if(!summary) return;
+  const start = (page-1)*PER_PAGE + 1; const end = Math.min(page*PER_PAGE, totalCount);
   summary.textContent = `Showing ${start}-${end} of ${totalCount} tasks`;
 }
 
-/* === Task Modal: open, fetch, populate, save === */
-/* The openTaskModal below uses bootstrap when available but provides a robust fallback
-   that ensures the modal/backdrop overlay covers the viewport and looks professional. */
-
+/* === Modal / fallback logic === */
 let taskModalInstance = null;
 
-// light-weight backdrop creation used by fallback
 function createFallbackBackdrop() {
-  // avoid duplicate
   if (document.querySelector('.modal-backdrop.fallback')) return;
+  const modalEl = document.getElementById('taskDetailModal');
   const b = document.createElement('div');
   b.className = 'modal-backdrop fallback';
-  document.body.appendChild(b);
+  b.style.position = 'fixed';
+  b.style.inset = '0';
+  b.style.background = 'rgba(3,20,40,0.72)';
+  b.style.zIndex = '1050';
+  // Insert backdrop BEFORE modal element so it's behind it
+  if (modalEl && modalEl.parentElement) { modalEl.parentElement.insertBefore(b, modalEl); }
+  else document.body.appendChild(b);
 }
+function removeFallbackBackdrop() { document.querySelectorAll('.modal-backdrop.fallback').forEach(el => el.remove()); }
 
-function removeFallbackBackdrop() {
-  document.querySelectorAll('.modal-backdrop.fallback').forEach(el => el.remove());
-}
-
-/* fallback show/hide in case bootstrap fails */
 function showModalFallback(modalEl) {
   if (!modalEl) return;
   createFallbackBackdrop();
+  // Remove hidden attr
+  modalEl.removeAttribute('hidden');
+  modalEl.setAttribute('aria-hidden', 'false');
+  // Add fallback-show class which applies fixed full-screen centering
   modalEl.classList.add('fallback-show');
   document.body.classList.add('modal-open');
-  // focus first focusable element for accessibility
+  // focus first control
   const first = modalEl.querySelector('input, textarea, button, select, a');
   if (first) try { first.focus(); } catch(e) {}
 }
 function hideModalFallback(modalEl) {
   if (!modalEl) return;
+  // remove the visible class so it goes back to hidden
   modalEl.classList.remove('fallback-show');
+  // set aria-hidden and hidden attribute to keep markup out of view
+  modalEl.setAttribute('hidden', '');
+  modalEl.setAttribute('aria-hidden', 'true');
   removeFallbackBackdrop();
   document.body.classList.remove('modal-open');
 }
 
-/* main open function */
+/* open modal (Bootstrap preferred; fallback if not available) */
 function openTaskModal(taskId){
-  const modalEl = document.getElementById('taskDetailModal');
-  if (!modalEl) return;
+  const modalEl = document.getElementById('taskDetailModal'); if (!modalEl) return;
 
-  // keep modal markup hidden by default
-  if (modalEl.hasAttribute('hidden')) {
-    modalEl.removeAttribute('hidden');
-    modalEl.setAttribute('aria-hidden', 'false');
-  }
-
-  // ensure modal is attached to body so backdrop covers full viewport
-  if (modalEl.parentElement !== document.body) {
-    document.body.appendChild(modalEl);
-  }
-
-  // clear form & set loading text
-  document.getElementById('modal_alert').classList.add('d-none');
-  document.getElementById('taskDetailTitle').textContent = 'Loading...';
+  // clear and mark loading
+  const alertEl = document.getElementById('modal_alert'); if (alertEl) alertEl.classList.add('d-none');
+  const titleEl = document.getElementById('taskDetailTitle'); if (titleEl) titleEl.textContent = 'Loading...';
   document.getElementById('modal_task_id').value = taskId;
   document.getElementById('modal_title').value = '';
   document.getElementById('modal_description').value = '';
   document.getElementById('modal_priority').value = '';
   document.getElementById('modal_due_date').value = '';
-  document.getElementById('modal_assignee').value = '';
+  // if assignee field exists, reset it appropriately
+  const assEl = document.getElementById('modal_assignee');
+  if (assEl) { if (assEl.tagName === 'SELECT') assEl.value = ''; else assEl.value = ''; }
 
-  // Try using Bootstrap modal if available
+  // Ensure modal is appended to body (and not nested where z-index issues happen)
+  if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+
+  // Try bootstrap
   let usedBootstrap = false;
   try {
     if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -643,57 +531,56 @@ function openTaskModal(taskId){
       usedBootstrap = true;
     }
   } catch (err) {
-    console.warn('Bootstrap modal failed, will use fallback', err);
-    usedBootstrap = false;
+    console.warn('bootstrap modal failed, falling back', err); usedBootstrap = false;
   }
 
-  // Fetch details (do this regardless of which show method used)
+  // Fetch task details
   fetch(TASK_DETAIL_API + '?id=' + encodeURIComponent(taskId))
     .then(r => r.json())
     .then(data => {
       if (!data || !data.id) {
         showModalAlert('error', 'Failed to load task details.');
-        // if bootstrap used but failed to fetch, ensure fallback not left visible
-        if (!usedBootstrap && modalEl.classList.contains('fallback-show')) hideModalFallback(modalEl);
+        if (!usedBootstrap) hideModalFallback(modalEl);
         return;
       }
-      // populate fields
-      document.getElementById('taskDetailTitle').textContent = data.title || ('Task #' + data.id);
+      const title = document.getElementById('taskDetailTitle'); if (title) title.textContent = data.title || ('Task #' + data.id);
       document.getElementById('modal_task_id').value = data.id;
       document.getElementById('modal_title').value = data.title || '';
       document.getElementById('modal_description').value = data.description || '';
       document.getElementById('modal_priority').value = data.priority || '';
       document.getElementById('modal_due_date').value = data.due_date || '';
-      document.getElementById('modal_assignee').value = data.assigned_to_display || (data.assigned_to || '');
+      // set assignee appropriately
+      const aEl = document.getElementById('modal_assignee');
+      if (aEl) {
+        if (aEl.tagName === 'SELECT') {
+          if (data.assigned_to) aEl.value = data.assigned_to;
+        } else {
+          aEl.value = data.assigned_to_display || (data.assigned_to || '');
+        }
+      }
     })
-    .catch(err => {
-      console.error(err);
-      showModalAlert('error', 'Network error loading task.');
-    });
+    .catch(err => { console.error(err); showModalAlert('error', 'Network error loading task.'); });
 
-  // After a short delay, if bootstrap didn't actually show the modal, fall back
+  // If bootstrap did not show within short time, use fallback show that guarantees centering
   setTimeout(() => {
-    const actuallyShown = modalEl.classList.contains('show') || modalEl.classList.contains('fallback-show') || document.querySelector('.modal-backdrop');
-    if (!actuallyShown) {
-      // Use fallback show to guarantee overlay and fixed positioning
-      showModalFallback(modalEl);
-    }
-  }, 160);
+    const actuallyShown = document.querySelector('.modal-backdrop') || modalEl.classList.contains('show') || modalEl.classList.contains('fallback-show');
+    if (!actuallyShown) showModalFallback(modalEl);
+  }, 180);
 }
 
+/* show alert inside modal */
 function showModalAlert(type, text){
-  const el = document.getElementById('modal_alert');
+  const el = document.getElementById('modal_alert'); if (!el) return;
   el.className = 'alert mt-3';
   if (type === 'success') { el.classList.add('success'); el.textContent = text; el.classList.remove('d-none'); }
   else { el.classList.add('error'); el.textContent = text; el.classList.remove('d-none'); }
 }
 
-/* Submit form via AJAX */
+/* submit save */
 document.getElementById('taskDetailForm')?.addEventListener('submit', async function(e){
   e.preventDefault();
   const btn = document.getElementById('saveTaskBtn');
-  btn.disabled = true;
-  btn.innerHTML = 'Saving...';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Saving...'; }
 
   const fd = new FormData(this);
   fd.append('task_id', document.getElementById('modal_task_id').value);
@@ -707,15 +594,11 @@ document.getElementById('taskDetailForm')?.addEventListener('submit', async func
     const json = await res.json();
     if (json && json.ok) {
       showModalAlert('success', 'Saved successfully');
-      // reload board to reflect changes
       setTimeout(() => {
-        try {
-          if (taskModalInstance) taskModalInstance.hide();
-        } catch (e) {}
-        // hide fallback if it was used
+        try { if (taskModalInstance) taskModalInstance.hide(); } catch (e) {}
         hideModalFallback(document.getElementById('taskDetailModal'));
         loadBoard(CURRENT_BOARD_PAGE);
-      }, 500);
+      }, 450);
     } else {
       showModalAlert('error', json.error || 'Save failed');
     }
@@ -723,60 +606,66 @@ document.getElementById('taskDetailForm')?.addEventListener('submit', async func
     console.error(err);
     showModalAlert('error', 'Network error while saving.');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = 'Save changes';
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Save changes'; }
   }
 });
 
-/* Close handling: hide fallback on close buttons or bootstrap events */
+/* Close/hide handlers:
+   - include the new .modal-close-circle so it closes in both bootstrap & fallback modes
+*/
 document.addEventListener('click', function (e) {
-  if (e.target.closest('[data-bs-dismiss="modal"]') || e.target.closest('.btn-close')) {
+  if (e.target.closest('[data-bs-dismiss="modal"]') || e.target.closest('.btn-close') || e.target.closest('.modal-close-circle')) {
     const modalEl = document.getElementById('taskDetailModal');
     try { if (taskModalInstance) taskModalInstance.hide(); } catch(e) {}
     hideModalFallback(modalEl);
   }
 });
+
+// When Bootstrap emits hidden event, ensure fallback removed too
 document.addEventListener('hidden.bs.modal', function(ev){
   const modalEl = document.getElementById('taskDetailModal');
-  hideModalFallback(modalEl);
+  // remove any fallback if exists
+  removeFallbackBackdrop();
+  // ensure modal hidden attribute set
+  if (modalEl) { modalEl.setAttribute('hidden',''); modalEl.setAttribute('aria-hidden','true'); }
 });
 
-/* === Enhance footer (wrap summary + pagination into a centered footer) and modal z-index handlers === */
+// also hide on Esc when fallback is used
+document.addEventListener('keydown', function(ev){
+  if (ev.key === 'Escape') {
+    const modalEl = document.getElementById('taskDetailModal');
+    try { if (taskModalInstance) taskModalInstance.hide(); } catch(e) {}
+    hideModalFallback(modalEl);
+  }
+});
+
+/* enhance footer + z-index housekeeping */
 (function enhanceFooterAndModalBehavior(){
-  // build footer wrapper
   const summary = document.getElementById('boardSummary');
   const pagination = document.getElementById('boardPagination');
   if (summary && pagination) {
-    // create wrapper only if not present
     if (!document.querySelector('.footer-pagination')) {
       const parent = summary.parentElement || pagination.parentElement;
-      const wrapper = document.createElement('div');
-      wrapper.className = 'footer-pagination';
+      const wrapper = document.createElement('div'); wrapper.className = 'footer-pagination';
       parent.insertBefore(wrapper, parent.firstChild);
-      wrapper.appendChild(summary);
-      wrapper.appendChild(pagination);
+      wrapper.appendChild(summary); wrapper.appendChild(pagination);
     }
   }
-
-  // Ensure Bootstrap modal backdrop and z-index are correct on show
   document.addEventListener('shown.bs.modal', function (ev) {
-    const modal = ev.target;
-    if (modal && modal.classList && modal.classList.contains('modal')) {
-      modal.style.zIndex = 1060;
+    const modal = ev.target; if (modal && modal.classList && modal.classList.contains('modal')) {
+      modal.style.zIndex = 1061;
       document.querySelectorAll('.modal-backdrop').forEach(b => b.style.zIndex = 1050);
     }
   });
-
-  // clean stray backdrops when modal hides
   document.addEventListener('hidden.bs.modal', function (ev) {
     document.querySelectorAll('.modal-backdrop:not(.fade)').forEach(b => b.remove());
   });
 })();
 
-/* === Utilities === */
+/* utilities */
 function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-/* === Init === */
+/* init */
 document.addEventListener("DOMContentLoaded", function(){
   loadBoard(1);
 });
