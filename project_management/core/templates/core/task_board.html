@@ -147,6 +147,25 @@
 .modal .form-label { font-weight:600; color:#0b2440; }
 #modal_alert.success { background:#ecfdf5; color:#065f46; border:1px solid rgba(16,185,129,0.12); }
 #modal_alert.error { background:#fff1f2; color:#9f1239; border:1px solid rgba(239,68,68,0.08); }
+/* --- Fix drag-drop behavior --- */
+.kanban-body {
+  min-height: 55vh;
+  padding: 8px;
+  border-radius: 10px;
+  background-color: #f9fcff;
+  position: relative;
+  z-index: 1;
+}
+
+.kanban-body.drag-over {
+  background-color: rgba(56, 189, 248, 0.12);
+  border: 2px dashed #38bdf8;
+}
+
+.task-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
 
 /* small responsive polish */
 @media (max-width: 900px) {
