@@ -38,6 +38,82 @@
   .team-chart { width:100%; height:160px; }
   .donut-legend { display:flex; gap:12px; margin-top:12px; align-items:center; flex-wrap:wrap; font-size:13px; color:var(--muted); }
   .dot { width:14px; height:10px; border-radius:3px; display:inline-block; }
+
+  /* ---- Split layout + Quick Actions ---- */
+  .chart-split{ display:flex; gap:14px; align-items:stretch; }
+  .chart-split .shortcuts-area, .chart-split .donut-pane{ flex:1 1 50%; min-width:0; }
+
+  /* shortcuts grid */
+  .shortcuts {
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap:12px;
+    align-content:start;
+  }
+  .shortcut-btn{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:18px;
+    border-radius:12px;
+    color:#fff;
+    box-shadow: 0 6px 16px rgba(12,38,63,0.04);
+    cursor:pointer;
+    transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
+    font-weight:700;
+    font-size:13px;
+    height:110px; /* square-ish */
+    text-align:center;
+    overflow:hidden;
+    border: none;
+  }
+  .shortcut-btn svg { width:36px; height:36px; color:rgba(255,255,255,0.95); }
+  .shortcut-btn .lbl { font-size:13px; opacity:0.95; color:rgba(255,255,255,0.95); }
+
+  /* professional gradient palette for each button */
+  .shortcut-blue   { background: linear-gradient(135deg,#2563eb,#60a5fa); }
+  .shortcut-green  { background: linear-gradient(135deg,#059669,#34d399); }
+  .shortcut-violet { background: linear-gradient(135deg,#9333ea,#a855f7); }
+  .shortcut-orange { background: linear-gradient(135deg,#ea580c,#f97316); }
+
+  /* subtle hover glow */
+  .shortcut-btn:hover { transform: translateY(-5px); filter:brightness(1.03); box-shadow: 0 18px 40px rgba(20,40,80,0.12); }
+
+  /* badge */
+  .shortcut-badge {
+    position:absolute;
+    top:10px;
+    right:10px;
+    min-width:22px;
+    height:22px;
+    padding:0 6px;
+    border-radius:12px;
+    background:rgba(255,255,255,0.95);
+    color:#0b57a4;
+    font-size:12px;
+    font-weight:800;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow: 0 8px 20px rgba(11,87,164,0.08);
+  }
+
+  .shortcuts-area h3 { font-size:16px; font-weight:700; color:var(--text); margin:6px 0 12px; }
+  .donut-pane h3 { font-size:16px; font-weight:700; color:var(--text); margin:6px 0 12px; }
+
+  /* donut pane layout */
+  .donut-pane { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding-left:6px; }
+
+  /* responsive */
+  @media (max-width:1000px){
+    .chart-split { flex-direction:column; }
+    .shortcut-btn { height:92px; }
+    #progressChart { max-width:420px; height:220px !important; }
+    .shortcuts { grid-template-columns: repeat(3, 1fr); }
+  }
 </style>
 {% endblock %}
 
@@ -84,14 +160,57 @@
 </div>
 
 <div class="charts-row">
-  <!-- Donut (smaller) -->
+  <!-- Combined Quick Actions + Task Breakdown -->
   <div class="chart-card">
-    <h3>My Task Breakdown</h3>
-    <canvas id="progressChart"></canvas>
-    <div class="donut-legend">
-      <div class="item"><span class="dot" style="background:#16a34a"></span> Completed ({{ progress_completed|default:0 }})</div>
-      <div class="item"><span class="dot" style="background:#1f86e3"></span> In Progress ({{ progress_inprogress|default:0 }})</div>
-      <div class="item"><span class="dot" style="background:#eab308"></span> Pending ({{ progress_pending|default:0 }})</div>
+    <div class="chart-split" style="margin-top:6px;">
+
+      <!-- Left: Quick Actions -->
+      <div class="shortcuts-area">
+        <h3>Quick Actions:</h3>
+        <div class="shortcuts" aria-hidden="false">
+
+          <button class="shortcut-btn shortcut-blue" data-action="{% url 'my_tasks' %}" aria-label="My tasks">
+            <span class="shortcut-badge">{{ assigned_count|default:0 }}</span>
+            <!-- task list icon -->
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 11H7V9h2v2zm0 4H7v-2h2v2zm4-4h-2V9h2v2zM5 5h14v2H5V5zm2 14h10v-8H7v8z" fill="currentColor"/></svg>
+            <div class="lbl">My Tasks</div>
+          </button>
+
+          <button class="shortcut-btn shortcut-green" data-action="{% url 'create_task' %}" aria-label="Create task">
+            <span class="shortcut-badge">{{ my_new_tasks_count|default:0 }}</span>
+            <!-- plus icon -->
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z" fill="currentColor"/></svg>
+            <div class="lbl">Create</div>
+          </button>
+
+          <button class="shortcut-btn shortcut-violet" data-action="{% url 'task_board' %}" aria-label="Task board">
+            <span class="shortcut-badge">{{ board_open_count|default:0 }}</span>
+            <!-- board icon -->
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 13h8V3H3v10zm10 8h8V3h-8v18zM3 21h8v-6H3v6z" fill="currentColor"/></svg>
+            <div class="lbl">Board</div>
+          </button>
+
+          <button class="shortcut-btn shortcut-orange" data-action="{% url 'projects_list' %}" aria-label="All projects">
+            <span class="shortcut-badge">{{ active_projects|default:0 }}</span>
+            <!-- projects icon -->
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 13h8V3H3v10zm10 8h8v-6h-8v6zM3 21h8v-6H3v6z" fill="currentColor" opacity="0.95"/></svg>
+            <div class="lbl">Projects</div>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Right: Task Breakdown -->
+      <div class="donut-pane">
+        <h3>Task Breakdown:</h3>
+        <canvas id="progressChart"></canvas>
+        <div class="donut-legend" style="justify-content:flex-start;">
+          <div class="item"><span class="dot" style="background:#16a34a"></span> Completed ({{ progress_completed|default:0 }})</div>
+          <div class="item"><span class="dot" style="background:#1f86e3"></span> In Progress ({{ progress_inprogress|default:0 }})</div>
+          <div class="item"><span class="dot" style="background:#eab308"></span> Pending ({{ progress_pending|default:0 }})</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -164,6 +283,21 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+  // Attach handlers to shortcut buttons
+  document.querySelectorAll('.shortcut-btn').forEach(btn => {
+    btn.addEventListener('click', function(e){
+      const url = this.getAttribute('data-action');
+      if (!url) return;
+      location.assign(url);
+    });
+    btn.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.click();
+      }
+    });
+  });
+
   // Donut chart
   const progressCtx = document.getElementById('progressChart')?.getContext('2d');
   if (progressCtx) {
@@ -209,7 +343,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // Team View -- only attach handler if button exists (rendered only for team leads)
+  // Team View
   const teamBtn = document.getElementById('teamViewBtn');
   if (teamBtn) {
     teamBtn.addEventListener('click', async function() {
@@ -234,14 +368,12 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // load team summary and render
   async function loadTeamSummary(team_id) {
     try {
       const res = await fetch("{% url 'api_team_summary' %}?team_id=" + encodeURIComponent(team_id));
       if (!res.ok) throw new Error('no data');
       const data = await res.json();
 
-      // fill table rows
       const tbody = document.getElementById('teamRows');
       tbody.innerHTML = '';
       (data.members || []).forEach(m => {

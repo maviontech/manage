@@ -16,6 +16,72 @@
   <!-- load our new css -->
   <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
 
+  {# Small local overrides to ensure submenus collapse without leaving vertical gaps #}
+  <style>
+    /* Reset submenu spacing and animate height instead of display */
+    .menu-root { list-style:none; margin:0; padding:0; }
+    .menu-root > .menu-item { margin: 6px 0; } /* small spacing between main menu items */
+
+    /* Submenu base: hidden by default (no padding/margin so it takes zero space) */
+    .submenu {
+      list-style:none;
+      margin: 0;               /* remove default ul margin */
+      padding: 0;              /* remove default ul padding */
+      overflow: hidden;        /* clip children when collapsed */
+      max-height: 0;           /* collapsed */
+      transition: max-height .26s cubic-bezier(.2,.9,.2,1), padding .18s ease;
+      will-change: max-height;
+    }
+
+    /* Submenu items when collapsed - keep heights zero */
+    .submenu > li {
+      padding: 0;
+      margin: 0;
+    }
+
+    /* When a menu-item is open, allow the submenu to expand */
+    .menu-item.open > .submenu {
+      padding-top: 8px;        /* small breathing room when open */
+      padding-bottom: 8px;
+      max-height: 480px;       /* large enough for most submenus; will clip if more */
+      transition: max-height .36s cubic-bezier(.2,.9,.2,1), padding .18s ease;
+    }
+
+    /* Submenu links styling (kept tight when collapsed) */
+    .submenu-link {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      width:100%;
+      padding:10px 14px;
+      color:var(--muted);
+      text-decoration:none;
+      border-radius:8px;
+    }
+    .submenu-link:hover { background: rgba(255,255,255,0.02); color: var(--text); }
+
+    /* Caret rotation */
+    .menu-link .caret {
+      display:inline-block;
+      margin-left:auto;
+      transition: transform .22s ease;
+      color: rgba(255,255,255,0.6);
+    }
+    .menu-item.open > .menu-link .caret {
+      transform: rotate(90deg);
+    }
+
+    /* When submenu is collapsed ensure no gap is left by list item padding */
+    .menu-item > .menu-link { padding: 12px 14px; display:flex; align-items:center; gap:12px; border-radius:8px; }
+    .menu-item > .menu-link:focus, .menu-item > .menu-link:hover { background: rgba(255,255,255,0.02); }
+
+    /* small responsive fix: reduce submenu padding on narrow screens */
+    @media (max-width:700px){
+      .submenu-link { padding:8px 12px; font-size:14px; }
+      .menu-item > .menu-link { padding:10px 12px; }
+    }
+  </style>
+
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -59,7 +125,7 @@
               <li role="none" class="{% if page == 'project_create' %}active{% endif %}">
                 <a href="{% url 'project_create' %}" class="submenu-link ripple" role="menuitem">
                   <i class="fa-solid fa-plus-circle"></i>
-                  <span>Projects/Subprojects</span>
+                  <span>Create Project</span>
                 </a>
               </li>
             </ul>
@@ -239,55 +305,80 @@
   </div>
 
   <script>
+    const SIDEBAR_KEY = 'trackline.sidebar.state';
+
     // --- Submenu controller (only one open at a time) ---
-(function(){
-  document.querySelectorAll('.sub-toggle').forEach(btn=>{
-    const id = btn.getAttribute('aria-controls');            // e.g. submenu-tasks
-    const li = btn.closest('.menu-item');
+    (function(){
+      document.querySelectorAll('.sub-toggle').forEach(btn=>{
+        const id = btn.getAttribute('aria-controls');            // e.g. submenu-tasks
+        const li = btn.closest('.menu-item');
 
-    btn.addEventListener('click', function(e){
-      e.preventDefault();
+        btn.addEventListener('click', function(e){
+          e.preventDefault();
 
-      // toggle current
-      const isNowOpen = li.classList.toggle('open');
-      btn.setAttribute('aria-expanded', isNowOpen ? 'true' : 'false');
+          // toggle current
+          const isNowOpen = li.classList.toggle('open');
+          btn.setAttribute('aria-expanded', isNowOpen ? 'true' : 'false');
 
-      // close any other open menu-item (only keep this one open)
-      document.querySelectorAll('.menu-item.open').forEach(other=>{
-        if (other === li) return; // skip the one we just toggled
-        other.classList.remove('open');
+          // close any other open menu-item (only keep this one open)
+          document.querySelectorAll('.menu-item.open').forEach(other=>{
+            if (other === li) return; // skip the one we just toggled
+            other.classList.remove('open');
 
-        // also make sure the button for the other submenu has aria-expanded=false
-        const otherBtn = other.querySelector('.sub-toggle');
-        if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
-      });
+            // ensure button aria-expanded for the other submenu is false
+            const otherBtn = other.querySelector('.sub-toggle');
+            if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
 
-      // persist per-submenu and collapsed state into localStorage
-      try {
-        const saved = JSON.parse(localStorage.getItem(SIDEBAR_KEY) || "{}");
+            // defensive: remove inline max-height/padding if any left by legacy code
+            const otherSub = other.querySelector('.submenu');
+            if (otherSub) {
+              otherSub.style.maxHeight = null;
+              otherSub.style.paddingTop = null;
+              otherSub.style.paddingBottom = null;
+            }
+          });
 
-        // set this submenu state
-        saved[id] = isNowOpen;
+          // persist per-submenu and collapsed state into localStorage
+          try {
+            const saved = JSON.parse(localStorage.getItem(SIDEBAR_KEY) || "{}");
 
-        // ensure all other submenu keys are set to false (so only this one opens next time)
-        document.querySelectorAll('.sub-toggle').forEach(b=>{
-          const k = b.getAttribute('aria-controls');
-          if (k !== id) saved[k] = false;
+            // set this submenu state
+            saved[id] = isNowOpen;
+
+            // ensure all other submenu keys are set to false (so only this one opens next time)
+            document.querySelectorAll('.sub-toggle').forEach(b=>{
+              const k = b.getAttribute('aria-controls');
+              if (k !== id) saved[k] = false;
+            });
+
+            localStorage.setItem(SIDEBAR_KEY, JSON.stringify(saved));
+          } catch(e) {
+            // ignore storage errors
+          }
         });
 
-        localStorage.setItem(SIDEBAR_KEY, JSON.stringify(saved));
-      } catch(e) {
-        // ignore storage errors
-      }
-    });
+        // keyboard activation
+        btn.addEventListener('keydown', function(e){
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
+        });
+      });
 
-    // keyboard activation
-    btn.addEventListener('keydown', function(e){
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
-    });
-  });
-})();
+      // On first load: restore previously saved open submenu state (if any)
+      try {
+        const saved = JSON.parse(localStorage.getItem(SIDEBAR_KEY) || "{}");
+        Object.keys(saved).forEach(k=>{
+          if (saved[k]) {
+            const btn = document.querySelector(`[aria-controls="${k}"]`);
+            if (btn) {
+              const li = btn.closest('.menu-item');
+              li.classList.add('open');
+              btn.setAttribute('aria-expanded','true');
+            }
+          }
+        });
+      } catch(e){ /* ignore */ }
 
+    })();
   </script>
 
   {% block extra_js %}{% endblock %}

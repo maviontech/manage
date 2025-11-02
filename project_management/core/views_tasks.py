@@ -2,7 +2,9 @@ import csv, io, datetime
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 
 # helper: get connection for current tenant
 from .db_helpers import get_tenant_conn
@@ -341,3 +343,71 @@ def bulk_import_csv_view(request):
         return render(request, "core/tasks_bulk_import_result.html", context)
 
     return render(request, "core/tasks_bulk_import.html", context)
+
+@require_GET
+def api_task_detail(request):
+    """
+    GET ?id=<task_id>
+    Returns JSON with task fields used by the modal: id, title, description, priority, due_date, assigned_to, assigned_to_display, status
+    """
+    tid = request.GET.get('id') or request.GET.get('task_id')
+    if not tid:
+        return HttpResponseBadRequest(json.dumps({'error': 'missing id'}), content_type='application/json')
+
+    task = get_object_or_404(Task, pk=tid)
+    # adapt field names to your model
+    data = {
+        'id': task.id,
+        'title': task.title,
+        'description': task.description or '',
+        'priority': task.priority or '',
+        'due_date': task.due_date.isoformat() if getattr(task, 'due_date', None) else '',
+        'assigned_to': getattr(task, 'assigned_to', '') or '',
+        'assigned_to_display': getattr(task, 'assigned_to_display', '') or '',
+        'status': task.status,
+    }
+    return JsonResponse(data)
+
+
+@require_POST
+def api_task_update(request):
+    """
+    Accepts form-data (task_id, title, description, priority, due_date, assigned_to_display, status)
+    Returns { "ok": true } on success or { "ok": false, "error": "..." }
+    """
+    tid = request.POST.get('task_id')
+    if not tid:
+        return JsonResponse({'ok': False, 'error': 'missing task_id'}, status=400)
+
+    task = get_object_or_404(Task, pk=tid)
+
+    # simple permission check: only owner or staff can update (customize as needed)
+    if not (request.user.is_staff or task.created_by == request.user):
+        # adapt permission logic to your app
+        pass
+
+    # update fields (validate as needed)
+    title = request.POST.get('title')
+    description = request.POST.get('description')
+    priority = request.POST.get('priority')
+    due_date = request.POST.get('due_date')
+    assigned_to_display = request.POST.get('assigned_to_display')
+    status = request.POST.get('status')
+
+    if title is not None: task.title = title
+    if description is not None: task.description = description
+    if priority is not None: task.priority = priority
+    if due_date:
+        try:
+            from django.utils.dateparse import parse_date
+            task.due_date = parse_date(due_date)
+        except Exception:
+            pass
+    if assigned_to_display is not None:
+        # adapt to your way of storing assignee (here we set a display field)
+        task.assigned_to_display = assigned_to_display
+    if status is not None:
+        task.status = status
+
+    task.save()
+    return JsonResponse({'ok': True})

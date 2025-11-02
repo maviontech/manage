@@ -2,35 +2,42 @@
 {% block content %}
 <div class="container-fluid py-4">
 
-  <!-- RIGHT-SIDE compact submenu inserted (no removal of existing content) -->
-
-
   <!-- ===== Header Section ===== -->
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
     <div>
       <h4 class="fw-bold text-gradient mb-0">
         <i class="fa-solid fa-table-columns me-2"></i> Task Board
       </h4>
-      <p class="small text-muted mb-0">Drag & drop tasks between columns. Click a card to view details.</p>
+      <p class="small text-muted mb-0">Drag &amp; drop tasks between columns. Click a card to view details.</p>
     </div>
-    <div class="d-flex flex-wrap gap-2">
-      <a href="{% url 'create_task' %}" class="btn btn-gradient">
+
+    <!-- Action buttons grouped and separated from search -->
+    <div class="d-flex flex-wrap align-items-center gap-2 header-actions">
+      <a href="{% url 'create_task' %}" class="btn btn-gradient btn-lg">
         <i class="fa-solid fa-plus me-1"></i> New Task
       </a>
-      <a href="{% url 'unassigned_tasks' %}" class="btn btn-outline-gradient">
+      <a href="{% url 'unassigned_tasks' %}" class="btn btn-outline-gradient btn-lg">
         <i class="fa-solid fa-user-clock me-1"></i> Unassigned
       </a>
+      <!-- optional quick filter / other buttons can go here -->
     </div>
   </div>
 
-  <!-- ===== Search Bar ===== -->
+  <!-- ===== Search Bar (separated with margin from header actions) ===== -->
   <div class="card mb-4 border-0 shadow-sm search-card">
-    <div class="card-body py-2">
-      <div class="d-flex align-items-center gap-2">
-        <div class="position-relative flex-fill">
-          <i class="fa-solid fa-magnifying-glass search-icon"></i>
-          <input type="text" id="taskSearch" class="form-control search-input" placeholder="Search tasks by title, assignee or priority...">
-        </div>
+    <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
+      <div class="position-relative flex-fill" style="min-width:280px;">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="taskSearch" class="form-control search-input" placeholder="Search tasks by title, assignee or priority...">
+      </div>
+
+      <!-- small quick filters to the right of search (optional) -->
+      <div class="d-flex gap-2">
+        <select id="priorityFilter" class="form-select" style="width:160px;">
+          <option value="">All priorities</option>
+          <option>Critical</option><option>High</option><option>Normal</option><option>Low</option>
+        </select>
+        <button id="clearFilters" class="btn btn-light">Clear</button>
       </div>
     </div>
   </div>
@@ -56,137 +63,95 @@
   </div>
 </div>
 
-<!-- ===== Styling ===== -->
+<!-- ===== Task Detail Modal ===== -->
+<div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form id="taskDetailForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="taskDetailTitle">Task</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" name="task_id" id="modal_task_id" />
+
+          <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input id="modal_title" name="title" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea id="modal_description" name="description" class="form-control" rows="6"></textarea>
+          </div>
+
+          <div class="row g-2">
+            <div class="col-sm-6">
+              <label class="form-label">Priority</label>
+              <select id="modal_priority" name="priority" class="form-select">
+                <option value="">--</option>
+                <option>Critical</option><option>High</option><option>Normal</option><option>Low</option>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Due date</label>
+              <input id="modal_due_date" name="due_date" type="date" class="form-control">
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label">Assignee</label>
+            <input id="modal_assignee" name="assigned_to_display" class="form-control" placeholder="Assignee name or team (editable)">
+            <div class="form-text">Type member or team; backend will resolve on save.</div>
+          </div>
+
+          <div id="modal_alert" class="alert d-none mt-3" role="alert"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button id="saveTaskBtn" type="submit" class="btn btn-gradient">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Styling tweaks ===== -->
 <style>
-/* preserve your existing styles (copied from original) */
-.text-gradient {
-  background:linear-gradient(90deg,#0b57a4,#38bdf8);
-  -webkit-background-clip:text;
-  color:transparent;
-}
-.btn-gradient {
-  background:linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8);
-  color:#fff; border:none; border-radius:8px; padding:8px 14px; font-weight:500;
-}
-.btn-gradient:hover { opacity:0.9; }
-.btn-outline-gradient {
-  border:1px solid #38bdf8; color:#0b57a4; border-radius:8px; padding:8px 14px; font-weight:500;
-}
+/* header action spacing */
+.header-actions .btn { display:inline-flex; align-items:center; gap:8px; }
+
+/* larger, separated search area */
 .search-card { border-radius:10px; }
-.search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#6c757d; }
-.search-input {
-  padding-left:36px; border-radius:8px; border:1px solid #dee2e6; box-shadow:none;
-}
-.kanban-column {
-  background:#f8fafc; border-radius:12px; min-height:70vh;
-  box-shadow:0 4px 12px rgba(13,38,71,0.06); padding-bottom:16px;
-}
-.kanban-header {
-  background:linear-gradient(90deg,#0b57a4,#38bdf8);
-  color:#fff; text-align:center; border-radius:8px; font-weight:600;
-  padding:8px; margin-bottom:10px; letter-spacing:0.3px;
-}
-.kanban-body { padding:8px; transition:background-color .3s ease; }
-.task-card {
-  background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05);
-  padding:12px 14px; margin-bottom:12px; cursor:grab;
-  transition:transform .15s ease, box-shadow .15s ease;
-}
-.task-card:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,0.08); }
-.task-title { font-weight:600; font-size:0.95rem; margin-bottom:2px; }
-.task-meta { font-size:0.8rem; color:#667084; margin-top:2px; }
-.assignee-name { font-size:0.8rem; font-weight:500; color:#0b57a4; margin-top:6px; }
-.dragging { opacity:0.6; transform:scale(.98); }
-.drag-over { background:rgba(56,189,248,0.08)!important; border-radius:10px; }
-.board-row { margin-bottom:40px; }
+.search-input { padding-left:40px; border-radius:8px; border:1px solid #e6eef6; box-shadow:none; height:44px; }
+.search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#6c757d; font-size:14px; }
 
-/* Pagination look */
-.pagination .page-item.active .page-link {
-  background-color:#0b57a4; border-color:#0b57a4;
-}
-.pagination .page-link {
-  color:#0b57a4;
-  border-radius:6px;
-}
+/* improve button visuals and spacing vs search */
+.btn-lg { padding:10px 16px; border-radius:10px; font-weight:600; }
+.header-actions { margin-left:12px; }
 
-/* ---------- Right-side compact submenu styles (strong overrides) ---------- */
-/* container relative so absolute/right positioning references visible area */
-.container-fluid { position: relative; }
+/* column/card styles (kept from your original but small polish) */
+.kanban-column { background:#fbfeff; border-radius:12px; min-height:54vh; box-shadow:0 6px 18px rgba(13,38,71,0.06); padding-bottom:18px; }
+.kanban-header { background:linear-gradient(90deg,#0b57a4,#38bdf8); color:#fff; text-align:center; border-radius:8px; font-weight:700; padding:10px; margin-bottom:12px; }
 
-/* important: place the submenu to the right and vertically center */
-.task-submenu {
-  position: absolute;
-  right: 48px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1200;
-  pointer-events: auto;
-  width: 320px;
-}
+/* task card clickable UI */
+.task-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05); padding:14px 16px; margin-bottom:12px; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; }
+.task-card:focus, .task-card:hover { transform:translateY(-4px); box-shadow:0 10px 26px rgba(10,30,60,0.08); outline: none; }
+.task-title { font-weight:700; font-size:0.98rem; margin-bottom:4px; color:#0f1724; }
+.task-meta { font-size:0.82rem; color:#54607a; margin-top:2px; }
+.assignee-name { font-size:0.82rem; font-weight:600; color:#0b57a4; margin-top:8px; }
 
-/* submenu card (glassy) */
-.submenu-card {
-  border-radius: 12px;
-  padding: 10px;
-  color: #fff;
-  background: linear-gradient(180deg, rgba(11,87,164,0.96), rgba(31,134,227,0.92));
-  box-shadow: 0 20px 40px rgba(11,87,164,0.09), inset 0 1px 0 rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.04);
-  backdrop-filter: blur(6px);
-  overflow: visible;
-}
+/* modal form */
+.modal .form-label { font-weight:600; color:#0b2440; }
+#modal_alert.success { background:#ecfdf5; color:#065f46; border:1px solid rgba(16,185,129,0.12); }
+#modal_alert.error { background:#fff1f2; color:#9f1239; border:1px solid rgba(239,68,68,0.08); }
 
-/* compact item list */
-.submenu-list-compact { display:flex; flex-direction:column; gap:10px; padding:6px; }
-
-/* menu items */
-.submenu-item-compact {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px; border-radius:10px;
-  color:rgba(255,255,255,0.95); text-decoration:none; font-weight:600;
-  transition: box-shadow .18s ease, transform .12s ease, background-color .12s ease, color .12s;
-  border-left: 3px solid transparent; background: transparent; position:relative;
-}
-
-/* icons */
-.submenu-item-compact i { width:18px; text-align:center; opacity:0.95; }
-
-/* GLOWING WHITE hover - strong */
-.submenu-item-compact:hover {
-  transform: translateY(-2px);
-  color: #fff !important;
-  background: rgba(255,255,255,0.16) !important;
-  box-shadow:
-    0 0 18px rgba(255,255,255,0.65),
-    0 0 36px rgba(255,255,255,0.35),
-    0 0 60px rgba(255,255,255,0.18);
-  border-left-color: rgba(255,255,255,0.95) !important;
-}
-.submenu-item-compact::after {
-  content: "";
-  position: absolute; left: -40%; top: -30%;
-  width: 140%; height: 80%;
-  background: linear-gradient(90deg, rgba(255,255,255,0.00), rgba(255,255,255,0.22), rgba(255,255,255,0.00));
-  transform: rotate(-20deg);
-  opacity: 0; transition: transform .45s ease, opacity .25s ease; pointer-events:none;
-}
-.submenu-item-compact:hover::after { transform: rotate(-18deg) translateX(-6%); opacity: 1; }
-
-/* active item */
-.submenu-item-compact.active {
-  background: rgba(255,255,255,0.12) !important;
-  color: #ffffff !important;
-  border-left-color: #10b981 !important;
-  box-shadow: 0 0 18px rgba(16,185,129,0.18) !important;
-}
-
-/* ensure glow visible */
-.submenu-card, .submenu-item-compact { overflow: visible !important; }
-
-/* responsive: hide/move submenu below on small screens */
-@media (max-width: 992px) {
-  .task-submenu { position: static; transform: none; width: 100%; margin-top: 12px; }
-  .container-fluid { position: static; }
+/* small responsive polish */
+@media (max-width: 900px) {
+  .header-actions { width:100%; justify-content:flex-start; gap:8px; }
+  .search-card .card-body { flex-direction:column; gap:10px; }
 }
 </style>
 
@@ -195,8 +160,11 @@
 let CURRENT_BOARD_PAGE = 1;
 const PER_PAGE = 10;
 let ALL_TASKS = [];
+const TASK_DETAIL_API = "{% url 'api_task_detail' %}";        // expects GET ?id=ID
+const TASK_UPDATE_API = "{% url 'api_task_update' %}";       // expects POST form data
+const CSRF_TOKEN = "{{ csrf_token }}";
 
-/* === Load board data, render cards, drag-drop, pagination, and search filter === */
+/* --- Board load (unchanged core logic) --- */
 async function loadBoard(page=1){
   try {
     CURRENT_BOARD_PAGE = page;
@@ -223,12 +191,16 @@ function renderAllColumns(tasks){
   initSearch(ALL_TASKS);
 }
 
+/* --- Card rendering: make them clickable and accessible --- */
 function renderCard(t){
   const col = document.querySelector(`[data-status="${t.status}"]`) || document.querySelector(".kanban-body");
   const card = document.createElement("div");
   card.className = "task-card";
   card.setAttribute("draggable", "true");
   card.dataset.id = t.id;
+  card.setAttribute("tabindex","0");
+  card.setAttribute("role","button");
+  card.setAttribute("aria-label", "Open task " + (t.title || '') );
 
   let displayAssignee = "";
   if (t.assigned_to_display) displayAssignee = t.assigned_to_display;
@@ -241,25 +213,25 @@ function renderCard(t){
     <div>
       <div class="task-title">${escapeHtml(t.title)}</div>
       <div class="task-meta">
-        ${escapeHtml(t.priority)}${t.due_date ? ' • Due ' + escapeHtml(t.due_date) : ''}
+        ${escapeHtml(t.priority || '')}${t.due_date ? ' • Due ' + escapeHtml(t.due_date) : ''}
       </div>
       ${displayAssignee ? `<div class="assignee-name"><i class="fa-solid fa-user me-1"></i>${escapeHtml(displayAssignee)}</div>` : ''}
     </div>
   `;
 
-  // click to open detail (optional)
+  // click to open modal detail
   card.addEventListener("click", e => {
     if (card.dataset.dragging === "1") return;
-    if (typeof TASK_DETAIL_URL_TEMPLATE !== "undefined") {
-      const url = TASK_DETAIL_URL_TEMPLATE.replace("__ID__", t.id);
-      window.location = url;
-    }
+    openTaskModal(t.id);
   });
+  card.addEventListener("keydown", e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTaskModal(t.id); }
+  });
+
   col.appendChild(card);
 }
 
-function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
+/* === Drag/drop preserved from original === */
 function initDragDrop(){
   document.querySelectorAll(".task-card").forEach(card=>{
     card.addEventListener("dragstart", e=>{
@@ -286,7 +258,7 @@ function initDragDrop(){
         fd.append("status", newStatus);
         const res = await fetch("{% url 'api_update_status' %}", {
           method: "POST",
-          headers: { "X-CSRFToken": "{{ csrf_token }}" },
+          headers: { "X-CSRFToken": CSRF_TOKEN },
           body: fd
         });
         const json = await res.json();
@@ -296,27 +268,36 @@ function initDragDrop(){
   });
 }
 
-/* === Search Filter === */
+/* === Search / Filter === */
 function initSearch(allTasks){
   const searchInput = document.getElementById("taskSearch");
-  if (!searchInput) return;
-  searchInput.oninput = e => {
-    const term = e.target.value.toLowerCase();
+  const priorityFilter = document.getElementById("priorityFilter");
+  const clearBtn = document.getElementById("clearFilters");
+
+  function applyFilter(){
+    const term = searchInput.value.trim().toLowerCase();
+    const pri = priorityFilter.value;
     document.querySelectorAll(".task-card").forEach(card => card.style.display = "none");
+
     allTasks.forEach(t => {
-      const match =
+      const matchTerm =
         (t.title && t.title.toLowerCase().includes(term)) ||
         (t.priority && t.priority.toLowerCase().includes(term)) ||
         (t.assigned_to_display && t.assigned_to_display.toLowerCase().includes(term));
-      if (term === "" || match) {
+      const matchPri = !pri || (t.priority === pri);
+      if ((term === "" || matchTerm) && matchPri) {
         const cardEl = document.querySelector(`.task-card[data-id="${t.id}"]`);
         if (cardEl) cardEl.style.display = "";
       }
     });
-  };
+  }
+
+  if (searchInput) searchInput.addEventListener('input', applyFilter);
+  if (priorityFilter) priorityFilter.addEventListener('change', applyFilter);
+  if (clearBtn) clearBtn.addEventListener('click', function(){ searchInput.value=''; priorityFilter.value=''; applyFilter(); });
 }
 
-/* === Pagination === */
+/* === Pagination & Summary (unchanged) === */
 function renderPagination(current, total){
   const container = document.getElementById("boardPagination");
   if(!container) return;
@@ -338,7 +319,6 @@ function renderPagination(current, total){
     return li;
   }
 
-  // Prev
   container.appendChild(pageItem("Prev", Math.max(1, current-1), current<=1));
 
   const pages = new Set();
@@ -359,11 +339,9 @@ function renderPagination(current, total){
     last = p;
   });
 
-  // Next
   container.appendChild(pageItem("Next", Math.min(total, current+1), current>=total));
 }
 
-/* === Summary (X–Y of total) === */
 function updateSummary(page, totalCount, totalPages){
   const summary = document.getElementById("boardSummary");
   if(!summary) return;
@@ -371,6 +349,96 @@ function updateSummary(page, totalCount, totalPages){
   const end = Math.min(page*PER_PAGE, totalCount);
   summary.textContent = `Showing ${start}-${end} of ${totalCount} tasks`;
 }
+
+/* === Task Modal: open, fetch, populate, save === */
+let taskModalInstance = null;
+function openTaskModal(taskId){
+  const modalEl = document.getElementById('taskDetailModal');
+  if (!modalEl) return;
+  // create bootstrap modal if not already
+  if (!taskModalInstance) taskModalInstance = new bootstrap.Modal(modalEl);
+
+  // clear form
+  document.getElementById('modal_alert').classList.add('d-none');
+  document.getElementById('taskDetailTitle').textContent = 'Loading...';
+  document.getElementById('modal_task_id').value = taskId;
+  document.getElementById('modal_title').value = '';
+  document.getElementById('modal_description').value = '';
+  document.getElementById('modal_priority').value = '';
+  document.getElementById('modal_due_date').value = '';
+  document.getElementById('modal_assignee').value = '';
+
+  // show the modal (loading state visible)
+  taskModalInstance.show();
+
+  // fetch details
+  fetch(TASK_DETAIL_API + '?id=' + encodeURIComponent(taskId))
+    .then(r => r.json())
+    .then(data => {
+      if (!data || !data.id) {
+        showModalAlert('error', 'Failed to load task details.');
+        return;
+      }
+      // populate fields
+      document.getElementById('taskDetailTitle').textContent = data.title || ('Task #' + data.id);
+      document.getElementById('modal_task_id').value = data.id;
+      document.getElementById('modal_title').value = data.title || '';
+      document.getElementById('modal_description').value = data.description || '';
+      document.getElementById('modal_priority').value = data.priority || '';
+      document.getElementById('modal_due_date').value = data.due_date || '';
+      document.getElementById('modal_assignee').value = data.assigned_to_display || (data.assigned_to || '');
+    })
+    .catch(err => {
+      console.error(err);
+      showModalAlert('error', 'Network error loading task.');
+    });
+}
+
+function showModalAlert(type, text){
+  const el = document.getElementById('modal_alert');
+  el.className = 'alert mt-3';
+  if (type === 'success') { el.classList.add('success'); el.textContent = text; el.classList.remove('d-none'); }
+  else { el.classList.add('error'); el.textContent = text; el.classList.remove('d-none'); }
+}
+
+/* Submit form via AJAX */
+document.getElementById('taskDetailForm')?.addEventListener('submit', async function(e){
+  e.preventDefault();
+  const btn = document.getElementById('saveTaskBtn');
+  btn.disabled = true;
+  btn.innerHTML = 'Saving...';
+
+  const fd = new FormData(this);
+  fd.append('task_id', document.getElementById('modal_task_id').value);
+
+  try {
+    const res = await fetch(TASK_UPDATE_API, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF_TOKEN },
+      body: fd
+    });
+    const json = await res.json();
+    if (json && json.ok) {
+      showModalAlert('success', 'Saved successfully');
+      // reload board to reflect changes
+      setTimeout(() => {
+        if (taskModalInstance) taskModalInstance.hide();
+        loadBoard(CURRENT_BOARD_PAGE);
+      }, 600);
+    } else {
+      showModalAlert('error', json.error || 'Save failed');
+    }
+  } catch (err) {
+    console.error(err);
+    showModalAlert('error', 'Network error while saving.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Save changes';
+  }
+});
+
+/* === Utilities === */
+function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* === Init === */
 document.addEventListener("DOMContentLoaded", function(){

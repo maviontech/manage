@@ -47,4 +47,6 @@ urlpatterns = [
     path("tasks/api/assign/", views_tasks.assign_task_api, name="api_assign_task"),
     path("tasks/api/update-status/", views_tasks.api_update_status, name="api_update_status"),
     path("tasks/api/board-data/", views_tasks.board_data_api, name="board_data"),
+    path('api/task/detail/', views_tasks.api_task_detail, name='api_task_detail'),
+    path('api/task/update/', views_tasks.api_task_update, name='api_task_update'),
 ]
