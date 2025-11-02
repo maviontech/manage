@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 
 # helper: get connection for current tenant
 from .db_helpers import get_tenant_conn
+import json
 
 
 # ==============================
@@ -349,24 +350,78 @@ def api_task_detail(request):
     """
     GET ?id=<task_id>
     Returns JSON with task fields used by the modal: id, title, description, priority, due_date, assigned_to, assigned_to_display, status
+    Implemented using tenant DB queries (no Django ORM model required).
     """
     tid = request.GET.get('id') or request.GET.get('task_id')
     if not tid:
-        return HttpResponseBadRequest(json.dumps({'error': 'missing id'}), content_type='application/json')
+        return JsonResponse({'error': 'missing id'}, status=400)
 
-    task = get_object_or_404(Task, pk=tid)
-    # adapt field names to your model
-    data = {
-        'id': task.id,
-        'title': task.title,
-        'description': task.description or '',
-        'priority': task.priority or '',
-        'due_date': task.due_date.isoformat() if getattr(task, 'due_date', None) else '',
-        'assigned_to': getattr(task, 'assigned_to', '') or '',
-        'assigned_to_display': getattr(task, 'assigned_to_display', '') or '',
-        'status': task.status,
-    }
-    return JsonResponse(data)
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    try:
+        # fetch task row and human-friendly assignee display name
+        cur.execute("""
+            SELECT
+                t.id,
+                COALESCE(t.title, '') AS title,
+                COALESCE(t.description, '') AS description,
+                COALESCE(t.priority, '') AS priority,
+                t.due_date,
+                t.status,
+                t.assigned_to,
+                t.assigned_type,
+                -- compute display name for assigned entity
+                CASE
+                  WHEN t.assigned_type = 'member' THEN (
+                    SELECT CONCAT(m.first_name, ' ', m.last_name) FROM members m WHERE m.id = t.assigned_to
+                  )
+                  WHEN t.assigned_type = 'team' THEN (
+                    SELECT tm.name FROM teams tm WHERE tm.id = t.assigned_to
+                  )
+                  ELSE NULL
+                END AS assigned_to_display
+            FROM tasks t
+            WHERE t.id = %s
+            LIMIT 1
+        """, (tid,))
+        row = cur.fetchone()
+        if not row:
+            return JsonResponse({'error': 'task not found'}, status=404)
+
+        # map columns to dict depending on cursor return type
+        if isinstance(row, dict):
+            data = row
+        else:
+            cols = [desc[0] for desc in cur.description]
+            data = dict(zip(cols, row))
+
+        # ensure date is serialized as iso string (or empty)
+        due = data.get('due_date')
+        if due is None:
+            data['due_date'] = ''
+        else:
+            # if it's a date/datetime object, convert to ISO date
+            try:
+                data['due_date'] = due.isoformat()
+            except Exception:
+                data['due_date'] = str(due)
+
+        # normalize assigned fields to strings
+        data['assigned_to'] = data.get('assigned_to') or ''
+        data['assigned_to_display'] = data.get('assigned_to_display') or ''
+
+        return JsonResponse({
+            'id': data.get('id'),
+            'title': data.get('title', ''),
+            'description': data.get('description', ''),
+            'priority': data.get('priority', ''),
+            'due_date': data.get('due_date', ''),
+            'assigned_to': data.get('assigned_to', ''),
+            'assigned_to_display': data.get('assigned_to_display', ''),
+            'status': data.get('status', '')
+        })
+    finally:
+        cur.close()
 
 
 @require_POST
@@ -374,40 +429,99 @@ def api_task_update(request):
     """
     Accepts form-data (task_id, title, description, priority, due_date, assigned_to_display, status)
     Returns { "ok": true } on success or { "ok": false, "error": "..." }
+    Implemented using SQL updates against tenant DB (no ORM).
     """
     tid = request.POST.get('task_id')
     if not tid:
         return JsonResponse({'ok': False, 'error': 'missing task_id'}, status=400)
 
-    task = get_object_or_404(Task, pk=tid)
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    try:
+        # check exists
+        cur.execute("SELECT id, created_by FROM tasks WHERE id = %s LIMIT 1", (tid,))
+        existing = cur.fetchone()
+        if not existing:
+            return JsonResponse({'ok': False, 'error': 'task not found'}, status=404)
 
-    # simple permission check: only owner or staff can update (customize as needed)
-    if not (request.user.is_staff or task.created_by == request.user):
-        # adapt permission logic to your app
-        pass
+        # collect fields to update
+        updates = []
+        params = []
 
-    # update fields (validate as needed)
-    title = request.POST.get('title')
-    description = request.POST.get('description')
-    priority = request.POST.get('priority')
-    due_date = request.POST.get('due_date')
-    assigned_to_display = request.POST.get('assigned_to_display')
-    status = request.POST.get('status')
+        title = request.POST.get('title')
+        if title is not None:
+            updates.append("title = %s")
+            params.append(title)
 
-    if title is not None: task.title = title
-    if description is not None: task.description = description
-    if priority is not None: task.priority = priority
-    if due_date:
+        description = request.POST.get('description')
+        if description is not None:
+            updates.append("description = %s")
+            params.append(description)
+
+        priority = request.POST.get('priority')
+        if priority is not None:
+            updates.append("priority = %s")
+            params.append(priority)
+
+        due_date = request.POST.get('due_date')
+        if due_date:
+            # Accept YYYY-MM-DD (frontend uses input[type=date])
+            updates.append("due_date = %s")
+            params.append(due_date)
+        elif due_date == '':
+            # explicit empty string -> set NULL
+            updates.append("due_date = NULL")
+
+        # If frontend posts assigned_to_display, update a display column (you have used assigned_to_display in UI)
+        assigned_to_display = request.POST.get('assigned_to_display')
+        if assigned_to_display is not None:
+            # Ensure your table has this column; if not, you can skip or store in a comment field
+            # For compatibility with your DB schema above, store it in assigned_to (if you use member: or team:)
+            # Here we just store it to a display column if it exists
+            try:
+                # attempt to update assigned_to_display column if present
+                cur.execute("SHOW COLUMNS FROM tasks LIKE 'assigned_to_display'")
+                col = cur.fetchone()
+                if col:
+                    updates.append("assigned_to_display = %s")
+                    params.append(assigned_to_display)
+                else:
+                    # if column absent, optionally skip — or update assigned_to raw (not ideal)
+                    pass
+            except Exception:
+                # ignore schema-check errors and skip
+                pass
+
+        status = request.POST.get('status')
+        if status is not None:
+            updates.append("status = %s")
+            params.append(status)
+
+        if not updates:
+            return JsonResponse({'ok': False, 'error': 'no fields to update'}, status=400)
+
+        # build and execute update
+        set_clause = ", ".join(updates)
+        params.append(tid)
+        sql = f"UPDATE tasks SET {set_clause}, updated_at = NOW() WHERE id = %s"
+        cur.execute(sql, tuple(params))
+
+        # optional: log activity
+        performed_by = request.session.get("user_id")
         try:
-            from django.utils.dateparse import parse_date
-            task.due_date = parse_date(due_date)
+            cur.execute(
+                "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+                ("task", tid, f"updated_via_api", performed_by),
+            )
         except Exception:
+            # don't fail entire operation if logging fails
             pass
-    if assigned_to_display is not None:
-        # adapt to your way of storing assignee (here we set a display field)
-        task.assigned_to_display = assigned_to_display
-    if status is not None:
-        task.status = status
 
-    task.save()
-    return JsonResponse({'ok': True})
+        conn.commit()
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        # log or return reasonable error message
+        conn.rollback()
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+    finally:
+        cur.close()

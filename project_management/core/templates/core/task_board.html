@@ -19,7 +19,6 @@
       <a href="{% url 'unassigned_tasks' %}" class="btn btn-outline-gradient btn-lg">
         <i class="fa-solid fa-user-clock me-1"></i> Unassigned
       </a>
-      <!-- optional quick filter / other buttons can go here -->
     </div>
   </div>
 
@@ -42,19 +41,19 @@
     </div>
   </div>
 
-  <!-- ===== Kanban Columns ===== -->
-  <div class="row g-3 board-row">
-    {% for col in status_columns %}
-    <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
-      <div class="kanban-column p-2">
+  <!-- ===== Kanban Board (Horizontal Scroll Layout) ===== -->
+  <div class="kanban-board-wrapper mb-3">
+    <div class="kanban-board" id="kanbanBoard">
+      {% for col in status_columns %}
+      <div class="kanban-column">
         <div class="kanban-header">{{ col }}</div>
         <div class="kanban-body" data-status="{{ col }}" id="col-{{ col|slugify }}"></div>
       </div>
+      {% endfor %}
     </div>
-    {% endfor %}
   </div>
 
-  <!-- ===== Pagination ===== -->
+  <!-- ===== Pagination / Summary (footer wrapper will be created by JS) ===== -->
   <div class="d-flex flex-column align-items-center mt-3">
     <div id="boardSummary" class="small text-muted mb-1"></div>
     <nav aria-label="Task board pages">
@@ -63,45 +62,46 @@
   </div>
 </div>
 
-<!-- ===== Task Detail Modal ===== -->
-<div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true">
+<!-- ===== Task Detail Modal (Hidden by Default) ===== -->
+<!-- kept hidden attribute so it doesn't render inline unexpectedly; JS removes hidden before show -->
+<div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true" hidden>
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
-      <form id="taskDetailForm">
+      <form id="taskDetailForm" class="needs-validation" novalidate>
         <div class="modal-header">
           <h5 class="modal-title" id="taskDetailTitle">Task</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body py-4">
           <input type="hidden" name="task_id" id="modal_task_id" />
 
           <div class="mb-3">
-            <label class="form-label">Title</label>
-            <input id="modal_title" name="title" class="form-control" required>
+            <label class="form-label fw-semibold">Title</label>
+            <input id="modal_title" name="title" class="form-control form-control-lg" required>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Description</label>
+            <label class="form-label fw-semibold">Description</label>
             <textarea id="modal_description" name="description" class="form-control" rows="6"></textarea>
           </div>
 
           <div class="row g-2">
             <div class="col-sm-6">
-              <label class="form-label">Priority</label>
+              <label class="form-label fw-semibold">Priority</label>
               <select id="modal_priority" name="priority" class="form-select">
                 <option value="">--</option>
                 <option>Critical</option><option>High</option><option>Normal</option><option>Low</option>
               </select>
             </div>
             <div class="col-sm-6">
-              <label class="form-label">Due date</label>
+              <label class="form-label fw-semibold">Due date</label>
               <input id="modal_due_date" name="due_date" type="date" class="form-control">
             </div>
           </div>
 
           <div class="mt-3">
-            <label class="form-label">Assignee</label>
+            <label class="form-label fw-semibold">Assignee</label>
             <input id="modal_assignee" name="assigned_to_display" class="form-control" placeholder="Assignee name or team (editable)">
             <div class="form-text">Type member or team; backend will resolve on save.</div>
           </div>
@@ -109,9 +109,9 @@
           <div id="modal_alert" class="alert d-none mt-3" role="alert"></div>
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button id="saveTaskBtn" type="submit" class="btn btn-gradient">Save changes</button>
+        <div class="modal-footer d-flex justify-content-end gap-2 px-4 py-3">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+          <button id="saveTaskBtn" type="submit" class="btn btn-gradient btn-lg">Save changes</button>
         </div>
       </form>
     </div>
@@ -132,27 +132,54 @@
 .btn-lg { padding:10px 16px; border-radius:10px; font-weight:600; }
 .header-actions { margin-left:12px; }
 
-/* column/card styles (kept from your original but small polish) */
-.kanban-column { background:#fbfeff; border-radius:12px; min-height:54vh; box-shadow:0 6px 18px rgba(13,38,71,0.06); padding-bottom:18px; }
-.kanban-header { background:linear-gradient(90deg,#0b57a4,#38bdf8); color:#fff; text-align:center; border-radius:8px; font-weight:700; padding:10px; margin-bottom:12px; }
+/* --- Modern Kanban Board Layout --- */
+.kanban-board-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding-bottom: 10px;
+  -webkit-overflow-scrolling: touch;
+}
 
-/* task card clickable UI */
-.task-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05); padding:14px 16px; margin-bottom:12px; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; }
-.task-card:focus, .task-card:hover { transform:translateY(-4px); box-shadow:0 10px 26px rgba(10,30,60,0.08); outline: none; }
-.task-title { font-weight:700; font-size:0.98rem; margin-bottom:4px; color:#0f1724; }
-.task-meta { font-size:0.82rem; color:#54607a; margin-top:2px; }
-.assignee-name { font-size:0.82rem; font-weight:600; color:#0b57a4; margin-top:8px; }
+.kanban-board {
+  display: flex;
+  gap: 16px;
+  min-height: 70vh;
+  padding-bottom: 10px;
+  align-items: flex-start;
+}
 
-/* modal form */
-.modal .form-label { font-weight:600; color:#0b2440; }
-#modal_alert.success { background:#ecfdf5; color:#065f46; border:1px solid rgba(16,185,129,0.12); }
-#modal_alert.error { background:#fff1f2; color:#9f1239; border:1px solid rgba(239,68,68,0.08); }
-/* --- Fix drag-drop behavior --- */
+.kanban-column {
+  flex: 0 0 320px;
+  background: #fbfeff;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(13,38,71,0.06);
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  max-height: 80vh;
+}
+
+.kanban-header {
+  background: linear-gradient(90deg, #0b57a4, #38bdf8);
+  color: #fff;
+  text-align: center;
+  border-radius: 8px 8px 0 0;
+  font-weight: 700;
+  padding: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* body is the drop area and scrollable per column */
 .kanban-body {
-  min-height: 55vh;
-  padding: 8px;
-  border-radius: 10px;
+  flex: 1;
+  padding: 12px;
+  border-radius: 0 0 12px 12px;
   background-color: #f9fcff;
+  min-height: 55vh;
+  overflow-y: auto;
   position: relative;
   z-index: 1;
 }
@@ -162,15 +189,156 @@
   border: 2px dashed #38bdf8;
 }
 
-.task-card.dragging {
-  opacity: 0.5;
-  transform: scale(0.98);
+/* task card clickable UI */
+.task-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05); padding:14px 16px; margin-bottom:12px; cursor:grab; transition:transform .12s ease, box-shadow .12s ease; }
+.task-card:active { cursor:grabbing; }
+.task-card:focus, .task-card:hover { transform:translateY(-4px); box-shadow:0 10px 26px rgba(10,30,60,0.08); outline: none; }
+.task-title { font-weight:700; font-size:0.98rem; margin-bottom:4px; color:#0f1724; }
+.task-meta { font-size:0.82rem; color:#54607a; margin-top:2px; }
+.assignee-name { font-size:0.82rem; font-weight:600; color:#0b57a4; margin-top:8px; }
+
+/* modal form */
+.modal .form-label { font-weight:600; color:#0b2440; }
+#modal_alert.success { background:#ecfdf5; color:#065f46; border:1px solid rgba(16,185,129,0.12); }
+#modal_alert.error { background:#fff1f2; color:#9f1239; border:1px solid rgba(239,68,68,0.08); }
+
+/* dragging visual */
+.task-card.dragging { opacity: 0.6; transform: scale(0.995); }
+
+/* Scrollbar styling for horizontal wrapper */
+.kanban-board-wrapper::-webkit-scrollbar { height: 10px; }
+.kanban-board-wrapper::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #0b57a4, #38bdf8); border-radius: 5px; }
+.kanban-board-wrapper::-webkit-scrollbar-track { background: #eef5fa; }
+
+/* ensure modal markup stays hidden until JS shows it */
+.modal[hidden] { display: none !important; visibility: hidden !important; }
+
+/* ------------ Pagination / Summary styling ------------ */
+#boardSummary {
+  color: #374151;
+  font-size: 0.92rem;
+  margin-right: 12px;
+}
+
+/* Force pagination UL to be inline, remove bullets and default spacing */
+#boardPagination {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  padding-left: 0;
+  margin: 8px 0 0 0;
+  align-items: center;
+}
+
+/* Page item and links - pill style */
+#boardPagination .page-item { display: inline-block; }
+#boardPagination .page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  border-radius: 20px;
+  padding: 0 10px;
+  border: 1px solid rgba(11,87,164,0.12);
+  background: #ffffff;
+  color: #0b57a4;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(11,87,164,0.03);
+}
+#boardPagination .page-item.active .page-link {
+  background: linear-gradient(90deg,#0b57a4,#38bdf8);
+  color: #fff;
+  border-color: transparent;
+}
+#boardPagination .page-item.disabled .page-link {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f3f6f9;
+}
+
+/* make the footer compact and centered */
+.footer-pagination {
+  display:flex;
+  gap:18px;
+  align-items:center;
+  justify-content:center;
+  padding: 16px 0 28px 0;
+}
+
+/* small responsive tweak so it wraps nicely on narrow screens */
+@media (max-width: 600px) {
+  .footer-pagination { flex-direction: column; gap: 6px; padding-bottom: 18px; }
+  #boardPagination .page-link { min-width: 32px; height: 32px; }
+}
+
+/* ------------ Modal overlay & z-index fix ------------ */
+/* Ensure backdrop sits under modal but above page content */
+.modal-backdrop {
+  z-index: 1050 !important;
+}
+
+/* Ensure modal itself is above backdrop and everything else */
+.modal {
+  z-index: 1060 !important;
+}
+
+/* Make sure modal uses fixed positioning and covers viewport (bootstrap does this by default) */
+.modal.show {
+  display: block;
+}
+
+/* Modal visual polish */
+.modal .modal-content {
+  border-radius: 12px;
+  box-shadow: 0 18px 60px rgba(8,30,59,0.12);
+  border: none;
+  overflow: hidden;
+}
+.modal .modal-header .modal-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #072a4f;
+}
+.modal .modal-body { font-size: 0.95rem; color: #2b3b4a; }
+
+/* fallback fixed modal style when bootstrap fails to position it */
+.modal.fallback-show {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  display: block !important;
+  visibility: visible !important;
+  width: 92% !important;
+  max-width: 940px !important;
+  z-index: 20000 !important;
+  margin: 0 !important;
+}
+
+/* fallback backdrop */
+.modal-backdrop.fallback {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(6, 30, 60, 0.55) !important;
+  z-index: 19990 !important;
+}
+
+/* optional: dim the board behind modal a touch more when modal open */
+body.modal-open .kanban-board-wrapper,
+body.modal-open .kanban-board {
+  filter: blur(0.2px);
 }
 
 /* small responsive polish */
+@media (max-width: 1100px) {
+  .kanban-column { flex: 0 0 280px; }
+}
 @media (max-width: 900px) {
   .header-actions { width:100%; justify-content:flex-start; gap:8px; }
   .search-card .card-body { flex-direction:column; gap:10px; }
+  .kanban-column { flex: 0 0 240px; }
 }
 </style>
 
@@ -252,9 +420,11 @@ function renderCard(t){
 
 /* === Drag/drop preserved from original === */
 function initDragDrop(){
+  // re-bind cards
   document.querySelectorAll(".task-card").forEach(card=>{
     card.addEventListener("dragstart", e=>{
       e.dataTransfer.setData("text/plain", card.dataset.id);
+      try { e.dataTransfer.effectAllowed = "move"; } catch(err) {}
       card.dataset.dragging = "1";
       card.classList.add("dragging");
     });
@@ -264,8 +434,11 @@ function initDragDrop(){
     });
   });
 
+  // columns as drop targets
   document.querySelectorAll(".kanban-body").forEach(col=>{
-    col.addEventListener("dragover", e=>{ e.preventDefault(); col.classList.add("drag-over"); });
+    // allow dropping
+    col.addEventListener("dragover", e=>{ e.preventDefault(); col.classList.add("drag-over"); e.dataTransfer.dropEffect = 'move'; });
+    col.addEventListener("dragenter", e=>{ e.preventDefault(); col.classList.add("drag-over"); });
     col.addEventListener("dragleave", e=>{ col.classList.remove("drag-over"); });
     col.addEventListener("drop", async e=>{
       e.preventDefault(); col.classList.remove("drag-over");
@@ -287,6 +460,36 @@ function initDragDrop(){
   });
 }
 
+/* === Drag-scroll for board (mouse drag to scroll horizontally) === */
+(function enableBoardDragScroll(){
+  const boardWrapper = document.querySelector('.kanban-board-wrapper');
+  if(!boardWrapper) return;
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+
+  boardWrapper.addEventListener('mousedown', (e) => {
+    // only activate if clicking on empty board area, not when interacting inside a card
+    if (e.target.closest('.task-card')) return;
+    isDown = true;
+    boardWrapper.classList.add('drag-scrolling');
+    startX = e.pageX - boardWrapper.offsetLeft;
+    scrollLeft = boardWrapper.scrollLeft;
+    boardWrapper.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  boardWrapper.addEventListener('mouseleave', () => { isDown = false; boardWrapper.style.cursor = ''; boardWrapper.classList.remove('drag-scrolling'); });
+  boardWrapper.addEventListener('mouseup', () => { isDown = false; boardWrapper.style.cursor = ''; boardWrapper.classList.remove('drag-scrolling'); });
+
+  boardWrapper.addEventListener('mousemove', (e) => {
+    if(!isDown) return;
+    const x = e.pageX - boardWrapper.offsetLeft;
+    const walk = (x - startX) * 1.2; // scroll speed
+    boardWrapper.scrollLeft = scrollLeft - walk;
+  });
+})();
+
 /* === Search / Filter === */
 function initSearch(allTasks){
   const searchInput = document.getElementById("taskSearch");
@@ -294,7 +497,7 @@ function initSearch(allTasks){
   const clearBtn = document.getElementById("clearFilters");
 
   function applyFilter(){
-    const term = searchInput.value.trim().toLowerCase();
+    const term = (searchInput.value || '').trim().toLowerCase();
     const pri = priorityFilter.value;
     document.querySelectorAll(".task-card").forEach(card => card.style.display = "none");
 
@@ -370,14 +573,58 @@ function updateSummary(page, totalCount, totalPages){
 }
 
 /* === Task Modal: open, fetch, populate, save === */
+/* The openTaskModal below uses bootstrap when available but provides a robust fallback
+   that ensures the modal/backdrop overlay covers the viewport and looks professional. */
+
 let taskModalInstance = null;
+
+// light-weight backdrop creation used by fallback
+function createFallbackBackdrop() {
+  // avoid duplicate
+  if (document.querySelector('.modal-backdrop.fallback')) return;
+  const b = document.createElement('div');
+  b.className = 'modal-backdrop fallback';
+  document.body.appendChild(b);
+}
+
+function removeFallbackBackdrop() {
+  document.querySelectorAll('.modal-backdrop.fallback').forEach(el => el.remove());
+}
+
+/* fallback show/hide in case bootstrap fails */
+function showModalFallback(modalEl) {
+  if (!modalEl) return;
+  createFallbackBackdrop();
+  modalEl.classList.add('fallback-show');
+  document.body.classList.add('modal-open');
+  // focus first focusable element for accessibility
+  const first = modalEl.querySelector('input, textarea, button, select, a');
+  if (first) try { first.focus(); } catch(e) {}
+}
+function hideModalFallback(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.remove('fallback-show');
+  removeFallbackBackdrop();
+  document.body.classList.remove('modal-open');
+}
+
+/* main open function */
 function openTaskModal(taskId){
   const modalEl = document.getElementById('taskDetailModal');
   if (!modalEl) return;
-  // create bootstrap modal if not already
-  if (!taskModalInstance) taskModalInstance = new bootstrap.Modal(modalEl);
 
-  // clear form
+  // keep modal markup hidden by default
+  if (modalEl.hasAttribute('hidden')) {
+    modalEl.removeAttribute('hidden');
+    modalEl.setAttribute('aria-hidden', 'false');
+  }
+
+  // ensure modal is attached to body so backdrop covers full viewport
+  if (modalEl.parentElement !== document.body) {
+    document.body.appendChild(modalEl);
+  }
+
+  // clear form & set loading text
   document.getElementById('modal_alert').classList.add('d-none');
   document.getElementById('taskDetailTitle').textContent = 'Loading...';
   document.getElementById('modal_task_id').value = taskId;
@@ -387,15 +634,27 @@ function openTaskModal(taskId){
   document.getElementById('modal_due_date').value = '';
   document.getElementById('modal_assignee').value = '';
 
-  // show the modal (loading state visible)
-  taskModalInstance.show();
+  // Try using Bootstrap modal if available
+  let usedBootstrap = false;
+  try {
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      if (!taskModalInstance) taskModalInstance = new bootstrap.Modal(modalEl, { backdrop: true });
+      taskModalInstance.show();
+      usedBootstrap = true;
+    }
+  } catch (err) {
+    console.warn('Bootstrap modal failed, will use fallback', err);
+    usedBootstrap = false;
+  }
 
-  // fetch details
+  // Fetch details (do this regardless of which show method used)
   fetch(TASK_DETAIL_API + '?id=' + encodeURIComponent(taskId))
     .then(r => r.json())
     .then(data => {
       if (!data || !data.id) {
         showModalAlert('error', 'Failed to load task details.');
+        // if bootstrap used but failed to fetch, ensure fallback not left visible
+        if (!usedBootstrap && modalEl.classList.contains('fallback-show')) hideModalFallback(modalEl);
         return;
       }
       // populate fields
@@ -411,6 +670,15 @@ function openTaskModal(taskId){
       console.error(err);
       showModalAlert('error', 'Network error loading task.');
     });
+
+  // After a short delay, if bootstrap didn't actually show the modal, fall back
+  setTimeout(() => {
+    const actuallyShown = modalEl.classList.contains('show') || modalEl.classList.contains('fallback-show') || document.querySelector('.modal-backdrop');
+    if (!actuallyShown) {
+      // Use fallback show to guarantee overlay and fixed positioning
+      showModalFallback(modalEl);
+    }
+  }, 160);
 }
 
 function showModalAlert(type, text){
@@ -441,9 +709,13 @@ document.getElementById('taskDetailForm')?.addEventListener('submit', async func
       showModalAlert('success', 'Saved successfully');
       // reload board to reflect changes
       setTimeout(() => {
-        if (taskModalInstance) taskModalInstance.hide();
+        try {
+          if (taskModalInstance) taskModalInstance.hide();
+        } catch (e) {}
+        // hide fallback if it was used
+        hideModalFallback(document.getElementById('taskDetailModal'));
         loadBoard(CURRENT_BOARD_PAGE);
-      }, 600);
+      }, 500);
     } else {
       showModalAlert('error', json.error || 'Save failed');
     }
@@ -455,6 +727,51 @@ document.getElementById('taskDetailForm')?.addEventListener('submit', async func
     btn.innerHTML = 'Save changes';
   }
 });
+
+/* Close handling: hide fallback on close buttons or bootstrap events */
+document.addEventListener('click', function (e) {
+  if (e.target.closest('[data-bs-dismiss="modal"]') || e.target.closest('.btn-close')) {
+    const modalEl = document.getElementById('taskDetailModal');
+    try { if (taskModalInstance) taskModalInstance.hide(); } catch(e) {}
+    hideModalFallback(modalEl);
+  }
+});
+document.addEventListener('hidden.bs.modal', function(ev){
+  const modalEl = document.getElementById('taskDetailModal');
+  hideModalFallback(modalEl);
+});
+
+/* === Enhance footer (wrap summary + pagination into a centered footer) and modal z-index handlers === */
+(function enhanceFooterAndModalBehavior(){
+  // build footer wrapper
+  const summary = document.getElementById('boardSummary');
+  const pagination = document.getElementById('boardPagination');
+  if (summary && pagination) {
+    // create wrapper only if not present
+    if (!document.querySelector('.footer-pagination')) {
+      const parent = summary.parentElement || pagination.parentElement;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'footer-pagination';
+      parent.insertBefore(wrapper, parent.firstChild);
+      wrapper.appendChild(summary);
+      wrapper.appendChild(pagination);
+    }
+  }
+
+  // Ensure Bootstrap modal backdrop and z-index are correct on show
+  document.addEventListener('shown.bs.modal', function (ev) {
+    const modal = ev.target;
+    if (modal && modal.classList && modal.classList.contains('modal')) {
+      modal.style.zIndex = 1060;
+      document.querySelectorAll('.modal-backdrop').forEach(b => b.style.zIndex = 1050);
+    }
+  });
+
+  // clean stray backdrops when modal hides
+  document.addEventListener('hidden.bs.modal', function (ev) {
+    document.querySelectorAll('.modal-backdrop:not(.fade)').forEach(b => b.remove());
+  });
+})();
 
 /* === Utilities === */
 function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
