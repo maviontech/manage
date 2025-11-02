@@ -2,6 +2,9 @@
 {% block content %}
 <div class="container-fluid py-4">
 
+  <!-- RIGHT-SIDE compact submenu inserted (no removal of existing content) -->
+
+
   <!-- ===== Header Section ===== -->
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
     <div>
@@ -55,6 +58,7 @@
 
 <!-- ===== Styling ===== -->
 <style>
+/* preserve your existing styles (copied from original) */
 .text-gradient {
   background:linear-gradient(90deg,#0b57a4,#38bdf8);
   -webkit-background-clip:text;
@@ -103,6 +107,86 @@
 .pagination .page-link {
   color:#0b57a4;
   border-radius:6px;
+}
+
+/* ---------- Right-side compact submenu styles (strong overrides) ---------- */
+/* container relative so absolute/right positioning references visible area */
+.container-fluid { position: relative; }
+
+/* important: place the submenu to the right and vertically center */
+.task-submenu {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1200;
+  pointer-events: auto;
+  width: 320px;
+}
+
+/* submenu card (glassy) */
+.submenu-card {
+  border-radius: 12px;
+  padding: 10px;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(11,87,164,0.96), rgba(31,134,227,0.92));
+  box-shadow: 0 20px 40px rgba(11,87,164,0.09), inset 0 1px 0 rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  backdrop-filter: blur(6px);
+  overflow: visible;
+}
+
+/* compact item list */
+.submenu-list-compact { display:flex; flex-direction:column; gap:10px; padding:6px; }
+
+/* menu items */
+.submenu-item-compact {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:10px;
+  color:rgba(255,255,255,0.95); text-decoration:none; font-weight:600;
+  transition: box-shadow .18s ease, transform .12s ease, background-color .12s ease, color .12s;
+  border-left: 3px solid transparent; background: transparent; position:relative;
+}
+
+/* icons */
+.submenu-item-compact i { width:18px; text-align:center; opacity:0.95; }
+
+/* GLOWING WHITE hover - strong */
+.submenu-item-compact:hover {
+  transform: translateY(-2px);
+  color: #fff !important;
+  background: rgba(255,255,255,0.16) !important;
+  box-shadow:
+    0 0 18px rgba(255,255,255,0.65),
+    0 0 36px rgba(255,255,255,0.35),
+    0 0 60px rgba(255,255,255,0.18);
+  border-left-color: rgba(255,255,255,0.95) !important;
+}
+.submenu-item-compact::after {
+  content: "";
+  position: absolute; left: -40%; top: -30%;
+  width: 140%; height: 80%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.00), rgba(255,255,255,0.22), rgba(255,255,255,0.00));
+  transform: rotate(-20deg);
+  opacity: 0; transition: transform .45s ease, opacity .25s ease; pointer-events:none;
+}
+.submenu-item-compact:hover::after { transform: rotate(-18deg) translateX(-6%); opacity: 1; }
+
+/* active item */
+.submenu-item-compact.active {
+  background: rgba(255,255,255,0.12) !important;
+  color: #ffffff !important;
+  border-left-color: #10b981 !important;
+  box-shadow: 0 0 18px rgba(16,185,129,0.18) !important;
+}
+
+/* ensure glow visible */
+.submenu-card, .submenu-item-compact { overflow: visible !important; }
+
+/* responsive: hide/move submenu below on small screens */
+@media (max-width: 992px) {
+  .task-submenu { position: static; transform: none; width: 100%; margin-top: 12px; }
+  .container-fluid { position: static; }
 }
 </style>
 

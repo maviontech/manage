@@ -3,135 +3,222 @@
 
 {% block content %}
 <div class="container py-5">
-  <div class="mx-auto" style="max-width: 980px;">
-    <div class="card border-0 shadow-sm soft-card">
-      <div class="card-body p-5">
 
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-start mb-4">
-          <div>
-            <h3 class="fw-bold mb-1 text-gradient"><i class="fa-solid fa-plus-circle me-2"></i> Create Task</h3>
-            <p class="text-muted small mb-0">Provide essential details below to create a new task for your project.</p>
-          </div>
+  <!-- GRID layout: left = form (flexible) + right = submenu (fixed width, centered) -->
+  <div class="one-col">
 
-          <!-- Back button safely in header -->
-          <div class="text-end">
-            <a href="{% url 'task_board' %}" class="btn btn-sm btn-outline-gradient">
-              <i class="fa-solid fa-arrow-left me-1"></i> Back to Board
-            </a>
+
+    <!-- LEFT: main form -->
+    <main class="page-main">
+      <div class="mx-auto">
+        <div class="card border-0 shadow-sm soft-card">
+          <div class="card-body p-5">
+
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-start mb-4">
+              <div>
+                <h3 class="fw-bold mb-1 text-gradient"><i class="fa-solid fa-plus-circle me-2"></i> Create Task</h3>
+                <p class="text-muted small mb-0">Provide essential details below to create a new task for your project.</p>
+              </div>
+              <div class="text-end">
+                <a href="{% url 'task_board' %}" class="btn btn-sm btn-outline-gradient">
+                  <i class="fa-solid fa-arrow-left me-1"></i> Back to Board
+                </a>
+              </div>
+            </div>
+
+            <form method="post" id="createTaskForm" class="row gx-4" novalidate>
+              {% csrf_token %}
+
+              <div class="col-12">
+                <div class="form-grid">
+                  <div class="form-row">
+                    <label class="form-label">Task Title <span class="text-danger">*</span></label>
+                    <div class="form-control-wrap">
+                      <input name="title" type="text" class="form-control" placeholder="e.g. Implement user authentication" required>
+                      <div class="form-hint">Short, descriptive title</div>
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <label class="form-label">Project</label>
+                    <div class="form-control-wrap">
+                      <select name="project_id" id="projectSelect" class="form-select">
+                        <option value="">-- Choose Project --</option>
+                        {% for p in projects %}
+                          <option value="{{ p.id }}">{{ p.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <label class="form-label">Subproject</label>
+                    <div class="form-control-wrap">
+                      <select name="subproject_id" id="subprojectSelect" class="form-select">
+                        <option value="">-- Optional Subproject --</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <label class="form-label">Priority</label>
+                    <div class="form-control-wrap">
+                      <select name="priority" class="form-select">
+                        <option value="Low">Low</option>
+                        <option value="Normal" selected>Normal</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <label class="form-label">Due date</label>
+                    <div class="form-control-wrap">
+                      <input type="date" name="due_date" class="form-control">
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <label class="form-label">Assign to</label>
+                    <div class="form-control-wrap">
+                      <select name="assigned_to" id="assignSelect" class="form-select">
+                        <option value="">Unassigned</option>
+                        <optgroup label="Members">
+                          {% for m in members %}
+                            <option value="member:{{ m.id }}">{{ m.first_name }} {{ m.last_name }} — {{ m.email }}</option>
+                          {% endfor %}
+                        </optgroup>
+                        <optgroup label="Teams">
+                          {% for t in teams %}
+                            <option value="team:{{ t.id }}">Team: {{ t.name }}</option>
+                          {% endfor %}
+                        </optgroup>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 mt-4 d-flex justify-content-end gap-3">
+                <a href="{% url 'task_board' %}" class="btn btn-outline-gradient btn-lg">Cancel</a>
+                <button id="createBtn" type="submit" class="btn btn-gradient btn-lg">
+                  <i class="fa-solid fa-check me-1"></i> Create Task
+                </button>
+              </div>
+
+              <div class="col-12 mt-4">
+                <div class="card p-3 border-0" style="background:#fbfcfe; border-radius:12px;">
+                  <label class="form-label fw-semibold mb-2">Description (optional)</label>
+                  <textarea name="description" rows="6" class="form-control" placeholder="Add detailed notes, acceptance criteria, links, steps to reproduce..."></textarea>
+                  <div class="form-text mt-2">Optional — good place for acceptance criteria or reproduction steps.</div>
+                </div>
+              </div>
+            </form>
+
           </div>
         </div>
+      </div>
+    </main>
 
-        <form method="post" id="createTaskForm" class="row gx-4" novalidate>
-          {% csrf_token %}
-
-          <!-- Left column: form labels + inputs arranged in aligned grid -->
-          <div class="col-12">
-            <div class="form-grid">
-              <!-- Title -->
-              <div class="form-row">
-                <label class="form-label">Task Title <span class="text-danger">*</span></label>
-                <div class="form-control-wrap">
-                  <input name="title" type="text" class="form-control" placeholder="e.g. Implement user authentication" required>
-                  <div class="form-hint">Short, descriptive title</div>
-                </div>
-              </div>
-
-              <!-- Project -->
-              <div class="form-row">
-                <label class="form-label">Project</label>
-                <div class="form-control-wrap">
-                  <select name="project_id" id="projectSelect" class="form-select">
-                    <option value="">-- Choose Project --</option>
-                    {% for p in projects %}
-                      <option value="{{ p.id }}">{{ p.name }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-              </div>
-
-              <!-- Subproject -->
-              <div class="form-row">
-                <label class="form-label">Subproject</label>
-                <div class="form-control-wrap">
-                  <select name="subproject_id" id="subprojectSelect" class="form-select">
-                    <option value="">-- Optional Subproject --</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Priority -->
-              <div class="form-row">
-                <label class="form-label">Priority</label>
-                <div class="form-control-wrap">
-                  <select name="priority" class="form-select">
-                    <option value="Low">Low</option>
-                    <option value="Normal" selected>Normal</option>
-                    <option value="High">High</option>
-                    <option value="Critical">Critical</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Due date -->
-              <div class="form-row">
-                <label class="form-label">Due date</label>
-                <div class="form-control-wrap">
-                  <input type="date" name="due_date" class="form-control">
-                </div>
-              </div>
-
-              <!-- Assign to -->
-              <div class="form-row">
-                <label class="form-label">Assign to</label>
-                <div class="form-control-wrap">
-                  <select name="assigned_to" id="assignSelect" class="form-select">
-                    <option value="">Unassigned</option>
-                    <optgroup label="Members">
-                      {% for m in members %}
-                        <option value="member:{{ m.id }}">{{ m.first_name }} {{ m.last_name }} — {{ m.email }}</option>
-                      {% endfor %}
-                    </optgroup>
-                    <optgroup label="Teams">
-                      {% for t in teams %}
-                        <option value="team:{{ t.id }}">Team: {{ t.name }}</option>
-                      {% endfor %}
-                    </optgroup>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Buttons (full width row) -->
-          <div class="col-12 mt-4 d-flex justify-content-end gap-3">
-            <a href="{% url 'task_board' %}" class="btn btn-outline-gradient btn-lg">Cancel</a>
-            <button id="createBtn" type="submit" class="btn btn-gradient btn-lg">
-              <i class="fa-solid fa-check me-1"></i> Create Task
-            </button>
-          </div>
-
-          <!-- Description placed at the end (full-width, roomy) -->
-          <div class="col-12 mt-4">
-            <div class="card p-3 border-0" style="background:#fbfcfe; border-radius:12px;">
-              <label class="form-label fw-semibold mb-2">Description (optional)</label>
-              <textarea name="description" rows="6" class="form-control" placeholder="Add detailed notes, acceptance criteria, links, steps to reproduce..."></textarea>
-              <div class="form-text mt-2">Optional — good place for acceptance criteria or reproduction steps.</div>
-            </div>
-          </div>
-        </form>
-
-      </div> <!-- card-body -->
-    </div> <!-- card -->
   </div>
 </div>
 
-<!-- Styles: grid alignment, spacing -->
 <style>
-/* Card look */
-.soft-card { border-radius:14px; box-shadow:0 10px 30px rgba(13,38,71,0.06); background:#fff; }
+/* ---------- Strong grid & positioning override ---------- */
 
-/* Two-column label → control grid: labels aligned flush left */
+/* Ensure this grid definition wins against other CSS */
+.two-col {
+  display: grid !important;
+  grid-template-columns: 1fr 320px !important; /* form | submenu */
+  gap: 28px !important;
+  align-items: center !important;
+  align-content: start !important;
+  margin-top: 6px !important;
+  min-height: calc(100vh - 120px) !important; /* adjust 120px to match your header */
+}
+
+/* Force the aside into the right column and center it */
+.two-col > .page-aside {
+  grid-column: 2 / 3 !important;
+  grid-row: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: center !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* Make sure main occupies first column */
+.two-col > .page-main {
+  grid-column: 1 / 2 !important;
+  grid-row: 1 !important;
+}
+
+/* Submenu card */
+.submenu-card {
+  width: 100% !important;
+  border-radius: 12px !important;
+  padding: 10px !important;
+  color: #fff !important;
+  background: linear-gradient(180deg, rgba(11,87,164,0.96), rgba(31,134,227,0.92)) !important;
+  box-shadow: 0 20px 40px rgba(11,87,164,0.09) !important;
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(6px) !important;
+  margin: 0 !important;
+}
+
+/* Compact submenu list */
+.submenu-list-compact { display:flex; flex-direction:column; gap:10px; padding:6px; }
+
+/* items */
+.submenu-item-compact {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:10px;
+  color:rgba(255,255,255,0.95); text-decoration:none; font-weight:600;
+  transition: box-shadow .18s ease, transform .12s ease, background-color .12s ease, color .12s;
+  border-left: 3px solid transparent; background: transparent; position:relative;
+}
+
+/* Hover: glowing white (strong) */
+.submenu-item-compact:hover {
+  transform: translateY(-2px);
+  color: #fff !important;
+  background: rgba(255,255,255,0.16) !important;
+  box-shadow:
+    0 0 18px rgba(255,255,255,0.65),
+    0 0 36px rgba(255,255,255,0.35),
+    0 0 60px rgba(255,255,255,0.18);
+  border-left-color: rgba(255,255,255,0.95) !important;
+}
+
+/* Shimmer */
+.submenu-item-compact::after {
+  content: "";
+  position: absolute;
+  left: -40%; top: -30%;
+  width: 140%; height: 80%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.00), rgba(255,255,255,0.22), rgba(255,255,255,0.00));
+  transform: rotate(-20deg);
+  opacity: 0; transition: transform .45s ease, opacity .25s ease; pointer-events:none;
+}
+.submenu-item-compact:hover::after { transform: rotate(-18deg) translateX(-6%); opacity: 1; }
+
+/* active */
+.submenu-item-compact.active {
+  background: rgba(255,255,255,0.12) !important;
+  color: #ffffff !important;
+  border-left-color: #10b981 !important;
+  box-shadow: 0 0 18px rgba(16,185,129,0.18) !important;
+}
+
+/* Keep glow visible */
+.submenu-card, .submenu-item-compact { overflow: visible !important; }
+
+/* Form / buttons / inputs - keep original look */
+.soft-card { border-radius: 14px; box-shadow: 0 10px 30px rgba(13,38,71,0.06); background: #fff; }
 .form-grid { display:block; }
 .form-row { display:grid; grid-template-columns: 220px 1fr; gap: 12px 20px; align-items:start; margin-bottom:18px; }
 .form-label { font-weight:600; color:#0b57a4; font-size:0.95rem; padding-top:6px; }
@@ -139,20 +226,20 @@
 .form-control, .form-select, textarea { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #dee2e6; transition:box-shadow .12s, border-color .12s; background:#fff; }
 .form-control:focus, .form-select:focus, textarea:focus { outline:none; border-color:#38bdf8; box-shadow:0 4px 14px rgba(56,189,248,0.08); }
 .form-hint { font-size:0.85rem; color:#6c757d; margin-top:6px; }
-
-/* Buttons */
 .btn-gradient { background:linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border:none; border-radius:10px; padding:10px 18px; font-weight:600; }
 .btn-outline-gradient { background:#fff; color:#0b57a4; border:1px solid #38bdf8; border-radius:10px; padding:9px 16px; font-weight:600; }
 
-/* Responsive adjustments */
-@media (max-width: 880px) {
-  .form-row { grid-template-columns: 1fr; }
-  .form-label { padding-top:0; }
+/* Responsive: stack on narrow screens */
+@media (max-width: 992px) {
+  .two-col { grid-template-columns: 1fr !important; align-items: stretch !important; gap: 16px !important; min-height: auto !important; }
+  .two-col > .page-aside { grid-column: 1 !important; justify-content: flex-start !important; padding-top: 6px !important; }
+  .submenu-card { width:100% !important; }
+  .form-row { grid-template-columns: 1fr !important; }
+  .form-label { padding-top:0 !important; }
   .card-body { padding: 28px !important; }
 }
 </style>
 
-<!-- Subproject loader + submit UX -->
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   const projectSelect = document.getElementById('projectSelect');
@@ -160,6 +247,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const createBtn = document.getElementById('createBtn');
 
   async function loadSubprojects(pid){
+    if(!subprojectSelect) return;
     subprojectSelect.innerHTML = '<option>Loading...</option>';
     try {
       const res = await fetch(`/tasks/api/subprojects/?project_id=${pid}`);
@@ -175,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  projectSelect?.addEventListener('change', (e) => {
+  projectSelect?.addEventListener('change', e => {
     const pid = e.target.value;
     if(pid) loadSubprojects(pid);
     else subprojectSelect.innerHTML = '<option value="">-- Optional Subproject --</option>';
