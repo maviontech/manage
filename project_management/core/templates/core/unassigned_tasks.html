@@ -18,21 +18,22 @@
   </div>
 
   <!-- Search / Controls row -->
-  <div class="card mb-3 border-0 shadow-sm search-card">
-    <div class="card-body py-3 d-flex flex-wrap align-items-center gap-3">
-      <div class="position-relative flex-fill" style="min-width:200px;">
+  <!-- NOTE: increased margin-top for breathing room after header -->
+  <div class="card mb-3 border-0 shadow-sm search-card" style="margin-top:18px;">
+    <div class="card-body py-3 d-flex flex-wrap align-items-center gap-3 search-card-body">
+      <div class="position-relative flex-fill search-input-wrap" style="min-width:260px;">
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
         <input id="unassignedSearch" class="form-control search-input" placeholder="Search by ID (#4 or 4) or text in title/description...">
       </div>
 
-      <div style="min-width:160px;">
+      <div style="min-width:140px;">
         <select id="unassignedPriority" class="form-select">
           <option value="">All priorities</option>
           <option>Critical</option><option>High</option><option>Normal</option><option>Low</option>
         </select>
       </div>
 
-      <div class="d-flex gap-2 align-items-center">
+      <div class="d-flex gap-2 align-items-center ms-auto search-controls-right">
         <button id="refreshUnassigned" class="btn btn-outline-gradient">Refresh</button>
         <label class="form-check form-check-inline mb-0 ms-2">
           <input type="checkbox" id="selectAllPage" class="form-check-input">
@@ -245,6 +246,45 @@
   padding:6px 12px;
 }
 .search-card .form-check { margin-left:8px; }
+
+/* Ensure search + filter + refresh stay on same row on medium+ screens */
+/* Ensure search + filter + refresh stay on same row and evenly spaced */
+.search-card-body {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-start;
+}
+
+.search-input-wrap {
+  flex: 1 1 auto;
+  min-width: 260px;
+  max-width: 420px;
+}
+
+.search-card-body select,
+.search-card-body button {
+  flex-shrink: 0;
+}
+
+.search-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .search-card-body {
+    flex-wrap: wrap;
+  }
+  .search-controls-right {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 8px;
+  }
+}
+
 
 /* pagination styling */
 .pagination {
