@@ -1,4 +1,6 @@
 {% extends "core/base.html" %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid py-4">
 
@@ -11,7 +13,7 @@
       <p class="small text-muted mb-0">Drag &amp; drop tasks between columns. Click a card to view details.</p>
     </div>
 
-    <!-- Action buttons grouped and separated from search -->
+    <!-- Action buttons -->
     <div class="d-flex flex-wrap align-items-center gap-2 header-actions">
       <a href="{% url 'create_task' %}" class="btn btn-gradient btn-lg">
         <i class="fa-solid fa-plus me-1"></i> New Task
@@ -22,7 +24,7 @@
     </div>
   </div>
 
-  <!-- ===== Search Bar (separated with margin from header actions) ===== -->
+  <!-- ===== Search Bar ===== -->
   <div class="card mb-4 border-0 shadow-sm search-card">
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
       <div class="position-relative flex-fill" style="min-width:280px;">
@@ -30,7 +32,6 @@
         <input type="text" id="taskSearch" class="form-control search-input" placeholder="Search tasks by title, assignee or priority...">
       </div>
 
-      <!-- small quick filters to the right of search (optional) -->
       <div class="d-flex gap-2">
         <select id="priorityFilter" class="form-select" style="width:160px;">
           <option value="">All priorities</option>
@@ -41,7 +42,7 @@
     </div>
   </div>
 
-  <!-- ===== Kanban Board (Horizontal Scroll Layout) ===== -->
+  <!-- ===== Kanban Board ===== -->
   <div class="kanban-board-wrapper mb-3">
     <div class="kanban-board" id="kanbanBoard">
       {% for col in status_columns %}
@@ -53,7 +54,7 @@
     </div>
   </div>
 
-  <!-- ===== Pagination / Summary (footer wrapper will be created by JS) ===== -->
+  <!-- ===== Pagination / Summary ===== -->
   <div class="d-flex flex-column align-items-center mt-3">
     <div id="boardSummary" class="small text-muted mb-1"></div>
     <nav aria-label="Task board pages">
@@ -62,109 +63,120 @@
   </div>
 </div>
 
-<!-- ===== Task Detail Modal (Hidden by Default) ===== -->
+<!-- ===== Task Detail Modal (styled like Create Task) ===== -->
 <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true" hidden>
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
-    <div class="modal-content modal-opaque-content" role="dialog" aria-modal="true">
+    <div class="modal-content modal-opaque-content" role="dialog" aria-modal="true" aria-labelledby="taskDetailTitle">
 
-      <!-- Visible circular close button -->
-      <button type="button" class="modal-close-circle" aria-label="Close">
+      <!-- Circular close (top-right) -->
+      <button type="button" class="modal-close-circle" aria-label="Close" title="Close">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" fill="#0b2440"/></svg>
       </button>
 
-      <form id="taskDetailForm" class="needs-validation" novalidate>
-        <div class="modal-header border-0 ps-4 pe-4 pt-4">
-          <div>
-            <h5 class="modal-title" id="taskDetailTitle">Task</h5>
-            <div class="text-muted small" id="modalSubtitle">Task details</div>
+      <form id="taskDetailForm" class="row gx-4" novalidate>
+        {% csrf_token %}
+        <input type="hidden" id="modal_task_id" name="task_id" value="">
+        <div class="card-body p-4" style="background:transparent; box-shadow:none; padding-left:34px; padding-right:34px;">
+          <div class="modal-header-centered mb-3">
+            <div class="modal-title-wrap">
+              <h3 class="fw-bold mb-1 text-gradient text-center" id="taskDetailTitle">Task Details</h3>
+              <p class="text-muted small mb-0 text-center" id="modalSubtitle">View and update task information</p>
+            </div>
           </div>
-        </div>
 
-        <div class="modal-body py-3 px-4">
-          <input type="hidden" name="task_id" id="modal_task_id" />
+          <!-- ===== Re-use Create Task form styling here (labels on left, inputs on right) ==== -->
+          <div class="form-grid">
 
-          <!-- Reworked, aligned form grid:
-               left-column primary fields, right-column compact fields.
-               Description moved to the end and spans full width.
-          -->
-          <div class="modal-form-grid">
-            <!-- Title (full width of left column) -->
-            <div class="form-group">
-              <label class="form-label fw-semibold">Title</label>
-              <input id="modal_title" name="title" class="form-control form-control-lg" required>
-            </div>
-
-            <!-- Priority (right column) -->
-            <div class="form-group">
-              <label class="form-label fw-semibold">Priority</label>
-              <select id="modal_priority" name="priority" class="form-select form-control-lg">
-                <option value="">--</option>
-                <option>Critical</option><option>High</option><option>Normal</option><option>Low</option>
-              </select>
-            </div>
-
-            <!-- Due date (left column, below title) -->
-            <div class="form-group">
-              <label class="form-label fw-semibold">Due date</label>
-              <input id="modal_due_date" name="due_date" type="date" class="form-control form-control-lg">
-            </div>
-
-            <!-- Assignee (right column) - prefer select if members/teams provided -->
-            <div class="form-group">
-              <label class="form-label fw-semibold">Assignee</label>
-              <div>
-                {% if members or teams %}
-                <select id="modal_assignee" name="assigned_to" class="form-select form-control-lg">
-                  <option value="">-- Unassigned --</option>
-                  {% if members %}
-                    <optgroup label="Members">
-                      {% for m in members %}
-                        <option value="member:{{ m.id }}">{{ m.display_name }}</option>
-                      {% endfor %}
-                    </optgroup>
-                  {% endif %}
-                  {% if teams %}
-                    <optgroup label="Teams">
-                      {% for t in teams %}
-                        <option value="team:{{ t.id }}">{{ t.name }}</option>
-                      {% endfor %}
-                    </optgroup>
-                  {% endif %}
-                </select>
-                {% else %}
-                <input id="modal_assignee" name="assigned_to_display" class="form-control form-control-lg" placeholder="Type member or team (backend will resolve)">
-                {% endif %}
+            <!-- Title -->
+            <div class="form-row">
+              <label class="form-label">Task Title <span class="text-danger">*</span></label>
+              <div class="form-control-wrap">
+                <input id="modal_title" name="title" type="text" class="form-control" placeholder="e.g. Implement user authentication" required>
+                <div class="form-hint">Short, descriptive title</div>
               </div>
-              <div class="form-text">Type member or team; backend will resolve on save.</div>
             </div>
 
-            <!-- Spacer to retain grid alignment; not visible -->
-            <div class="form-spacer" aria-hidden="true"></div>
-
-            <!-- Description (full-width at the end) -->
-            <div class="form-group full-width">
-              <label class="form-label fw-semibold">Description</label>
-              <textarea id="modal_description" name="description" class="form-control" rows="6" placeholder="Describe the task..."></textarea>
+            <!-- Project -->
+            <div class="form-row">
+              <label class="form-label">Project</label>
+              <div class="form-control-wrap">
+                <select name="project_id" id="modal_project" class="form-select">
+                  <option value="">-- Choose Project --</option>
+                  {% for p in projects %}
+                    <option value="{{ p.id }}">{{ p.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
-          </div>
 
-          <div id="modal_alert" class="alert d-none mt-3" role="alert"></div>
+            <!-- Subproject -->
+            <div class="form-row">
+              <label class="form-label">Subproject</label>
+              <div class="form-control-wrap">
+                <select name="subproject_id" id="modal_subproject" class="form-select">
+                  <option value="">-- Optional Subproject --</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Priority -->
+            <div class="form-row">
+              <label class="form-label">Priority</label>
+              <div class="form-control-wrap">
+                <select id="modal_priority" name="priority" class="form-select">
+                  <option value="Low">Low</option>
+                  <option value="Normal">Normal</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Due date -->
+            <div class="form-row">
+              <label class="form-label">Due date</label>
+              <div class="form-control-wrap">
+                <input id="modal_due_date" name="due_date" type="date" class="form-control">
+              </div>
+            </div>
+
+            <!-- Assign to (populated from API at runtime) -->
+            <div class="form-row">
+              <label class="form-label">Assign to</label>
+              <div class="form-control-wrap">
+                <select name="assigned_to" id="modal_assignee" class="form-select">
+                  <option value="">Unassigned</option>
+                  <!-- populated by JS from /api/people/list and /api/teams/list -->
+                </select>
+              </div>
+            </div>
+
+            <!-- Description (spans full width) -->
+            <div class="form-row" style="grid-column: 1 / -1;">
+              <label class="form-label fw-semibold">Description (optional)</label>
+              <div class="form-control-wrap">
+                <textarea id="modal_description" name="description" rows="6" class="form-control" placeholder="Add detailed notes, acceptance criteria, links, steps to reproduce..."></textarea>
+                <div class="form-text mt-2">Optional — good place for acceptance criteria or reproduction steps.</div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
-        <div class="modal-footer modal-footer-centered px-4 py-4 border-0">
-          <div class="footer-btns">
-            <button type="button" class="btn btn-light btn-lg px-4" data-bs-dismiss="modal">Close</button>
-            <button id="saveTaskBtn" type="submit" class="btn btn-gradient btn-lg px-4">Save changes</button>
-          </div>
+        <!-- Footer: centered buttons like Create Task -->
+        <div class="col-12 mt-2 d-flex justify-content-center gap-3 px-4 pb-4">
+          <button type="button" class="btn btn-outline-gradient btn-lg" data-bs-dismiss="modal">Cancel</button>
+          <button id="saveTaskBtn" type="submit" class="btn btn-gradient btn-lg"><i class="fa-solid fa-check me-1"></i> Save changes</button>
         </div>
+
       </form>
     </div>
   </div>
 </div>
 
-<!-- ===== Styling tweaks & modal improvements (kept file logic intact) ===== -->
+<!-- ===== Styles: adopt Create Task styles for the overlay + soft frosted backdrop ===== -->
 <style>
-/* keep your original board styles unchanged (copied from your file) */
+/* Board styles kept */
 .header-actions .btn { display:inline-flex; align-items:center; gap:8px; }
 .search-card { border-radius:10px; }
 .search-input { padding-left:40px; border-radius:8px; border:1px solid #e6eef6; box-shadow:none; height:44px; }
@@ -185,41 +197,50 @@
 .task-meta { font-size:0.82rem; color:#54607a; margin-top:2px; }
 .assignee-name { font-size:0.82rem; font-weight:600; color:#0b57a4; margin-top:8px; }
 
-.modal .form-label { font-weight:600; color:#0b2440; }
-#modal_alert.success { background:#ecfdf5; color:#065f46; border:1px solid rgba(16,185,129,0.12); }
-#modal_alert.error { background:#fff1f2; color:#9f1239; border:1px solid rgba(239,68,68,0.08); }
+/* ===== Create Task form look (applied inside modal) ===== */
+.form-grid { display:block; max-width:880px; margin: 0 auto; }
+.form-row { display:grid; grid-template-columns: 200px 1fr; gap: 12px 20px; align-items:start; margin-bottom:18px; }
+.form-label { font-weight:600; color:#0b57a4; font-size:0.95rem; padding-top:6px; text-align:left; }
+.form-control-wrap { display:flex; flex-direction:column; }
+.form-control, .form-select, textarea { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #dee2e6; transition:box-shadow .12s, border-color .12s; background:#fff; }
+.form-control:focus, .form-select:focus, textarea:focus { outline:none; border-color:#38bdf8; box-shadow:0 4px 14px rgba(56,189,248,0.08); }
+.form-hint { font-size:0.85rem; color:#6c757d; margin-top:6px; }
+.btn-gradient { background:linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border:none; border-radius:10px; padding:10px 18px; font-weight:600; }
+.btn-outline-gradient { background:#fff; color:#0b57a4; border:1px solid #38bdf8; border-radius:10px; padding:9px 16px; font-weight:600; }
 
-.modal[hidden] { display: none !important; visibility: hidden !important; }
+.form-text { color:#6b7b8a; font-size:.88rem; }
 
-/* --- Backdrop: no blur (keeps crisp modal) --- */
+/* ===== Modal backdrop (soft frost) and modal card ===== */
 .modal-backdrop,
 .modal-backdrop.fallback {
   position: fixed !important;
   inset: 0 !important;
-  background: rgba(3,20,40,0.72) !important;
+  background: rgba(6,18,34,0.30) !important; /* mild dim */
+  backdrop-filter: blur(6px) saturate(1.05) contrast(0.98);
+  -webkit-backdrop-filter: blur(6px) saturate(1.05) contrast(0.98);
   z-index: 1050 !important;
   pointer-events: auto;
 }
-
-/* ensure bootstrap modal sits above backdrop */
 .modal { z-index: 1060 !important; }
 
-/* Opaque modal content: professional card with subtle gradient */
+/* Opaque modal content: subtle frosted card with side margins enforced */
 .modal-opaque-content {
   position: relative;
   z-index: 1061;
   border-radius: 12px;
   overflow: hidden;
   border: none;
-  background: linear-gradient(180deg, #ffffff, #f7fbff);
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,251,255,0.96));
   box-shadow: 0 24px 60px rgba(6,30,60,0.28);
-  max-width: 920px;
+  max-width: 980px;
   margin: 0 auto;
   color: #122033;
   transition: transform .12s ease, opacity .12s ease;
+  border: 1px solid rgba(14,66,122,0.04);
+  padding-bottom: 6px;
 }
 
-/* circular close button top-right */
+/* circular close button */
 .modal-close-circle {
   position: absolute;
   top: 14px;
@@ -227,7 +248,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(180deg,#fff,#f4fbff);
+  background: linear-gradient(180deg,#ffffff,#f4fbff);
   border: 1px solid rgba(11,87,164,0.06);
   display: inline-flex;
   align-items: center;
@@ -238,31 +259,14 @@
 }
 .modal-close-circle svg { display:block; }
 
-/* Header and subtitle */
-.modal .modal-header { display:flex; align-items:center; justify-content:flex-start; padding: 18px 8px; background: transparent; }
-.modal .modal-title { font-size:1.12rem; font-weight:800; color:#072a4f; margin-left:8px; }
-#modalSubtitle { color: #5b6b7a; margin-left:8px; }
+/* Center header title & subtitle */
+.modal-header-centered { display:block; text-align:center; padding-top:6px; padding-bottom:12px; }
+.modal-title-wrap { max-width:760px; margin: 0 auto; }
 
-/* Form grid (columns and full-width description) */
-.modal-form-grid {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 12px 20px;
-  align-items: start;
-}
-.modal-form-grid .full-width { grid-column: 1 / -1; }
+/* Footer buttons centered */
+.modal .d-flex.justify-content-center { justify-content:center !important; }
 
-.modal .form-control, .modal .form-select { border-radius:8px; border:1px solid rgba(11,87,164,0.08); padding:10px 12px; box-shadow:none; min-height:44px; font-size:0.95rem; }
-
-.modal .form-control[rows] { min-height:120px; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
-
-/* Footer buttons */
-.modal-footer-centered { justify-content:center; padding: 18px 22px; background: transparent; }
-.footer-btns { display:flex; gap:14px; justify-content:center; align-items:center; width:100%; max-width:500px; }
-.btn-gradient { background: linear-gradient(90deg,#0b57a4,#38bdf8); color: #fff; border: none; box-shadow: 0 8px 20px rgba(11,87,164,0.12); border-radius:10px; padding:10px 18px; font-weight:700; }
-.btn-light { background:#f6f8fb; color:#0b2440; border:1px solid rgba(11,87,164,0.06); padding:10px 18px; border-radius:10px; }
-
-/* Fallback show rules (so modal centers when bootstrap isn't available) */
+/* Fallback show (centers modal when bootstrap modal not available) */
 .modal.fallback-show {
   display: flex !important;
   position: fixed !important;
@@ -277,23 +281,23 @@
 .modal.fallback-show .modal-content { max-height: calc(100vh - 80px); overflow:auto; }
 
 /* Responsive */
-@media (max-width: 900px) {
-  .modal-form-grid { grid-template-columns: 1fr; }
-  .modal-opaque-content { margin: 12px; max-width: 96%; }
+@media (max-width: 992px) {
+  .form-row { grid-template-columns: 1fr !important; }
+  .modal-opaque-content { margin: 12px; max-width: 96%; padding-left:16px; padding-right:16px; }
   .modal-close-circle { top: 10px; right: 10px; width:36px; height:36px; }
 }
 </style>
 
-<!-- ===== JS Logic (board + modal + fallback fixes) ===== -->
+<!-- ===== JS Logic (board + modal + assignees load + fallback) ===== -->
 <script>
 let CURRENT_BOARD_PAGE = 1;
 const PER_PAGE = 10;
 let ALL_TASKS = [];
-const TASK_DETAIL_API = "{% url 'api_task_detail' %}";        // expects GET ?id=ID
-const TASK_UPDATE_API = "{% url 'api_task_update' %}";       // expects POST form data
+const TASK_DETAIL_API = "{% url 'api_task_detail' %}";
+const TASK_UPDATE_API = "{% url 'api_task_update' %}";
 const CSRF_TOKEN = "{{ csrf_token }}";
 
-/* --- Board loader / renderer (unchanged core logic) --- */
+/* Load board (unchanged) */
 async function loadBoard(page=1){
   try {
     CURRENT_BOARD_PAGE = page;
@@ -304,7 +308,6 @@ async function loadBoard(page=1){
     const pageNum = payload.page || 1;
     const totalPages = payload.total_pages || 1;
     const totalCount = payload.total_count || tasks.length;
-
     renderAllColumns(tasks);
     renderPagination(pageNum, totalPages);
     updateSummary(pageNum, totalCount, totalPages);
@@ -319,7 +322,7 @@ function renderAllColumns(tasks){
   initSearch(ALL_TASKS);
 }
 
-/* --- Card rendering --- */
+/* Card render */
 function renderCard(t){
   const col = document.querySelector(`[data-status="${t.status}"]`) || document.querySelector(".kanban-body");
   const card = document.createElement("div");
@@ -358,7 +361,7 @@ function renderCard(t){
   col.appendChild(card);
 }
 
-/* === Drag/drop === */
+/* Drag & drop */
 function initDragDrop(){
   document.querySelectorAll(".task-card").forEach(card=>{
     card.addEventListener("dragstart", e=>{
@@ -395,7 +398,7 @@ function initDragDrop(){
   });
 }
 
-/* drag-scroll for board */
+/* Board drag-scroll */
 (function enableBoardDragScroll(){
   const boardWrapper = document.querySelector('.kanban-board-wrapper');
   if(!boardWrapper) return;
@@ -412,7 +415,7 @@ function initDragDrop(){
   });
 })();
 
-/* === Search / Filter === */
+/* Search / filter */
 function initSearch(allTasks){
   const searchInput = document.getElementById("taskSearch");
   const priorityFilter = document.getElementById("priorityFilter");
@@ -434,7 +437,7 @@ function initSearch(allTasks){
   if (clearBtn) clearBtn.addEventListener('click', function(){ searchInput.value=''; priorityFilter.value=''; applyFilter(); });
 }
 
-/* === Pagination & Summary === */
+/* Pagination */
 function renderPagination(current, total){
   const container = document.getElementById("boardPagination"); if(!container) return; container.innerHTML = "";
   function pageItem(label, page, disabled=false, active=false){
@@ -461,7 +464,7 @@ function updateSummary(page, totalCount, totalPages){
   summary.textContent = `Showing ${start}-${end} of ${totalCount} tasks`;
 }
 
-/* === Modal / fallback logic === */
+/* Modal + fallback backdrop + assignees loader */
 let taskModalInstance = null;
 
 function createFallbackBackdrop() {
@@ -471,9 +474,9 @@ function createFallbackBackdrop() {
   b.className = 'modal-backdrop fallback';
   b.style.position = 'fixed';
   b.style.inset = '0';
-  b.style.background = 'rgba(3,20,40,0.72)';
+  b.style.background = 'rgba(6,18,34,0.30)';
+  b.style.backdropFilter = 'blur(6px)';
   b.style.zIndex = '1050';
-  // Insert backdrop BEFORE modal element so it's behind it
   if (modalEl && modalEl.parentElement) { modalEl.parentElement.insertBefore(b, modalEl); }
   else document.body.appendChild(b);
 }
@@ -482,47 +485,94 @@ function removeFallbackBackdrop() { document.querySelectorAll('.modal-backdrop.f
 function showModalFallback(modalEl) {
   if (!modalEl) return;
   createFallbackBackdrop();
-  // Remove hidden attr
   modalEl.removeAttribute('hidden');
   modalEl.setAttribute('aria-hidden', 'false');
-  // Add fallback-show class which applies fixed full-screen centering
   modalEl.classList.add('fallback-show');
   document.body.classList.add('modal-open');
-  // focus first control
   const first = modalEl.querySelector('input, textarea, button, select, a');
   if (first) try { first.focus(); } catch(e) {}
 }
 function hideModalFallback(modalEl) {
   if (!modalEl) return;
-  // remove the visible class so it goes back to hidden
   modalEl.classList.remove('fallback-show');
-  // set aria-hidden and hidden attribute to keep markup out of view
   modalEl.setAttribute('hidden', '');
   modalEl.setAttribute('aria-hidden', 'true');
   removeFallbackBackdrop();
   document.body.classList.remove('modal-open');
 }
 
-/* open modal (Bootstrap preferred; fallback if not available) */
+/* Populate assignee dropdown (members + teams) from APIs */
+async function loadAssignees(){
+  const select = document.getElementById('modal_assignee');
+  if (!select) return;
+  // keep Unassigned option
+  select.innerHTML = '<option value="">Unassigned</option>';
+  try {
+    // people list
+    let res = await fetch('/api/people/list');
+    if (res.ok) {
+      const data = await res.json();
+      // assume data is list of {id, first_name, last_name, email}
+      if (Array.isArray(data)) {
+        const memGroup = document.createElement('optgroup'); memGroup.label = 'Members';
+        data.forEach(m => {
+          const o = document.createElement('option');
+          o.value = `member:${m.id}`;
+          o.textContent = `${m.first_name} ${m.last_name} — ${m.email || ''}`;
+          memGroup.appendChild(o);
+        });
+        if (memGroup.children.length) select.appendChild(memGroup);
+      } else if (data.members) {
+        const memGroup = document.createElement('optgroup'); memGroup.label = 'Members';
+        data.members.forEach(m => {
+          const o = document.createElement('option');
+          o.value = `member:${m.id}`;
+          o.textContent = `${m.first_name} ${m.last_name} — ${m.email || ''}`;
+          memGroup.appendChild(o);
+        });
+        if (memGroup.children.length) select.appendChild(memGroup);
+      }
+    }
+  } catch(e){ console.warn('members load failed', e); }
+
+  try {
+    let res2 = await fetch('/api/teams/list');
+    if (res2.ok) {
+      const data2 = await res2.json();
+      const tGroup = document.createElement('optgroup'); tGroup.label = 'Teams';
+      if (Array.isArray(data2)) {
+        data2.forEach(t => {
+          const o = document.createElement('option');
+          o.value = `team:${t.id}`;
+          o.textContent = `Team: ${t.name}`;
+          tGroup.appendChild(o);
+        });
+      } else if (data2.teams) {
+        data2.teams.forEach(t => {
+          const o = document.createElement('option');
+          o.value = `team:${t.id}`;
+          o.textContent = `Team: ${t.name}`;
+          tGroup.appendChild(o);
+        });
+      }
+      if (tGroup.children.length) select.appendChild(tGroup);
+    }
+  } catch(e){ console.warn('teams load failed', e); }
+}
+
+/* Open task modal (fetch details & populate fields) */
 function openTaskModal(taskId){
   const modalEl = document.getElementById('taskDetailModal'); if (!modalEl) return;
 
-  // clear and mark loading
+  // reset UI
   const alertEl = document.getElementById('modal_alert'); if (alertEl) alertEl.classList.add('d-none');
-  const titleEl = document.getElementById('taskDetailTitle'); if (titleEl) titleEl.textContent = 'Loading...';
-  document.getElementById('modal_task_id').value = taskId;
-  document.getElementById('modal_title').value = '';
-  document.getElementById('modal_description').value = '';
-  document.getElementById('modal_priority').value = '';
-  document.getElementById('modal_due_date').value = '';
-  // if assignee field exists, reset it appropriately
-  const assEl = document.getElementById('modal_assignee');
-  if (assEl) { if (assEl.tagName === 'SELECT') assEl.value = ''; else assEl.value = ''; }
+  document.getElementById('taskDetailTitle').textContent = 'Loading...';
+  document.getElementById('modal_task_id').value = taskId || '';
 
-  // Ensure modal is appended to body (and not nested where z-index issues happen)
+  // Append modal to body to avoid z-index nesting
   if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
 
-  // Try bootstrap
+  // attempt to show bootstrap modal, fallback otherwise
   let usedBootstrap = false;
   try {
     if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -534,57 +584,108 @@ function openTaskModal(taskId){
     console.warn('bootstrap modal failed, falling back', err); usedBootstrap = false;
   }
 
-  // Fetch task details
-  fetch(TASK_DETAIL_API + '?id=' + encodeURIComponent(taskId))
-    .then(r => r.json())
-    .then(data => {
-      if (!data || !data.id) {
-        showModalAlert('error', 'Failed to load task details.');
-        if (!usedBootstrap) hideModalFallback(modalEl);
-        return;
-      }
-      const title = document.getElementById('taskDetailTitle'); if (title) title.textContent = data.title || ('Task #' + data.id);
-      document.getElementById('modal_task_id').value = data.id;
-      document.getElementById('modal_title').value = data.title || '';
-      document.getElementById('modal_description').value = data.description || '';
-      document.getElementById('modal_priority').value = data.priority || '';
-      document.getElementById('modal_due_date').value = data.due_date || '';
-      // set assignee appropriately
-      const aEl = document.getElementById('modal_assignee');
-      if (aEl) {
-        if (aEl.tagName === 'SELECT') {
-          if (data.assigned_to) aEl.value = data.assigned_to;
-        } else {
-          aEl.value = data.assigned_to_display || (data.assigned_to || '');
+  // ensure assignees are loaded before populating assigned value
+  loadAssignees().finally(() => {
+    // fetch task details
+    fetch(TASK_DETAIL_API + '?id=' + encodeURIComponent(taskId))
+      .then(r => r.json())
+      .then(data => {
+        if (!data || data.error) {
+          alert('Failed to load task details.');
+          if (!usedBootstrap) hideModalFallback(modalEl);
+          return;
         }
-      }
-    })
-    .catch(err => { console.error(err); showModalAlert('error', 'Network error loading task.'); });
 
-  // If bootstrap did not show within short time, use fallback show that guarantees centering
+        document.getElementById('taskDetailTitle').textContent = data.title || ('Task #' + (data.id || ''));
+        document.getElementById('modal_title').value = data.title || '';
+        document.getElementById('modal_description').value = data.description || '';
+        document.getElementById('modal_priority').value = data.priority || 'Normal';
+        // due_date as ISO -> if empty leave blank otherwise use yyyy-mm-dd
+        document.getElementById('modal_due_date').value = data.due_date || '';
+
+        // project/subproject if returned
+        if (data.project_id) {
+          const p = document.getElementById('modal_project');
+          if (p) p.value = data.project_id;
+          loadModalSubprojects(data.project_id, data.subproject_id);
+        } else {
+          const p = document.getElementById('modal_project'); if (p) p.value = '';
+          const sp = document.getElementById('modal_subproject'); if (sp) sp.innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
+        }
+
+        // assigned: use assigned_type + assigned_to to match value format in select
+        const aEl = document.getElementById('modal_assignee');
+        if (aEl) {
+          const atype = data.assigned_type || '';
+          const atoid = data.assigned_to || '';
+          if (atype && atoid) {
+            const val = `${atype}:${atoid}`;
+            // if option exists set it; otherwise leave as unassigned
+            try {
+              aEl.value = val;
+              // if the exact option is not present, create a fallback option showing display name
+              if (!Array.from(aEl.options).some(opt => opt.value === val)) {
+                const fo = document.createElement('option');
+                fo.value = val;
+                fo.textContent = data.assigned_to_display || (atype + ':' + atoid);
+                aEl.appendChild(fo);
+                aEl.value = val;
+              }
+            } catch (e) {
+              aEl.value = '';
+            }
+          } else {
+            aEl.value = '';
+          }
+        }
+      })
+      .catch(err => { console.error(err); alert('Network error loading task.'); });
+  });
+
+  // ensure fallback shows if bootstrap didn't appear
   setTimeout(() => {
     const actuallyShown = document.querySelector('.modal-backdrop') || modalEl.classList.contains('show') || modalEl.classList.contains('fallback-show');
     if (!actuallyShown) showModalFallback(modalEl);
   }, 180);
 }
 
-/* show alert inside modal */
+/* Load subprojects for modal (same endpoint as create task) */
+async function loadModalSubprojects(pid, selectValue=null){
+  const sp = document.getElementById('modal_subproject');
+  if(!sp) return;
+  sp.innerHTML = '<option>Loading...</option>';
+  try {
+    const res = await fetch(`/tasks/api/subprojects/?project_id=${pid}`);
+    if(!res.ok) throw new Error('no data');
+    const data = await res.json();
+    sp.innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
+    (data.subprojects || []).forEach(s => {
+      const o = document.createElement('option'); o.value = s.id; o.textContent = s.name; sp.appendChild(o);
+    });
+    if (selectValue) sp.value = selectValue;
+  } catch (err) {
+    sp.innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
+  }
+}
+
+/* Show alert inside modal */
 function showModalAlert(type, text){
-  const el = document.getElementById('modal_alert'); if (!el) return;
+  let el = document.getElementById('modal_alert');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'modal_alert'; el.className = 'alert mt-3'; document.querySelector('#taskDetailModal .modal-opaque-content .card-body')?.appendChild(el);
+  }
   el.className = 'alert mt-3';
   if (type === 'success') { el.classList.add('success'); el.textContent = text; el.classList.remove('d-none'); }
   else { el.classList.add('error'); el.textContent = text; el.classList.remove('d-none'); }
 }
 
-/* submit save */
+/* Submit save */
 document.getElementById('taskDetailForm')?.addEventListener('submit', async function(e){
   e.preventDefault();
   const btn = document.getElementById('saveTaskBtn');
-  if (btn) { btn.disabled = true; btn.innerHTML = 'Saving...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Saving...'; }
 
   const fd = new FormData(this);
-  fd.append('task_id', document.getElementById('modal_task_id').value);
-
   try {
     const res = await fetch(TASK_UPDATE_API, {
       method: 'POST',
@@ -606,13 +707,11 @@ document.getElementById('taskDetailForm')?.addEventListener('submit', async func
     console.error(err);
     showModalAlert('error', 'Network error while saving.');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = 'Save changes'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Save changes'; }
   }
 });
 
-/* Close/hide handlers:
-   - include the new .modal-close-circle so it closes in both bootstrap & fallback modes
-*/
+/* Close/hide handlers */
 document.addEventListener('click', function (e) {
   if (e.target.closest('[data-bs-dismiss="modal"]') || e.target.closest('.btn-close') || e.target.closest('.modal-close-circle')) {
     const modalEl = document.getElementById('taskDetailModal');
@@ -621,16 +720,11 @@ document.addEventListener('click', function (e) {
   }
 });
 
-// When Bootstrap emits hidden event, ensure fallback removed too
 document.addEventListener('hidden.bs.modal', function(ev){
   const modalEl = document.getElementById('taskDetailModal');
-  // remove any fallback if exists
   removeFallbackBackdrop();
-  // ensure modal hidden attribute set
   if (modalEl) { modalEl.setAttribute('hidden',''); modalEl.setAttribute('aria-hidden','true'); }
 });
-
-// also hide on Esc when fallback is used
 document.addEventListener('keydown', function(ev){
   if (ev.key === 'Escape') {
     const modalEl = document.getElementById('taskDetailModal');
@@ -639,35 +733,34 @@ document.addEventListener('keydown', function(ev){
   }
 });
 
-/* enhance footer + z-index housekeeping */
-(function enhanceFooterAndModalBehavior(){
-  const summary = document.getElementById('boardSummary');
-  const pagination = document.getElementById('boardPagination');
-  if (summary && pagination) {
-    if (!document.querySelector('.footer-pagination')) {
-      const parent = summary.parentElement || pagination.parentElement;
-      const wrapper = document.createElement('div'); wrapper.className = 'footer-pagination';
-      parent.insertBefore(wrapper, parent.firstChild);
-      wrapper.appendChild(summary); wrapper.appendChild(pagination);
-    }
-  }
-  document.addEventListener('shown.bs.modal', function (ev) {
-    const modal = ev.target; if (modal && modal.classList && modal.classList.contains('modal')) {
-      modal.style.zIndex = 1061;
-      document.querySelectorAll('.modal-backdrop').forEach(b => b.style.zIndex = 1050);
-    }
-  });
-  document.addEventListener('hidden.bs.modal', function (ev) {
-    document.querySelectorAll('.modal-backdrop:not(.fade)').forEach(b => b.remove());
-  });
-})();
-
-/* utilities */
-function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-/* init */
+/* Ensure modal appended to body and accessible close circle keyboard support */
 document.addEventListener("DOMContentLoaded", function(){
+  const modalEl = document.getElementById('taskDetailModal');
+  if (modalEl && modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+
+  const closeCircle = document.querySelector('.modal-close-circle');
+  if (closeCircle && modalEl) {
+    closeCircle.setAttribute('role','button');
+    closeCircle.setAttribute('tabindex','0');
+    closeCircle.setAttribute('aria-controls','taskDetailModal');
+    closeCircle.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeCircle.click(); }});
+  }
+
+  // wire project->subproject load inside modal similar to create_task behaviour
+  document.getElementById('modal_project')?.addEventListener('change', function(e){
+    const pid = e.target.value;
+    if(pid) loadModalSubprojects(pid);
+    else {
+      const sp = document.getElementById('modal_subproject'); if (sp) sp.innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
+    }
+  });
+
+  // preload assignees on page load so modal shows quickly
+  loadAssignees().catch(()=>{});
   loadBoard(1);
 });
+
+/* Utilities */
+function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 </script>
 {% endblock %}

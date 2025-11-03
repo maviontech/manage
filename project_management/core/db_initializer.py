@@ -114,6 +114,19 @@ TENANT_DDL = [
       FOREIGN KEY (team_lead_id) REFERENCES members(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """
+     """
+    CREATE TABLE IF NOT EXISTS members (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      email VARCHAR(255) NOT NULL,
+      first_name VARCHAR(120),
+      last_name VARCHAR(120),
+      phone VARCHAR(50),
+      meta JSON DEFAULT NULL,
+      created_by INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_member_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """
     """
     CREATE TABLE IF NOT EXISTS team_memberships (
       id INT AUTO_INCREMENT PRIMARY KEY,
