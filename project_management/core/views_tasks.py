@@ -144,14 +144,6 @@ def unassigned_tasks_view(request):
 # ==============================
 #  TASK BOARD PAGE + DATA
 # ==============================
-def task_board_view(request):
-    status_columns = ["Open", "In Progress", "Review", "Blocked", "Closed"]
-    return render(
-        request,
-        "core/task_board.html",
-        {"page": "task_board", "status_columns": status_columns},
-    )
-
 
 from math import ceil
 from django.http import JsonResponse
@@ -362,24 +354,21 @@ def api_task_detail(request):
         # fetch task row and human-friendly assignee display name
         cur.execute("""
             SELECT
-                t.id,
-                COALESCE(t.title, '') AS title,
-                COALESCE(t.description, '') AS description,
-                COALESCE(t.priority, '') AS priority,
-                t.due_date,
-                t.status,
-                t.assigned_to,
-                t.assigned_type,
-                -- compute display name for assigned entity
-                CASE
-                  WHEN t.assigned_type = 'member' THEN (
-                    SELECT CONCAT(m.first_name, ' ', m.last_name) FROM members m WHERE m.id = t.assigned_to
-                  )
-                  WHEN t.assigned_type = 'team' THEN (
-                    SELECT tm.name FROM teams tm WHERE tm.id = t.assigned_to
-                  )
-                  ELSE NULL
-                END AS assigned_to_display
+              t.id,
+              COALESCE(t.title, '') AS title,
+              COALESCE(t.description, '') AS description,
+              COALESCE(t.priority, '') AS priority,
+              t.due_date,
+              t.status,
+              t.project_id,
+              t.subproject_id,
+              t.assigned_to,
+              t.assigned_type,
+              CASE
+                WHEN t.assigned_type = 'member' THEN (SELECT CONCAT(m.first_name, ' ', m.last_name) FROM members m WHERE m.id = t.assigned_to)
+                WHEN t.assigned_type = 'team' THEN (SELECT tm.name FROM teams tm WHERE tm.id = t.assigned_to)
+                ELSE NULL
+              END AS assigned_to_display
             FROM tasks t
             WHERE t.id = %s
             LIMIT 1
@@ -409,17 +398,21 @@ def api_task_detail(request):
         # normalize assigned fields to strings
         data['assigned_to'] = data.get('assigned_to') or ''
         data['assigned_to_display'] = data.get('assigned_to_display') or ''
-
+        print("DATA:", data)
         return JsonResponse({
             'id': data.get('id'),
             'title': data.get('title', ''),
             'description': data.get('description', ''),
             'priority': data.get('priority', ''),
             'due_date': data.get('due_date', ''),
+            'status': data.get('status', ''),
+            'project_id': data.get('project_id'),
+            'subproject_id': data.get('subproject_id'),
+            'assigned_type': data.get('assigned_type'),
             'assigned_to': data.get('assigned_to', ''),
             'assigned_to_display': data.get('assigned_to_display', ''),
-            'status': data.get('status', '')
         })
+
     finally:
         cur.close()
 
@@ -525,3 +518,21 @@ def api_task_update(request):
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
     finally:
         cur.close()
+
+def task_board_view(request):
+    status_columns = ["Open", "In Progress", "Review", "Blocked", "Closed"]
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    cur.execute("SELECT id, name FROM projects ORDER BY name")
+    projects = cur.fetchall()
+    cur.execute("SELECT id, email, first_name, last_name FROM members ORDER BY first_name")
+    members = cur.fetchall()
+    cur.execute("SELECT id, name FROM teams ORDER BY name")
+    teams = cur.fetchall()
+    cur.close()
+    return render(
+        request,
+        "core/task_board.html",
+        {"page": "task_board", "status_columns": status_columns,
+         "projects": projects, "members": members, "teams": teams},
+    )

@@ -96,15 +96,12 @@
               </div>
             </div>
 
-            <!-- Project -->
+            <!-- Project (populated from AJAX, not template context) -->
             <div class="form-row">
               <label class="form-label">Project</label>
               <div class="form-control-wrap">
                 <select name="project_id" id="modal_project" class="form-select">
                   <option value="">-- Choose Project --</option>
-                  {% for p in projects %}
-                    <option value="{{ p.id }}">{{ p.name }}</option>
-                  {% endfor %}
                 </select>
               </div>
             </div>
@@ -153,7 +150,7 @@
 
             <!-- Description (spans full width) -->
             <div class="form-row" style="grid-column: 1 / -1;">
-              <label class="form-label fw-semibold">Description (optional)</label>
+              <label class="form-label fw-semibold">Description</label>
               <div class="form-control-wrap">
                 <textarea id="modal_description" name="description" rows="6" class="form-control" placeholder="Add detailed notes, acceptance criteria, links, steps to reproduce..."></textarea>
                 <div class="form-text mt-2">Optional — good place for acceptance criteria or reproduction steps.</div>
@@ -163,10 +160,14 @@
           </div>
         </div>
 
-        <!-- Footer: centered buttons like Create Task -->
-        <div class="col-12 mt-2 d-flex justify-content-center gap-3 px-4 pb-4">
-          <button type="button" class="btn btn-outline-gradient btn-lg" data-bs-dismiss="modal">Cancel</button>
-          <button id="saveTaskBtn" type="submit" class="btn btn-gradient btn-lg"><i class="fa-solid fa-check me-1"></i> Save changes</button>
+        <!-- Footer: centered buttons like Create Task (centered inside modal content) -->
+        <div class="modal-footer-centered">
+          <div class="footer-inner">
+            <div class="footer-btns">
+              <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+              <button id="saveTaskBtn" type="submit" class="btn btn-gradient"><i class="fa-solid fa-check me-1"></i> Save changes</button>
+            </div>
+          </div>
         </div>
 
       </form>
@@ -208,7 +209,25 @@
 .btn-gradient { background:linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border:none; border-radius:10px; padding:10px 18px; font-weight:600; }
 .btn-outline-gradient { background:#fff; color:#0b57a4; border:1px solid #38bdf8; border-radius:10px; padding:9px 16px; font-weight:600; }
 
-.form-text { color:#6b7b8a; font-size:.88rem; }
+/* custom cancel button matching create_task */
+.btn-cancel {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:8px 14px;
+  border-radius:8px;
+  background:#ffffff;
+  color:#0b57a4;
+  border:1px solid rgba(11,87,164,0.12);
+  font-weight:600;
+  box-shadow: 0 6px 18px rgba(11,87,164,0.03);
+}
+
+/* Footer centered layout */
+.modal-footer-centered { display:flex; justify-content:center; padding: 12px 20px 20px 20px; background: transparent; }
+.footer-inner { width:100%; max-width:880px; margin: 0 auto; display:flex; justify-content:center; }
+.footer-btns { display:flex; gap:14px; justify-content:center; align-items:center; width:100%; max-width:420px; }
 
 /* ===== Modal backdrop (soft frost) and modal card ===== */
 .modal-backdrop,
@@ -263,9 +282,6 @@
 .modal-header-centered { display:block; text-align:center; padding-top:6px; padding-bottom:12px; }
 .modal-title-wrap { max-width:760px; margin: 0 auto; }
 
-/* Footer buttons centered */
-.modal .d-flex.justify-content-center { justify-content:center !important; }
-
 /* Fallback show (centers modal when bootstrap modal not available) */
 .modal.fallback-show {
   display: flex !important;
@@ -280,28 +296,33 @@
 .modal.fallback-show .modal-dialog { display:flex; align-items:center; justify-content:center; min-height:0; max-width:96%; margin:0; }
 .modal.fallback-show .modal-content { max-height: calc(100vh - 80px); overflow:auto; }
 
+/* Ensure modal dialog centers even when bootstrap attempted to position at bottom */
+.modal-dialog { display: flex; align-items: center; min-height: calc(100vh - 80px); }
+
 /* Responsive */
 @media (max-width: 992px) {
   .form-row { grid-template-columns: 1fr !important; }
   .modal-opaque-content { margin: 12px; max-width: 96%; padding-left:16px; padding-right:16px; }
   .modal-close-circle { top: 10px; right: 10px; width:36px; height:36px; }
+  .footer-inner { padding-left: 8px; padding-right: 8px; }
 }
 </style>
 
-<!-- ===== JS Logic (board + modal + assignees load + fallback) ===== -->
+<!-- ===== JS Logic (board + modal + assignees load + projects load + improved population flow) ===== -->
 <script>
 let CURRENT_BOARD_PAGE = 1;
 const PER_PAGE = 10;
 let ALL_TASKS = [];
 const TASK_DETAIL_API = "{% url 'api_task_detail' %}";
 const TASK_UPDATE_API = "{% url 'api_task_update' %}";
+const BOARD_DATA_API = "{% url 'board_data' %}";
 const CSRF_TOKEN = "{{ csrf_token }}";
 
 /* Load board (unchanged) */
 async function loadBoard(page=1){
   try {
     CURRENT_BOARD_PAGE = page;
-    const res = await fetch("{% url 'board_data' %}?page=" + page);
+    const res = await fetch(BOARD_DATA_API + "?page=" + page);
     const payload = await res.json();
     const tasks = payload.tasks || [];
     ALL_TASKS = tasks;
@@ -464,7 +485,7 @@ function updateSummary(page, totalCount, totalPages){
   summary.textContent = `Showing ${start}-${end} of ${totalCount} tasks`;
 }
 
-/* Modal + fallback backdrop + assignees loader */
+/* Modal + fallback backdrop + assignees + projects load + improved population flow */
 let taskModalInstance = null;
 
 function createFallbackBackdrop() {
@@ -501,37 +522,58 @@ function hideModalFallback(modalEl) {
   document.body.classList.remove('modal-open');
 }
 
+/* Load projects via AJAX (projects/ajax/search/) and populate modal_project */
+async function loadProjects(q = '') {
+  const select = document.getElementById('modal_project');
+  if (!select) return;
+  select.innerHTML = '<option>Loading...</option>';
+  try {
+    // projects/ajax/search/ returns JSON list of projects (this route exists in urls.py)
+    const res = await fetch(`/projects/ajax/search/?q=${encodeURIComponent(q)}`);
+    if (!res.ok) throw new Error('no projects');
+    const data = await res.json();
+    // support both array and {projects: [...]}
+    const list = Array.isArray(data) ? data : (data.projects || []);
+    select.innerHTML = '<option value="">-- Choose Project --</option>';
+    list.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = p.name || p.title || (`Project ${p.id}`);
+      select.appendChild(o);
+    });
+  } catch (err) {
+    // fallback: leave empty list
+    select.innerHTML = '<option value="">-- Choose Project --</option>';
+    console.warn('projects load failed', err);
+  }
+}
+
 /* Populate assignee dropdown (members + teams) from APIs */
 async function loadAssignees(){
   const select = document.getElementById('modal_assignee');
   if (!select) return;
-  // keep Unassigned option
   select.innerHTML = '<option value="">Unassigned</option>';
   try {
-    // people list
     let res = await fetch('/api/people/list');
     if (res.ok) {
       const data = await res.json();
-      // assume data is list of {id, first_name, last_name, email}
+      const memGroup = document.createElement('optgroup'); memGroup.label = 'Members';
       if (Array.isArray(data)) {
-        const memGroup = document.createElement('optgroup'); memGroup.label = 'Members';
         data.forEach(m => {
           const o = document.createElement('option');
           o.value = `member:${m.id}`;
-          o.textContent = `${m.first_name} ${m.last_name} — ${m.email || ''}`;
+          o.textContent = `${m.first_name} ${m.last_name}${m.email ? ' — ' + m.email : ''}`;
           memGroup.appendChild(o);
         });
-        if (memGroup.children.length) select.appendChild(memGroup);
       } else if (data.members) {
-        const memGroup = document.createElement('optgroup'); memGroup.label = 'Members';
         data.members.forEach(m => {
           const o = document.createElement('option');
           o.value = `member:${m.id}`;
-          o.textContent = `${m.first_name} ${m.last_name} — ${m.email || ''}`;
+          o.textContent = `${m.first_name} ${m.last_name}${m.email ? ' — ' + m.email : ''}`;
           memGroup.appendChild(o);
         });
-        if (memGroup.children.length) select.appendChild(memGroup);
       }
+      if (memGroup.children.length) select.appendChild(memGroup);
     }
   } catch(e){ console.warn('members load failed', e); }
 
@@ -560,19 +602,49 @@ async function loadAssignees(){
   } catch(e){ console.warn('teams load failed', e); }
 }
 
-/* Open task modal (fetch details & populate fields) */
-function openTaskModal(taskId){
+/* Load subprojects for modal (returns Promise) */
+function loadModalSubprojects(pid, selectValue=null){
+  const sp = document.getElementById('modal_subproject');
+  if(!sp) return Promise.resolve();
+  sp.innerHTML = '<option>Loading...</option>';
+  return fetch(`/tasks/api/subprojects/?project_id=${pid}`).then(r=>{
+    if (!r.ok) throw new Error('no data');
+    return r.json();
+  }).then(data=>{
+    sp.innerHTML = '<option value="">-- Optional Subproject --</option>';
+    (data.subprojects || []).forEach(s => {
+      const o = document.createElement('option'); o.value = s.id; o.textContent = s.name; sp.appendChild(o);
+    });
+    if (selectValue) sp.value = selectValue;
+  }).catch(err=>{
+    sp.innerHTML = '<option value="">-- Optional Subproject --</option>';
+  });
+}
+
+/* Open task modal (improved flow):
+   1) fetch task detail
+   2) fetch projects + assignees (in parallel)
+   3) fetch subprojects (if project)
+   4) populate all fields (ensures selects exist before setting value)
+*/
+async function openTaskModal(taskId){
   const modalEl = document.getElementById('taskDetailModal'); if (!modalEl) return;
 
-  // reset UI
-  const alertEl = document.getElementById('modal_alert'); if (alertEl) alertEl.classList.add('d-none');
+  // reset UI and show spinner text
   document.getElementById('taskDetailTitle').textContent = 'Loading...';
   document.getElementById('modal_task_id').value = taskId || '';
+  document.getElementById('modal_title').value = '';
+  document.getElementById('modal_description').value = '';
+  document.getElementById('modal_priority').value = 'Normal';
+  document.getElementById('modal_due_date').value = '';
+  document.getElementById('modal_assignee').innerHTML = '<option value=\"\">Unassigned</option>';
+  document.getElementById('modal_subproject').innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
+  document.getElementById('modal_project').innerHTML = '<option>Loading...</option>';
 
-  // Append modal to body to avoid z-index nesting
+  // append modal to body
   if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
 
-  // attempt to show bootstrap modal, fallback otherwise
+  // show modal (bootstrap if present, otherwise fallback)
   let usedBootstrap = false;
   try {
     if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -581,91 +653,100 @@ function openTaskModal(taskId){
       usedBootstrap = true;
     }
   } catch (err) {
-    console.warn('bootstrap modal failed, falling back', err); usedBootstrap = false;
+    usedBootstrap = false;
   }
-
-  // ensure assignees are loaded before populating assigned value
-  loadAssignees().finally(() => {
-    // fetch task details
-    fetch(TASK_DETAIL_API + '?id=' + encodeURIComponent(taskId))
-      .then(r => r.json())
-      .then(data => {
-        if (!data || data.error) {
-          alert('Failed to load task details.');
-          if (!usedBootstrap) hideModalFallback(modalEl);
-          return;
-        }
-
-        document.getElementById('taskDetailTitle').textContent = data.title || ('Task #' + (data.id || ''));
-        document.getElementById('modal_title').value = data.title || '';
-        document.getElementById('modal_description').value = data.description || '';
-        document.getElementById('modal_priority').value = data.priority || 'Normal';
-        // due_date as ISO -> if empty leave blank otherwise use yyyy-mm-dd
-        document.getElementById('modal_due_date').value = data.due_date || '';
-
-        // project/subproject if returned
-        if (data.project_id) {
-          const p = document.getElementById('modal_project');
-          if (p) p.value = data.project_id;
-          loadModalSubprojects(data.project_id, data.subproject_id);
-        } else {
-          const p = document.getElementById('modal_project'); if (p) p.value = '';
-          const sp = document.getElementById('modal_subproject'); if (sp) sp.innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
-        }
-
-        // assigned: use assigned_type + assigned_to to match value format in select
-        const aEl = document.getElementById('modal_assignee');
-        if (aEl) {
-          const atype = data.assigned_type || '';
-          const atoid = data.assigned_to || '';
-          if (atype && atoid) {
-            const val = `${atype}:${atoid}`;
-            // if option exists set it; otherwise leave as unassigned
-            try {
-              aEl.value = val;
-              // if the exact option is not present, create a fallback option showing display name
-              if (!Array.from(aEl.options).some(opt => opt.value === val)) {
-                const fo = document.createElement('option');
-                fo.value = val;
-                fo.textContent = data.assigned_to_display || (atype + ':' + atoid);
-                aEl.appendChild(fo);
-                aEl.value = val;
-              }
-            } catch (e) {
-              aEl.value = '';
-            }
-          } else {
-            aEl.value = '';
-          }
-        }
-      })
-      .catch(err => { console.error(err); alert('Network error loading task.'); });
-  });
-
-  // ensure fallback shows if bootstrap didn't appear
   setTimeout(() => {
     const actuallyShown = document.querySelector('.modal-backdrop') || modalEl.classList.contains('show') || modalEl.classList.contains('fallback-show');
     if (!actuallyShown) showModalFallback(modalEl);
-  }, 180);
-}
+  }, 100);
 
-/* Load subprojects for modal (same endpoint as create task) */
-async function loadModalSubprojects(pid, selectValue=null){
-  const sp = document.getElementById('modal_subproject');
-  if(!sp) return;
-  sp.innerHTML = '<option>Loading...</option>';
+  // 1) fetch task detail
+  let taskData = null;
   try {
-    const res = await fetch(`/tasks/api/subprojects/?project_id=${pid}`);
-    if(!res.ok) throw new Error('no data');
-    const data = await res.json();
-    sp.innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
-    (data.subprojects || []).forEach(s => {
-      const o = document.createElement('option'); o.value = s.id; o.textContent = s.name; sp.appendChild(o);
-    });
-    if (selectValue) sp.value = selectValue;
+    const r = await fetch(TASK_DETAIL_API + '?id=' + encodeURIComponent(taskId));
+    if (!r.ok) throw new Error('task not found');
+    taskData = await r.json();
+    if (taskData.error) throw new Error(taskData.error);
   } catch (err) {
-    sp.innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
+    console.error('task detail load failed', err);
+    alert('Failed to load task details.');
+    if (!usedBootstrap) hideModalFallback(modalEl);
+    return;
   }
+
+  // 2) load projects + assignees in parallel
+  const promises = [ loadProjects(''), loadAssignees() ];
+  await Promise.allSettled(promises);
+
+  // 3) if project present, load subprojects
+  const pid = taskData.project_id || taskData.project || '';
+  if (pid) {
+    await loadModalSubprojects(pid, taskData.subproject_id || taskData.subproject || null);
+  } else {
+    document.getElementById('modal_subproject').innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
+  }
+
+  // 4) populate fields safely
+  // Title & header with ID
+  const displayTitle = taskData.title || ('Task #' + (taskData.id || ''));
+  document.getElementById('taskDetailTitle').textContent = displayTitle + (taskData.id ? (' — #' + taskData.id) : '');
+  document.getElementById('modal_title').value = taskData.title || '';
+  document.getElementById('modal_description').value = taskData.description || '';
+
+  // priority
+  const priEl = document.getElementById('modal_priority');
+  if (priEl && taskData.priority) try { priEl.value = taskData.priority; } catch(e){}
+
+  // due_date ISO -> yyyy-mm-dd
+  const dueRaw = taskData.due_date || taskData.due || '';
+  if (dueRaw) {
+    document.getElementById('modal_due_date').value = String(dueRaw).split('T')[0];
+  } else {
+    document.getElementById('modal_due_date').value = '';
+  }
+
+  // project select: set after loadProjects completed
+  const pEl = document.getElementById('modal_project');
+  if (pEl) {
+    try {
+      if ((taskData.project_id || taskData.project) && Array.from(pEl.options).some(o => o.value == (taskData.project_id || taskData.project))) {
+        pEl.value = taskData.project_id || taskData.project;
+      } else if (taskData.project_id || taskData.project) {
+        // fallback: if project option not found, add one
+        const val = taskData.project_id || taskData.project;
+        const o = document.createElement('option'); o.value = val; o.textContent = taskData.project_name || ('Project ' + val); pEl.appendChild(o); pEl.value = val;
+      } else {
+        pEl.value = '';
+      }
+    } catch(e){
+      pEl.value = '';
+    }
+  }
+
+  // assigned: map assigned_type + assigned_to -> "member:123" etc.
+  const aEl = document.getElementById('modal_assignee');
+  if (aEl) {
+    const atype = taskData.assigned_type || '';
+    const atoid = taskData.assigned_to || '';
+    if (atype && (atoid !== null && atoid !== undefined && atoid !== '')) {
+      const val = `${atype}:${atoid}`;
+      if (Array.from(aEl.options).some(opt => opt.value === val)) {
+        aEl.value = val;
+      } else {
+        // create fallback option with display text
+        const fo = document.createElement('option');
+        fo.value = val;
+        fo.textContent = taskData.assigned_to_display || (atype + ':' + atoid);
+        aEl.appendChild(fo);
+        aEl.value = val;
+      }
+    } else {
+      aEl.value = '';
+    }
+  }
+
+  // focus title
+  try { document.getElementById('modal_title').focus(); } catch(e){}
 }
 
 /* Show alert inside modal */
@@ -675,8 +756,8 @@ function showModalAlert(type, text){
     el = document.createElement('div'); el.id = 'modal_alert'; el.className = 'alert mt-3'; document.querySelector('#taskDetailModal .modal-opaque-content .card-body')?.appendChild(el);
   }
   el.className = 'alert mt-3';
-  if (type === 'success') { el.classList.add('success'); el.textContent = text; el.classList.remove('d-none'); }
-  else { el.classList.add('error'); el.textContent = text; el.classList.remove('d-none'); }
+  el.textContent = text || '';
+  el.classList.remove('d-none');
 }
 
 /* Submit save */
@@ -733,7 +814,7 @@ document.addEventListener('keydown', function(ev){
   }
 });
 
-/* Ensure modal appended to body and accessible close circle keyboard support */
+/* DOM ready: ensure modal exists on body, wire events */
 document.addEventListener("DOMContentLoaded", function(){
   const modalEl = document.getElementById('taskDetailModal');
   if (modalEl && modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
@@ -746,7 +827,6 @@ document.addEventListener("DOMContentLoaded", function(){
     closeCircle.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeCircle.click(); }});
   }
 
-  // wire project->subproject load inside modal similar to create_task behaviour
   document.getElementById('modal_project')?.addEventListener('change', function(e){
     const pid = e.target.value;
     if(pid) loadModalSubprojects(pid);
@@ -755,7 +835,8 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   });
 
-  // preload assignees on page load so modal shows quickly
+  // preload lists to speed up modal
+  loadProjects().catch(()=>{});
   loadAssignees().catch(()=>{});
   loadBoard(1);
 });
