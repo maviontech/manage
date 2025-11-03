@@ -465,6 +465,31 @@ def api_task_update(request):
             # explicit empty string -> set NULL
             updates.append("due_date = NULL")
 
+        # --- ASSIGNED TO (member:ID or team:ID) ---
+        # frontend posts field name "assigned_to" (value like "member:23" or "team:5", or empty string to unassign)
+        assigned_raw = request.POST.get('assigned_to')
+        if assigned_raw is not None:
+            # explicit empty string -> clear assignment
+            if assigned_raw == '':
+                updates.append("assigned_to = NULL")
+                updates.append("assigned_type = NULL")
+            else:
+                assigned_to_val, assigned_type_val = None, None
+                if ":" in assigned_raw:
+                    # expected format "member:23" or "team:5"
+                    assigned_type_val, assigned_to_val = assigned_raw.split(":", 1)
+                else:
+                    # fallback assume member id
+                    assigned_type_val, assigned_to_val = "member", assigned_raw
+                updates.append("assigned_to = %s")
+                params.append(assigned_to_val)
+                updates.append("assigned_type = %s")
+                params.append(assigned_type_val)
+            # remember for activity logging after update
+            _assigned_change = assigned_raw
+        else:
+            _assigned_change = None
+
         # If frontend posts assigned_to_display, update a display column (you have used assigned_to_display in UI)
         assigned_to_display = request.POST.get('assigned_to_display')
         if assigned_to_display is not None:
