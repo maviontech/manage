@@ -20,7 +20,7 @@
   <!-- Search / Controls row -->
   <div class="card mb-3 border-0 shadow-sm search-card">
     <div class="card-body py-3 d-flex flex-wrap align-items-center gap-3">
-      <div class="position-relative flex-fill" style="min-width:320px;">
+      <div class="position-relative flex-fill" style="min-width:200px;">
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
         <input id="unassignedSearch" class="form-control search-input" placeholder="Search by ID (#4 or 4) or text in title/description...">
       </div>
@@ -33,7 +33,7 @@
       </div>
 
       <div class="d-flex gap-2 align-items-center">
-        <button id="refreshUnassigned" class="btn btn-light">Refresh</button>
+        <button id="refreshUnassigned" class="btn btn-outline-gradient">Refresh</button>
         <label class="form-check form-check-inline mb-0 ms-2">
           <input type="checkbox" id="selectAllPage" class="form-check-input">
           <span class="form-check-label small">Select all on page</span>
@@ -182,9 +182,30 @@
 .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9aa7b8; }
 .search-input { padding-left:36px; border-radius:8px; border:1px solid #e6eef6; height:44px; }
 
-/* header row */
-.task-table-header { padding:12px 16px; background:linear-gradient(90deg,#f7fbff,#fff); border-bottom:1px solid rgba(11,87,164,0.03); color:#45647a; font-weight:700; }
-.task-table-header .col { padding:6px 12px; }
+/* --- Header row: horizontal aligned columns (matches row widths) --- */
+.task-table-header {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg,#f7fbff,#fff);
+  border-bottom: 1px solid rgba(11,87,164,0.03);
+  color: #45647a;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.task-table-header .col {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+}
+.task-table-header .id-col { flex: 0 0 120px; }
+.task-table-header .title-col { flex: 1 1 45%; min-width:220px; }
+.task-table-header .project-col { flex: 1 1 28%; min-width:180px; }
+.task-table-header .priority-col { flex: 0 0 110px; }
+.task-table-header .due-col { flex: 0 0 120px; }
+.task-table-header .action-col { flex: 0 0 150px; text-align: right; }
 
 /* rows */
 .task-table { padding:12px; }
@@ -212,6 +233,47 @@
 .btn-gradient { background:linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border:none; border-radius:10px; padding:8px 12px; font-weight:600; }
 .btn-outline-gradient { background:#fff; color:#0b57a4; border:1px solid #38bdf8; border-radius:10px; padding:6px 10px; font-weight:600; }
 .btn-cancel { display:inline-flex; align-items:center; justify-content:center; padding:8px 14px; border-radius:8px; background:#fff; color:#0b57a4; border:1px solid rgba(11,87,164,0.12); font-weight:600; }
+
+/* search card form controls polish */
+.search-card .form-control, .search-card .form-select {
+  height:44px;
+  border-radius:8px;
+  border:1px solid #e6eef6;
+}
+.search-card .btn-outline-gradient {
+  height:40px;
+  padding:6px 12px;
+}
+.search-card .form-check { margin-left:8px; }
+
+/* pagination styling */
+.pagination {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: 6px;
+}
+.pagination .page-item { display: inline-block; }
+.pagination .page-link {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fff;
+  color: #0b57a4;
+  border: 1px solid rgba(11,87,164,0.08);
+  text-decoration: none;
+  font-weight:600;
+}
+.pagination .page-item.active .page-link {
+  background: linear-gradient(90deg,#0b57a4,#1f86e3);
+  color: #fff;
+  border: none;
+}
+.pagination .page-item.disabled .page-link {
+  opacity: 0.55;
+  pointer-events: none;
+}
 
 /* Modal styles - soft frost */
 .modal-frost { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:2400; }
@@ -269,14 +331,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   });
 
-  // Fallback if no rows found
   if (!ALL_TASK_ROWS) ALL_TASK_ROWS = [];
 
-  // State
   let filtered = [...ALL_TASK_ROWS];
   let currentPage = 1;
 
-  // DOM references (guarded)
   const unassignedList = $('#unassignedList');
   const unassignedSearch = $('#unassignedSearch');
   const unassignedPriority = $('#unassignedPriority');
@@ -288,7 +347,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const topPagination = $('#topPagination');
   const bottomPagination = $('#bottomPagination');
 
-  // Modal refs
   const assignModal = $('#assignModal');
   const assignBackdrop = assignModal ? assignModal.querySelector('.modal-backdrop-frost') : null;
   const assignForm = $('#assignForm');
@@ -298,13 +356,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const assignModalCloseBtn = $('#assignModalClose');
   const assignModalCancelBtns = $$('.modal-cancel');
 
-  // Safety: if required DOM containers missing, print and stop to avoid undefined calls
   if (!unassignedList || !unassignedSearch) {
     console.warn('unassigned_tasks: core DOM elements missing (list/search). Aborting JS bootstrap.');
     return;
   }
 
-  // ---------- Rendering and pagination ----------
   function renderPagination() {
     const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
     const renderPageList = (container) => {
@@ -335,20 +391,17 @@ document.addEventListener('DOMContentLoaded', () => {
     currentPage = page;
     const start = (page-1) * ITEMS_PER_PAGE;
     const pageItems = filtered.slice(start, start + ITEMS_PER_PAGE);
-    // clear container then append
     unassignedList.innerHTML = '';
     if (!pageItems.length) {
       unassignedList.innerHTML = '<div class="py-4 text-center text-muted">No tasks found.</div>';
     } else {
       for (const t of pageItems) unassignedList.appendChild(t.el);
     }
-    // update counters
     if (unassignedCount) unassignedCount.textContent = `Showing ${Math.min(filtered.length, start+1)}–${Math.min(filtered.length, start+pageItems.length)} of ${filtered.length} tasks`;
     if (bottomCount) bottomCount.textContent = `Page ${page} of ${Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))}`;
     renderPagination();
   }
 
-  // ---------- Filter / Search ----------
   function applyFilter() {
     const qraw = (unassignedSearch?.value || '').trim();
     const q = qraw.toLowerCase();
@@ -369,12 +422,10 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPage(1);
   }
 
-  // ---------- Safe event wiring ----------
   if (unassignedSearch) unassignedSearch.addEventListener('input', applyFilter);
   if (unassignedPriority) unassignedPriority.addEventListener('change', applyFilter);
   if (refreshUnassigned) refreshUnassigned.addEventListener('click', () => location.reload());
 
-  // Select all on current page
   if (selectAllPage) {
     selectAllPage.addEventListener('change', function() {
       const checked = !!this.checked;
@@ -387,7 +438,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Assign Selected
   if (assignSelectedBtn) {
     assignSelectedBtn.addEventListener('click', () => {
       const checked = $$('input.task-select:checked').map(cb => cb.dataset.task);
@@ -396,7 +446,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ---------- Modal helpers ----------
   async function ensureAssigneesLoaded() {
     if (!assignAssigneeSel) return;
     if (assignAssigneeSel.options && assignAssigneeSel.options.length > 1) return;
@@ -445,13 +494,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (assignMultipleEl) assignMultipleEl.value = '';
   }
 
-  // Attach modal close listeners safely
   if (assignModalCloseBtn) assignModalCloseBtn.addEventListener('click', closeAssignModal);
   if (assignBackdrop) assignBackdrop.addEventListener('click', closeAssignModal);
   assignModalCancelBtns.forEach(b => b.addEventListener('click', closeAssignModal));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAssignModal(); });
 
-  // ---------- Event delegation for per-row Assign button ----------
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.assign-row-btn');
     if (!btn) return;
@@ -460,7 +507,6 @@ document.addEventListener('DOMContentLoaded', () => {
     openAssignModal(tid);
   });
 
-  // ---------- Assign form submit ----------
   if (assignForm) {
     assignForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
@@ -474,7 +520,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (!taskIds.length) { showToast('No tasks selected', 'warning'); return; }
 
-      // disable submit button to prevent duplicate clicks
       const submitBtn = $('#assignModalSubmit');
       if (submitBtn) submitBtn.disabled = true;
 
@@ -492,7 +537,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Assign failed for task #' + tid, 'error');
             continue;
           }
-          // remove row from ALL_TASK_ROWS and DOM (animated)
           const idx = ALL_TASK_ROWS.findIndex(x => String(x.id) === String(tid));
           if (idx !== -1) {
             const rowEl = ALL_TASK_ROWS[idx].el;
@@ -503,7 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ALL_TASK_ROWS.splice(idx,1);
           }
         }
-        // refresh filtered & page after small delay to allow removal animation
         setTimeout(() => {
           filtered = [...ALL_TASK_ROWS];
           applyFilter();
@@ -519,8 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ---------- Small toast helper (non-blocking) ----------
-  // lightweight toast system appended to body
   function showToast(message, level='info') {
     try {
       const id = 'toast-' + Date.now();
@@ -547,11 +588,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) { console.warn('toast failed', e); }
   }
 
-  // ---------- Initial rendering ----------
-  // If pagination UI exists, render page 1
   applyFilter();
-  // attach any other controls safely
-}); // DOMContentLoaded
+});
 </script>
 
 {% endblock %}
