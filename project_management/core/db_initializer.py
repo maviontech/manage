@@ -88,7 +88,7 @@ TENANT_DDL = [
       performed_by INT,
       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """
+    """,
     """
     CREATE TABLE IF NOT EXISTS members (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -101,7 +101,7 @@ TENANT_DDL = [
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uk_member_email (email)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """
+    """,
     """
     CREATE TABLE IF NOT EXISTS teams (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -113,7 +113,7 @@ TENANT_DDL = [
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (team_lead_id) REFERENCES members(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """
+    """,
      """
     CREATE TABLE IF NOT EXISTS members (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -126,7 +126,7 @@ TENANT_DDL = [
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uk_member_email (email)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """
+    """,
     """
     CREATE TABLE IF NOT EXISTS team_memberships (
       id INT AUTO_INCREMENT PRIMARY KEY,
