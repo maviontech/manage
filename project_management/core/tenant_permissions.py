@@ -14,15 +14,46 @@ import secrets, string
 def get_tenant_conn_from_request(request):
     # This assumes you have stored tenant DB credentials in session or can derive a db_name from session
     # Replace with your project's actual tenant-connection helper.
-    from core.views import get_tenant_conn  # if you already implemented this
+    from .db_helpers import get_tenant_conn
     return get_tenant_conn(request)
 
 def get_user_project_role_ids(conn, member_id, project_id):
+    """
+    Return role_ids assigned to member for this project (if project_id provided) OR tenant-wide (tenant_role_assignments).
+    Returns a list of unique role_id ints.
+    Assumes 'conn' is a pymysql connection with DictCursor.
+    """
     cur = conn.cursor()
-    cur.execute("SELECT role_id FROM project_role_assignments WHERE member_id=%s AND project_id=%s", (member_id, project_id))
-    rows = cur.fetchall()
+    role_ids = set()
+
+    # 1) tenant-wide roles
+    try:
+        cur.execute("SELECT role_id FROM tenant_role_assignments WHERE member_id=%s", (member_id,))
+        rows = cur.fetchall()
+        for r in rows:
+            role_ids.add(int(r['role_id']))
+    except Exception:
+        # If tenant_role_assignments does not exist for some reason, ignore and continue
+        pass
+
+    # 2) project-scoped roles (if project_id provided)
+    if project_id is not None:
+        try:
+            cur.execute(
+                "SELECT role_id FROM project_role_assignments WHERE member_id=%s AND project_id=%s",
+                (member_id, project_id)
+            )
+            prow = cur.fetchall()
+            for r in prow:
+                role_ids.add(int(r['role_id']))
+        except Exception:
+            # If querying project_role_assignments fails for some reason, ignore (we don't want to break permission flow)
+            pass
+
     cur.close()
-    return [r['role_id'] for r in rows] if rows else []
+    return list(role_ids)
+
+
 
 def get_permissions_for_role_ids(conn, role_ids):
     if not role_ids:

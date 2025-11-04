@@ -37,6 +37,11 @@ def identify_view(request):
     request.session['ident_email'] = email
     return redirect('login_password')
 
+from django.shortcuts import render, redirect
+from django.utils import timezone
+from django.http import HttpResponseForbidden
+
+
 def login_password_view(request):
     if request.method == 'GET':
         if not request.session.get('tenant_config') or not request.session.get('ident_email'):
@@ -61,21 +66,120 @@ def login_password_view(request):
     if not user:
         return render(request, 'core/login.html', {'email': email, 'error': 'Invalid credentials'})
 
-    # ✅ Auth success
+    # ✅ Auth success — store user in session (keep what you already did)
     request.session['user'] = user
-
-    # ✅ Ensure tenant_config present
     request.session['tenant_config'] = tenant_conf
     set_current_tenant(tenant_conf)
 
-    # ✅ Add explicit tenant connection info for db_helpers.py
+    # --- Determine a sensible full name for the user ---
+    user_fullname = None
+
+    # 1) If authenticate() returned a dict-like or object with full_name, use it
+    try:
+        # dict-like
+        if isinstance(user, dict):
+            user_fullname = user.get('full_name') or user.get('fullname') or user.get('name')
+        else:
+            # object-like
+            user_fullname = getattr(user, 'full_name', None) or getattr(user, 'fullname', None) or getattr(user, 'name', None)
+    except Exception:
+        user_fullname = None
+
+    # 2) If still None, try to query tenant users table for full_name
+    if not user_fullname:
+        try:
+            # get a tenant DB connection (use your project's connector)
+            conn = get_tenant_conn(request)
+            cur = conn.cursor()
+            # assumes the tenant 'users' table has 'email' and 'full_name'
+            cur.execute("SELECT full_name FROM users WHERE email=%s LIMIT 1", (email,))
+            row = cur.fetchone()
+            if row:
+                # row may be dict or tuple depending on cursorclass
+                if isinstance(row, dict):
+                    user_fullname = row.get('full_name') or row.get('fullname')
+                else:
+                    user_fullname = row[0]
+            cur.close()
+            conn.close()
+        except Exception:
+            user_fullname = None
+
+    # 3) Fallback: use the email local-part
+    if not user_fullname:
+        user_fullname = email.split('@', 1)[0]
+
+    # Ensure the members table has an entry and set the session member_id
+    try:
+        ensure_member_and_set_session(request, email, user_fullname, created_by=None)
+    except Exception as ex:
+        # log error (print for now) and continue — we still want to set DB connection details
+        print("ensure_member_and_set_session failed:", ex)
+
+    # Add explicit tenant DB credentials to session for your db_helpers
     request.session['tenant_db_name'] = tenant_conf.get('db_name')
     request.session['tenant_db_user'] = tenant_conf.get('db_user')
     request.session['tenant_db_password'] = tenant_conf.get('db_password')
     request.session['tenant_db_host'] = tenant_conf.get('db_host', '127.0.0.1')
     request.session['tenant_db_port'] = tenant_conf.get('db_port', 3306)
 
+
     return redirect('dashboard')
+
+
+# inside your login view, after successful auth
+# ------------------------------------------------
+# ensure member record exists and set request.session['member_id']
+from django.utils import timezone
+
+def ensure_member_and_set_session(request, user_email, user_fullname=None, created_by=None):
+    """
+    Ensure a row exists in members for this user_email, create if missing, and set session['member_id'].
+    Uses raw SQL and your tenant DB connection.
+    """
+    conn = get_tenant_conn(request)   # <-- use your project's tenant connector
+    cur = conn.cursor()
+    try:
+        # 1) find existing member
+        cur.execute("SELECT id FROM members WHERE email=%s LIMIT 1", (user_email,))
+        r = cur.fetchone()
+        if r and r.get('id'):
+            member_id = int(r['id'])
+        else:
+            # 2) create members row using full name split if provided
+            first_name = None
+            last_name = None
+            if user_fullname:
+                # basic split (first token / last token)
+                parts = user_fullname.strip().split()
+                first_name = parts[0] if parts else user_fullname
+                last_name = parts[-1] if len(parts) > 1 else ''
+            else:
+                first_name = user_email.split('@')[0]
+                last_name = ''
+
+            cur.execute("""
+                INSERT INTO members (email, first_name, last_name, phone, meta, created_by, created_at)
+                VALUES (%s,%s,%s,%s,%s,%s,%s)
+            """, (user_email, first_name, last_name, None, None, created_by, timezone.now()))
+            member_id = cur.lastrowid
+
+        # 3) set session
+        request.session['member_id'] = int(member_id)
+
+        # Optionally set a human display name (`cn`) used across your templates
+        if user_fullname:
+            request.session['cn'] = user_fullname
+        else:
+            # fallback to members table name
+            cur.execute("SELECT CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')) AS cn FROM members WHERE id=%s", (member_id,))
+            rr = cur.fetchone()
+            if rr and rr.get('cn'):
+                request.session['cn'] = rr['cn']
+
+    finally:
+        cur.close()
+        conn.close()
 
 
 def logout_view(request):

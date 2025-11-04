@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load dict_extras %}
 {% block title %}Access Control — Trackline{% endblock %}
 {% block content %}
 <div class="card">
@@ -40,13 +41,14 @@
     <tbody>
       {% for p in projects %}
         {% for m in members %}
-          {% with key= (p.id|stringformat:"s")|add:","|add:(m.id|stringformat:"s") %}
-            {% if assign_map and assign_map|get_item: (p.id,m.id) %}
+          {# build string key like "projectid,memberid" without parentheses #}
+          {% with key=p.id|stringformat:"s"|add:","|add:m.id|stringformat:"s" %}
+            {% if assign_map and assign_map|get_item:key %}
               <tr>
                 <td>{{ p.name }}</td>
                 <td>{{ m.email }}</td>
                 <td>
-                  {% for r_id in assign_map|get_item:(p.id, m.id) %}
+                  {% for r_id in assign_map|get_item:key %}
                     {% for r in roles %}
                       {% if r.id == r_id %}
                         <span class="chip">{{ r.name }}</span>

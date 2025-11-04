@@ -207,6 +207,20 @@ CREATE TABLE IF NOT EXISTS password_policies (
   require_symbol TINYINT(1) DEFAULT 0,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+""",
+    """
+CREATE TABLE IF NOT EXISTS tenant_role_assignments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  member_id INT NOT NULL,
+  role_id INT NOT NULL,
+  assigned_by INT DEFAULT NULL,
+  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_tenant_member_role (member_id, role_id),
+  KEY member_id_idx (member_id),
+  KEY role_id_idx (role_id),
+  CONSTRAINT fk_tr_member FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
+  CONSTRAINT fk_tr_role   FOREIGN KEY (role_id)   REFERENCES roles(id)   ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 """
 
 ]

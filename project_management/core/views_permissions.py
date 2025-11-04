@@ -149,6 +149,7 @@ def password_reset_confirm(request):
 def roles_page(request):
     # require 'roles.manage' permission for tenant-level role editing (we treat project_id None)
     member_id = request.session.get('member_id')
+    print("Roles page access by member:", member_id)
     if not tp.user_has_permission(request, member_id, None, 'roles.manage'):
         return HttpResponseForbidden("Permission denied")
 
@@ -246,14 +247,22 @@ def access_control_page(request):
     members = cur.fetchall()
     cur.execute("SELECT id, name FROM roles ORDER BY name")
     roles = cur.fetchall()
+
+
+
+    # inside access_control_page view (replace existing assignment map construction)
     cur.execute("SELECT project_id, member_id, role_id FROM project_role_assignments")
-    assignments = cur.fetchall()
+    assign_rows = cur.fetchall()
     cur.close()
     conn.close()
-
+    # Build a string-keyed map: "projectid,memberid" -> [role_id, ...]
     assign_map = {}
-    for a in assignments:
-        assign_map.setdefault((a['project_id'], a['member_id']), []).append(a['role_id'])
+    for a in assign_rows:
+        # normalize values to strings (in case cursor returns ints)
+        proj = str(a['project_id'])
+        mem = str(a['member_id'])
+        key = proj + ',' + mem
+        assign_map.setdefault(key, []).append(a['role_id'])
 
     return render(request, 'core/access_control.html', {
         'projects': projects,
