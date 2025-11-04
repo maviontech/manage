@@ -16,10 +16,20 @@ from .db_helpers import get_tenant_conn  # your existing helper (adapt import pa
 
 # --- Change Password (user) ---
 def change_password_page(request):
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # local import of auth helpers (adjust if your package layout differs)
+    try:
+        from .auth import check_password, hash_password
+    except Exception:
+        # fallback if views_permissions is not a package module
+        from core.auth import check_password, hash_password
+
     if request.method == 'POST':
-        cur_pw = request.POST.get('current_password','')
-        new_pw = request.POST.get('new_password','')
-        confirm = request.POST.get('confirm_password','')
+        cur_pw = request.POST.get('current_password', '')
+        new_pw = request.POST.get('new_password', '')
+        confirm = request.POST.get('confirm_password', '')
         if new_pw != confirm:
             messages.error(request, "New passwords do not match.")
             return redirect('change_password')
@@ -28,56 +38,138 @@ def change_password_page(request):
         if not member_id:
             return redirect('login')
 
+        # fetch stored hash
         conn = get_tenant_conn(request)
         cur = conn.cursor()
-        cur.execute("SELECT password_hash FROM users WHERE id=%s", (member_id,))
-        row = cur.fetchone()
-        cur.close()
+        try:
+            cur.execute("SELECT password_hash FROM users WHERE id=%s", (member_id,))
+            row = cur.fetchone()
+        finally:
+            try:
+                cur.close()
+            except Exception:
+                pass
+            try:
+                conn.close()
+            except Exception:
+                pass
+
         if not row:
             messages.error(request, "User not found.")
             return redirect('change_password')
 
-        if not check_password(cur_pw, row['password_hash']):
+        stored_hash = row.get('password_hash') if isinstance(row, dict) else row[0]
+
+        # robust password check: check_password returns (ok, needs_rehash)
+        try:
+            ok, needs_rehash = check_password(cur_pw, stored_hash)
+        except TypeError:
+            # if legacy check_password signature (bool only), handle gracefully
+            try:
+                ok_bool = check_password(cur_pw, stored_hash)
+                ok, needs_rehash = bool(ok_bool), False
+            except Exception as e:
+                logger.exception("Unexpected error while checking password: %s", e)
+                messages.error(request, "An internal error occurred.")
+                return redirect('change_password')
+        except Exception as e:
+            logger.exception("Error during password verification: %s", e)
+            messages.error(request, "An internal error occurred.")
+            return redirect('change_password')
+
+        if not ok:
             messages.error(request, "Current password is incorrect.")
             return redirect('change_password')
 
+        # If the stored hash validated but was not bcrypt, re-hash current password to bcrypt and persist.
+        if needs_rehash:
+            try:
+                new_bcrypt = hash_password(cur_pw)
+                conn_up = get_tenant_conn(request)
+                cur_up = conn_up.cursor()
+                try:
+                    cur_up.execute("UPDATE users SET password_hash=%s WHERE id=%s", (new_bcrypt, member_id))
+                    conn_up.commit()
+                finally:
+                    try:
+                        cur_up.close()
+                    except Exception:
+                        pass
+                    try:
+                        conn_up.close()
+                    except Exception:
+                        pass
+            except Exception as e:
+                # log warning but do not block password change flow
+                logger.warning("Rehash-to-bcrypt failed for user %s: %s", member_id, e)
+
         # optional: enforce password policy
-        # fetch policy
         conn2 = get_tenant_conn(request)
         c2 = conn2.cursor()
-        c2.execute("SELECT * FROM password_policies LIMIT 1")
-        policy = c2.fetchone()
-        c2.close()
-        conn2.close()
+        try:
+            c2.execute("SELECT * FROM password_policies LIMIT 1")
+            policy = c2.fetchone()
+        finally:
+            try:
+                c2.close()
+            except Exception:
+                pass
+            try:
+                conn2.close()
+            except Exception:
+                pass
+
         if policy:
-            # minimal checks
-            if len(new_pw) < policy['min_length']:
-                messages.error(request, f"Password must be at least {policy['min_length']} characters.")
+            # minimal checks (ensure keys exist in policy dict if using dict row)
+            min_len = policy.get('min_length') if isinstance(policy, dict) else policy['min_length']
+            require_number = policy.get('require_number') if isinstance(policy, dict) else policy['require_number']
+            require_upper = policy.get('require_upper') if isinstance(policy, dict) else policy['require_upper']
+            require_lower = policy.get('require_lower') if isinstance(policy, dict) else policy['require_lower']
+            require_symbol = policy.get('require_symbol') if isinstance(policy, dict) else policy['require_symbol']
+
+            if min_len and len(new_pw) < int(min_len):
+                messages.error(request, f"Password must be at least {min_len} characters.")
                 return redirect('change_password')
-            if policy['require_number'] and not any(ch.isdigit() for ch in new_pw):
+            if require_number and not any(ch.isdigit() for ch in new_pw):
                 messages.error(request, "Password must contain a number.")
                 return redirect('change_password')
-            if policy['require_upper'] and not any(ch.isupper() for ch in new_pw):
+            if require_upper and not any(ch.isupper() for ch in new_pw):
                 messages.error(request, "Password must contain an uppercase letter.")
                 return redirect('change_password')
-            if policy['require_lower'] and not any(ch.islower() for ch in new_pw):
+            if require_lower and not any(ch.islower() for ch in new_pw):
                 messages.error(request, "Password must contain a lowercase letter.")
                 return redirect('change_password')
-            if policy['require_symbol'] and not any(not ch.isalnum() for ch in new_pw):
+            if require_symbol and not any(not ch.isalnum() for ch in new_pw):
                 messages.error(request, "Password must contain a symbol.")
                 return redirect('change_password')
 
-        # update
-        new_hash = hash_password(new_pw)
-        conn3 = get_tenant_conn(request)
-        cur3 = conn3.cursor()
-        cur3.execute("UPDATE users SET password_hash=%s WHERE id=%s", (new_hash, member_id))
-        cur3.close()
-        conn3.close()
+        # update with new bcrypt hash
+        try:
+            new_hash = hash_password(new_pw)
+            conn3 = get_tenant_conn(request)
+            cur3 = conn3.cursor()
+            try:
+                cur3.execute("UPDATE users SET password_hash=%s WHERE id=%s", (new_hash, member_id))
+                conn3.commit()
+            finally:
+                try:
+                    cur3.close()
+                except Exception:
+                    pass
+                try:
+                    conn3.close()
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.exception("Failed to update password for user %s: %s", member_id, e)
+            messages.error(request, "Could not update password due to an internal error.")
+            return redirect('change_password')
+
         messages.success(request, "Your password has been changed.")
         return redirect('change_password')
 
     return render(request, 'core/change_password.html', {})
+
 
 
 # --- Password Reset Request ---

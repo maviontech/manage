@@ -1,9 +1,10 @@
 # auth.py
 import os
 import pymysql
+import logging
 import bcrypt
 from core.db_connector import get_connection_from_config
-
+logger = logging.getLogger(__name__)
 # MASTER DB connection config read from environment (or you can hardcode)
 MASTER_DB_CONFIG = {
     'db_engine': 'mysql',
@@ -15,11 +16,73 @@ MASTER_DB_CONFIG = {
 }
 
 def hash_password(plain_password: str) -> str:
-    hashed = bcrypt.hashpw(plain_password.encode('utf-8'), bcrypt.gensalt())
+    """
+    Hash using bcrypt and return a utf-8 string suitable for storage.
+    """
+    if not isinstance(plain_password, str):
+        plain_password = str(plain_password)
+    hashed = bcrypt.hashpw(plain_password.encode('utf-8'), bcrypt.gensalt(rounds=12))
     return hashed.decode('utf-8')
 
-def check_password(plain_password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed.encode('utf-8'))
+def _looks_like_bcrypt(s: str) -> bool:
+    return isinstance(s, str) and s.startswith(('$2a$', '$2b$', '$2y$'))
+
+def check_password(plain_password: str, stored_hash: str):
+    """
+    Robust check that supports:
+      - bcrypt (preferred)
+      - Django built-in hashers (pbkdf2, argon2, etc.) when available
+      - legacy hex digests (example included for SHA1/MD5)
+    Returns: (ok: bool, needs_rehash: bool)
+      needs_rehash==True => stored_hash was not bcrypt (caller can rehash and store bcrypt)
+    """
+    if not stored_hash:
+        return False, False
+
+    # 1) bcrypt (fast path)
+    try:
+        if _looks_like_bcrypt(stored_hash):
+            ok = bcrypt.checkpw(plain_password.encode('utf-8'), stored_hash.encode('utf-8'))
+            return bool(ok), False
+    except ValueError as e:
+        # invalid salt or other bcrypt format error — log and continue to fallbacks
+        logger.warning("bcrypt.checkpw ValueError: %s", e)
+
+    # 2) Django hashers (if available) - supports many formats
+    try:
+        if HAS_DJANGO_HASHERS:
+            try:
+                ok = django_check_password(plain_password, stored_hash)
+                if ok:
+                    # stored_hash is not bcrypt — recommend rehash to bcrypt
+                    return True, True
+            except Exception as e:
+                logger.debug("django_check_password failed: %s", e)
+    except Exception:
+        pass
+
+    # 3) Example legacy SHA1 or MD5 storage (customize to your legacy format)
+    #    Suppose old storage was hex digest of sha1: "sha1$<hex>"
+    try:
+        if isinstance(stored_hash, str) and stored_hash.startswith('sha1$'):
+            import hashlib
+            hexpart = stored_hash.split('$',1)[1]
+            cand = hashlib.sha1(plain_password.encode('utf-8')).hexdigest()
+            if cand == hexpart:
+                return True, True
+        if isinstance(stored_hash, str) and stored_hash.startswith('md5$'):
+            import hashlib
+            hexpart = stored_hash.split('$',1)[1]
+            if hashlib.md5(plain_password.encode('utf-8')).hexdigest() == hexpart:
+                return True, True
+    except Exception as e:
+        logger.debug("legacy check failed: %s", e)
+
+    # 4) last-resort: direct equality (not recommended) — keep disabled unless you know stored plaintext
+    # if plain_password == stored_hash:
+    #     return True, True
+
+    return False, False
 
 def identify_tenant_by_email(email: str):
     postfix = email.split('@')[-1]

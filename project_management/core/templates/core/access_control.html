@@ -89,31 +89,68 @@
           <tr><th>Project</th><th>Member</th><th>Roles</th></tr>
         </thead>
         <tbody id="assignments-tbody">
-          {% comment %} preserve the original nested loops / assign_map logic {% endcomment %}
-          {% for p in projects %}
-            {% for m in members %}
-              {% with key=p.id|stringformat:"s"|add:","|add:m.id|stringformat:"s" %}
-                {% if assign_map and assign_map|get_item:key %}
-                  <tr class="assignment-row">
-                    <td>{{ p.name }}</td>
-                    <td>{{ m.email }}</td>
-                    <td>
-                      <div class="chips" aria-label="roles">
-                        {% for r_id in assign_map|get_item:key %}
-                          {% for r in roles %}
-                            {% if r.id == r_id %}
-                              <span class="chip">{{ r.name }}</span>
-                            {% endif %}
-                          {% endfor %}
-                        {% endfor %}
-                      </div>
-                    </td>
-                  </tr>
-                {% endif %}
-              {% endwith %}
+          {# 1) Try: composite keys like "123,45" (current approach) #}
+          {% comment %} server-side: render when assign_map uses composite keys or nested dicts {% endcomment %}
+          {% with rows_found=False %}
+            {% for p in projects %}
+              {% for m in members %}
+                {% with key=p.id|stringformat:"s"|add:","|add:m.id|stringformat:"s" %}
+                  {% if assign_map and assign_map|get_item:key %}
+                    {% with rows_found=True %}
+                      <tr>
+                        <td>{{ p.name }}</td>
+                        <td>{{ m.email }}</td>
+                        <td>
+                          <div class="chips">
+                            {% for r_id in assign_map|get_item:key %}
+                              {% for r in roles %}
+                                {% if r.id == r_id %}
+                                  <span class="chip">{{ r.name }}</span>
+                                {% endif %}
+                              {% endfor %}
+                            {% endfor %}
+                          </div>
+                        </td>
+                      </tr>
+                    {% endwith %}
+                  {% endif %}
+                {% endwith %}
+              {% endfor %}
             {% endfor %}
+
+            {# 2) Try: nested mapping assign_map[project_id][member_id] => list of role ids #}
+            {% if not rows_found and assign_map %}
+              {% for p in projects %}
+                {% if assign_map|get_item:p.id %}
+                  {% for m in members %}
+                    {% if assign_map|get_item:p.id|get_item:m.id %}
+                      {% with role_ids=assign_map|get_item:p.id|get_item:m.id %}
+                        <tr>
+                          <td>{{ p.name }}</td>
+                          <td>{{ m.email }}</td>
+                          <td>
+                            <div class="chips">
+                              {% for r_id in role_ids %}
+                                {% for r in roles %}
+                                  {% if r.id == r_id %}
+                                    <span class="chip">{{ r.name }}</span>
+                                  {% endif %}
+                                {% endfor %}
+                              {% endfor %}
+                            </div>
+                          </td>
+                        </tr>
+              {% endwith %}
+            {% endif %}
           {% endfor %}
-        </tbody>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {# 3) If still nothing server-side, leave tbody empty — client-side script will populate and log assign_map for debugging #}
+  {% endwith %}
+</tbody>
+
       </table>
 
       {% comment %} show helpful message if no rows found at server render time {% endcomment %}
@@ -125,18 +162,66 @@
 </div>
 
 <script>
-  // Simple client-side filter for the assignments table (progressive enhancement)
   (function(){
-    const search = document.getElementById('searchMember');
-    if(!search) return;
-    const rows = Array.from(document.querySelectorAll('#assignments-tbody tr'));
-    search.addEventListener('input', ()=> {
-      const q = search.value.trim().toLowerCase();
-      rows.forEach(r=>{
-        const text = r.textContent.trim().toLowerCase();
-        r.style.display = (q === '' || text.includes(q)) ? '' : 'none';
-      });
-    });
+    // Make sure the template has these variables; if your view doesn't pass JSON versions,
+    // add them (e.g., assign_map_json = json.dumps(assign_map) in context).
+    try {
+      // If your backend provides *_json variables, use them. Otherwise try to read via inline script.
+      const assignMap = window.ASSIGN_MAP || ({{ assign_map|default:"null" | safe }});
+      const projects = {{ projects|default:"[]" | safe }};
+      const members = {{ members|default:"[]" | safe }};
+      const roles = {{ roles|default:"[]" | safe }};
+
+      console.log("DEBUG assign_map (raw):", assignMap);
+      // If assignMap is null/undefined, bail — so page doesn't error in older Django
+      if(!assignMap) return;
+
+      const tbody = document.getElementById('assignments-tbody');
+      if(!tbody) return;
+
+      // helper to find role names by id
+      const roleById = {};
+      (roles||[]).forEach(r => roleById[String(r.id)] = r.name || r.code || r.id);
+
+      // If assignMap is nested: { project_id: { member_id: [role_ids] } }
+      if(typeof assignMap === 'object' && !Array.isArray(assignMap)) {
+        // Two possibilities:
+        // - keys are composite "projid,memid" => array
+        // - keys are project ids mapping to nested objects
+        const sampleKey = Object.keys(assignMap)[0];
+        if(sampleKey && sampleKey.includes(',')) {
+          // composite keys
+          Object.entries(assignMap).forEach(([k, roleIds])=>{
+            const [pid, mid] = k.split(',');
+            const proj = projects.find(p=>String(p.id)===String(pid));
+            const mem  = members.find(m=>String(m.id)===String(mid));
+            if(proj && mem && roleIds && roleIds.length){
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${proj.name}</td><td>${mem.email}</td><td>${roleIds.map(id=>'<span class="chip">'+(roleById[String(id)]||id)+'</span>').join(' ')}</td>`;
+              tbody.appendChild(tr);
+            }
+          });
+          return;
+        } else {
+          // nested mapping
+          Object.entries(assignMap).forEach(([pid, memMap])=>{
+            Object.entries(memMap||{}).forEach(([mid, roleIds])=>{
+              const proj = projects.find(p=>String(p.id)===String(pid));
+              const mem  = members.find(m=>String(m.id)===String(mid));
+              if(proj && mem && roleIds && roleIds.length){
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${proj.name}</td><td>${mem.email}</td><td>${roleIds.map(id=>'<span class="chip">'+(roleById[String(id)]||id)+'</span>').join(' ')}</td>`;
+                tbody.appendChild(tr);
+              }
+            });
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('assign_map render fallback error', err);
+    }
   })();
 </script>
+
 {% endblock %}
