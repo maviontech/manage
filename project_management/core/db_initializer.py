@@ -139,7 +139,76 @@ TENANT_DDL = [
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """
+    """,
+"""
+-- Roles & permissions
+CREATE TABLE IF NOT EXISTS roles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description VARCHAR(255),
+  is_builtin TINYINT(1) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_role_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+""",
+"""
+CREATE TABLE IF NOT EXISTS permissions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(150) NOT NULL,
+  description VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_perm_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+""",
+"""
+CREATE TABLE IF NOT EXISTS role_permissions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  role_id INT NOT NULL,
+  permission_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_role_perm (role_id, permission_id),
+  CONSTRAINT fk_rp_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+  CONSTRAINT fk_rp_perm FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+""",
+"""
+CREATE TABLE IF NOT EXISTS project_role_assignments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT NOT NULL,
+  member_id INT NOT NULL,
+  role_id INT NOT NULL,
+  assigned_by INT DEFAULT NULL,
+  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_proj_mem_role (project_id, member_id, role_id),
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
+  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+""",
+"""
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token VARCHAR(128) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL,
+  used TINYINT(1) DEFAULT 0,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_token (token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+""",
+"""
+CREATE TABLE IF NOT EXISTS password_policies (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  min_length INT DEFAULT 8,
+  require_upper TINYINT(1) DEFAULT 1,
+  require_lower TINYINT(1) DEFAULT 1,
+  require_number TINYINT(1) DEFAULT 1,
+  require_symbol TINYINT(1) DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+"""
+
 ]
 
 def random_password(length=18):
@@ -201,6 +270,93 @@ class DBInitializer:
         conn.close()
         print(f"[init] Tenant DDL executed on {db_name}")
 
+    def seed_roles_and_permissions(self, db_name, tenant_user, tenant_pwd):
+        conn = pymysql.connect(
+            host=ADMIN_HOST, port=ADMIN_PORT, user=tenant_user, password=tenant_pwd,
+            database=db_name, cursorclass=pymysql.cursors.DictCursor, autocommit=True
+        )
+        cur = conn.cursor()
+
+        # default permissions list
+        perms = [
+            ('projects.view', 'View projects'),
+            ('projects.create', 'Create projects'),
+            ('projects.edit', 'Edit projects'),
+            ('projects.delete', 'Delete projects'),
+            ('tasks.view', 'View tasks'),
+            ('tasks.create', 'Create tasks'),
+            ('tasks.edit', 'Edit tasks'),
+            ('tasks.assign', 'Assign tasks'),
+            ('tasks.delete', 'Delete tasks'),
+            ('time.record', 'Record time'),
+            ('time.approve', 'Approve time'),
+            ('members.view', 'View members'),
+            ('members.invite', 'Invite members'),
+            ('members.remove', 'Remove members'),
+            ('members.manage_roles', 'Manage member roles'),
+            ('settings.view', 'View settings'),
+            ('settings.edit', 'Edit settings'),
+            ('roles.manage', 'Manage roles and permissions'),
+            ('audit.view', 'View audit logs')
+        ]
+
+        # insert permissions idempotently
+        for code, desc in perms:
+            cur.execute("INSERT IGNORE INTO permissions (code, description) VALUES (%s,%s)", (code, desc))
+
+        # create builtin roles
+        builtin_roles = [
+            ('Admin', 'Tenant-level admin with full control', 1),
+            ('Developer', 'Developer role', 1),
+            ('Tester', 'Tester role', 1),
+            ('Collaborator', 'Collaborator role', 1),
+            ('Viewer', 'Read-only', 1)
+        ]
+        for name, desc, builtin in builtin_roles:
+            cur.execute("INSERT IGNORE INTO roles (name, description, is_builtin) VALUES (%s,%s,%s)",
+                        (name, desc, builtin))
+
+        # mapping: role -> permission codes (list)
+        role_perm_map = {
+            'Admin': [p[0] for p in perms],  # Admin gets everything
+            'Developer': ['projects.view', 'tasks.view', 'tasks.create', 'tasks.edit', 'time.record', 'projects.edit'],
+            'Tester': ['projects.view', 'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.assign', 'time.record'],
+            'Collaborator': ['projects.view', 'tasks.view', 'tasks.create', 'time.record'],
+            'Viewer': ['projects.view', 'tasks.view']
+        }
+
+        # map role to permission ids
+        # fetch role ids
+        cur.execute("SELECT id, name FROM roles")
+        roles_rows = cur.fetchall()
+        role_ids = {r['name']: r['id'] for r in roles_rows}
+
+        # fetch permission ids
+        cur.execute("SELECT id, code FROM permissions")
+        p_rows = cur.fetchall()
+        perm_ids = {p['code']: p['id'] for p in p_rows}
+
+        for role_name, codes in role_perm_map.items():
+            r_id = role_ids.get(role_name)
+            if not r_id:
+                continue
+            for code in codes:
+                p_id = perm_ids.get(code)
+                if not p_id:
+                    continue
+                # insert mapping idempotently
+                cur.execute("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (%s,%s)", (r_id, p_id))
+
+        # ensure a default password policy exists (only one row)
+        cur.execute("SELECT COUNT(*) AS c FROM password_policies")
+        if cur.fetchone()['c'] == 0:
+            cur.execute(
+                "INSERT INTO password_policies (min_length, require_upper, require_lower, require_number, require_symbol) VALUES (8,1,1,1,0)")
+
+        cur.close()
+        conn.close()
+        print(f"[init] Seeded roles & permissions for {db_name}")
+
     def seed_admin(self, db_name, tenant_user, tenant_pwd, domain_postfix):
         conn = pymysql.connect(
             host=ADMIN_HOST, port=ADMIN_PORT, user=tenant_user, password=tenant_pwd,
@@ -237,6 +393,7 @@ class DBInitializer:
             try:
                 self.run_ddl_on_tenant(client['db_name'], tenant_user, tenant_pwd)
                 self.seed_admin(client['db_name'], tenant_user, tenant_pwd, client['domain_postfix'])
+                self.seed_roles_and_permissions(client['db_name'], tenant_user, tenant_pwd)
             except Exception as e:
                 print("[init] Error provisioning tenant:", e)
         print("[init] Done provisioning all tenants.")

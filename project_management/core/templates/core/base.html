@@ -215,9 +215,30 @@
               <span class="caret" aria-hidden="true">▸</span>
             </button>
             <ul id="submenu-settings" class="submenu" role="menu" aria-label="Settings submenu">
-              <li role="none" class="{% if page == 'workflows' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-stream"></i><span>Workflows</span></a></li>
-              <li role="none" class="{% if page == 'priorities' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-flag"></i><span>Priorities</span></a></li>
-              <li role="none" class="{% if page == 'workweek' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-calendar-week"></i><span>Work Week</span></a></li>
+             <li role="none" class="{% if page == 'workflows' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-stream"></i><span>Workflows</span></a></li>
+            <li role="none" class="{% if page == 'priorities' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-flag"></i><span>Priorities</span></a></li>
+            <li role="none" class="{% if page == 'workweek' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-calendar-week"></i><span>Work Week</span></a></li>
+
+            <li role="none" class="{% if page == 'change_password' %}active{% endif %}"><a href="{% url 'change_password' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-key"></i><span>Change Password</span></a></li>
+
+            <li role="none" class="{% if page == 'roles' %}active{% endif %}">
+              <a href="{% url 'roles_page' %}" class="submenu-link ripple" role="menuitem">
+                <i class="fa-solid fa-user-shield"></i><span>Roles &amp; Permissions</span>
+              </a>
+            </li>
+
+            <li role="none" class="{% if page == 'access_control' %}active{% endif %}">
+              <a href="{% url 'access_control_page' %}" class="submenu-link ripple" role="menuitem">
+                <i class="fa-solid fa-lock"></i><span>Access Control</span>
+              </a>
+            </li>
+
+            <li role="none" class="{% if page == 'password_policy' %}active{% endif %}">
+              <a href="{% url 'password_policy_page' %}" class="submenu-link ripple" role="menuitem">
+                <i class="fa-solid fa-shield-alt"></i><span>Password Policy</span>
+              </a>
+            </li>
+
             </ul>
           </li>
 

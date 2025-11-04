@@ -6,6 +6,7 @@ from . import views_passwordreset
 from . import views_projects as projects
 from . import views_teams as people
 from . import views_tasks as views_tasks
+from  .import views_permissions as vp
 
 urlpatterns = [
     path('identify/', views.identify_view, name='identify'),
@@ -49,4 +50,17 @@ urlpatterns = [
     path("tasks/api/board-data/", views_tasks.board_data_api, name="board_data"),
     path('api/task/detail/', views_tasks.api_task_detail, name='api_task_detail'),
     path('api/task/update/', views_tasks.api_task_update, name='api_task_update'),
+
+    path('settings/change-password/', vp.change_password_page, name='change_password'),
+    path('settings/password-reset/', vp.password_reset_request, name='password_reset_request'),
+    path('settings/password-reset/confirm/', vp.password_reset_confirm, name='password_reset_confirm'),
+
+    path('settings/roles/', vp.roles_page, name='roles_page'),
+    path('settings/roles/save/', vp.roles_save, name='roles_save'),
+    path('settings/roles/delete/', vp.roles_delete, name='roles_delete'),
+
+    path('settings/access-control/', vp.access_control_page, name='access_control_page'),
+    path('settings/access-control/assign/', vp.assign_role, name='assign_role'),
+
+    path('settings/password-policy/', vp.password_policy_page, name='password_policy_page'),
 ]

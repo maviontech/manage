@@ -1,0 +1,55 @@
+{% extends "core/base.html" %}
+{% block title %}Roles & Permissions — Trackline{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:320px 1fr;gap:18px;">
+  <aside class="card">
+    <h3>Roles</h3>
+    <ul style="list-style:none;padding:0;margin:0;">
+      {% for r in roles %}
+      <li style="padding:8px 6px;border-radius:6px;margin-bottom:6px;background:rgba(0,0,0,0.03)">
+        <strong>{{ r.name }}</strong><br/><small class="muted">{{ r.description }}</small>
+      </li>
+      {% empty %}
+      <li>No roles found</li>
+      {% endfor %}
+    </ul>
+    <div style="margin-top:12px">
+      <button id="create-role" class="btn">New role</button>
+    </div>
+  </aside>
+
+  <section class="card">
+    <h3 id="editor-title">Create / Edit Role</h3>
+    <form method="post" action="{% url 'roles_save' %}" id="role-form">
+      {% csrf_token %}
+      <input type="hidden" name="role_id" id="role_id" value="">
+      <div class="form-row"><label>Name</label><input name="name" id="name" required></div>
+      <div class="form-row"><label>Description</label><input name="description" id="description"></div>
+
+      <div style="margin-top:10px">
+        <h4>Permissions</h4>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px;max-height:260px;overflow:auto">
+          {% for p in permissions %}
+            <label style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" name="perm" value="{{ p.id }}" {% if rp_map and rp_map|get_item:p.id %}checked{% endif %}>
+              <span>{{ p.code }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        <button class="btn" type="submit">Save role</button>
+        <button id="delete-role" class="btn-ghost" type="button" style="margin-left:8px">Delete</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<script>
+  // small client-side glue to prefill editing when clicking a role (optional)
+  document.querySelectorAll('.card aside li').forEach(li=>{
+    li.addEventListener('click', ()=>{ alert('Click a role to edit - you can wire this quickly by adding data-role-id attributes.') })
+  });
+</script>
+{% endblock %}

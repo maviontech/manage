@@ -1,0 +1,65 @@
+{% extends "core/base.html" %}
+{% block title %}Access Control — Trackline{% endblock %}
+{% block content %}
+<div class="card">
+  <h3>Access Control</h3>
+
+  <form method="post" action="{% url 'assign_role' %}">
+    {% csrf_token %}
+    <div style="display:flex;gap:12px;align-items:flex-end">
+      <div>
+        <label>Project</label>
+        <select name="project_id" required>
+          {% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Member</label>
+        <select name="member_id" required>
+          {% for m in members %}<option value="{{ m.id }}">{{ m.email }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Role</label>
+        <select name="role_id" required>
+          {% for r in roles %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <button class="btn" type="submit" name="action" value="add">Assign role</button>
+        <button class="btn-ghost" type="submit" name="action" value="remove">Remove role</button>
+      </div>
+    </div>
+  </form>
+
+  <hr style="margin:12px 0"/>
+
+  <h4>Current Assignments</h4>
+  <table class="table">
+    <thead><tr><th>Project</th><th>Member</th><th>Roles</th></tr></thead>
+    <tbody>
+      {% for p in projects %}
+        {% for m in members %}
+          {% with key= (p.id|stringformat:"s")|add:","|add:(m.id|stringformat:"s") %}
+            {% if assign_map and assign_map|get_item: (p.id,m.id) %}
+              <tr>
+                <td>{{ p.name }}</td>
+                <td>{{ m.email }}</td>
+                <td>
+                  {% for r_id in assign_map|get_item:(p.id, m.id) %}
+                    {% for r in roles %}
+                      {% if r.id == r_id %}
+                        <span class="chip">{{ r.name }}</span>
+                      {% endif %}
+                    {% endfor %}
+                  {% endfor %}
+                </td>
+              </tr>
+            {% endif %}
+          {% endwith %}
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
