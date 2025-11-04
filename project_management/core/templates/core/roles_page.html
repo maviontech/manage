@@ -1,56 +1,171 @@
 {% extends "core/base.html" %}
 {% load dict_extras %}
 {% block title %}Roles & Permissions — Trackline{% endblock %}
+
 {% block content %}
-<div style="display:grid;grid-template-columns:320px 1fr;gap:18px;">
-  <aside class="card">
-    <h3>Roles</h3>
-    <ul style="list-style:none;padding:0;margin:0;">
+<style>
+/* Layout and component styles */
+.layout { display:grid; grid-template-columns: 320px 1fr; gap:18px; }
+@media(max-width:800px){ .layout { grid-template-columns: 1fr; } }
+
+.card { padding:18px; background:white; border-radius:10px; box-shadow:0 1px 6px rgba(20,20,30,0.04); }
+.roles-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; max-height:calc(80vh - 160px); overflow:auto; }
+.role-item { display:flex; flex-direction:column; gap:4px; padding:10px; border-radius:8px; cursor:pointer; background:linear-gradient(180deg, rgba(15,23,42,0.02), transparent); border:1px solid transparent; }
+.role-item:hover { transform:translateY(-1px); box-shadow:0 4px 10px rgba(16,24,40,0.04); }
+.role-item.active { border-color:#c7e0ff; background:#f8fbff; box-shadow:0 6px 18px rgba(14,74,173,0.06); }
+.small-muted { color:#475569; font-size:13px; }
+.perm-grid { display:grid; grid-template-columns: repeat(2,1fr); gap:8px; max-height:260px; overflow:auto; padding-right:6px; }
+.form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+.input, .select { padding:8px 10px; border-radius:8px; border:1px solid #e2e8f0; width:100%; }
+.btn { padding:8px 12px; border-radius:8px; border:none; background:linear-gradient(90deg,#0b57a4,#1f86e3); color:white; cursor:pointer; }
+.btn-ghost { padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; background:transparent; cursor:pointer; }
+.header-row { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
+.help { font-size:13px; color:#64748b; }
+</style>
+
+<div class="layout">
+  <aside class="card" aria-labelledby="roles-heading">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 id="roles-heading" style="margin:0">Roles</h3>
+      <button id="create-role" class="btn" type="button">New role</button>
+    </div>
+
+    <ul class="roles-list" id="rolesList" role="list">
       {% for r in roles %}
-      <li style="padding:8px 6px;border-radius:6px;margin-bottom:6px;background:rgba(0,0,0,0.03)">
-        <strong>{{ r.name }}</strong><br/><small class="muted">{{ r.description }}</small>
+      <li class="role-item" role="button" tabindex="0"
+          data-role-id="{{ r.id }}"
+          data-role-name="{{ r.name|escapejs }}"
+          data-role-desc="{{ r.description|default:''|escapejs }}">
+        <strong style="font-size:15px">{{ r.name }}</strong>
+        <small class="small-muted">{{ r.description }}</small>
       </li>
       {% empty %}
-      <li>No roles found</li>
+      <li class="small-muted">No roles found</li>
       {% endfor %}
     </ul>
-    <div style="margin-top:12px">
-      <button id="create-role" class="btn">New role</button>
-    </div>
   </aside>
 
-  <section class="card">
-    <h3 id="editor-title">Create / Edit Role</h3>
+  <section class="card" aria-labelledby="editor-title">
+    <div class="header-row">
+      <h3 id="editor-title" style="margin:0">Create / Edit Role</h3>
+      <div class="help">Click a role on the left to edit — changes are saved to the server.</div>
+    </div>
+
     <form method="post" action="{% url 'roles_save' %}" id="role-form">
       {% csrf_token %}
       <input type="hidden" name="role_id" id="role_id" value="">
-      <div class="form-row"><label>Name</label><input name="name" id="name" required></div>
-      <div class="form-row"><label>Description</label><input name="description" id="description"></div>
+      <div class="form-row">
+        <label for="name">Name</label>
+        <input name="name" id="name" class="input" required autocomplete="off">
+      </div>
+
+      <div class="form-row">
+        <label for="description">Description</label>
+        <input name="description" id="description" class="input">
+      </div>
 
       <div style="margin-top:10px">
-        <h4>Permissions</h4>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px;max-height:260px;overflow:auto">
+        <h4 style="margin:0 0 6px 0">Permissions</h4>
+        <div class="perm-grid" id="permGrid">
           {% for p in permissions %}
-            <label style="display:flex;align-items:center;gap:8px">
-              <input type="checkbox" name="perm" value="{{ p.id }}" {% if rp_map and rp_map|get_item:p.id %}checked{% endif %}>
-              <span>{{ p.code }}</span>
+            <label style="display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;">
+              <input type="checkbox" name="perm" value="{{ p.id }}" class="perm-checkbox"
+                {% if rp_map and rp_map|get_item:p.id %}checked{% endif %}>
+              <div style="display:flex;flex-direction:column;">
+                <span style="font-size:14px">{{ p.code }}</span>
+                <small class="small-muted">{{ p.description|default:"" }}</small>
+              </div>
             </label>
           {% endfor %}
         </div>
       </div>
 
-      <div style="margin-top:14px">
+      <div style="margin-top:14px; display:flex; gap:8px; align-items:center;">
         <button class="btn" type="submit">Save role</button>
-        <button id="delete-role" class="btn-ghost" type="button" style="margin-left:8px">Delete</button>
+        <button id="delete-role" class="btn-ghost" type="button">Delete</button>
       </div>
     </form>
   </section>
 </div>
 
 <script>
-  // small client-side glue to prefill editing when clicking a role (optional)
-  document.querySelectorAll('.card aside li').forEach(li=>{
-    li.addEventListener('click', ()=>{ alert('Click a role to edit - you can wire this quickly by adding data-role-id attributes.') })
+/*
+  Simple client-side glue:
+  - clicking a role populates the editor fields
+  - visual active state on selected role
+  - 'New role' clears editor
+  - 'Delete' prompts confirmation and posts form with action=delete (server must handle it)
+*/
+(function(){
+  const rolesList = document.getElementById('rolesList');
+  const roleItems = rolesList ? Array.from(rolesList.querySelectorAll('.role-item')) : [];
+  const roleIdInput = document.getElementById('role_id');
+  const nameInput = document.getElementById('name');
+  const descInput = document.getElementById('description');
+  const deleteBtn = document.getElementById('delete-role');
+  const createBtn = document.getElementById('create-role');
+
+  function clearSelection() {
+    roleItems.forEach(li => li.classList.remove('active'));
+  }
+
+  function clearForm() {
+    roleIdInput.value = '';
+    nameInput.value = '';
+    descInput.value = '';
+    // uncheck all permission checkboxes
+    document.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
+  }
+
+  roleItems.forEach(li=>{
+    li.addEventListener('click', ()=>{
+      clearSelection();
+      li.classList.add('active');
+
+      const rid = li.dataset.roleId || '';
+      const rname = li.dataset.roleName || '';
+      const rdesc = li.dataset.roleDesc || '';
+      roleIdInput.value = rid;
+      nameInput.value = rname;
+      descInput.value = rdesc;
+
+      // Note: We don't have a reliable server-side role->perms map in this template context,
+      // so permissions cannot be auto-filled here without backend support.
+      // If you add a context variable role_perm_map (mapping role_id -> [perm_id,...]),
+      // you can add code here to check the checkboxes accordingly.
+    });
+    li.addEventListener('keydown', (e)=> { if(e.key === 'Enter' || e.key === ' ') li.click(); });
   });
+
+  createBtn && createBtn.addEventListener('click', (e)=>{
+    clearSelection();
+    clearForm();
+    nameInput.focus();
+  });
+
+  deleteBtn && deleteBtn.addEventListener('click', ()=>{
+    if(!roleIdInput.value){
+      // nothing selected - nothing to delete
+      if(!confirm('No role selected. Create a new role instead?')) return;
+      clearForm();
+      return;
+    }
+    if(confirm('Delete this role? This action cannot be undone.')){
+      // create form to submit delete action. Server must accept POST with action=delete
+      const form = document.getElementById('role-form');
+      // append a hidden input to indicate delete action
+      let actionInput = form.querySelector('input[name="action"]');
+      if(!actionInput){
+        actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        form.appendChild(actionInput);
+      }
+      actionInput.value = 'delete';
+      form.submit();
+    }
+  });
+
+})();
 </script>
 {% endblock %}

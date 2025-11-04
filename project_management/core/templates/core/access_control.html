@@ -1,67 +1,142 @@
 {% extends "core/base.html" %}
 {% load dict_extras %}
 {% block title %}Access Control — Trackline{% endblock %}
-{% block content %}
-<div class="card">
-  <h3>Access Control</h3>
 
-  <form method="post" action="{% url 'assign_role' %}">
-    {% csrf_token %}
-    <div style="display:flex;gap:12px;align-items:flex-end">
-      <div>
-        <label>Project</label>
-        <select name="project_id" required>
-          {% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-        </select>
+{% block content %}
+<style>
+/* Small, self-contained styles to improve visuals while relying on project's base CSS */
+.access-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media(min-width:900px){ .access-grid { grid-template-columns: 420px 1fr; } }
+
+.card-compact { padding: 18px; border-radius: 10px; box-shadow: 0 1px 6px rgba(20,20,30,0.04); background:white; }
+.form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+.form-inline { display:flex; gap:12px; align-items:end; flex-wrap:wrap; }
+.select, .input { padding:8px 10px; border-radius:6px; border:1px solid #e2e8f0; min-width:180px; background:#fff; }
+.btn { padding:8px 12px; border-radius:6px; border: none; cursor:pointer; background:linear-gradient(90deg,#0b57a4,#1f86e3); color:white; }
+.btn-ghost { padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1; background:transparent; cursor:pointer; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { padding:6px 10px; border-radius:999px; background:#eef2ff; color:#1e3a8a; font-size:13px; }
+.table { width:100%; border-collapse:collapse; margin-top:8px; }
+.table th, .table td { text-align:left; padding:10px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.table thead th { font-weight:600; color:#0f172a; background:transparent; }
+.empty-note { color:#64748b; padding:14px; text-align:center; }
+.controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.filter { display:flex; gap:8px; align-items:center; }
+.kv { font-size:13px; color:#475569; }
+.card-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:6px;}
+.search { padding:8px 10px; border-radius:8px; border:1px solid #e2e8f0; width:100%; min-width:220px; }
+</style>
+
+<div class="access-grid">
+  <!-- Left: Assign form -->
+  <div class="card-compact" aria-labelledby="ac-title">
+    <div class="card-head">
+      <h3 id="ac-title" style="margin:0">Assign Roles</h3>
+      <div class="kv">Manage project-level role assignments</div>
+    </div>
+
+    <form method="post" action="{% url 'assign_role' %}" id="assign-form">
+      {% csrf_token %}
+      <div class="form-inline">
+        <div class="form-row">
+          <label for="project_id">Project</label>
+          <select name="project_id" id="project_id" class="select" required>
+            {% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="member_id">Member</label>
+          <select name="member_id" id="member_id" class="select" required>
+            {% for m in members %}<option value="{{ m.id }}">{{ m.email }}</option>{% endfor %}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="role_id">Role</label>
+          <select name="role_id" id="role_id" class="select" required>
+            {% for r in roles %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+          </select>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn" type="submit" name="action" value="add">Assign</button>
+          <button class="btn-ghost" type="submit" name="action" value="remove">Remove</button>
+        </div>
       </div>
-      <div>
-        <label>Member</label>
-        <select name="member_id" required>
-          {% for m in members %}<option value="{{ m.id }}">{{ m.email }}</option>{% endfor %}
-        </select>
-      </div>
-      <div>
-        <label>Role</label>
-        <select name="role_id" required>
-          {% for r in roles %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
-        </select>
-      </div>
-      <div>
-        <button class="btn" type="submit" name="action" value="add">Assign role</button>
-        <button class="btn-ghost" type="submit" name="action" value="remove">Remove role</button>
+    </form>
+
+    <hr style="margin:12px 0"/>
+
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input id="searchMember" class="search" placeholder="Filter by project / member / role">
+      <div style="margin-left:auto" class="controls">
+        <span class="kv">Assignments</span>
       </div>
     </div>
-  </form>
+  </div>
 
-  <hr style="margin:12px 0"/>
+  <!-- Right: Current assignments -->
+  <div class="card-compact" aria-labelledby="current-title">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h3 id="current-title" style="margin:0">Current Assignments</h3>
+      <div class="kv">Showing project × member roles</div>
+    </div>
 
-  <h4>Current Assignments</h4>
-  <table class="table">
-    <thead><tr><th>Project</th><th>Member</th><th>Roles</th></tr></thead>
-    <tbody>
-      {% for p in projects %}
-        {% for m in members %}
-          {# build string key like "projectid,memberid" without parentheses #}
-          {% with key=p.id|stringformat:"s"|add:","|add:m.id|stringformat:"s" %}
-            {% if assign_map and assign_map|get_item:key %}
-              <tr>
-                <td>{{ p.name }}</td>
-                <td>{{ m.email }}</td>
-                <td>
-                  {% for r_id in assign_map|get_item:key %}
-                    {% for r in roles %}
-                      {% if r.id == r_id %}
-                        <span class="chip">{{ r.name }}</span>
-                      {% endif %}
-                    {% endfor %}
-                  {% endfor %}
-                </td>
-              </tr>
-            {% endif %}
-          {% endwith %}
-        {% endfor %}
-      {% endfor %}
-    </tbody>
-  </table>
+    <div id="assignments-container">
+      <table class="table" id="assignments-table" aria-describedby="current-title">
+        <thead>
+          <tr><th>Project</th><th>Member</th><th>Roles</th></tr>
+        </thead>
+        <tbody id="assignments-tbody">
+          {% comment %} preserve the original nested loops / assign_map logic {% endcomment %}
+          {% for p in projects %}
+            {% for m in members %}
+              {% with key=p.id|stringformat:"s"|add:","|add:m.id|stringformat:"s" %}
+                {% if assign_map and assign_map|get_item:key %}
+                  <tr class="assignment-row">
+                    <td>{{ p.name }}</td>
+                    <td>{{ m.email }}</td>
+                    <td>
+                      <div class="chips" aria-label="roles">
+                        {% for r_id in assign_map|get_item:key %}
+                          {% for r in roles %}
+                            {% if r.id == r_id %}
+                              <span class="chip">{{ r.name }}</span>
+                            {% endif %}
+                          {% endfor %}
+                        {% endfor %}
+                      </div>
+                    </td>
+                  </tr>
+                {% endif %}
+              {% endwith %}
+            {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% comment %} show helpful message if no rows found at server render time {% endcomment %}
+      {% if not projects or not members %}
+        <div class="empty-note">No projects or members available to display assignments.</div>
+      {% endif %}
+    </div>
+  </div>
 </div>
+
+<script>
+  // Simple client-side filter for the assignments table (progressive enhancement)
+  (function(){
+    const search = document.getElementById('searchMember');
+    if(!search) return;
+    const rows = Array.from(document.querySelectorAll('#assignments-tbody tr'));
+    search.addEventListener('input', ()=> {
+      const q = search.value.trim().toLowerCase();
+      rows.forEach(r=>{
+        const text = r.textContent.trim().toLowerCase();
+        r.style.display = (q === '' || text.includes(q)) ? '' : 'none';
+      });
+    });
+  })();
+</script>
 {% endblock %}
