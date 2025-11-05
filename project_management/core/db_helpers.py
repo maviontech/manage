@@ -30,6 +30,12 @@ import pymysql.cursors
 from django.conf import settings
 from django.db import connection as default_connection
 from django.http import HttpRequest
+import contextlib
+import logging
+from typing import Optional, List, Dict, Any, Union
+from django.db import connections, connection as default_connection
+
+logger = logging.getLogger(__name__)
 
 # Thread-local cache for tenant connections
 _tlocal = threading.local()
@@ -282,3 +288,116 @@ def close_all_thread_conns():
         except Exception:
             pass
         cache.pop(k, None)
+
+
+# core/db_helpers.py
+
+
+def _cursor_from_conn(conn):
+    """
+    Normalize a 'conn' into a Django-like connection that has .cursor().
+    Accepts:
+      - None -> uses default Django connection
+      - Django connection object (has .cursor)
+      - string DB alias -> connections[alias]
+      - a wrapper that exposes .cursor()
+    """
+    if conn is None:
+        return default_connection
+    if isinstance(conn, str):
+        return connections[conn]
+    if hasattr(conn, "cursor"):
+        return conn
+    raise ValueError("Unsupported connection object passed to exec_sql")
+
+def exec_sql(conn: Optional[Union[str, object]],
+             query: str,
+             params: Optional[List[Any]] = None,
+             fetch: bool = True,
+             commit: bool = False,
+             many: bool = False) -> Union[List[Dict[str, Any]], int, None]:
+    """
+    Execute raw SQL and return results.
+
+    - If fetch=True: returns list of dict rows (column -> value).
+    - If fetch=False: returns lastrowid (if available) or rowcount.
+    """
+    params = params or []
+    db = _cursor_from_conn(conn)
+
+    with contextlib.closing(db.cursor()) as cur:
+        try:
+            if many:
+                cur.executemany(query, params)
+            else:
+                cur.execute(query, params)
+        except Exception:
+            logger.exception("exec_sql failed executing query: %s", query)
+            raise
+
+        # commit if requested (note: Django typically autocommits)
+        if commit and hasattr(db, "commit"):
+            try:
+                db.commit()
+            except Exception:
+                logger.exception("exec_sql commit failed")
+
+        if fetch:
+            # if cursor.description is falsy, no rows to fetch
+            if not cur.description:
+                return []
+
+            cols = [col[0] for col in cur.description]
+
+            rows = cur.fetchall()
+
+            result = []
+            for row in rows:
+                # Case 1: row is a mapping (dict-like)
+                try:
+                    # Many DB connectors return dict-like rows (e.g. DictCursor)
+                    if hasattr(row, "keys"):
+                        # mapping: use column names to fetch values
+                        # Some mapping-like rows implement __getitem__ with column names
+                        row_dict = {}
+                        for c in cols:
+                            # prefer direct key access; fallback to .get or attribute
+                            if c in row:
+                                row_dict[c] = row[c]
+                            else:
+                                # Some row objects require access by index
+                                try:
+                                    # get index of c
+                                    idx = cols.index(c)
+                                    row_dict[c] = row[idx]
+                                except Exception:
+                                    # last resort: None
+                                    row_dict[c] = None
+                        result.append(row_dict)
+                        continue
+                except Exception:
+                    # fall through to sequence handling
+                    pass
+
+                # Case 2: row is sequence/tuple-like
+                try:
+                    row_seq = list(row)
+                    row_dict = {cols[i]: row_seq[i] for i in range(len(cols))}
+                    result.append(row_dict)
+                except Exception:
+                    # Case 3: object with attributes
+                    row_dict = {}
+                    for i, c in enumerate(cols):
+                        row_dict[c] = getattr(row, c, None)
+                    result.append(row_dict)
+
+            return result
+        else:
+            # non-fetch: try lastrowid then rowcount
+            lastrowid = getattr(cur, "lastrowid", None)
+            if lastrowid:
+                return lastrowid
+            try:
+                return cur.rowcount
+            except Exception:
+                return None

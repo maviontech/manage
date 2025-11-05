@@ -221,7 +221,37 @@ CREATE TABLE IF NOT EXISTS tenant_role_assignments (
   CONSTRAINT fk_tr_member FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
   CONSTRAINT fk_tr_role   FOREIGN KEY (role_id)   REFERENCES roles(id)   ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-"""
+""",
+    """
+CREATE TABLE IF NOT EXISTS chat_conversation (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id VARCHAR(128) NOT NULL,
+  user_a VARCHAR(128) NOT NULL,
+  user_b VARCHAR(128) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY tenant_pair (tenant_id, user_a, user_b)
+);
+""",
+    """
+
+CREATE TABLE IF NOT EXISTS chat_message (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  conversation_id INT NOT NULL,
+  sender VARCHAR(128) NOT NULL,
+  text TEXT NOT NULL,
+  is_read TINYINT(1) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (conversation_id) REFERENCES chat_conversation(id) ON DELETE CASCADE
+);
+""",
+    """
+
+CREATE INDEX idx_msg_conv_created ON chat_message (conversation_id, created_at);
+""",
+    """
+CREATE INDEX idx_conv_tenant ON chat_conversation (tenant_id);
+
+    """
 
 ]
 

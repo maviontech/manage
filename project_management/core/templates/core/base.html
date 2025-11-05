@@ -310,6 +310,47 @@
       </main>
     </div>
   </div>
+  {# ----------------- CHAT WIDGET: pinned to footer (chat app namespace = "chat") ----------------- #}
+  {# Add the static files to your static/chat/ path: chat_widget.css and chat_widget.js #}
+  <link rel="stylesheet" href="{% static 'chat/chat_widget.css' %}">
+
+  <div id="chat-shortcut" aria-hidden="false" style="position:fixed;right:22px;bottom:18px;z-index:1400">
+    <button id="chat-open-btn" title="Open team chat" class="chat-fab" aria-label="Open chat" style="width:56px;height:56px;border-radius:999px;border:none;cursor:pointer;">
+      <i class="fa fa-comments" aria-hidden="true" style="font-size:18px;color:#fff"></i>
+      <span id="chat-unread-badge" class="hidden" style="position:absolute;right:-6px;top:-6px;background:#ff3b30;color:#fff;border-radius:999px;padding:4px 6px;font-size:12px"></span>
+    </button>
+
+    <div id="chat-panel" class="hidden" role="dialog" aria-label="Team chat" style="width:420px;max-height:72vh;background:#fff;border-radius:12px;box-shadow:0 18px 60px rgba(2,6,23,0.35);overflow:hidden;margin-top:6px;">
+      <div class="chat-header" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:linear-gradient(90deg,#0b57a4,#1f86e3);color:#fff;">
+        <div class="chat-title" style="font-weight:600">Team chat</div>
+        <button id="chat-close-btn" class="icon-btn" aria-label="Close chat" style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;"><i class="fa fa-times" aria-hidden="true"></i></button>
+      </div>
+
+      <div class="chat-body" style="display:flex;min-height:320px;">
+        <div class="chat-members" style="width:150px;border-right:1px solid #eef2f6;padding:8px;background:#fbfdff;">
+          <input id="chat-member-search" placeholder="Search members..." style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #e6eef6;margin-bottom:8px" />
+          <ul id="chat-members-list" style="list-style:none;padding:0;margin:0;max-height:52vh;overflow:auto;"></ul>
+        </div>
+
+        <div id="chat-window" class="chat-window hidden" style="flex:1;display:flex;flex-direction:column;">
+          <div id="chat-history" style="flex:1;padding:12px;overflow:auto;background:linear-gradient(to bottom,#fff,#f7fbff)"></div>
+          <div class="chat-input" style="display:flex;gap:8px;padding:10px;border-top:1px solid #eef2f6;">
+            <input id="chat-input" placeholder="Write a message..." autocomplete="off" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid #e6eef6;" />
+            <button id="chat-send" class="btn" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,#1f86e3,#38bdf8);color:#fff;cursor:pointer">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // expose to chat_widget.js
+    const CURRENT_USER = "{{ request.user.emp_code|default:request.user.username }}";
+    const TENANT_ID = "{{ request.session.tenant_id|default:'' }}";
+  </script>
+
+  <script src="{% static 'chat/chat_widget.js' %}"></script>
+  {# ----------------- end chat widget ----------------- #}
 
   <script>
     const SIDEBAR_KEY = 'trackline.sidebar.state';
