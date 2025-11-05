@@ -171,3 +171,37 @@
   font-weight: 500;
   cursor: pointer;
 }
+/* unread badge in members list */
+.member-badge {
+  display:inline-block;
+  min-width:20px;
+  height:20px;
+  line-height:20px;
+  padding:0 6px;
+  background:#ff3b30;
+  color:#fff;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+  margin-left:8px;
+  vertical-align:middle;
+}
+
+/* presence dot (green) before member name */
+.presence-dot {
+  display:inline-block;
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  margin-right:8px;
+  vertical-align:middle;
+  background:#cbd5e1; /* default gray */
+}
+.presence-dot.online { background: #22c55e; } /* green */
+.presence-dot.offline { background: #cbd5e1; } /* gray */
+#chat-members-list li[data-self="true"] {
+  opacity: 0.6;
+  font-style: italic;
+  cursor: default;
+  color: #666;
+}

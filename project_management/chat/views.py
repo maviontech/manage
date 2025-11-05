@@ -13,11 +13,16 @@ from core.db_helpers import get_tenant_conn, exec_sql
 def tenant_members(request):
     """
     Return all members in the same tenant.
+    Includes the logged-in user at the top as 'Self'.
     Display format: "<LastName> <FirstName> <Email>"
     """
     tenant_conn = get_tenant_conn(request)
     if not tenant_conn:
         return HttpResponseForbidden("No tenant connection")
+
+    # Identify current user
+    me_email = getattr(request.user, "emp_code", request.user.username)
+    me_display = request.session.get("cn") or request.user.get_full_name() or me_email
 
     # Fetch all members
     rows = exec_sql(tenant_conn, """
@@ -27,20 +32,34 @@ def tenant_members(request):
     """, [])
 
     members = []
+
+    # Add self entry first
+    members.append({
+        "id": me_email,
+        "pk": 0,
+        "name": f"Self ({me_display})",
+        "email": me_email,
+        "phone": "",
+        "is_self": True,
+    })
+
+    # Then add all others
     for r in rows:
+        email = (r.get("email") or "").strip()
+        if email.lower() == str(me_email).lower():
+            continue  # skip duplicate self
         last_name = (r.get("last_name") or "").strip()
         first_name = (r.get("first_name") or "").strip()
-        email = (r.get("email") or "").strip()
-
-        # Construct display name "<LastName> <FirstName> <Email>"
         parts = [p for p in [last_name, first_name, f"<{email}>"] if p]
         display_name = " ".join(parts)
 
         members.append({
-            "id": email,           # email used as chat identifier
-            "pk": r.get("id"),     # numeric member id
-            "name": display_name,  # formatted name
+            "id": email,
+            "pk": r.get("id"),
+            "name": display_name,
+            "email": email,
             "phone": r.get("phone"),
+            "is_self": False,
         })
 
     return JsonResponse({"members": members})
@@ -126,6 +145,80 @@ def send_message(request):
 
     # Optionally call a background notifier here (if you have channels, the websocket consumer will handle real-time)
     return JsonResponse({"ok": True})
-from django.shortcuts import render
 
-# Create your views here.
+
+# chat/views.py (append these handlers)
+from django.views.decorators.http import require_POST, require_GET
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, HttpResponseBadRequest
+import json
+
+@require_GET
+def unread_counts(request):
+    """
+    Return unread counts for current user grouped by sender.
+    Response:
+      { "unread": [{ "from": "<email>", "count": 3 }, ...] }
+    """
+    tenant_conn = get_tenant_conn(request)
+    if not tenant_conn:
+        return JsonResponse({"unread": []})
+
+    me = getattr(request.user, "emp_code", request.user.username)
+    tenant_id = str(request.session.get("tenant_id", ""))
+
+    # Find conversations for this tenant where messages are unread and receiver is me.
+    # Since conversation stores two users, find conversations where me appears and unread messages exist from the other side.
+    rows = exec_sql(tenant_conn, """
+      SELECT m.sender AS `from`, COUNT(*) AS cnt
+      FROM chat_conversation c
+      JOIN chat_message m ON m.conversation_id = c.id
+      WHERE c.tenant_id=%s
+        AND m.is_read = 0
+        -- message sender is not me
+        AND m.sender <> %s
+        -- conversation includes me
+        AND (c.user_a = %s OR c.user_b = %s)
+      GROUP BY m.sender
+    """, [tenant_id, me, me, me])
+
+    out = [{"from": r["from"], "count": int(r["cnt"])} for r in rows]
+    return JsonResponse({"unread": out})
+
+
+@require_POST
+def mark_read(request):
+    """
+    Mark messages in conversation between current user and 'peer' as read.
+    POST body: { "peer": "<email>" }
+    """
+    try:
+        payload = json.loads(request.body.decode())
+    except Exception:
+        return HttpResponseBadRequest("Invalid JSON")
+    peer = payload.get("peer")
+    if not peer:
+        return HttpResponseBadRequest("Missing peer")
+
+    tenant_conn = get_tenant_conn(request)
+    if not tenant_conn:
+        return JsonResponse({"ok": False})
+
+    me = getattr(request.user, "emp_code", request.user.username)
+    tenant_id = str(request.session.get("tenant_id", ""))
+
+    a, b = sorted([me, peer])
+    conv = exec_sql(tenant_conn, """
+      SELECT id FROM chat_conversation WHERE tenant_id=%s AND user_a=%s AND user_b=%s
+    """, [tenant_id, a, b])
+    if not conv:
+        return JsonResponse({"ok": True})  # nothing to mark
+
+    conv_id = conv[0]["id"]
+    exec_sql(tenant_conn, """
+      UPDATE chat_message SET is_read = 1
+      WHERE conversation_id=%s AND sender <> %s AND is_read = 0
+    """, [conv_id, me], fetch=False)
+
+    return JsonResponse({"ok": True})
+
