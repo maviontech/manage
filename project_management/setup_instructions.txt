@@ -1,4 +1,4 @@
-Run the commands below in My SQL interface to create teh base environment :
+Run the commands below in My SQL interface to create the base environment :
 
 CREATE DATABASE IF NOT EXISTS master_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE master_db;
@@ -23,7 +23,40 @@ VALUES ('ACME Corp', '@acme.com', 'tenant_acme', '127.0.0.1', 'mysql');
 
 C:\projects\manage\project_management> python -m core.db_initializer
 
+
 SQL change :
+-------------
 ALTER TABLE tasks
 ADD COLUMN assigned_type ENUM('member', 'team') DEFAULT NULL,
 MODIFY COLUMN assigned_to INT NULL;
+
+
+# --------------------------------------------------------------------------
+# ADDITIONAL STEP: Assign Admin role to the default tenant user
+# --------------------------------------------------------------------------
+
+-- Create tenant_role_assignments table if not already present
+CREATE TABLE IF NOT EXISTS tenant_role_assignments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  member_id INT NOT NULL,
+  role_id INT NOT NULL,
+  assigned_by INT DEFAULT NULL,
+  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_tenant_member_role (member_id, role_id),
+  KEY member_id_idx (member_id),
+  KEY role_id_idx (role_id),
+  CONSTRAINT fk_tr_member FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
+  CONSTRAINT fk_tr_role   FOREIGN KEY (role_id)   REFERENCES roles(id)   ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Assign tenant-wide Admin role for admin@acme.com
+SET @admin_email = 'admin@acme.com';
+SET @member_id = (SELECT id FROM members WHERE email = @admin_email LIMIT 1);
+SET @role_admin = (SELECT id FROM roles WHERE name = 'Admin' LIMIT 1);
+
+INSERT IGNORE INTO tenant_role_assignments (member_id, role_id, assigned_by, assigned_at)
+SELECT @member_id, @role_admin, @member_id, NOW()
+WHERE @member_id IS NOT NULL AND @role_admin IS NOT NULL;
+
+-- Verify the assignment
+SELECT * FROM tenant_role_assignments WHERE member_id = (SELECT id FROM members WHERE email='admin@acme.com' LIMIT 1);
