@@ -1,14 +1,384 @@
+{# core/templates/core/new_tenant.html #}
 <!doctype html>
-<html>
-<head><title>Create Tenant</title></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Create Tenant — Trackline</title>
+
+  <!-- Inter font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --muted: #9aa4b2;
+      --text: #e6eef6;
+      --accent1: #0b57a4;
+      --accent2: #1f86e3;
+      --success: #1f6e3a;
+      --danger: #b3242a;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071027 0%, #071322 60%);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased;}
+    .page{min-height:100vh;display:flex;flex-direction:column;}
+
+    /* header */
+    header.site-header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid rgba(255,255,255,0.03);background:linear-gradient(90deg, rgba(11,87,164,0.06), rgba(31,134,227,0.03));gap:12px;}
+    .brand{display:flex;gap:12px;align-items:center;}
+    .brand-logo{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--accent1),var(--accent2));box-shadow:0 6px 20px rgba(11,87,164,0.18);font-size:18px;}
+    .brand-title{font-weight:700;font-size:18px;letter-spacing:-0.2px;}
+    .brand-sub{color:var(--muted);font-size:13px;margin-top:2px;}
+
+    /* main area */
+    main{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 20px;}
+
+    .card{width:100%;max-width:920px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;box-shadow:0 10px 40px rgba(2,6,23,0.6);padding:26px;border:1px solid rgba(255,255,255,0.03);display:grid;grid-template-columns:1fr 360px;gap:20px;}
+    @media (max-width:980px){ .card{grid-template-columns:1fr;padding:18px;} }
+
+    .left{padding-right:8px;}
+    h1{margin:0;font-size:20px;letter-spacing:-0.3px;}
+    p.lead{color:var(--muted);margin-top:8px;margin-bottom:18px;font-size:14px;}
+
+    .form-row{display:flex;flex-direction:column;gap:12px;margin-bottom:12px;}
+    label.small{font-size:13px;color:var(--muted);display:block;margin-bottom:6px;}
+    input[type="text"], input[type="email"], select {width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.01);color:var(--text);font-size:14px;}
+    input:focus, select:focus{outline:none;border-color:rgba(31,134,227,0.28);box-shadow:0 6px 18px rgba(31,134,227,0.06);}
+
+    .hint{font-size:13px;color:var(--muted);margin-top:6px;}
+
+    .right{padding-left:8px;border-left:1px dashed rgba(255,255,255,0.02);}
+    @media (max-width:980px){ .right{border-left:none;padding-left:0;padding-top:8px;} }
+
+    .meta{font-size:13px;color:var(--muted);margin-bottom:12px;}
+    .preview{background:rgba(255,255,255,0.01);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);color:var(--muted);font-size:13px;}
+
+    .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px;}
+    .btn{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:0;font-weight:600;cursor:pointer;}
+    .btn-primary{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#fff;box-shadow:0 8px 24px rgba(11,87,164,0.18);}
+    .btn-ghost{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.04);}
+
+    /* messages */
+    .messages{margin-bottom:16px;display:flex;flex-direction:column;gap:8px;}
+    .msg-success{padding:10px 12px;border-radius:8px;background:rgba(31,110,58,0.06);color:var(--success);border:1px solid rgba(31,110,58,0.08);}
+    .msg-error{padding:10px 12px;border-radius:8px;background:rgba(179,36,42,0.04);color:var(--danger);border:1px solid rgba(179,36,42,0.06);}
+
+    footer.site-footer{padding:18px 28px;font-size:13px;color:var(--muted);border-top:1px solid rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:space-between;}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:none;align-items:center;justify-content:center;z-index:1200;padding:20px;}
+    .modal{background:var(--card);border-radius:12px;padding:18px;max-width:520px;width:100%;box-shadow:0 12px 40px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03);}
+    .modal h3{margin:0 0 8px 0;}
+    .cred { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);margin-top:8px; color:var(--text); }
+    .modal .meta { color:var(--muted); font-size:13px; margin-top:8px; }
+
+    .copy-btn { background: linear-gradient(90deg,var(--accent1),var(--accent2)); color: #fff; border: 0; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    .email-btn { background: transparent; color: var(--muted); border: 1px solid rgba(255,255,255,0.04); padding:8px 12px; border-radius:8px; cursor:pointer; }
+
+    .kbd { background: rgba(255,255,255,0.02); padding:6px 8px; border-radius:6px; font-size:13px; color:var(--muted); border:1px solid rgba(255,255,255,0.02); }
+  </style>
+</head>
 <body>
-  <h2>Create New Tenant</h2>
-  {% for msg in messages %}<p style="color:green">{{ msg }}</p>{% endfor %}
-  <form method="post">{% csrf_token %}
-    <p><input name="client_name" placeholder="Client Name (e.g. Zenith Tech)" required /></p>
-    <p><input name="domain" placeholder="Domain (without @) e.g. zenith.com" required /></p>
-    <p><input name="db_name" placeholder="Database name (e.g. tenant_zenith)" required /></p>
-    <button type="submit">Add Tenant</button>
-  </form>
+  <div class="page" role="document">
+    <header class="site-header" role="banner">
+      <div class="brand" aria-hidden="true">
+        <div class="brand-logo">M</div>
+        <div>
+          <div class="brand-title">Trackline</div>
+          <div class="brand-sub">Momentum with vision</div>
+        </div>
+      </div>
+      <nav aria-label="Utility">
+        <a href="{% url 'dashboard' %}" class="kbd" title="Dashboard"><i class="fa-solid fa-chart-line" style="margin-right:8px"></i>Dashboard</a>
+      </nav>
+    </header>
+
+    <main role="main">
+      <section class="card" aria-labelledby="create-title">
+        <div class="left">
+          <h1 id="create-title">Create a new tenant</h1>
+          <p class="lead">Provision a tenant database, create a default admin and seed initial roles & permissions for a new organization.</p>
+
+          {# --- Render Django messages --- #}
+          <div id="messages" class="messages" aria-live="polite">
+            {% if messages %}
+              {% for message in messages %}
+                {% if 'error' in message.tags %}
+                  <div class="msg-error" role="alert" aria-atomic="true">
+                    <i class="fa-solid fa-triangle-exclamation" style="margin-right:8px"></i>
+                    {{ message }}
+                  </div>
+                {% elif 'warning' in message.tags %}
+                  <div class="msg-error" role="status">
+                    <i class="fa-solid fa-triangle-exclamation" style="margin-right:8px"></i>
+                    {{ message }}
+                  </div>
+                {% else %}
+                  <div class="msg-success" role="status">
+                    <i class="fa-solid fa-circle-check" style="margin-right:8px"></i>
+                    {{ message }}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          </div>
+
+          <form id="tenant-form" method="post" action="{% url 'new_tenant' %}">
+            {% csrf_token %}
+            <div class="form-row">
+              <div>
+                <label class="small" for="client_name">Client / Company name</label>
+                <input id="client_name" name="client_name" type="text" placeholder="Zenith Technologies" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <div style="flex:1;min-width:220px">
+                  <label class="small" for="domain">Tenant domain (no @)</label>
+                  <input id="domain" name="domain" type="text" placeholder="acme.com" required>
+                  <div class="hint">Used to create the admin email: <span id="admin-example" class="kbd">admin@acme.com</span></div>
+                </div>
+
+                <div style="flex:1;min-width:220px">
+                  <label class="small" for="db_name">Database name</label>
+                  <input id="db_name" name="db_name" type="text" placeholder="tenant_acme" required>
+                  <div class="hint">Letters, numbers and underscores only.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row" style="display:flex;gap:12px;flex-wrap:wrap">
+              <div style="flex:1;min-width:220px">
+                <label class="small" for="db_prefix">DB username (optional)</label>
+                <input id="db_prefix" name="db_prefix" type="text" placeholder="tenant_acme_user">
+                <div class="hint">If left empty a username will be generated automatically.</div>
+              </div>
+
+              <div style="flex:0 0 180px">
+                <label class="small" for="provision_mode">Provisioning mode</label>
+                <select id="provision_mode" name="provision_mode">
+                  <option value="full" selected>Full (DB + Seed)</option>
+                  <option value="db-only">DB only</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="actions" style="margin-top:18px">
+              <button type="button" class="btn btn-ghost" id="reset-btn">Reset</button>
+              <button type="submit" class="btn btn-primary" id="create-btn"><i class="fa-solid fa-plus" style="margin-right:8px"></i> Create tenant</button>
+            </div>
+          </form>
+        </div>
+
+        <aside class="right" aria-labelledby="how-title">
+          <h3 id="how-title" style="margin:0 0 12px 0">What will happen</h3>
+          <div class="meta">A secure database user will be created and a temporary admin account will be provisioned. Use the temporary password to login and change it immediately.</div>
+
+          <div class="preview">
+            <strong>Admin account:</strong>
+            <div style="margin-top:8px;font-size:14px"><span id="preview-admin">admin@example.com</span></div>
+            <div style="margin-top:10px" class="hint">Temporary password will be generated and shown after provisioning completes.</div>
+          </div>
+
+          <div style="margin-top:14px">
+            <button class="btn btn-ghost" id="repair-btn" title="Repair tenant">
+              <i class="fa-solid fa-wrench" style="margin-right:8px"></i> Repair tenant (re-run seed)
+            </button>
+          </div>
+
+          <div style="margin-top:18px" class="hint"><strong>Tip:</strong> For production, deliver the temporary password by email and require the user to change it on first login.</div>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div>© <span id="year"></span> MavionTech</div>
+      <div class="muted">Project Management • Version 0.1</div>
+    </footer>
+  </div>
+
+  <!-- Modal: show admin credentials if present -->
+  <div id="modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document" aria-labelledby="modal-title">
+      <h3 id="modal-title">Tenant admin credentials</h3>
+      <div class="meta">The tenant admin account has been created. Store these credentials securely and ask the admin to change the password on first login.</div>
+
+      <div style="margin-top:12px;">
+        <div><strong>Admin email</strong></div>
+        <div class="cred" id="modal-admin-email">admin@example.com</div>
+
+        <div style="margin-top:12px"><strong>Temporary admin password</strong></div>
+        <div class="cred" id="modal-admin-password">temporary_password_here</div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="copy-btn" id="copy-cred"><i class="fa-regular fa-copy" style="margin-right:8px"></i>Copy password</button>
+          <button class="email-btn" id="email-cred"><i class="fa-regular fa-envelope" style="margin-right:8px"></i>Email password</button>
+          <button class="btn btn-ghost" id="close-modal" style="margin-left:auto">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // render year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // preview admin email example
+    (function(){
+      const domainEl = document.getElementById('domain');
+      const preview = document.getElementById('preview-admin');
+      function updatePreview(){
+        const d = (domainEl.value||'').trim();
+        preview.textContent = d ? ('admin@' + d) : 'admin@example.com';
+        const adminExample = document.getElementById('admin-example');
+        if (adminExample) adminExample.textContent = preview.textContent;
+        // also update modal email placeholder
+        const modalEmail = document.getElementById('modal-admin-email');
+        if (modalEmail) modalEmail.textContent = preview.textContent;
+      }
+      domainEl.addEventListener('input', updatePreview);
+      updatePreview();
+    })();
+
+    // client-side validation + UX
+    (function(){
+      const form = document.getElementById('tenant-form');
+      const reset = document.getElementById('reset-btn');
+      const createBtn = document.getElementById('create-btn');
+
+      reset.addEventListener('click', function(){ form.reset(); form.querySelector('#domain').focus(); });
+
+      form.addEventListener('submit', function(e){
+        // basic checks
+        const client = form.client_name.value.trim();
+        const domain = form.domain.value.trim();
+        const dbName = form.db_name.value.trim();
+        if (!client || !domain || !dbName) {
+          e.preventDefault();
+          showError('Please fill Client, Domain and Database name.');
+          return;
+        }
+        if (!/^[A-Za-z0-9_]+$/.test(dbName)) {
+          e.preventDefault();
+          showError('DB name may contain only letters, numbers and underscores.');
+          return;
+        }
+
+        if (!confirm('Create tenant "'+client+'" with domain "'+domain+'"? This will provision a new database.')) {
+          e.preventDefault();
+          return;
+        }
+
+        createBtn.disabled = true;
+        createBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:8px"></i>Provisioning...';
+      });
+
+      function showError(text){
+        const area = document.getElementById('messages');
+        const el = document.createElement('div');
+        el.className = 'msg-error';
+        el.textContent = text;
+        area.appendChild(el);
+      }
+    })();
+
+    // Repair button (calls POST /repair-tenant/)
+    document.getElementById('repair-btn').addEventListener('click', function(){
+      const dbName = document.getElementById('db_name').value.trim();
+      if (!dbName) { alert('Enter the DB name to repair.'); return; }
+      if (!confirm('Re-run provisioning (DDL & seed) for DB: ' + dbName + '?')) return;
+      fetch('{% url "access_control_page" %}', { method:'GET' }); // no-op placeholder for permission check
+      fetch('/repair-tenant/', {
+        method:'POST',
+        headers: {'Content-Type':'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+        body: JSON.stringify({db_name: dbName}),
+      }).then(r=>r.json()).then(j=>{
+        if (j && j.success) alert('Repair started. Check server logs.');
+        else alert('Repair request failed.');
+      }).catch(()=>alert('Repair request failed.'));
+    });
+
+    // CSRF cookie helper (for fetch)
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    // --- Modal handling: detect temp password in messages and show modal ---
+    (function(){
+      // find text like "Temporary admin password: <pwd>" in rendered messages
+      const messagesEl = document.getElementById('messages');
+      if (!messagesEl) return;
+
+      // gather text content of messages
+      const text = messagesEl.innerText || messagesEl.textContent || '';
+      // Try two common message formats used in view:
+      // "Temporary admin password: <pwd>"
+      // or "Temporary password: <pwd>"
+      const regex = /temporary (admin )?password\s*:\s*([A-Za-z0-9\-_!@#\$%&=+]+)/i;
+      const match = text.match(regex);
+      if (match && match[2]) {
+        const pwd = match[2];
+        // extract admin email if available in messages (search for 'Admin account: <email>')
+        let adminEmail = 'admin@example.com';
+        const emailRegex = /admin account\s*:\s*([^\s,]+)/i;
+        const em = text.match(emailRegex);
+        if (em && em[1]) adminEmail = em[1];
+
+        // populate modal
+        document.getElementById('modal-admin-email').textContent = adminEmail;
+        document.getElementById('modal-admin-password').textContent = pwd;
+
+        // show modal
+        const backdrop = document.getElementById('modal-backdrop');
+        backdrop.style.display = 'flex';
+        backdrop.setAttribute('aria-hidden','false');
+
+        // wire copy button
+        document.getElementById('copy-cred').addEventListener('click', function(){
+          navigator.clipboard.writeText(pwd).then(function(){
+            document.getElementById('copy-cred').textContent = 'Copied';
+            setTimeout(()=>document.getElementById('copy-cred').innerHTML = '<i class="fa-regular fa-copy" style="margin-right:8px"></i>Copy password', 1600);
+          }).catch(function(){
+            alert('Copy failed — please select and copy manually.');
+          });
+        });
+
+        // wire email button (mailto with body)
+        document.getElementById('email-cred').addEventListener('click', function(){
+          const subject = encodeURIComponent('Your tenant admin account for ' + adminEmail);
+          const body = encodeURIComponent('Admin login: ' + adminEmail + '\\nTemporary password: ' + pwd + '\\n\\nPlease change the password on first login.');
+          window.location.href = 'mailto:' + adminEmail + '?subject=' + subject + '&body=' + body;
+        });
+
+        // close
+        document.getElementById('close-modal').addEventListener('click', function(){
+          backdrop.style.display = 'none';
+          backdrop.setAttribute('aria-hidden','true');
+        });
+
+        // close clicking backdrop outside modal
+        backdrop.addEventListener('click', function(evt){
+          if (evt.target === backdrop) {
+            backdrop.style.display = 'none';
+            backdrop.setAttribute('aria-hidden','true');
+          }
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

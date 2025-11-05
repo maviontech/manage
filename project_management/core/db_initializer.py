@@ -9,7 +9,7 @@ MASTER_DB = os.environ.get('MASTER_DB_NAME', 'master_db')
 ADMIN_HOST = os.environ.get('MYSQL_ADMIN_HOST', '127.0.0.1')
 ADMIN_PORT = int(os.environ.get('MYSQL_ADMIN_PORT', 3306))
 ADMIN_USER = os.environ.get('MYSQL_ADMIN_USER', 'root')
-ADMIN_PWD = os.environ.get('MYSQL_ADMIN_PWD', '')
+ADMIN_PWD = os.environ.get('MYSQL_ADMIN_PWD', 'root')
 
 TENANT_DDL = [
     """
