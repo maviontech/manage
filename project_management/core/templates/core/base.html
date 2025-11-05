@@ -255,20 +255,6 @@
 
       <!-- Sidebar signed-in area -->
       <div class="sidebar-footer" role="region" aria-label="Signed in user">
-        <div class="sidebar-profile">
-          <div class="avatar" aria-hidden="true">
-            {% if request.session.cn %}
-              {{ request.session.cn|slice:":1" }}
-            {% else %}
-              {{ request.user.username|slice:":1"|default:"M" }}
-            {% endif %}
-          </div>
-          <div class="meta">
-            <div class="name">{% if request.session.cn %}{{ request.session.cn }}{% else %}{{ request.user.username }}{% endif %}</div>
-            <div class="role small muted">{% if request.session.role %}{{ request.session.role }}{% endif %}</div>
-          </div>
-        </div>
-
         <div class="profile-actions" role="toolbar" aria-label="Profile actions">
           <a class="btn-ghost" href="#" title="View profile">Profile</a>
           <a class="btn-ghost" href="{% url 'logout' %}" title="Log out">Log out</a>

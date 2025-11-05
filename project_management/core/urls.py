@@ -9,7 +9,9 @@ from . import views_tasks as views_tasks
 from  .import views_permissions as vp
 
 urlpatterns = [
-    path('identify/', views.identify_view, name='identify'),
+    # file: `project_management/core/urls.py`
+    path('', views.identify_view, name='identify'),             # root/default page -> identify view
+    path('identify/', views.identify_view, name='identify_page'),  # optional alias with a different name
     path('login_password/', views.login_password_view, name='login_password'),
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
