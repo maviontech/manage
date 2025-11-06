@@ -45,111 +45,181 @@
   };
 
   async function loadMembers() {
-    membersList.innerHTML = '<li style="text-align:center;padding:8px;color:#999;">Loading...</li>';
-    try {
-      // include credentials to avoid Django redirect to login
-      const res = await fetch('/chat/members/', { credentials: 'same-origin' });
-      if (!res.ok) {
-        throw new Error('Failed to load members: HTTP ' + res.status);
+  membersList.innerHTML = '<li style="text-align:center;padding:8px;color:#999;">Loading...</li>';
+  try {
+    const res = await fetch('/chat/members/', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    membersList.innerHTML = '';
+
+    // inside loadMembers(), when iterating over data.members:
+    data.members.forEach((m) => {
+      // normalize id to trimmed string, and fallback to CURRENT_USER if empty
+      const rawId = (m.id || '').toString().trim();
+      const memberId = rawId || (m.is_self ? (typeof CURRENT_USER !== 'undefined' ? String(CURRENT_USER).trim() : '') : '');
+
+      const memberName = (m.name || '').toString().trim();
+
+      const li = document.createElement('li');
+      li.dataset.id = memberId;
+      li.dataset.email = memberId;
+      li.dataset.name = memberName;
+      if (m.is_self) li.dataset.self = 'true';
+
+      const dot = document.createElement('span');
+      dot.className = 'presence-dot offline';
+      dot.setAttribute('data-user', memberId);
+
+      if (m.is_self) {
+        dot.classList.remove('offline');
+        dot.classList.add('online');
       }
-      const data = await res.json();
-      membersList.innerHTML = '';
 
-      // remove old event listeners (if any)
-      // (we simply replace innerHTML below, so previous elements are dropped)
-      data.members.forEach((m) => {
-        const li = document.createElement('li');
-        li.dataset.id = m.id;
-        li.dataset.email = m.id;
-        li.dataset.name = m.name;
-        if (m.is_self) li.dataset.self = 'true';
-        // presence dot + label + unread badge
-        const dot = document.createElement('span');
-        dot.className = 'presence-dot offline';
-        dot.setAttribute('data-user', m.id);
+      const label = document.createElement('span');
+      label.textContent = memberName;
+      label.style.verticalAlign = 'middle';
+      label.style.marginLeft = '6px';
+      label.style.fontSize = '13px';
+      label.style.fontWeight = m.is_self ? '600' : '500';
 
-        // If it's self, mark online immediately
-        if (m.is_self) {
-          dot.classList.remove('offline');
-          dot.classList.add('online');
-        }
+      const badge = document.createElement('span');
+      badge.className = 'member-badge';
+      badge.style.display = 'none';
+      badge.setAttribute('data-unread-for', memberId);
 
-        const label = document.createElement('span');
-        label.textContent = m.name;
-        label.style.verticalAlign = 'middle';
-        label.style.marginLeft = '6px';
-        label.style.fontSize = '13px';
-        label.style.fontWeight = m.is_self ? '600' : '500';
+      // Make rows clickable (including self)
+      li.addEventListener('click', () => selectPeer({ id: memberId, name: memberName, is_self: !!m.is_self }));
 
-        const badge = document.createElement('span');
-        badge.className = 'member-badge';
-        badge.style.display = 'none';
-        badge.setAttribute('data-unread-for', m.id);
+      li.appendChild(dot);
+      li.appendChild(label);
+      li.appendChild(badge);
+      membersList.appendChild(li);
+    });
 
-        // Make the list item clickable for everyone (including self)
-        li.addEventListener('click', () => selectPeer(m));
-        // Add inner elements and append
-        li.appendChild(dot);
-        li.appendChild(label);
-        li.appendChild(badge);
-        membersList.appendChild(li);
-      });
 
-      // fetch unread counts once immediately
-      await refreshUnreadCounts();
-    } catch (e) {
-      console.error('Failed to load members', e);
-      membersList.innerHTML = '<li style="color:red;padding:8px;">Error loading members</li>';
-    }
+    // initial unread counts
+    await refreshUnreadCounts();
+
+  } catch (e) {
+    console.error('Failed to load members', e);
+    membersList.innerHTML = '<li style="color:red;padding:8px;">Error loading members</li>';
   }
+}
+
+
 
   function findMemberLiById(id) {
     return [...membersList.children].find((li) => li.dataset.id === id);
   }
 
   function selectPeer(m) {
-    // highlight active
-    membersList.querySelectorAll('li').forEach((li) => li.classList.remove('active'));
-    const li = findMemberLiById(m.id);
-    if (li) li.classList.add('active');
+  // normalize and derive a usable id
+  const raw = (m.id || '').toString().trim();
+  let memberId = raw;
 
-    selectedPeer = m.id;
-    selectedPeerName = m.name;
-    chatWindow.classList.remove('hidden');
-    historyEl.innerHTML = '<div style="color:#888;text-align:center;margin-top:8px;">Loading messages...</div>';
+  // If raw empty, try extracting from name <email>
+  if (!memberId && m.name) {
+    const em = (m.name || '').match(/<([^>]+)>/);
+    if (em && em[1]) memberId = em[1].trim();
+  }
 
+  // If still empty and this row is flagged self, try CURRENT_USER
+  if (!memberId && m.is_self && (typeof CURRENT_USER !== 'undefined') && CURRENT_USER) {
+    memberId = String(CURRENT_USER).trim();
+  }
+
+  // Final fallback: try dataset of an element flagged as self
+  if (!memberId) {
+    const selfLi = document.querySelector('#chat-members-list li[data-self="true"]');
+    if (selfLi) {
+      memberId = (selfLi.dataset.id || selfLi.dataset.email || '').toString().trim();
+    }
+  }
+
+  // highlight active
+  membersList.querySelectorAll('li').forEach((li) => li.classList.remove('active'));
+  const li = [...membersList.children].find((x) => ((x.dataset.id || '').toString().trim() === memberId));
+  if (li) li.classList.add('active');
+
+  selectedPeer = memberId || '';               // explicit
+  selectedPeerName = (m.name || '').toString().trim() || (memberId || '');
+  chatWindow.classList.remove('hidden');
+
+  // show loading placeholder (will be replaced by loadHistory)
+  historyEl.innerHTML = '<div style="color:#888;text-align:center;margin-top:8px;">Loading messages...</div>';
+
+  // header update
+  if (m.is_self) {
+    const header = document.querySelector('.chat-header .chat-title');
+    header.innerHTML = `Team chat <span class="chat-partner">(notes for ${selectedPeerName})</span>`;
+  } else {
     updateHeaderPeer(selectedPeerName);
-    initWebSocket();
-    loadHistory().then(() => {
-      // After history loaded, mark messages as read
-      markRead(selectedPeer);
+  }
+
+  console.log('[chat] selectPeer -> selectedPeer=', selectedPeer, 'CURRENT_USER=', (typeof CURRENT_USER !== 'undefined' ? CURRENT_USER : null), 'is_self=', !!m.is_self);
+
+  // init websocket & load history
+  initWebSocket();
+  loadHistory().then(() => {
+    // Mark read only when we have a valid non-empty selectedPeer
+    if (selectedPeer) {
+      console.log('[chat] calling markRead for', selectedPeer);
+      markRead(selectedPeer).catch(err => console.warn('markRead failed in selectPeer', err));
       // hide unread badge for this peer
       const b = document.querySelector(`[data-unread-for="${selectedPeer}"]`);
       if (b) b.style.display = 'none';
-    });
-  }
+    } else {
+      console.warn('[chat] selectPeer resolved to empty id, skipping markRead');
+      // show a helpful message in UI so it's obvious to the user
+      historyEl.innerHTML = '<div style="color:#d9534f;text-align:center;margin-top:10px;">Cannot determine your identifier — please refresh the page.</div>';
+    }
+  }).catch(err => {
+    console.error('loadHistory failed in selectPeer', err);
+    if (selectedPeer) markRead(selectedPeer).catch(e => console.warn('markRead after failed loadHistory', e));
+  });
+}
 
   function updateHeaderPeer(name) {
     const header = document.querySelector('.chat-header .chat-title');
     header.innerHTML = `Team chat <span class="chat-partner">with ${name}</span>`;
   }
 
+    // -------------------------
+  // Load chat history (robust)
+  // -------------------------
   async function loadHistory() {
-    if (!selectedPeer) return;
+  if (!selectedPeer) {
+    historyEl.innerHTML = '<div style="color:#999;text-align:center;margin-top:10px;">Select a member to load messages</div>';
+    return;
+  }
+
+  historyEl.innerHTML = '<div style="color:#888;text-align:center;margin-top:8px;">Loading messages...</div>';
+
+  try {
     const res = await fetch(`/chat/history/?peer=${encodeURIComponent(selectedPeer)}`, { credentials: 'same-origin' });
+    if (res.status === 302 || res.status === 401 || res.status === 403) {
+      historyEl.innerHTML = '<div style="color:#d9534f;text-align:center;margin-top:10px;">Authentication required. Please login.</div>';
+      return;
+    }
     if (!res.ok) {
-      historyEl.innerHTML = '<div style="color:red;text-align:center;margin-top:10px;">Failed to load history</div>';
+      historyEl.innerHTML = `<div style="color:#d9534f;text-align:center;margin-top:10px;">Failed to load messages (status ${res.status}).</div>`;
       return;
     }
     const data = await res.json();
     historyEl.innerHTML = '';
-    if (!data.messages.length) {
+    if (!data.messages || data.messages.length === 0) {
       historyEl.innerHTML = '<div style="color:#999;text-align:center;margin-top:10px;">No previous messages</div>';
     } else {
       data.messages.forEach((m) => appendMessage(m));
     }
     historyEl.scrollTop = historyEl.scrollHeight;
+  } catch (err) {
+    console.error('loadHistory error', err);
+    historyEl.innerHTML = '<div style="color:#d9534f;text-align:center;margin-top:10px;">Error loading messages. See console.</div>';
   }
+}
+
+
 
   function initWebSocket() {
     if (ws) {
@@ -286,22 +356,52 @@
 
   // mark messages as read for this conversation
   async function markRead(peerEmail) {
-    try {
-      await fetch('/chat/mark_read/', {
+  if (!peerEmail) {
+    console.warn('[chat] markRead called with empty peerEmail');
+    return;
+  }
+  console.log('[chat] markRead -> peerEmail=', peerEmail);
+  try {
+    const res = await fetch('/chat/mark_read/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify({ peer: peerEmail })
+    });
+
+    console.log('[chat] markRead response status=', res.status);
+    if (!res.ok) {
+      // fallback form-encoded attempt
+      console.warn('[chat] markRead non-ok, trying fallback form post');
+      const res2 = await fetch('/chat/mark_read/', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
           'X-CSRFToken': getCookie('csrftoken'),
         },
-        body: JSON.stringify({ peer: peerEmail }),
+        body: `peer=${encodeURIComponent(peerEmail)}`
       });
+      console.log('[chat] markRead fallback status=', res2.status);
+      if (!res2.ok) {
+        console.warn('[chat] markRead fallback failed', res2.status);
+      }
+    } else {
+      // success
+      const j = await res.json().catch(()=>null);
+      console.log('[chat] markRead success json=', j);
       const b = document.querySelector(`[data-unread-for="${peerEmail}"]`);
       if (b) b.style.display = 'none';
-    } catch (e) {
-      console.warn('markRead failed', e);
     }
+  } catch (err) {
+    console.error('[chat] markRead exception', err);
   }
+}
+
+
 
   // ---------------- send message ----------------
   sendBtn.addEventListener('click', sendMessage);
@@ -309,13 +409,29 @@
     if (e.key === 'Enter') sendMessage();
   });
 
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text || !selectedPeer) return;
+    async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (!selectedPeer) {
+    const err = document.createElement('div');
+    err.style.color = '#d9534f';
+    err.style.textAlign = 'center';
+    err.style.marginTop = '8px';
+    err.textContent = 'Please select a member to send message';
+    historyEl.appendChild(err);
+    return;
+  }
+
+  // Disable send button to prevent double send
+  sendBtn.disabled = true;
+  sendBtn.style.opacity = '0.7';
+
+  try {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'message', tenant: TENANT_ID, to: selectedPeer, text }));
     } else {
-      await fetch('/chat/send/', {
+      const res = await fetch('/chat/send/', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
@@ -324,10 +440,37 @@
         },
         body: JSON.stringify({ to: selectedPeer, text }),
       });
+
+      if (!res.ok) {
+        const textErr = document.createElement('div');
+        textErr.style.color = '#d9534f';
+        textErr.style.textAlign = 'center';
+        textErr.style.marginTop = '8px';
+        textErr.textContent = `Send failed (status ${res.status})`;
+        historyEl.appendChild(textErr);
+        return;
+      }
     }
-    input.value = '';
+
+    // optimistic UI (self messages are stored server-side as read)
     appendMessage({ sender: CURRENT_USER, text });
+    input.value = '';
+    historyEl.scrollTop = historyEl.scrollHeight;
+  } catch (err) {
+    console.error('sendMessage exception', err);
+    const e = document.createElement('div');
+    e.style.color = '#d9534f';
+    e.style.textAlign = 'center';
+    e.style.marginTop = '8px';
+    e.textContent = 'Error sending message (see console)';
+    historyEl.appendChild(e);
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.style.opacity = '1';
   }
+}
+
+
 
   function getCookie(name) {
     const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');

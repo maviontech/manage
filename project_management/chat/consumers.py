@@ -112,26 +112,22 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     # Synchronous DB logic
     def _persist_message(self, tenant_id, sender, to_user, text):
         """
-        Insert message into chat_message with is_read=0. Create conversation if needed.
-        This function expects exec_sql(conn, query, params) available. Adjust get_tenant_conn usage
-        if your tenant DBs are per-tenant.
+        Insert message into chat_message. If sender == to_user (self-message),
+        mark is_read = 1 so no unread badge is created.
         """
-        # Attempt to obtain tenant_conn if you have a helper that accepts tenant_id.
+        # obtain tenant_conn as you already do in this function
         tenant_conn = None
         try:
-            # try a helper that can accept tenant_id (if implemented)
-            tenant_conn = get_tenant_conn(tenant_id=tenant_id)  # adapt if your helper has different signature
+            tenant_conn = get_tenant_conn(tenant_id=tenant_id)
         except TypeError:
-            # fallback to calling with no args if helper requires request
             try:
                 tenant_conn = get_tenant_conn(None)
             except Exception:
                 tenant_conn = None
 
-        # canonical sorted pair
         a, b = sorted([sender, to_user])
 
-        # find or create conversation
+        # find or create conversation (unchanged)
         conv = exec_sql(tenant_conn, """
             SELECT id FROM chat_conversation WHERE tenant_id=%s AND user_a=%s AND user_b=%s
         """, [tenant_id, a, b])
@@ -146,13 +142,18 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             """, [tenant_id, a, b])
             conv_id = conv[0]["id"]
 
-        exec_sql(tenant_conn, """
-            INSERT INTO chat_message (conversation_id, sender, text, is_read) VALUES (%s,%s,%s,0)
-        """, [conv_id, sender, text], fetch=False)
+        # If this is a self-message, set is_read = 1; otherwise is_read = 0
+        is_read_flag = 1 if (sender == to_user) else 0
 
-        # return the last inserted message (timestamp + id)
+        exec_sql(tenant_conn, """
+            INSERT INTO chat_message (conversation_id, sender, text, is_read) VALUES (%s,%s,%s,%s)
+        """, [conv_id, sender, text, is_read_flag], fetch=False)
+
+        # fetch last inserted message id / timestamp
         msg = exec_sql(tenant_conn, """
             SELECT id, created_at FROM chat_message WHERE conversation_id=%s ORDER BY created_at DESC LIMIT 1
         """, [conv_id])
-        created_at = msg[0]["created_at"].isoformat() if hasattr(msg[0]["created_at"], "isoformat") else str(msg[0]["created_at"])
+        created_at = msg[0]["created_at"].isoformat() if hasattr(msg[0]["created_at"], "isoformat") else str(
+            msg[0]["created_at"])
         return {"id": msg[0]["id"], "created_at": created_at}
+

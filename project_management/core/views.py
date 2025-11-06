@@ -68,8 +68,10 @@ def login_password_view(request):
 
     # ✅ Auth success — store user in session (keep what you already did)
     request.session['user'] = user
+    print("Authenticated user:", user)
     request.session['tenant_config'] = tenant_conf
     set_current_tenant(tenant_conf)
+    print("User authenticated:", email)
 
     # --- Determine a sensible full name for the user ---
     user_fullname = None
@@ -115,6 +117,23 @@ def login_password_view(request):
     except Exception as ex:
         # log error (print for now) and continue — we still want to set DB connection details
         print("ensure_member_and_set_session failed:", ex)
+    # prefer an explicit member identifier in session (email preferred)
+    # if your 'user' object/dict contains emp_code you can prefer it, but email is simplest
+    member_id = None
+    if isinstance(user, dict):
+        member_id = user.get('email') or user.get('emp_code') or request.session.get('ident_email')
+    else:
+        member_id = getattr(user, 'email', None) or getattr(user, 'emp_code', None) or request.session.get(
+            'ident_email')
+
+    member_id = str(member_id or request.session.get('ident_email') or '').strip()
+    member_name = user_fullname or request.session.get('cn') or member_id
+
+    # save canonical id and display name to session
+    request.session['member_id'] = member_id
+    request.session['member_name'] = member_name
+    print("Login successful for user:", member_id)
+    print("Login successful for user:", member_name)
 
     # Add explicit tenant DB credentials to session for your db_helpers
     request.session['tenant_db_name'] = tenant_conf.get('db_name')
@@ -122,6 +141,7 @@ def login_password_view(request):
     request.session['tenant_db_password'] = tenant_conf.get('db_password')
     request.session['tenant_db_host'] = tenant_conf.get('db_host', '127.0.0.1')
     request.session['tenant_db_port'] = tenant_conf.get('db_port', 3306)
+
 
 
     return redirect('dashboard')

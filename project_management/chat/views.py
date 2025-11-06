@@ -11,20 +11,13 @@ from core.db_helpers import get_tenant_conn, exec_sql
 
 @require_GET
 def tenant_members(request):
-    """
-    Return all members in the same tenant.
-    Includes the logged-in user at the top as 'Self'.
-    Display format: "<LastName> <FirstName> <Email>"
-    """
     tenant_conn = get_tenant_conn(request)
     if not tenant_conn:
         return HttpResponseForbidden("No tenant connection")
 
-    # Identify current user
-    me_email = getattr(request.user, "emp_code", request.user.username)
-    me_display = request.session.get("cn") or request.user.get_full_name() or me_email
+    me_id = str(request.session.get('member_id') or request.session.get('ident_email') or getattr(request.user, 'email', '')).strip()
+    me_name = str(request.session.get('member_name') or request.session.get('cn') or getattr(request.user, 'get_full_name', lambda: "")())
 
-    # Fetch all members
     rows = exec_sql(tenant_conn, """
         SELECT id, email, first_name, last_name, phone
         FROM members
@@ -32,39 +25,35 @@ def tenant_members(request):
     """, [])
 
     members = []
+    if me_id:
+        members.append({
+            "id": me_id,
+            "pk": 0,
+            "name": f"Self ({me_name}) <{me_id}>",
+            "email": me_id,
+            "phone": "",
+            "is_self": True,
+        })
 
-    # Add self entry first
-    members.append({
-        "id": me_email,
-        "pk": 0,
-        "name": f"Self ({me_display})",
-        "email": me_email,
-        "phone": "",
-        "is_self": True,
-    })
-
-    # Then add all others
     for r in rows:
         email = (r.get("email") or "").strip()
-        if email.lower() == str(me_email).lower():
-            continue  # skip duplicate self
+        if not email:
+            continue
+        if me_id and email.lower() == me_id.lower():
+            continue
         last_name = (r.get("last_name") or "").strip()
         first_name = (r.get("first_name") or "").strip()
-        parts = [p for p in [last_name, first_name, f"<{email}>"] if p]
-        display_name = " ".join(parts)
-
+        display = " ".join(p for p in (last_name, first_name, f"<{email}>") if p)
         members.append({
             "id": email,
             "pk": r.get("id"),
-            "name": display_name,
+            "name": display,
             "email": email,
             "phone": r.get("phone"),
             "is_self": False,
         })
 
     return JsonResponse({"members": members})
-
-
 
 @require_GET
 def conversation_history(request):
@@ -190,20 +179,32 @@ def unread_counts(request):
 def mark_read(request):
     """
     Mark messages in conversation between current user and 'peer' as read.
-    POST body: { "peer": "<email>" }
+    Accepts JSON body: { "peer": "<email>" }
+    Also accepts form-encoded POST (peer param) for robustness.
     """
-    try:
-        payload = json.loads(request.body.decode())
-    except Exception:
-        return HttpResponseBadRequest("Invalid JSON")
-    peer = payload.get("peer")
-    if not peer:
-        return HttpResponseBadRequest("Missing peer")
-
     tenant_conn = get_tenant_conn(request)
     if not tenant_conn:
-        return JsonResponse({"ok": False})
+        return JsonResponse({"ok": False, "error": "no_tenant"}, status=400)
 
+    # Try JSON first
+    peer = None
+    try:
+        body = request.body.decode('utf-8').strip()
+        if body:
+            payload = json.loads(body)
+            peer = payload.get("peer")
+    except Exception:
+        # not JSON — fall through to form parsing
+        peer = None
+
+    # Fallback to form POST (application/x-www-form-urlencoded) or POST param
+    if not peer:
+        peer = request.POST.get("peer") or request.GET.get("peer")
+
+    if not peer:
+        return JsonResponse({"ok": False, "error": "missing_peer"}, status=400)
+
+    # Now do the normal logic
     me = getattr(request.user, "emp_code", request.user.username)
     tenant_id = str(request.session.get("tenant_id", ""))
 

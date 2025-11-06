@@ -428,6 +428,22 @@
 
     })();
   </script>
+  <script>
+  <script>
+  {% if request.session.member_id %}
+    const CURRENT_USER = "{{ request.session.member_id|escapejs }}";
+  {% elif request.session.ident_email %}
+    const CURRENT_USER = "{{ request.session.ident_email|escapejs }}";
+  {% elif request.user.is_authenticated %}
+    const CURRENT_USER = "{{ request.user.email|default:request.user.username|escapejs }}";
+  {% else %}
+    const CURRENT_USER = "";
+  {% endif %}
+
+  const TENANT_ID = "{{ request.session.tenant_id|default:''|escapejs }}";
+</script>
+
+</script>
 
   {% block extra_js %}{% endblock %}
 </body>
