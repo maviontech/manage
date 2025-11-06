@@ -60,3 +60,8 @@ WHERE @member_id IS NOT NULL AND @role_admin IS NOT NULL;
 
 -- Verify the assignment
 SELECT * FROM tenant_role_assignments WHERE member_id = (SELECT id FROM members WHERE email='admin@acme.com' LIMIT 1);
+
+ALTER TABLE chat_message ADD INDEX idx_conv_created (conversation_id, created_at);
+ALTER TABLE chat_message ADD INDEX idx_sender (sender);
+-- Optionally index is_read for unread queries:
+ALTER TABLE chat_message ADD INDEX idx_conv_isread (conversation_id, is_read);

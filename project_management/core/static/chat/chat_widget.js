@@ -187,7 +187,8 @@
     // -------------------------
   // Load chat history (robust)
   // -------------------------
-  async function loadHistory() {
+  // loadHistory: fetch messages and render them each on their own line
+    async function loadHistory() {
   if (!selectedPeer) {
     historyEl.innerHTML = '<div style="color:#999;text-align:center;margin-top:10px;">Select a member to load messages</div>';
     return;
@@ -197,20 +198,26 @@
 
   try {
     const res = await fetch(`/chat/history/?peer=${encodeURIComponent(selectedPeer)}`, { credentials: 'same-origin' });
-    if (res.status === 302 || res.status === 401 || res.status === 403) {
-      historyEl.innerHTML = '<div style="color:#d9534f;text-align:center;margin-top:10px;">Authentication required. Please login.</div>';
-      return;
-    }
     if (!res.ok) {
       historyEl.innerHTML = `<div style="color:#d9534f;text-align:center;margin-top:10px;">Failed to load messages (status ${res.status}).</div>`;
       return;
     }
+
     const data = await res.json();
     historyEl.innerHTML = '';
-    if (!data.messages || data.messages.length === 0) {
+
+    // assume data.messages is an array of objects: { sender, text, created_at, sender_name (optional) }
+    // sort ascending by created_at to show oldest at top
+    const msgs = (data.messages || []).slice().sort((a,b) => {
+      const ta = new Date(a.created_at || 0).getTime() || 0;
+      const tb = new Date(b.created_at || 0).getTime() || 0;
+      return ta - tb;
+    });
+
+    if (!msgs.length) {
       historyEl.innerHTML = '<div style="color:#999;text-align:center;margin-top:10px;">No previous messages</div>';
     } else {
-      data.messages.forEach((m) => appendMessage(m));
+      msgs.forEach((m) => appendMessage(m));
     }
     historyEl.scrollTop = historyEl.scrollHeight;
   } catch (err) {
@@ -294,13 +301,85 @@
     }
   }
 
-  function appendMessage(m) {
-    const d = document.createElement('div');
-    d.className = m.sender === CURRENT_USER ? 'msg me' : 'msg other';
-    d.textContent = m.text;
-    historyEl.appendChild(d);
+  // Append a single message object to the chat history as a new row.
+// Message object format expected: { sender: "<email-or-id>", text: "<message text>", created_at: "<ISO timestamp>" }
+function appendMessage(m) {
+  try {
+    // create row wrapper
+    const row = document.createElement('div');
+    const isMe = (m.sender === CURRENT_USER);
+    row.className = 'msg-row ' + (isMe ? 'me' : 'other');
+
+    // message bubble container
+    const bubble = document.createElement('div');
+    bubble.className = 'msg ' + (isMe ? 'me' : 'other');
+
+    // text content (preserve line breaks)
+    const txt = document.createElement('div');
+    txt.className = 'msg-text';
+    txt.textContent = m.text || ''; // use textContent to avoid accidental HTML injection
+
+    // meta (sender short + time)
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+
+    // show sender (for other messages), and timestamp
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'time';
+
+    // format timestamp if available
+    let timeStr = '';
+    if (m.created_at) {
+      try {
+        // try ISO parse; will fall back to raw string if invalid
+        const d = new Date(m.created_at);
+        if (!isNaN(d.getTime())) {
+          // show "HH:MM" or "DD/MM HH:MM" if older than today
+          const now = new Date();
+          const sameDay = d.toDateString() === now.toDateString();
+          const pad = (n) => (n < 10 ? '0' + n : n);
+          if (sameDay) {
+            timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          } else {
+            timeStr = `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          }
+        } else {
+          timeStr = String(m.created_at).slice(0,16);
+        }
+      } catch (e) {
+        timeStr = String(m.created_at).slice(0,16);
+      }
+    }
+    timeSpan.textContent = timeStr;
+
+    // show sender label for messages from others (short form)
+    if (!isMe) {
+      const senderSpan = document.createElement('strong');
+      // show short name: either part before '<' in name or the sender id
+      senderSpan.textContent = (m.sender_name || m.sender || '').toString();
+      senderSpan.style.display = 'block';
+      senderSpan.style.fontSize = '12px';
+      senderSpan.style.marginBottom = '4px';
+      senderSpan.style.color = '#0b57a4';
+      meta.appendChild(senderSpan);
+    }
+
+    meta.appendChild(timeSpan);
+
+    // assemble bubble
+    bubble.appendChild(txt);
+    bubble.appendChild(meta);
+
+    row.appendChild(bubble);
+    historyEl.appendChild(row);
+
+    // keep view scrolled to bottom
     historyEl.scrollTop = historyEl.scrollHeight;
+  } catch (ex) {
+    console.error('appendMessage error', ex, m);
   }
+}
+
 
   function startAjaxPolling() {
     if (pollInterval) clearInterval(pollInterval);
