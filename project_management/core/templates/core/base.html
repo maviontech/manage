@@ -343,11 +343,6 @@
     </div>
   </div>
 
-  <script>
-    // expose to chat_widget.js
-    const CURRENT_USER = "{{ request.user.emp_code|default:request.user.username }}";
-    const TENANT_ID = "{{ request.session.tenant_id|default:'' }}";
-  </script>
 
   <script src="{% static 'chat/chat_widget.js' %}"></script>
   {# ----------------- end chat widget ----------------- #}
@@ -429,7 +424,10 @@
     })();
   </script>
   <script>
-  <script>
+  {% comment %}
+    Expose canonical CURRENT_USER to client JS.
+    Use session member_id (set at login); fall back safely.
+  {% endcomment %}
   {% if request.session.member_id %}
     const CURRENT_USER = "{{ request.session.member_id|escapejs }}";
   {% elif request.session.ident_email %}
@@ -441,8 +439,8 @@
   {% endif %}
 
   const TENANT_ID = "{{ request.session.tenant_id|default:''|escapejs }}";
-</script>
-
+  // debug helper (remove in production)
+  console.debug("[chat] CURRENT_USER on page load ->", CURRENT_USER);
 </script>
 
   {% block extra_js %}{% endblock %}

@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-(7k*wa$1=pw)2a#hs(%lsfe(rmwoti*_8+ve$4-su$7f=tuv3+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -41,13 +41,17 @@ INSTALLED_APPS = [
 ]
 
 INSTALLED_APPS += ["channels", "chat"]
-ASGI_APPLICATION = "project_name.asgi.application"
+# Channels: route to ASGI application
+ASGI_APPLICATION = "project_management.asgi.application"   # adjust module path to your project package
 
+# Use Redis channel layer (local redis on default port)
 CHANNEL_LAYERS = {
-  "default": {
-    "BACKEND": "channels_redis.core.RedisChannelLayer",
-    "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
-  },
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
 }
 
 MIDDLEWARE = [
