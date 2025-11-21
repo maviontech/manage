@@ -101,7 +101,7 @@ def my_tasks_view(request):
     cur.execute(
         """SELECT id, title, status, priority, due_date
            FROM tasks
-           WHERE assigned_type='member' AND assigned_to = %s
+           WHERE assigned_to = %s
            ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
                     due_date IS NULL, due_date ASC""",
         (user_id,),
@@ -122,7 +122,7 @@ def unassigned_tasks_view(request):
     sql = """SELECT t.id, t.title, t.priority, t.due_date, p.name AS project_name, t.created_at
              FROM tasks t
              LEFT JOIN projects p ON p.id = t.project_id
-             WHERE t.assigned_to IS NULL OR t.assigned_type IS NULL
+             WHERE t.assigned_to IS NULL
              ORDER BY t.priority DESC, t.due_date IS NULL, t.due_date ASC, t.created_at DESC"""
     cur.execute(sql)
     rows = cur.fetchall()
