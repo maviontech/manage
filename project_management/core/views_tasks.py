@@ -29,6 +29,7 @@ def create_task_view(request):
         title = data.get("title")
         description = data.get("description")
         due_date = data.get("due_date") or None
+        closure_date = data.get("closure_date") or None
         priority = data.get("priority") or "Normal"
         status = data.get("status") or "Open"
         created_by = request.session.get("user_id")
@@ -46,8 +47,8 @@ def create_task_view(request):
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, assigned_type, created_by, due_date, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                assigned_to, assigned_type, created_by, due_date, closure_date, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
@@ -59,6 +60,7 @@ def create_task_view(request):
                 assigned_type,
                 created_by,
                 due_date,
+                closure_date,
             ),
         )
         task_id = cur.lastrowid
@@ -145,8 +147,10 @@ def unassigned_tasks_view(request):
 #  TASK BOARD PAGE + DATA
 # ==============================
 
-from math import ceil
 from django.http import JsonResponse
+from math import ceil
+from .db_helpers import get_tenant_conn
+
 
 def board_data_api(request):
     """
@@ -161,24 +165,29 @@ def board_data_api(request):
         page = int(request.GET.get("page", "1"))
     except Exception:
         page = 1
+
     if page < 1:
         page = 1
-    per_page = 10
-    offset = (page - 1) * per_page
 
-    # ---- Total count (works for dict or tuple) ----
+    # Show all tasks on one page (disable pagination)
+    per_page = 10000  # or a very large number
+    offset = 0
+
+    # ---- Total count ----
     cur.execute("SELECT COUNT(*) AS total FROM tasks")
     row = cur.fetchone()
+
     if isinstance(row, dict):
         total_count = row.get("total", 0)
     elif isinstance(row, (list, tuple)):
         total_count = row[0]
     else:
         total_count = 0
-    total_pages = ceil(total_count / per_page) if total_count else 1
 
-    # ---- Main query ----
-    cur.execute(f"""
+    total_pages = 1
+
+    # ---- Main query (no f-string) ----
+    sql = """
         SELECT
             t.id,
             COALESCE(t.title, '(Untitled)') AS title,
@@ -187,25 +196,30 @@ def board_data_api(request):
             t.due_date,
             CONCAT_WS(':', t.assigned_type, t.assigned_to) AS assigned_to,
             CASE
-                WHEN t.assigned_type='member' THEN (
+                WHEN t.assigned_type = 'member' THEN (
                     SELECT CONCAT(m.first_name, ' ', m.last_name)
-                    FROM members m WHERE m.id=t.assigned_to
+                    FROM members m WHERE m.id = t.assigned_to
                 )
-                WHEN t.assigned_type='team' THEN (
-                    SELECT tm.name FROM teams tm WHERE tm.id=t.assigned_to
+                WHEN t.assigned_type = 'team' THEN (
+                    SELECT tm.name FROM teams tm WHERE tm.id = t.assigned_to
                 )
                 ELSE NULL
             END AS assigned_to_display
         FROM tasks t
         ORDER BY
-            FIELD(t.status,'Open','In Progress','Review','Blocked','Closed'),
-            FIELD(t.priority,'Critical','High','Normal','Low'),
-            t.due_date IS NULL ASC, t.due_date ASC, t.created_at DESC
+            FIELD(t.status, 'Open', 'In Progress', 'Review', 'Blocked', 'Closed'),
+            FIELD(t.priority, 'Critical', 'High', 'Normal', 'Low'),
+            t.due_date IS NULL ASC,
+            t.due_date ASC,
+            t.created_at DESC
         LIMIT %s OFFSET %s
-    """, (per_page, offset))
+    """
+
+    cur.execute(sql, (per_page, offset))
 
     # ---- Convert rows to list of dicts ----
     rows = cur.fetchall()
+
     if not rows:
         tasks = []
     elif isinstance(rows[0], dict):
@@ -215,6 +229,7 @@ def board_data_api(request):
         tasks = [dict(zip(cols, r)) for r in rows]
 
     cur.close()
+
     return JsonResponse({
         "tasks": tasks,
         "page": page,
@@ -594,7 +609,8 @@ def api_get_subprojects(request):
 def task_detail_view(request, task_id):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
-    cur.execute("SELECT id, title, description, status, priority, due_date FROM tasks WHERE id=%s", (task_id,))
+    cur.execute("SELECT id, title, description, status, priority, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
+    print("Executing SQL for task detail:", task_id)
     task = cur.fetchone()
     cur.close()
 
@@ -622,7 +638,7 @@ def edit_task_view(request, task_id):
         )
         conn.commit()
         # Re-fetch updated task
-        cur.execute("SELECT id, title, description, status, priority, due_date FROM tasks WHERE id=%s", (task_id,))
+        cur.execute("SELECT id, title, description, status, priority, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
         task = cur.fetchone()
         cur.close()
         if not task:
@@ -630,11 +646,22 @@ def edit_task_view(request, task_id):
         return render(request, "core/edit_task.html", {"task": task, "saved": True})
 
     # GET
-    cur.execute("SELECT id, title, description, status, priority, due_date FROM tasks WHERE id=%s", (task_id,))
-    task = cur.fetchone()
+    cur.execute("SELECT id, title, description, status, priority, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        return render(request, "core/404.html", status=404)
+
+    # Ensure row is a dict for template compatibility and description is not None
+    if isinstance(row, dict):
+        task = row
+    else:
+        cols = [desc[0] for desc in cur.description]
+        task = dict(zip(cols, row))
     cur.close()
 
-    if not task:
-        return render(request, "core/404.html", status=404)
+    # Fix: If description is None, set to empty string
+    if task.get('description') is None:
+        task['description'] = ''
 
     return render(request, "core/edit_task.html", {"task": task})

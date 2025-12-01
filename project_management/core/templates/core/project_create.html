@@ -7,23 +7,23 @@
     <div class="form-header d-flex justify-content-between align-items-start mb-4">
       <div>
         <h2 class="form-title mb-0">{% if editing %}Edit Project Details{% else %}Create New Project{% endif %}</h2>
-        <p class="form-sub text-muted small mb-0">Provide the essential project details. Fields marked * are required.</p>
+        <p class="form-sub text-muted small mb-0 margin-bottom-2px">Provide the essential project details. Fields marked * are required.</p>
       </div>
       <div class="text-end">
-        <a href="{% url 'projects_list' %}" class="back-link" title="Back to projects">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="me-1" aria-hidden>
-            <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Back to Projects
+        <a href="{% url 'projects_list' %}" class="btn btn-sm btn-outline-gradient" title="Back to projects">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="me-1" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Back to Projects
         </a>
-      </div>
     </div>
+  </div>
 
     <form method="post" novalidate class="project-form" autocomplete="off">
       {% csrf_token %}
 
       <div class="mb-4">
-        <label class="form-label required">{{ form.name.label }}</label>
+        <label class="form-label required margin-top-10px">{{ form.name.label }}</label>
         {{ form.name }}
         {% if form.name.errors %}
           <div class="form-text text-danger mt-1">{{ form.name.errors.as_text }}</div>
@@ -88,7 +88,7 @@
 .form-sub { margin-top:0.15rem; color:#6b7280; font-size:0.95rem; }
 
 /* back link */
-.back-link { color:#4b5563; font-size:0.9rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px; transition: color .15s ease; }
+.back-link { color:#4b5563; font-size:0.9rem; text-decoration:none; display:inline-flex;  margin-top: 1rem; align-items:center; gap:4px; transition: color .15s ease; }
 .back-link:hover { color: #0d6efd; }
 
 /* form controls - enforce consistent sizing & visuals */
@@ -121,7 +121,7 @@
 .project-form textarea { min-height:140px; padding-top:.75rem; padding-bottom:.75rem; height:auto; }
 
 /* label */
-.project-form .form-label { display:block; font-weight:600; margin-bottom:.4rem; color:#0f1724; font-size:.95rem; }
+.project-form .form-label { display:block; font-weight:600; margin-top:1.5rem; margin-bottom: .5rem; color:#0f1724; font-size:.95rem; }
 .project-form .form-label.required:after { content: ' *'; color: #dc3545; } /* Required indicator */
 
 /* helper text and validation */

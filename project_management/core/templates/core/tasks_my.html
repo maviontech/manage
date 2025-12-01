@@ -35,6 +35,7 @@
               <th scope="col" class="d-none d-lg-table-cell" style="width: 110px;">Priority</th>
               <th scope="col" class="d-none d-lg-table-cell" style="width: 150px;">Status</th>
               <th scope="col" class="text-center" style="width: 200px;">Due</th>
+              <th scope="col" class="text-center" style="width: 200px;">Closure Date</th>
               <th scope="col" class="text-end" style="width: 225px;">Actions</th>
             </tr>
           </thead>
@@ -45,25 +46,38 @@
               <td>
                 <div class="fw-semibold text-truncate">{{ t.title }}</div>
               </td>
-              <td>
-                <span class="badge priority {{ t.priority|lower }}">{{ t.priority }}</span>
+              <td class="text-center">
+                  <span class="priority-badge priority-{{ t.priority|lower }}">
+                      {{ t.priority }}
+                  </span>
               </td>
-              <td>
-                <span class="badge status {{ t.status|slugify }}">
-                  <i class="fa-solid fa-circle me-1"></i> {{ t.status }}
-                </span>
+
+              <td class="text-center">
+                  <span class="status-badge status-{{ t.status|slugify }}">
+                      {{ t.status }}
+                  </span>
               </td>
+
               <td>
                 {% if t.due_date %}
                   <span class="{% if t.due_date < today %}text-danger fw-semibold{% else %}text-muted{% endif %}">
-                    <i class="fa-regular fa-clock me-1"></i>{{ t.due_date }}
+                    <i class="fa-regular me-1"></i>{{ t.due_date }}
+                  </span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if t.closure_date %}
+                  <span class="text-muted">
+                    <i class="fa-regular fa-calendar-check me-1"></i>{{ t.closure_date }}
                   </span>
                 {% else %}
                   <span class="text-muted">—</span>
                 {% endif %}
               </td>
               <td class="text-end">
-              <div class="d-flex flex-row gap-2 align-items-center action-btn-row">
+                <div class="d-flex flex-row gap-2 align-items-center action-btn-row">
                   <a href="{% url 'task_detail' t.id %}" class="btn btn-action-circle" title="View">
                       <i class="fa-solid fa-eye"></i>
                   </a>
@@ -73,8 +87,8 @@
                   <button class="btn btn-action-circle btn-delete" title="Delete">
                       <i class="fa-solid fa-trash"></i>
                   </button>
-              </div>
-          </td>
+                </div>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -92,14 +106,127 @@
 
 <!-- appended CSS: keeps your original styles and forces the submenu to viewport-fixed right center -->
 <style>
+
+/* Base badge design */
+
+/* Base priority badge style */
+.priority-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 25px;
+    border: 1px solid transparent;
+    text-transform: capitalize;
+    letter-spacing: 0.3px;
+}
+
+/* === PRIORITY COLORS === */
+
+/* LOW */
+.priority-low {
+    background: #f2f2f2;
+    color: #6d6d6d;
+    border-color: #d9d9d9;
+}
+
+/* NORMAL */
+.priority-normal {
+    background: #e6f7ff;
+    color: #0077b6;
+    border-color: #b3e5ff;
+}
+
+/* HIGH */
+.priority-high {
+    background: #fff4cc;
+    color: #b88600;
+    border-color: #f4dda1;
+}
+
+/* CRITICAL */
+.priority-critical {
+    background: #ffe5e5;
+    color: #b42323;
+    border-color: #f5b3b3;
+}
+
+
+
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 25px;
+    border: 1px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* === STATUS COLORS === */
+
+/* OPEN */
+.status-open {
+    background: #e7f7ef;
+    color: #0f7a42;
+    border-color: #b7e8c9;
+}
+
+/* IN PROGRESS */
+.status-in-progress {
+    background: #e8f0ff;
+    color: #2563eb;
+    border-color: #bfd4ff;
+}
+
+/* COMPLETED or CLOSED */
+.status-completed,
+.status-closed {
+    background: #fff6d9;
+    color: #c89c00;
+    border-color: #f3e19c;
+}
+
+/* REVIEW */
+.status-review {
+    background: #f2f2f2;
+    color: #6e6e6e;
+    border-color: #d9d9d9;
+}
+
+/* ON HOLD */
+.status-on-hold {
+    background: #fff3e5;
+    color: #c96a10;
+    border-color: #ffd7b1;
+}
+
+/* BLOCKED */
+.status-blocked {
+    background: #ffe5e5;
+    color: #b42323;
+    border-color: #f7b3b3;
+}
+
+/* DEFAULT */
+.status-unknown {
+    background: #f0f0f0;
+    color: #666;
+    border-color: #dcdcdc;
+}
+
+
+
 /* preserve the original visual tokens */
-.text-gradient { background: linear-gradient(90deg,#0b57a4,#38bdf8); color:transparent; }
+.text-gradient { background: linear-gradient(90deg,#0b57a4,#38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .btn-gradient { background: linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border:none; border-radius:8px; padding:8px 14px; }
 .btn-outline-gradient { border:1px solid #38bdf8; color:#0b57a4; border-radius:8px; padding:6px 12px; }
 .soft-card { border-radius:12px; box-shadow:0 6px 18px rgba(13,38,71,0.06); border:none; }
 .modern-table thead { background: linear-gradient(90deg, rgba(11,87,164,0.06), rgba(31,134,227,0.04)); color:#0b57a4; font-weight:600; }
 .priority.low { background:#adb5bd; color:#fff; } .priority.normal { background:#0dcaf0; color:#00303f; } .priority.high { background:#ffc107; color:#1f1f1f; } .priority.critical { background:#dc3545; color:#fff; }
-.status.closed { background:#198754; color:#fff; } .status.blocked { background:#212529; color:#fff; } .status.review { background:#ffc107; } .status.in-progress { background:#0b57a4; color:#fff; }
+/* .status.closed { background:#198754; color:#fff; } .status.blocked { background:#212529; color:#fff; } .status.review { background:#ffc107; } .status.in-progress { background:#0b57a4; color:#fff; } */
 .action-btn { border-radius:8px; border:1px solid rgba(0,0,0,0.04); }
 /* Circle action buttons for table actions */
 .btn-action-circle {

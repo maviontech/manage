@@ -1,183 +1,236 @@
-{%extends "core/base.html" %}
+{% extends "core/base.html" %}
 {% load static %}
 
 {% block content %}
+
 <style>
-    .detail-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 28px;
-        box-shadow: 0 4px 18px rgba(0,0,0,0.06);
-        margin-top: 30px;
-        max-width: 780px;
-        margin-left: auto;
-        margin-right: auto;
+/* ---------------- BACKDROP ---------------- */
+.task-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(10px);
+    display: none;
+    z-index: 1999;
+    animation: fadeIn 0.25s ease-out;
+}
+
+/* ---------------- MODAL CONTAINER ---------------- */
+.task-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 24px;
+}
+
+/* ---------------- MODAL BOX ---------------- */
+.task-modal-content {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 32px 40px;
+    max-width: 640px;
+    width: 100%;
+    box-shadow: 0px 20px 60px rgba(0,0,0,0.25);
+    position: relative;
+    animation: slideUp 0.28s cubic-bezier(0.17, 0.84, 0.44, 1);
+}
+
+/* ---------------- CLOSE BUTTON ---------------- */
+.modal-close-btn {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size: 22px;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.modal-close-btn:hover {
+    background: #e5e7eb;
+    transform: scale(1.08);
+}
+
+/* ---------------- MODAL HEADER ---------------- */
+.task-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.task-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: #2563eb15;
+    display: flex;
+    align-items:center;
+    justify-content:center;
+    font-size: 22px;
+    color: #2563eb;
+}
+
+.task-title {
+    font-size: 1.55rem;
+    font-weight: 700;
+    margin: 0;
+    color: #1f2937;
+}
+
+.task-status {
+    background: #2563eb;
+    color: white;
+    font-size: 0.75rem;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+/* ---------------- DETAILS ---------------- */
+.detail-section {
+    margin-top: 20px;
+}
+
+.detail-item {
+    margin-bottom: 22px;
+}
+
+.detail-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 3px;
+}
+
+.detail-value {
+    font-size: 1rem;
+    color: #374151;
+    line-height: 1.5em;
+}
+
+/* ---------------- BUTTON ---------------- */
+.edit-btn {
+    display: inline-block;
+    padding: 10px 22px;
+    background: #2563eb;
+    color: white;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.2s;
+}
+.edit-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+/* ---------------- ANIMATIONS ---------------- */
+@keyframes fadeIn {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+@keyframes slideUp {
+    from {transform: translateY(20px); opacity: 0;}
+    to {transform: translateY(0); opacity: 1;}
+}
+
+/* ---------------- MOBILE ---------------- */
+@media (max-width: 600px) {
+    .task-modal-content {
+        padding: 24px;
     }
-
-    .detail-header {
-        font-size: 26px;
-        font-weight: 700;
-        margin-bottom: 10px;
-    }
-
-    .detail-item {
-        margin-bottom: 18px;
-    }
-
-    .detail-label {
-        font-weight: 600;
-        color: #555;
-        display: block;
-        margin-bottom: 5px;
-    }
-
-    .detail-value {
-        background: #fafafa;
-        padding: 12px 14px;
-        border-radius: 10px;
-        border: 1px solid #e1e1e1;
-    }
-
-    .btn-primary {
-        background: linear-gradient(90deg, #007bff, #15aaff);
-        border: none;
-        padding: 10px 28px;
-        border-radius: 10px;
-        font-size: 16px;
-    }
-
-    .btn-outline-secondary {
-        padding: 10px 28px;
-        font-size: 16px;
-        border-radius: 10px;
-    }
-
-    /* Modal animation */
-        .modal.fade .modal-dialog {
-            transform: translateY(-30px);
-            opacity: 0;
-            transition: all 0.35s ease-in-out;
-        }
-
-        .modal.fade.show .modal-dialog {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .detail-card {
-            background: #fff;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        .detail-item {
-            margin-bottom: 15px;
-        }
-
-        .detail-label {
-            font-weight: 600;
-        }
-
-        .detail-value {
-            margin-top: 5px;
-        }
+}
 </style>
 
+<!-- BACKDROP -->
+<div id="modalBg" class="task-backdrop"></div>
 
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Task List</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- MODAL -->
+<div class="task-modal" id="taskDetailModal">
+    <div class="task-modal-content">
 
-    <style>
-        /* Modal animation */
-        .modal.fade .modal-dialog {
-            transform: translateY(-30px);
-            opacity: 0;
-            transition: all 0.35s ease-in-out;
-        }
+        <!-- CLOSE BUTTON -->
+        <button class="modal-close-btn" onclick="closeTaskModal()">&times;</button>
 
-        .modal.fade.show .modal-dialog {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .detail-card {
-            background: #fff;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        .detail-item {
-            margin-bottom: 15px;
-        }
-
-        .detail-label {
-            font-weight: 600;
-        }
-
-        .detail-value {
-            margin-top: 5px;
-        }
-    </style>
-</head>
-<body class="bg-light">
-
-<div class="container mt-2">
-
-    <div class="detail-card">
-        <h2 class="detail-header">{{ task.title }}</h2>
-        <p class="text-muted mb-2">Full details of the task.</p>
-
-        <div class="detail-item">
-            <span class="detail-label">Description:</span>
-            <div class="detail-value">
-                {% if task.description %}
-                    {{ task.description }}
-                {% else %}
-                    <span class="text-muted">No description provided.</span>
-                {% endif %}
+        <!-- HEADER -->
+        <div class="task-header">
+            <div class="task-icon">
+                📝
+            </div>
+            <div>
+                <h1 class="task-title">{{ task.title }}</h1>
+                <span class="task-status">{{ task.status }}</span>
             </div>
         </div>
 
-        <div class="detail-item">
-            <span class="detail-label">Status:</span>
-            <div class="detail-value">{{ task.status }}</div>
-        </div>
+        <hr class="mb-4">
 
-        <div class="detail-item">
-            <span class="detail-label">Due Date:</span>
-            <div class="detail-value">
-                {% if task.due_date %}
-                    {{ task.due_date }}
-                {% else %}
-                    <span class="text-muted">No due date set.</span>
-                {% endif %}
+        <!-- DETAILS -->
+        <div class="detail-section">
+
+            <div class="detail-item">
+                <div class="detail-label">Description</div>
+                <div class="detail-value">
+                    {% if task.description %}
+                        {{ task.description }}
+                    {% else %}
+                        <span class="text-muted">No description provided.</span>
+                    {% endif %}
+                </div>
             </div>
+
+            <div class="detail-item">
+                <div class="detail-label">Due Date</div>
+                <div class="detail-value">
+                    {% if task.due_date %}
+                        {{ task.due_date }}
+                    {% else %}
+                        <span class="text-muted">Not set</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="detail-item">
+                <div class="detail-label">Created At</div>
+                <div class="detail-value">{{ task.created_at }}</div>
+            </div>
+
         </div>
 
-        <div class="detail-item">
-            <span class="detail-label">Created At:</span>
-            <div class="detail-value">{{ task.created_at }}</div>
+        <!-- BUTTON -->
+        <div class="text-center mt-4">
+            <a href="{% url 'edit_task' task.id %}" class="edit-btn">
+                ✏️ Edit Task
+            </a>
         </div>
 
-        <div class="d-flex justify-content-center mt-4">
-            <a href="{% url 'edit_task' task.id %}" class="btn btn-primary px-4">Edit Task</a>
-        </div>
     </div>
-
 </div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-</script>
 
-</body>
-</html>
+<script>
+function closeTaskModal() {
+    document.getElementById('taskDetailModal').style.display = 'none';
+    document.getElementById('modalBg').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('taskDetailModal').style.display = 'flex';
+    document.getElementById('modalBg').style.display = 'block';
+});
+</script>
 
 {% endblock %}
