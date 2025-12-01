@@ -46,6 +46,10 @@ urlpatterns = [
     path("tasks/board/", views_tasks.task_board_view, name="task_board"),
     path("tasks/api/team-list/", views.api_team_list, name="api_team_list"),
     path("tasks/api/team-summary/", views.api_team_summary, name="api_team_summary"),
+    path("tasks/api/subprojects/", views_tasks.api_get_subprojects, name="api_get_subprojects"),
+    path("tasks/<int:task_id>/", views_tasks.task_detail_view, name="task_detail"),
+    path("tasks/<int:task_id>/edit/", views_tasks.edit_task_view, name="edit_task"),
+
     # APIs
     path("tasks/api/assign/", views_tasks.assign_task_api, name="api_assign_task"),
     path("tasks/api/update-status/", views_tasks.api_update_status, name="api_update_status"),

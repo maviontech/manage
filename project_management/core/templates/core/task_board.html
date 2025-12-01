@@ -413,7 +413,7 @@ function initDragDrop(){
           body: fd
         });
         const json = await res.json();
-        if(json.ok){ loadBoard(CURRENT_BOARD_PAGE); } else { alert("Status update failed"); }
+        if(json.ok){ loadBoard(1); } else { alert("Status update failed"); }
       } catch (err) { console.error(err); alert("Network error."); }
     });
   });

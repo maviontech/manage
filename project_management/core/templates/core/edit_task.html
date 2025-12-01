@@ -1,0 +1,131 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<style>
+    /* Container card styling */
+    .form-card {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+        margin-top: 20px;
+        max-width: 780px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Labels */
+    .form-card label {
+        font-weight: 600;
+        margin-bottom: 6px;
+        display: block;
+        color: #333;
+    }
+
+    /* Inputs, Select, Textarea */
+    .form-control {
+        border-radius: 10px;
+        border: 1px solid #d9d9d9;
+        padding: 10px 14px;
+        font-size: 15px;
+        transition: 0.2s ease-in-out;
+        background-color: #fafafa;
+        width: 100%;
+        max-width: 650px;
+        min-width: 350px;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        border-color: #1e90ff;
+        background: white;
+        box-shadow: 0 0 0 2px rgba(30,144,255,0.15);
+    }
+
+    /* Buttons */
+    .btn-primary {
+        background: linear-gradient(90deg, #007bff, #15aaff);
+        border: none;
+        padding: 10px 28px;
+        border-radius: 10px;
+        font-size: 16px;
+    }
+
+    .btn-primary:hover {
+        opacity: 0.9;
+    }
+
+    .btn-outline-secondary {
+        padding: 10px 28px;
+        font-size: 16px;
+        border-radius: 10px;
+    }
+
+    /* Back link */
+    .back-link {
+        color: #007bff;
+        font-size: 15px;
+        text-decoration: none;
+        margin-bottom: 15px;
+        display: inline-block;
+    }
+
+    .back-link:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<div class="container mt-4">
+
+    <div class="form-card">
+        <h2 class="mb-2">Edit Task</h2>
+        <p>Update the task details below. Fields marked * are required.</p>
+
+        <button type="button" onclick="history.back()" class="btn btn-outline-secondary px-4 mb-3">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Tasks
+        </button>
+
+        <form method="post" class="mt-3">
+            {% csrf_token %}
+
+                 <!-- Title -->
+                 <label style="margin-top:20px;">Title *</label>
+                 <input type="text" name="title" value="{{ task.title }}"
+                     class="form-control mb-3" style="margin-bottom: 25px;" required
+                     placeholder="Name *">
+
+                 <!-- Priority -->
+                 <label>Priority</label>
+                 <input type="text" name="priority" class="form-control mb-3" style="margin-bottom: 20px;" value="{{ task.priority }}" placeholder="Enter priority (e.g., High, Medium, Low)">
+
+                 <!-- Status -->
+            <label>Status *</label>
+                <select name="status" class="form-control mb-3" style="margin-bottom: 25px;">
+                    <option value="Open" {% if task.status == "Open" %}selected{% endif %}>Open</option>
+                    <option value="active"{% if task.status == "active" %}selected{% endif %}>Active</option>
+                    <option value="In Progress" {% if task.status == "In Progress" %}selected{% endif %}>In Progress</option>
+                    <option value="Review" {% if task.status == "Review" %}selected{% endif %}>Review</option>
+                    <option value="Blocked" {% if task.status == "Blocked" %}selected{% endif %}>Blocked</option>
+                    <option value="Closed" {% if task.status == "Closed" %}selected{% endif %}>Closed</option>
+                </select>
+
+                 <!-- Due Date -->
+                 <label>Due Date</label>
+                 <input type="date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}"
+                     class="form-control mb-4" placeholder="dd-mm-yyyy">
+
+            <!-- Buttons -->
+            <div class="d-flex justify-content-center mt-4" style="margin-top: 25px; margin-left: 200px;">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary px-4">
+                    Cancel
+                </a>
+
+                <button type="submit" class="btn btn-primary px-4" style="margin-left: 10px;">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

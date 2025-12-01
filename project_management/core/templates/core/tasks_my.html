@@ -6,46 +6,44 @@
 
 
   <!-- HEADER -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
+    <div class="mb-4">
       <h4 class="fw-bold mb-1 text-gradient">
         <i class="fa-solid fa-clipboard-list me-2"></i> My Tasks
       </h4>
-      <p class="text-muted small mb-0">View, track and manage your assigned work items.</p>
+      <p class="text-muted small mb-3">View, track and manage your assigned work items.</p>
+      <div class="d-flex justify-content-center align-items-center gap-6" style="margin-bottom:1.5rem;">
+        <a href="{% url 'create_task' %}" class="btn btn-gradient btn-lg px-4" style="font-size:1rem; margin-right:8px;">
+          <i class="fa-solid fa-plus me-2"></i> New Task
+        </a>
+        <a href="{% url 'task_board' %}" class="btn btn-gradient btn-lg px-4" style="font-size:1rem;">
+          <i class="fa-solid fa-th-large me-4"></i> Board View
+        </a>
+      </div>
     </div>
-    <div>
-      <a href="{% url 'create_task' %}" class="btn btn-gradient me-2">
-        <i class="fa-solid fa-plus"></i> New Task
-      </a>
-      <a href="{% url 'task_board' %}" class="btn btn-outline-gradient">
-        <i class="fa-solid fa-th-large"></i> Board View
-      </a>
-    </div>
-  </div>
 
   <!-- TABLE CARD -->
   <div class="card soft-card">
     <div class="card-body p-0">
       {% if tasks %}
       <div class="table-responsive">
-        <table class="table align-middle mb-0 table-hover modern-table">
+        <table class="table align-middle mb-0 table-hover modern-table margin-center-auto">
           <thead>
-            <tr>
-              <th>#</th>
-              <th>Title</th>
-              <th>Priority</th>
-              <th>Status</th>
-              <th>Due</th>
-              <th class="text-end">Actions</th>
+            <thead>
+            <tr class="thead-row">
+              <th scope="col" style="min-width: 30px;">id</th>
+              <th scope="col" style="min-width: 400px;">Title</th>
+              <th scope="col" class="d-none d-lg-table-cell" style="width: 110px;">Priority</th>
+              <th scope="col" class="d-none d-lg-table-cell" style="width: 150px;">Status</th>
+              <th scope="col" class="text-center" style="width: 200px;">Due</th>
+              <th scope="col" class="text-end" style="width: 225px;">Actions</th>
             </tr>
           </thead>
           <tbody>
             {% for t in tasks %}
             <tr>
-              <td class="text-muted small">{{ forloop.counter }}</td>
+              <td class="text-muted small">#{{ t.id }}</td>
               <td>
                 <div class="fw-semibold text-truncate">{{ t.title }}</div>
-                <small class="text-muted">#{{ t.id }}</small>
               </td>
               <td>
                 <span class="badge priority {{ t.priority|lower }}">{{ t.priority }}</span>
@@ -65,10 +63,18 @@
                 {% endif %}
               </td>
               <td class="text-end">
-                <a href="{% url 'task_detail' t.id %}" class="btn btn-sm btn-light action-btn" title="View"><i class="fa-solid fa-eye"></i></a>
-                <a href="{% url 'task_edit' t.id %}" class="btn btn-sm btn-light action-btn" title="Edit"><i class="fa-solid fa-pen"></i></a>
-                <button class="btn btn-sm btn-light action-btn text-danger" title="Delete"><i class="fa-solid fa-trash"></i></button>
-              </td>
+              <div class="d-flex flex-row gap-2 align-items-center action-btn-row">
+                  <a href="{% url 'task_detail' t.id %}" class="btn btn-action-circle" title="View">
+                      <i class="fa-solid fa-eye"></i>
+                  </a>
+                  <a href="{% url 'edit_task' t.id %}" class="btn btn-action-circle" title="Edit">
+                      <i class="fa-solid fa-pen"></i>
+                  </a>
+                  <button class="btn btn-action-circle btn-delete" title="Delete">
+                      <i class="fa-solid fa-trash"></i>
+                  </button>
+              </div>
+          </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -95,6 +101,68 @@
 .priority.low { background:#adb5bd; color:#fff; } .priority.normal { background:#0dcaf0; color:#00303f; } .priority.high { background:#ffc107; color:#1f1f1f; } .priority.critical { background:#dc3545; color:#fff; }
 .status.closed { background:#198754; color:#fff; } .status.blocked { background:#212529; color:#fff; } .status.review { background:#ffc107; } .status.in-progress { background:#0b57a4; color:#fff; }
 .action-btn { border-radius:8px; border:1px solid rgba(0,0,0,0.04); }
+/* Circle action buttons for table actions */
+.btn-action-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #15aaff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(30,144,255,0.08);
+  transition: background 0.18s, box-shadow 0.18s;
+  margin-right: 2px;
+}
+.btn-action-circle:last-child {
+  margin-right: 0;
+}
+.btn-action-circle:hover {
+  background: #007bff;
+  box-shadow: 0 4px 16px rgba(30,144,255,0.12);
+  color: #fff;
+}
+.btn-action-circle.text-danger {
+  background: #dc3545;
+}
+.btn-action-circle.text-danger:hover {
+  background: #b02a37;
+}
+.btn-action-circle i {
+  margin: 0;
+}
+
+
+/* Force vertical centering inside all table cells */
+.modern-table td {
+    vertical-align: middle !important;
+}
+
+/* Also center inner divs */
+.modern-table td > div {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* center cell content horizontally */
+.modern-table td {
+    vertical-align: middle !important;
+    text-align: center !important;
+}
+
+/* center inner divs (like Title column) */
+.modern-table td > div {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; /* horizontal center */
+}
+
+
 
 /* ---------- FIX: Position submenu fixed to viewport right and vertically centered ---------- */
 
@@ -112,6 +180,31 @@
   width: 320px !important;
   margin: 0 !important;
 }
+
+/* Force horizontal row, stop vertical stacking */
+.action-btn-row {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 10px !important;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+/* Remove strange margin stacking */
+.btn-action-circle {
+    margin-right: 0 !important;
+}
+
+/* Delete button coloring */
+.btn-delete {
+    background: #dc3545 !important;
+    color: #fff !important;
+}
+.btn-delete:hover {
+    background: #b02a37 !important;
+}
+
+
 
 /* submenu card */
 .submenu-card {

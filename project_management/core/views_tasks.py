@@ -122,7 +122,7 @@ def unassigned_tasks_view(request):
     sql = """SELECT t.id, t.title, t.priority, t.due_date, p.name AS project_name, t.created_at
              FROM tasks t
              LEFT JOIN projects p ON p.id = t.project_id
-             WHERE t.assigned_to IS NULL OR t.assigned_type IS NULL
+             WHERE t.assigned_to IS NULL OR t.assigned_to = '' OR t.assigned_type IS NULL OR t.assigned_type = ''
              ORDER BY t.priority DESC, t.due_date IS NULL, t.due_date ASC, t.created_at DESC"""
     cur.execute(sql)
     rows = cur.fetchall()
@@ -561,3 +561,80 @@ def task_board_view(request):
         {"page": "task_board", "status_columns": status_columns,
          "projects": projects, "members": members, "teams": teams},
     )
+
+
+@require_GET
+def api_get_subprojects(request):
+    """
+    API endpoint: GET /tasks/api/subprojects/?project_id=<id>
+    Returns: { subprojects: [ {id, name}, ... ] }
+    """
+    project_id = request.GET.get("project_id")
+    if not project_id:
+        return JsonResponse({"error": "Missing project_id"}, status=400)
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name FROM subprojects WHERE project_id = %s ORDER BY name", (project_id,))
+        rows = cur.fetchall()
+        # handle both dict and tuple cursor
+        subprojects = []
+        if rows:
+            if isinstance(rows[0], dict):
+                subprojects = [{"id": r["id"], "name": r["name"]} for r in rows]
+            else:
+                subprojects = [{"id": r[0], "name": r[1]} for r in rows]
+        return JsonResponse({"subprojects": subprojects})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+    finally:
+        cur.close()
+    
+
+def task_detail_view(request, task_id):
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    cur.execute("SELECT id, title, description, status, priority, due_date FROM tasks WHERE id=%s", (task_id,))
+    task = cur.fetchone()
+    cur.close()
+
+    if not task:
+        return render(request, "core/404.html", status=404)
+
+    return render(request, "core/task_detail.html", {"task": task})
+def edit_task_view(request, task_id):
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        data = request.POST
+        title = data.get("title")
+        description = data.get("description")
+        due_date = data.get("due_date") or None
+        priority = data.get("priority") or "Normal"
+        status = data.get("status") or "Open"
+
+        cur.execute(
+            """UPDATE tasks
+               SET title=%s, description=%s, status=%s, priority=%s, due_date=%s, updated_at=NOW()
+               WHERE id=%s""",
+            (title, description, status, priority, due_date, task_id),
+        )
+        conn.commit()
+        # Re-fetch updated task
+        cur.execute("SELECT id, title, description, status, priority, due_date FROM tasks WHERE id=%s", (task_id,))
+        task = cur.fetchone()
+        cur.close()
+        if not task:
+            return render(request, "core/404.html", status=404)
+        return render(request, "core/edit_task.html", {"task": task, "saved": True})
+
+    # GET
+    cur.execute("SELECT id, title, description, status, priority, due_date FROM tasks WHERE id=%s", (task_id,))
+    task = cur.fetchone()
+    cur.close()
+
+    if not task:
+        return render(request, "core/404.html", status=404)
+
+    return render(request, "core/edit_task.html", {"task": task})

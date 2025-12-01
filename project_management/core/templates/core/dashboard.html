@@ -11,14 +11,89 @@
     color: #fff; padding: 16px 20px; border-radius: 10px; margin-bottom: 14px;
     box-shadow: 0 8px 30px rgba(11,87,164,0.08);
   }
-  .dashboard-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 16px; margin-top: 14px; }
-  .metric-card { background:var(--panel); border-radius:10px; padding:14px; box-shadow:0 6px 18px rgba(12,38,63,0.05); }
-  .metric-card .label { color:var(--muted); font-weight:600; margin-bottom:6px; }
-  .metric-card .value { font-size:26px; font-weight:700; color:var(--accent); }
-  .charts-row { display:grid; grid-template-columns: 1fr 420px; gap:18px; margin-top:18px; }
-  @media (max-width:1000px){ .charts-row{ grid-template-columns: 1fr; } }
-  .chart-card { background:var(--panel); border-radius:12px; padding:14px; box-shadow:0 6px 16px rgba(12,38,63,0.05); }
-  .chart-card h3 { margin:0 0 8px; font-size:16px; color:var(--text); }
+ .dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.metric-card {
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 6px 18px rgba(12, 38, 63, 0.05);
+  color: #fff; /* Text color */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  
+  /* Center content */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.metric-card .label {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.metric-card .value {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+/* Background colors for each metric */
+.metric-card.total-tasks {
+  background-color: #007bff; /* Blue */
+}
+
+.metric-card.active-projects {
+  background-color: #28a745; /* Green */
+}
+
+.metric-card.tasks-completed {
+  background-color: #ffc107; /* Yellow */
+  color: #333; /* Dark text for contrast */
+}
+
+.metric-card.tasks-pending {
+  background-color: #fd7e14; /* Orange */
+}
+
+/* Charts row styling (optional) */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+@media (max-width: 1000px) {
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-card {
+  background: var(--panel, #f9f9f9);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 6px 16px rgba(12, 38, 63, 0.05);
+}
+
+.chart-card h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--text, #333);
+}
+
+
 
   /* donut reduced size */
   #progressChart { max-width:420px; margin: 0 auto; display:block; height:260px !important; }
@@ -141,23 +216,25 @@
 </div>
 
 <div class="dashboard-grid">
-  <div class="metric-card">
+  <div class="metric-card total-tasks">
     <div class="label">Total Tasks Assigned</div>
     <div class="value">{{ assigned_count|default:0 }}</div>
   </div>
-  <div class="metric-card">
+  <div class="metric-card active-projects">
     <div class="label">Active Projects</div>
     <div class="value">{{ active_projects|default:0 }}</div>
   </div>
-  <div class="metric-card">
+  <div class="metric-card tasks-completed">
     <div class="label">Tasks Completed</div>
     <div class="value">{{ tasks_completed|default:0 }}</div>
   </div>
-  <div class="metric-card">
+  <div class="metric-card tasks-pending">
     <div class="label">Tasks Pending</div>
     <div class="value">{{ tasks_pending|default:0 }}</div>
   </div>
 </div>
+
+
 
 <div class="charts-row">
   <!-- Combined Quick Actions + Task Breakdown -->

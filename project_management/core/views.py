@@ -111,27 +111,44 @@ def login_password_view(request):
     if not user_fullname:
         user_fullname = email.split('@', 1)[0]
 
-    # Ensure the members table has an entry and set the session member_id
-    try:
-        ensure_member_and_set_session(request, email, user_fullname, created_by=None)
-    except Exception as ex:
-        # log error (print for now) and continue — we still want to set DB connection details
-        print("ensure_member_and_set_session failed:", ex)
-    # prefer an explicit member identifier in session (email preferred)
-    # if your 'user' object/dict contains emp_code you can prefer it, but email is simplest
-    member_id = None
-    if isinstance(user, dict):
-        member_id = user.get('email') or user.get('emp_code') or request.session.get('ident_email')
-    else:
-        member_id = getattr(user, 'email', None) or getattr(user, 'emp_code', None) or request.session.get(
-            'ident_email')
 
-    member_id = str(member_id or request.session.get('ident_email') or '').strip()
-    member_name = user_fullname or request.session.get('cn') or member_id
+    # Ensure the members table has an entry and set the session member_id
+    member_id = None
+    member_name = user_fullname
+    try:
+        conn = get_tenant_conn(request)
+        cur = conn.cursor()
+        # Find or create member row
+        cur.execute("SELECT id, first_name, last_name FROM members WHERE email=%s LIMIT 1", (email,))
+        r = cur.fetchone()
+        if r:
+            # Dict or tuple
+            if isinstance(r, dict):
+                member_id = int(r['id'])
+                member_name = (r.get('first_name', '') + ' ' + r.get('last_name', '')).strip() or user_fullname
+            else:
+                member_id = int(r[0])
+                member_name = (r[1] + ' ' + r[2]).strip() or user_fullname
+        else:
+            # Create member row
+            first_name = user_fullname.split()[0] if user_fullname else email.split('@')[0]
+            last_name = user_fullname.split()[-1] if user_fullname and len(user_fullname.split()) > 1 else ''
+            cur.execute("""
+                INSERT INTO members (email, first_name, last_name, phone, meta, created_by, created_at)
+                VALUES (%s,%s,%s,%s,%s,%s,%s)
+            """, (email, first_name, last_name, None, None, None, timezone.now()))
+            member_id = cur.lastrowid
+            member_name = (first_name + ' ' + last_name).strip()
+        cur.close()
+        conn.close()
+    except Exception as ex:
+        print("ensure_member_and_set_session failed:", ex)
+        member_id = None
 
     # save canonical id and display name to session
     request.session['member_id'] = member_id
     request.session['member_name'] = member_name
+    request.session['user_id'] = member_id  # Ensure user_id is set for task views
     print("Login successful for user:", member_id)
     print("Login successful for user:", member_name)
 
@@ -219,8 +236,10 @@ def dashboard_view(request):
     if not tenant:
         return redirect('identify')
 
-    user = request.session.get('user')
-    if not user:
+
+    # Use member_id from session for all queries
+    member_id = request.session.get('member_id')
+    if not member_id:
         return redirect('login_password')
 
     # Open DB connection for current tenant (adapt function name if needed)
@@ -234,7 +253,6 @@ def dashboard_view(request):
     })
     cur = conn.cursor()
 
-    # Helper to read scalar counts safely from dict or tuple rows
     def scalar_from_row(row, key_alias='c'):
         if row is None:
             return 0
@@ -244,47 +262,50 @@ def dashboard_view(request):
             return int(row[0]) if len(row) > 0 and row[0] is not None else 0
         return 0
 
-    # 1) Total tasks assigned to this user
     assigned_count = 0
     try:
-        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to = %s", (user['id'],))
+        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to = %s", (member_id,))
         assigned_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         assigned_count = 0
 
-    # 2) Active projects (start <= today AND (end IS NULL OR end >= today))
     active_projects = 0
     try:
         cur.execute("""
             SELECT COUNT(*) AS c FROM projects
             WHERE (start_date IS NULL OR start_date <= CURDATE())
               AND (end_date IS NULL OR end_date >= CURDATE())
-        """)
+              AND (owner_id = %s OR members LIKE CONCAT('%', %s, '%'))
+        """, (member_id, member_id))
         active_projects = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         active_projects = 0
 
-    # 3) Tasks completed (for this user)
+    projects_completed = 0
+    try:
+        cur.execute("SELECT COUNT(*) AS c FROM projects WHERE status='Completed' AND (owner_id=%s OR members LIKE CONCAT('%', %s, '%'))", (member_id, member_id))
+        projects_completed = scalar_from_row(cur.fetchone(), 'c')
+    except Exception:
+        projects_completed = 0
+
     tasks_completed = 0
     try:
         cur.execute(
             "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status = 'Closed'",
-            (user['id'],))
+            (member_id,))
         tasks_completed = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         tasks_completed = 0
 
-    # 4) Tasks pending (for this user) -> any not Closed
     tasks_pending = 0
     try:
         cur.execute(
             "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND NOT (status = 'Closed')",
-            (user['id'],))
+            (member_id,))
         tasks_pending = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         tasks_pending = 0
 
-    # Chart #1: task distribution by logical groups (Completed, In Progress, Pending)
     progress_completed = progress_inprogress = progress_pending = 0
     try:
         cur.execute("""
@@ -292,7 +313,7 @@ def dashboard_view(request):
             FROM tasks
             WHERE assigned_type='member' AND assigned_to=%s
             GROUP BY status
-        """, (user['id'],))
+        """, (member_id,))
         rows = cur.fetchall() or []
         if rows:
             if isinstance(rows[0], dict):
@@ -310,7 +331,6 @@ def dashboard_view(request):
     except Exception:
         progress_completed = progress_inprogress = progress_pending = 0
 
-    # Chart #2: tasks by priority (flat counts)
     priority_buckets = {'Critical': 0, 'High': 0, 'Normal': 0, 'Low': 0}
     try:
         cur.execute("""
@@ -318,7 +338,7 @@ def dashboard_view(request):
             FROM tasks
             WHERE assigned_type='member' AND assigned_to=%s
             GROUP BY p
-        """, (user['id'],))
+        """, (member_id,))
         rows = cur.fetchall() or []
         if rows:
             if isinstance(rows[0], dict):
@@ -331,7 +351,6 @@ def dashboard_view(request):
     except Exception:
         pass
 
-    # --- NEW: compute per-priority open vs closed (for stacked bars) ---
     pri_keys = ['Critical', 'High', 'Normal', 'Low']
     pri_open = {k: 0 for k in pri_keys}
     pri_closed = {k: 0 for k in pri_keys}
@@ -341,7 +360,7 @@ def dashboard_view(request):
             FROM tasks
             WHERE assigned_type='member' AND assigned_to = %s
             GROUP BY p, status
-        """, (user['id'],))
+        """, (member_id,))
         rows = cur.fetchall() or []
         if rows:
             if isinstance(rows[0], dict):
@@ -363,40 +382,54 @@ def dashboard_view(request):
                     else:
                         pri_open[p] = pri_open.get(p, 0) + cnt
     except Exception:
-        # keep defaults
         pass
 
-    # ---- determine if logged-in user is a team lead (so UI can show Team View) ----
     is_team_lead = False
     try:
-        cur.execute("SELECT 1 FROM teams WHERE lead_id = %s LIMIT 1", (user['id'],))
+        cur.execute("SELECT 1 FROM teams WHERE lead_id = %s LIMIT 1", (member_id,))
         row = cur.fetchone()
         if row:
             is_team_lead = True
     except Exception:
         is_team_lead = False
 
-    # Close DB
+    # Board open count: tasks assigned to user and not closed (for board view)
+    board_open_count = 0
+    try:
+        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND NOT (status = 'Closed')", (member_id,))
+        board_open_count = scalar_from_row(cur.fetchone(), 'c')
+        print("DEBUG: board_open_count =", board_open_count)
+    except Exception as e:
+        print("ERROR: board_open_count", e)
+        board_open_count = 0
+
+    # My new tasks count: tasks assigned to user and status is 'New' (or similar)
+    my_new_tasks_count = 0
+    try:
+        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status = 'New'", (member_id,))
+        my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
+        print("DEBUG: my_new_tasks_count =", my_new_tasks_count)
+    except Exception as e:
+        print("ERROR: my_new_tasks_count", e)
+        my_new_tasks_count = 0
+
     cur.close()
     conn.close()
 
-    # Prepare context for template
     ctx = {
-        'user': user,
+        'user': request.session.get('user'),
         'assigned_count': assigned_count,
         'active_projects': active_projects,
+        'projects_completed': projects_completed,
         'tasks_completed': tasks_completed,
         'tasks_pending': tasks_pending,
-        # donut chart values
         'progress_completed': progress_completed,
         'progress_inprogress': progress_inprogress,
         'progress_pending': progress_pending,
-        # priority flat counts
         'pri_critical': priority_buckets.get('Critical', 0),
         'pri_high': priority_buckets.get('High', 0),
         'pri_normal': priority_buckets.get('Normal', 0),
         'pri_low': priority_buckets.get('Low', 0),
-        # priority open/closed for stacked chart
         'pri_critical_open': pri_open.get('Critical', 0),
         'pri_high_open': pri_open.get('High', 0),
         'pri_normal_open': pri_open.get('Normal', 0),
@@ -405,8 +438,9 @@ def dashboard_view(request):
         'pri_high_closed': pri_closed.get('High', 0),
         'pri_normal_closed': pri_closed.get('Normal', 0),
         'pri_low_closed': pri_closed.get('Low', 0),
-        # team lead flag
         'is_team_lead': is_team_lead,
+        'board_open_count': board_open_count,
+        'my_new_tasks_count': my_new_tasks_count,
     }
 
     return render(request, 'core/dashboard.html', ctx)

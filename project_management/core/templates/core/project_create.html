@@ -62,9 +62,14 @@
         </div>
       </div>
 
-      <div class="mt-5 d-flex align-items-center gap-3">
-        <button type="submit" class="btn btn-primary btn-lg">{% if editing %}Update Project{% else %}Create Project{% endif %}</button>
-        <a href="{% url 'projects_list' %}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+      <!-- CENTERED BUTTONS WITH INCREASED GAP -->
+      <div class="mt-5 d-flex justify-content-center" style="gap: 2rem;">
+        <button type="submit" class="btn btn-primary btn-lg">
+          {% if editing %}Update Project{% else %}Create{% endif %}
+        </button>
+        <a href="{% url 'projects_list' %}" class="btn btn-outline-secondary btn-lg">
+          Cancel
+        </a>
       </div>
     </form>
   </div>
@@ -124,10 +129,18 @@
 .form-text.text-danger { color:#b91c1c; font-weight: 500;}
 
 /* buttons */
-.btn-lg { padding:.7rem 1.4rem; border-radius:10px; font-size:1rem; font-weight: 600; }
+.btn-lg { padding:.7rem 1.4rem; border-radius:10px; font-size:1rem; font-weight: 600; min-width: 180px; text-align: center; }
 .btn-primary { background: #0d6efd; border-color: #0d6efd; box-shadow: 0 8px 28px rgba(13,110,253,0.12); color:#fff; }
 .btn-primary:hover { background: #0a58ca; border-color: #0a58ca; }
 .btn-outline-secondary { border: 1px solid rgba(16,24,40,0.15); color:#4b5563; background:transparent; }
+
+/* button container - centered with top margin */
+.project-form .mt-5 {
+  margin-top: 3rem !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
 
 /* grid spacing (makes fields aligned) */
 .row.gx-4 > [class*="col-"] { padding-left: .75rem; padding-right:.75rem; }

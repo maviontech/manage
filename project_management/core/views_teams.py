@@ -4,6 +4,7 @@ import secrets
 import string
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseBadRequest
+
 from django.views.decorators.http import require_http_methods
 from django.db import connection
 from django.contrib.auth.hashers import make_password

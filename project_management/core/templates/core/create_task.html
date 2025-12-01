@@ -15,7 +15,7 @@
           <div class="card-body p-5">
 
             <!-- Header -->
-            <div class="d-flex justify-content-between align-items-start mb-4">
+            <div class="d-flex justify-content-between align-items-start" style="margin-bottom: 2rem;">
               <div>
                 <h3 class="fw-bold mb-1 text-gradient"><i class="fa-solid fa-plus-circle me-2"></i> Create Task</h3>
                 <p class="text-muted small mb-0">Provide essential details below to create a new task for your project.</p>
@@ -101,11 +101,13 @@
                 </div>
               </div>
 
-              <div class="col-12 mt-4 d-flex justify-content-end gap-3">
-                <a href="{% url 'task_board' %}" class="btn btn-outline-gradient btn-lg">Cancel</a>
-                <button id="createBtn" type="submit" class="btn btn-gradient btn-lg">
-                  <i class="fa-solid fa-check me-1"></i> Create Task
-                </button>
+              <div class="col-12 mt-5 mb-4" style="display: flex; justify-content: center; align-items: center;">
+                <div style="display: flex; gap: 1rem;">
+                  <a href="{% url 'task_board' %}" class="btn btn-outline-gradient btn-lg" style="min-width: 160px; text-align: center;">Cancel</a>
+                  <button id="createBtn" type="submit" class="btn btn-gradient btn-lg" style="min-width: 160px; text-align: center;">
+                    <i class="fa-solid fa-check me-1"></i> Create Task
+                  </button>
+                </div>
               </div>
 
               <div class="col-12 mt-4">
@@ -242,32 +244,79 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+  console.log('Page loaded - script initialized');
   const projectSelect = document.getElementById('projectSelect');
   const subprojectSelect = document.getElementById('subprojectSelect');
   const createBtn = document.getElementById('createBtn');
+  
+  console.log('projectSelect found:', !!projectSelect);
+  console.log('subprojectSelect found:', !!subprojectSelect);
 
   async function loadSubprojects(pid){
-    if(!subprojectSelect) return;
-    subprojectSelect.innerHTML = '<option>Loading...</option>';
+    console.log('loadSubprojects called with project ID:', pid);
+    if(!subprojectSelect) {
+      console.error('subprojectSelect element not found!');
+      return;
+    }
+    subprojectSelect.innerHTML = '<option value="">Loading...</option>';
+    subprojectSelect.disabled = true;
     try {
-      const res = await fetch(`/tasks/api/subprojects/?project_id=${pid}`);
-      if(!res.ok) throw new Error('no data');
+      const url = `/tasks/api/subprojects/?project_id=${pid}`;
+      console.log('Fetching from:', url);
+      const res = await fetch(url);
+      console.log('Response status:', res.status);
+      if(!res.ok) {
+        console.error('API response not ok:', res.status, res.statusText);
+        const errorText = await res.text();
+        console.error('Error response:', errorText);
+        throw new Error('API request failed');
+      }
       const data = await res.json();
+      console.log('Subprojects loaded:', data);
+      
       subprojectSelect.innerHTML = '<option value="">-- Optional Subproject --</option>';
-      (data.subprojects || []).forEach(sp => {
-        const o = document.createElement('option'); o.value = sp.id; o.textContent = sp.name;
+      
+      if(data.subprojects && data.subprojects.length > 0) {
+        console.log('Adding', data.subprojects.length, 'subprojects to dropdown');
+        data.subprojects.forEach(sp => {
+          const o = document.createElement('option'); 
+          o.value = sp.id; 
+          o.textContent = sp.name;
+          subprojectSelect.appendChild(o);
+          console.log('Added subproject:', sp.name);
+        });
+      } else {
+        console.log('No subprojects found for this project');
+        const o = document.createElement('option');
+        o.value = '';
+        o.textContent = '(No subprojects available)';
+        o.disabled = true;
         subprojectSelect.appendChild(o);
-      });
+      }
+      subprojectSelect.disabled = false;
     } catch (err) {
-      subprojectSelect.innerHTML = '<option value="">-- Optional Subproject --</option>';
+      console.error('Error loading subprojects:', err);
+      subprojectSelect.innerHTML = '<option value="">-- Error loading subprojects --</option>';
+      subprojectSelect.disabled = false;
     }
   }
 
-  projectSelect?.addEventListener('change', e => {
-    const pid = e.target.value;
-    if(pid) loadSubprojects(pid);
-    else subprojectSelect.innerHTML = '<option value="">-- Optional Subproject --</option>';
-  });
+  if(projectSelect) {
+    projectSelect.addEventListener('change', e => {
+      const pid = e.target.value;
+      console.log('Project dropdown changed. Selected value:', pid);
+      if(pid) {
+        console.log('Loading subprojects for project:', pid);
+        loadSubprojects(pid);
+      } else {
+        console.log('No project selected, resetting subproject dropdown');
+        subprojectSelect.innerHTML = '<option value="">-- Optional Subproject --</option>';
+        subprojectSelect.disabled = false;
+      }
+    });
+  } else {
+    console.error('projectSelect element not found!');
+  }
 
   document.getElementById('createTaskForm')?.addEventListener('submit', function(){
     createBtn.disabled = true;

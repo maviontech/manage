@@ -17,7 +17,7 @@
 /* form */
 .form-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
 .form-row .field { flex: 1 1 180px; min-width:140px; }
-.label { font-size:13px; color:#333; margin-bottom:6px; display:block; }
+.label { font-size:13px; margin-bottom:6px; display:block; }
 .input, .select { width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:14px; background:#fcfdff; }
 .checkbox-inline { display:inline-flex; align-items:center; gap:6px; font-size:14px; color:#444; }
 
@@ -44,6 +44,28 @@
 @media (max-width:900px) {
   .page-hero { flex-direction:column; align-items:flex-start; gap:8px;}
   .pager { justify-content:flex-start; }
+}
+
+/* Sidebar and menu color fix for People page */
+.sidebar, .sidebar .menu-root, .sidebar .menu-item.open, .sidebar .submenu {
+  background: #0b2341 !important;
+}
+.sidebar .menu-link, .sidebar .submenu-link, .sidebar .menu-link .icon, .sidebar .submenu-link .icon {
+  color: #fff !important;
+}
+.sidebar .menu-link .label, .sidebar .submenu-link .label {
+  color: #fff !important;
+}
+.sidebar .menu-item.active > .menu-link, .sidebar .menu-item.open > .menu-link {
+  color: #fff !important;
+}
+.sidebar .submenu-link:hover {
+  background: rgba(255,255,255,0.02) !important;
+  color: #fff !important;
+}
+.sidebar .menu-header, .sidebar .menu-header * {
+  background: #0b2341 !important;
+  color: #fff !important;
 }
 </style>
 

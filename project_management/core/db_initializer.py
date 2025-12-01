@@ -53,6 +53,7 @@ TENANT_DDL = [
       description TEXT,
       status VARCHAR(50),
       priority VARCHAR(20),
+      assigned_type ENUM('member','team') DEFAULT 'member',
       assigned_to INT,
       created_by INT,
       due_date DATE,
@@ -443,7 +444,7 @@ class DBInitializer:
         print("[init] Done provisioning all tenants.")
 
 if __name__ == "__main__":
-    # validate admin creds presence
+# validate admin creds presence
     if not ADMIN_PWD:
         import getpass
         ADMIN_PWD = getpass.getpass("MySQL admin password: ")

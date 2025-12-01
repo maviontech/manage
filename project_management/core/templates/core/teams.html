@@ -57,6 +57,28 @@
 @media (max-width:900px) {
   .page-hero { flex-direction:column; align-items:flex-start; gap:8px;}
 }
+
+/* Sidebar and menu color fix for Teams page */
+.sidebar, .sidebar .menu-root, .sidebar .menu-item.open, .sidebar .submenu {
+  background: #0b2341 !important;
+}
+.sidebar .menu-link, .sidebar .submenu-link, .sidebar .menu-link .icon, .sidebar .submenu-link .icon {
+  color: #fff !important;
+}
+.sidebar .menu-link .label, .sidebar .submenu-link .label {
+  color: #fff !important;
+}
+.sidebar .menu-item.active > .menu-link, .sidebar .menu-item.open > .menu-link {
+  color: #fff !important;
+}
+.sidebar .submenu-link:hover {
+  background: rgba(255,255,255,0.02) !important;
+  color: #fff !important;
+}
+.sidebar .menu-header, .sidebar .menu-header * {
+  background: #0b2341 !important;
+  color: #fff !important;
+}
 </style>
 
 <div class="teams-page">

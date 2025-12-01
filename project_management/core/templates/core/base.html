@@ -424,24 +424,24 @@
     })();
   </script>
   <script>
-  {% comment %}
-    Expose canonical CURRENT_USER to client JS.
-    Use session member_id (set at login); fall back safely.
-  {% endcomment %}
-  {% if request.session.member_id %}
-    const CURRENT_USER = "{{ request.session.member_id|escapejs }}";
-  {% elif request.session.ident_email %}
-    const CURRENT_USER = "{{ request.session.ident_email|escapejs }}";
-  {% elif request.user.is_authenticated %}
-    const CURRENT_USER = "{{ request.user.email|default:request.user.username|escapejs }}";
-  {% else %}
-    const CURRENT_USER = "";
-  {% endif %}
+    // {% comment %}
+    //   Expose canonical CURRENT_USER to client JS.
+    //   Use session member_id (set at login); fall back safely.
+    // {% endcomment %}
+    // {% if request.session.member_id %}
+    //   const CURRENT_USER = "{{ request.session.member_id|escapejs }}";
+    // {% elif request.session.ident_email %}
+    //   const CURRENT_USER = "{{ request.session.ident_email|escapejs }}";
+    // {% elif request.user.is_authenticated %}
+    //   const CURRENT_USER = "{{ request.user.email|default:request.user.username|escapejs }}";
+    // {% else %}
+    //   const CURRENT_USER = "";
+    // {% endif %}
 
-  const TENANT_ID = "{{ request.session.tenant_id|default:''|escapejs }}";
-  // debug helper (remove in production)
-  console.debug("[chat] CURRENT_USER on page load ->", CURRENT_USER);
-</script>
+    const TENANT_ID = "{{ request.session.tenant_id|default:''|escapejs }}";
+    // debug helper (remove in production)
+    console.debug("[chat] CURRENT_USER on page load ->", CURRENT_USER);
+  </script>
 
   {% block extra_js %}{% endblock %}
 </body>

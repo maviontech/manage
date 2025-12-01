@@ -45,8 +45,8 @@
           <tr class="thead-row">
             <th scope="col" style="min-width: 240px;">Project</th>
             <th scope="col" style="min-width: 320px;">Description</th>
-            <th scope="col" class="d-none d-lg-table-cell" style="width: 120px;">Start</th>
-            <th scope="col" class="d-none d-lg-table-cell" style="width: 120px;">End</th>
+            <th scope="col" class="d-none d-lg-table-cell" style="width: 110px;">Start</th>
+            <th scope="col" class="d-none d-lg-table-cell" style="width: 110px;">End</th>
             <th scope="col" class="text-center" style="width: 100px;">Status</th>
             <th scope="col" class="d-none d-md-table-cell" style="width: 160px;">Created By</th>
             <th scope="col" class="text-end" style="width: 100px;">Actions</th>
@@ -62,8 +62,8 @@
             </td>
 
             <td class="text-muted desc-col">{{ p.description|default:"—"|truncatechars:120 }}</td>
-            <td class="d-none d-lg-table-cell">{{ p.start_date|date:"d M Y"|default:"—" }}</td>
-            <td class="d-none d-lg-table-cell">{{ p.end_date|date:"d M Y"|default:"—" }}</td>
+            <td class="d-none d-lg-table-cell" style="width: 110px; white-space: nowrap;">{{ p.start_date|date:"d M Y" }}</td>
+            <td class="d-none d-lg-table-cell" style="width: 110px; white-space: nowrap;">{{ p.end_date|date:"d M Y" }}</td>
 
             <td class="text-center">
               {% if p.status == "Active" %}
@@ -79,12 +79,14 @@
 
             <td class="d-none d-md-table-cell">{{ p.created_by_name|default:"—" }}</td>
             <td class="text-end actions-col">
-              <a href="{% url 'subprojects_list' p.id %}" class="icon-btn" title="Subprojects" aria-label="Open subprojects">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2v6M12 22v-6M4 12h6M20 12h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              </a>
-              <a href="{% url 'project_edit' p.id %}" class="icon-btn" title="Edit" aria-label="Edit project">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 21l3-1 11-11 2 2-11 11-1 3H3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-              </a>
+              <div class="d-flex align-items-center" style="display: flex; flex-direction: row !important; gap: 8px;">
+                <a href="{% url 'subprojects_list' p.id %}" class="btn btn-icon btn-primary" title="Subprojects" aria-label="Open subprojects">
+                  <i class="fas fa-plus"></i>
+                </a>
+                <a href="{% url 'project_edit' p.id %}" class="btn btn-icon btn-primary" title="Edit" aria-label="Edit project">
+                  <i class="fas fa-edit"></i>
+                </a>
+              </div>
             </td>
           </tr>
           {% empty %}
@@ -175,13 +177,31 @@
 .status-onhold { background:#fff7ed; color:#b45309; border: 1px solid #fed7aa; }
 .status-unknown { background:#f3f4f6; color:#4b5563; border: 1px solid #d1d5db; }
 
-/* actions */
-.icon-btn { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:8px; border:1px solid rgba(16,24,40,0.08); background:#f9fafb; color:#0d6efd; margin-left:.5rem; }
-.icon-btn:hover { background:rgba(13,110,253,0.1); border-color: rgba(13,110,253,0.2); }
+/* action buttons */
+.icon-btn { 
+  display:inline-flex;
+  align-items:center; 
+  justify-content:center; 
+  width:38px; 
+  height:38px; 
+  border-radius:8px; 
+  border:1.5px solid #0d6efd; 
+  background:#0d6efd !important; 
+  color:#ffffff; 
+  transition: all .2s ease;
+}
+.icon-btn:hover { 
+  background:#0a58ca; 
+  border-color: #0a58ca; 
+  color:#ffffff; 
+  transform: translateY(-2px); 
+  box-shadow: 0 4px 12px rgba(13,110,253,0.35); 
+}
+.icon-btn svg { stroke: currentColor; }
 
 /* empty state */
 .empty-emoji { font-size:32px; }
-.projects-table tr td.py-6 { padding-top:3rem !important; padding-bottom:3rem !important; }
+.projects-table tr td.py-6 { padding-top:5rem; padding-bottom:5rem; }
 
 /* pagination - kept consistent */
 .mavion-pagination .page-link { min-width:44px; border-radius:8px; margin:0 .12rem; }
@@ -191,7 +211,7 @@
 @media (max-width:767px) {
   .top-row { flex-direction: column; align-items: center; }
   .title-block { text-align: center; }
-  .search-form { width: 100%; margin-left: 0 !important; }
+  .search-form { width: 100%; margin-left: 0; }
   .action-col { width:100%; justify-content:center; }
   .search-input { min-width:unset; width: 100%; }
   .search-group { width: 100%; }
