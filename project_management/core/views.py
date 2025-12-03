@@ -635,3 +635,169 @@ def api_team_summary(request):
     conn.close()
     return JsonResponse({'members': member_summaries, 'totals': totals})
 
+def profile_view(request):
+    """
+    Display the profile of the logged-in user.
+    """
+    user = request.session.get('user')
+    if not user:
+        return redirect('login_password')
+
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('login_password')
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    profile = {}
+    try:
+        cur.execute("SELECT email, first_name, last_name, phone, meta, created_at FROM members WHERE id=%s LIMIT 1", (member_id,))
+        row = cur.fetchone()
+        if row:
+            if isinstance(row, dict):
+                profile = {
+                    'email': row.get('email'),
+                    'first_name': row.get('first_name'),
+                    'last_name': row.get('last_name'),
+                    'phone': row.get('phone'),
+                    'meta': row.get('meta'),
+                    'created_at': row.get('created_at'),
+                }
+            else:
+                profile = {
+                    'email': row[0],
+                    'first_name': row[1],
+                    'last_name': row[2],
+                    'phone': row[3],
+                    'meta': row[4],
+                    'created_at': row[5],
+                }
+    except Exception:
+        profile = {}
+    finally:
+        cur.close()
+        conn.close()
+
+    return render(request, 'core/profile_view.html', {'profile': profile})
+def profile_edit_view(request):
+    """Display the profile edit form and handle profile updates."""
+    user = request.session.get('user')
+    member_id = request.session.get('member_id')
+
+    if not user or not member_id:
+        return redirect('login_password')
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    error_msg = None
+
+    # ---------------------- POST: Save Updates ----------------------
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        meta = request.POST.get('meta', '').strip()
+
+        try:
+            cur.execute("""
+                UPDATE members
+                SET first_name=%s, last_name=%s, phone=%s, meta=%s
+                WHERE id=%s
+            """, (first_name, last_name, phone, meta, member_id))
+            conn.commit()
+
+            return redirect('profile_view')
+
+        except Exception as e:
+            conn.rollback()
+            error_msg = f"Update failed: {str(e)}"
+
+    # ---------------------- GET: Fetch Profile Data ----------------------
+    profile = {}
+    try:
+        cur.execute("""
+            SELECT email, first_name, last_name, phone, meta
+            FROM members
+            WHERE id=%s
+            LIMIT 1
+        """, (member_id,))
+        row = cur.fetchone()
+
+        if row:
+            # If row is a dict-like cursor result
+            if isinstance(row, dict):
+                profile = {
+                    'email': row.get('email'),
+                    'first_name': row.get('first_name'),
+                    'last_name': row.get('last_name'),
+                    'phone': row.get('phone'),
+                    'meta': row.get('meta'),
+                }
+            else:
+                # Row is a tuple
+                profile = {
+                    'email': row[0],
+                    'first_name': row[1],
+                    'last_name': row[2],
+                    'phone': row[3],
+                    'meta': row[4],
+                }
+
+    except Exception as e:
+        error_msg = f"Error loading profile: {str(e)}"
+
+    finally:
+        cur.close()
+        conn.close()
+
+    # ---------------------- RENDER PAGE ----------------------
+    return render(request, 'core/profile_edit.html', {
+        'profile': profile,
+        'error': error_msg
+    })
+
+def profile_change_password_view(request):
+    """ Allow the user to change their password. """
+    user = request.session.get('user')
+    if not user:
+        return redirect('login_password')
+
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('login_password')
+
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password', '')
+        new_password = request.POST.get('new_password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+
+        if new_password != confirm_password:
+            error_msg = "New password and confirmation do not match."
+        else:
+            # Verify current password
+            email = user.get('email')
+            tenant_conf = request.session.get('tenant_config')
+            try:
+                auth_user = authenticate(email, current_password, tenant_conf)
+                if not auth_user:
+                    error_msg = "Current password is incorrect."
+                else:
+                    # Update password in the users table
+                    conn = get_tenant_conn(request)
+                    cur = conn.cursor()
+                    try:
+                        cur.execute("UPDATE users SET password=%s WHERE email=%s", (new_password, email))
+                        conn.commit()
+                        return redirect('profile_view')
+                    except Exception as e:
+                        conn.rollback()
+                        error_msg = "Failed to update password: " + str(e)
+                    finally:
+                        cur.close()
+                        conn.close()
+            except Exception as e:
+                error_msg = "Authentication error: " + str(e)
+    else:
+        error_msg = None
+
+    return render(request, 'core/profile_change_password.html', {'error': error_msg})

@@ -1,0 +1,217 @@
+{% extends "core/base.html" %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+
+<style>
+/* --- Base Variables (from previous response) --- */
+:root {
+    --primary-color: #337ab7;
+    --background-light: #f7f7f7;
+    --card-background: #ffffff;
+    --text-dark: #333;
+    --text-label: #888;
+    --border-light: #e0e0e0;
+    --input-focus-color: #5cb85c; /* A green for focus state */
+}
+
+/* --- General Structure --- */
+body {
+    background-color: var(--background-light);
+    font-family: Arial, sans-serif;
+}
+
+.profile-page-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.card {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+}
+
+.card-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: var(--text-dark);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.social-title {
+    margin-top: 30px;
+}
+
+/* --- Profile Picture Edit Card --- */
+.profile-header-edit {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 20px 30px;
+}
+
+.profile-avatar-edit-group {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.upload-controls h6 {
+    font-size: 0.9em;
+    color: var(--text-label);
+    margin-bottom: 5px;
+}
+
+.photo-input {
+    display: none; /* Hide the default file input */
+}
+
+.btn {
+    padding: 8px 15px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.btn-upload {
+    background-color: var(--primary-color);
+    color: white;
+    display: inline-block;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+/* --- Form Layout (Grid) --- */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px 40px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.9em;
+    color: var(--text-label);
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    font-size: 1em;
+    color: var(--text-dark);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Focus State for Professionalism */
+.form-group input:focus {
+    border-color: var(--input-focus-color);
+    outline: none;
+    box-shadow: 0 0 0 1px var(--input-focus-color);
+}
+
+.wide-span {
+    grid-column: 1 / -1; /* Make address field span both columns */
+}
+
+/* --- Form Actions --- */
+.form-actions {
+    margin-top: 40px;
+    border-top: 1px solid var(--border-light);
+    padding-top: 20px;
+    text-align: right;
+}
+
+.btn-save {
+    background-color: var(--primary-color);
+    color: white;
+    margin-right: 10px;
+}
+
+.btn-cancel {
+    background-color: transparent;
+    border: 1px solid var(--text-label);
+    color: var(--text-dark);
+}
+</style>
+
+<div class="profile-page-container">
+
+    <div class="card profile-header-edit">
+        <div class="profile-avatar-edit-group">
+            <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="John Doe Avatar" class="profile-avatar">
+            <div class="upload-controls">
+                <h6>Change Photo</h6>
+                <input type="file" id="photo-upload" class="photo-input">
+                <label for="photo-upload" class="btn btn-upload">Upload New Image</label>
+            </div>
+        </div>
+        <div class="basic-info-display">
+            <h2>John Doe</h2>
+            <p>Full Stack Developer</p>
+        </div>
+    </div>
+
+    <form class="card contact-info-form">
+        <h2 class="card-title">Personal and Contact Information</h2>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="full-name">Full Name</label>
+                <input type="text" id="full-name" value="John Doe" placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label for="job-title">Job Title</label>
+                <input type="text" id="job-title" value="Full Stack Developer" placeholder="e.g., Senior Designer">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" value="john@example.com" placeholder="Enter your email address">
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="tel" id="phone" value="(123) 456-7890" placeholder="Enter phone number">
+            </div>
+            <div class="form-group wide-span">
+                <label for="address">Address / Location</label>
+                <input type="text" id="address" value="Bay Area, San Francisco, CA" placeholder="City, State, Country">
+            </div>
+        </div>
+
+        <h2 class="card-title social-title">Social Profiles</h2>
+        <div class="form-grid social-grid">
+            <div class="form-group">
+                <label for="github">GitHub Profile</label>
+                <input type="url" id="github" value="https://github.com/johndoe" placeholder="https://github.com/yourusername">
+            </div>
+            <div class="form-group">
+                <label for="twitter">Twitter Handle</label>
+                <input type="text" id="twitter" value="@johndoe" placeholder="@yourhandle">
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-save">Save Changes</button>
+            <a href="{% url 'profile' %}" class="btn btn-cancel">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

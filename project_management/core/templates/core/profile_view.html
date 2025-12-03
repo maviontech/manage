@@ -1,0 +1,242 @@
+{% extends "core/base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+
+<style>
+   /* --- Global Styles --- */
+:root {
+    --primary-color: #337ab7; /* A professional blue */
+    --background-light: #f7f7f7;
+    --card-background: #ffffff;
+    --text-dark: #333;
+    --text-label: #888;
+    --border-light: #e0e0e0;
+}
+
+body {
+    background-color: var(--background-light);
+    font-family: Arial, sans-serif;
+}
+
+.profile-page-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* --- Card Styles --- */
+.card {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+/* --- 1. Profile Header Card --- */
+.profile-header-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Pushes buttons to the right */
+}
+
+.profile-details-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.profile-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.profile-name {
+    font-size: 1.6em;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.profile-title {
+    font-size: 1em;
+    color: var(--text-label);
+}
+
+.btn {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    margin-left: 10px;
+    transition: background-color 0.2s;
+}
+
+.btn-follow {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-message {
+    background-color: white;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* --- 2. Social Links Cards --- */
+.social-links-row {
+    display: flex;
+    gap: 20px;
+}
+
+.social-card {
+    flex: 1; /* Makes cards grow equally */
+    padding: 15px 20px;
+    /* Optional: Remove box shadow for a lighter look like the image */
+    box-shadow: none; 
+    border: 1px solid var(--border-light);
+}
+
+.social-item {
+    font-size: 0.9em;
+    color: var(--text-dark);
+    line-height: 1.8;
+    /* (You'd need actual icon fonts or SVGs for the 'i.icon' tags) */
+}
+
+/* --- 3. Contact Information Card --- */
+.contact-info-card {
+    padding: 30px;
+}
+
+.card-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+    /* Remove gap to create the tight, line-separated look */
+}
+
+.info-group {
+    padding: 15px 0;
+    border-bottom: 1px solid var(--border-light); /* The key separator line */
+    /* Add padding/margin to space columns if needed, but in this image, they are tight */
+    padding-right: 40px; 
+}
+
+.info-group label {
+    display: block;
+    font-size: 0.9em;
+    color: var(--text-label); /* The light grey text on the top/left */
+    margin-bottom: 2px;
+}
+
+.data-value {
+    font-size: 1em;
+    color: var(--text-dark); /* The actual data, slightly darker */
+    margin-top: 2px;
+}
+
+.wide-span {
+    grid-column: 1 / -1; /* Makes the Address field span both columns */
+}
+
+.btn-edit-profile {
+    margin-top: 30px;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+}
+</style>
+<!-- 
+<div class="profile-container"> -->
+
+    <!-- Profile Header -->
+    <div class="profile-page-container">
+
+    <div class="card profile-header-card">
+        <div class="profile-details-group">
+            <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="John Doe Avatar" class="profile-avatar">
+            <div class="profile-info-text">
+                <h1 class="profile-name">John Doe</h1>
+                <p class="profile-title">Full Stack Developer</p>
+            </div>
+        </div>
+        <div class="profile-actions">
+            <button class="btn btn-follow">Follow</button>
+            <button class="btn btn-message">Message</button>
+        </div>
+    </div>
+
+    <div class="social-links-row">
+        <div class="card social-card">
+            <div class="social-item">
+                <i class="icon github"></i> github.com
+            </div>
+            <div class="social-item">
+                <i class="icon twitter"></i> @johnkdoe
+            </div>
+            <div class="social-item">
+                <i class="icon facebook"></i> facebook
+            </div>
+        </div>
+        
+        <div class="card social-card">
+            <div class="social-item">
+                <i class="icon github"></i> github.com
+            </div>
+            <div class="social-item">
+                <i class="icon twitter"></i> twitter@johndoe
+            </div>
+            <div class="social-item">
+                <i class="icon facebook"></i> facebook
+            </div>
+        </div>
+    </div>
+
+    <div class="card contact-info-card">
+        <h2 class="card-title">Contact Information</h2>
+        
+        <div class="info-grid">
+            <div class="info-group">
+                <label>Full Name</label>
+                <p class="data-value">John Doe</p>
+            </div>
+            <div class="info-group">
+                <label>Email</label>
+                <p class="data-value">john@example.com</p> </div>
+            
+            <div class="info-group">
+                <label>City</label>
+                <p class="data-value">San Francisco</p>
+            </div>
+            <div class="info-group">
+                <label>Phone</label>
+                <p class="data-value">(123) 456-7890</p>
+            </div>
+            
+            <div class="info-group">
+                <label>Dob</label>
+                <p class="data-value">01/01/1990</p> </div>
+            <div class="info-group">
+                <label>Mobile Optional</label>
+                <p class="data-value">(123) 456-7890</p>
+            </div>
+            
+            <div class="info-group wide-span">
+                <label>Address</label>
+                <p class="data-value">Bay Area, San Francisco, CA</p>
+            </div>
+        </div>
+    </div>
+    <a href="{% url 'profile_edit' %}" class="btn btn-edit-profile">Edit Profile</a>
+
+</div>
+
+{% endblock %}

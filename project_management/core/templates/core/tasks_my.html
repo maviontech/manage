@@ -69,13 +69,14 @@
               </td>
               <td>
                 {% if t.closure_date %}
-                  <span class="text-muted">
-                    <i class="fa-regular fa-calendar-check me-1"></i>{{ t.closure_date }}
+                  <span class="text-success fw-semibold">
+                    <i class="fa-regular me-1"></i>
+                    {{ t.closure_date|date:"d M Y" }}
                   </span>
                 {% else %}
                   <span class="text-muted">—</span>
                 {% endif %}
-              </td>
+            </td>
               <td class="text-end">
                 <div class="d-flex flex-row gap-2 align-items-center action-btn-row">
                   <a href="{% url 'task_detail' t.id %}" class="btn btn-action-circle" title="View">

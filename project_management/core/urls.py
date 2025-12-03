@@ -69,4 +69,11 @@ urlpatterns = [
     path('settings/access-control/assign/', vp.assign_role, name='assign_role'),
 
     path('settings/password-policy/', vp.password_policy_page, name='password_policy_page'),
+    
+    
+    path('profile/', views.profile_view, name='profile'),
+    path('profile/edit/', views.profile_edit_view, name='profile_edit'),
+    path('profile/change-password/', views.profile_change_password_view, name='profile_change_password'),
+    
 ]
+

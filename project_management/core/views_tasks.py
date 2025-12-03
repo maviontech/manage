@@ -101,7 +101,7 @@ def my_tasks_view(request):
 
     # Match both assigned_to and assigned_type='member'
     cur.execute(
-        """SELECT id, title, status, priority, due_date
+        """SELECT id, title, status, priority, due_date, closure_date
            FROM tasks
            WHERE assigned_type='member' AND assigned_to = %s
            ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
@@ -279,22 +279,47 @@ def assign_task_api(request):
 @require_POST
 def api_update_status(request):
     """Called from Kanban drag-drop to update status"""
+
     conn = get_tenant_conn(request)
     cur = conn.cursor()
+
     task_id = request.POST.get("task_id")
     new_status = request.POST.get("status")
     user_id = request.session.get("user_id")
 
+    # 1. CHECK REQUIRED PARAMS
     if not task_id or not new_status:
         return HttpResponseBadRequest("Missing parameters")
 
-    cur.execute("UPDATE tasks SET status=%s, updated_at=NOW() WHERE id=%s", (new_status, task_id))
-    cur.execute(
-        "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
-        ("task", task_id, f"status_changed:{new_status}", user_id),
-    )
+    # 2. SET CLOSURE DATE ONLY WHEN STATUS BECOMES 'Closed'
+    if new_status == "Closed":
+        cur.execute("""
+            UPDATE tasks
+            SET status=%s,
+                closure_date=NOW(),
+                updated_at=NOW()
+            WHERE id=%s
+        """, (new_status, task_id))
+    else:
+        # 3. FOR ANY OTHER STATUS → remove closure date?
+        cur.execute("""
+            UPDATE tasks
+            SET status=%s,
+                closure_date=NULL,
+                updated_at=NOW()
+            WHERE id=%s
+        """, (new_status, task_id))
+
+    # 4. CREATE LOG ENTRY
+    cur.execute("""
+        INSERT INTO activity_log (entity_type, entity_id, action, performed_by)
+        VALUES (%s, %s, %s, %s)
+    """, ("task", task_id, f"status_changed:{new_status}", user_id))
+
+    # 5. SAVE CHANGES
     conn.commit()
     cur.close()
+
     return JsonResponse({"ok": True})
 
 
