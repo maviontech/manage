@@ -1,3 +1,4 @@
+
 import csv, io, datetime
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -121,11 +122,15 @@ def my_tasks_view(request):
 def unassigned_tasks_view(request):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
-    sql = """SELECT t.id, t.title, t.priority, t.due_date, p.name AS project_name, t.created_at
-             FROM tasks t
-             LEFT JOIN projects p ON p.id = t.project_id
-             WHERE t.assigned_to IS NULL OR t.assigned_to = '' OR t.assigned_type IS NULL OR t.assigned_type = ''
-             ORDER BY t.priority DESC, t.due_date IS NULL, t.due_date ASC, t.created_at DESC"""
+
+    sql = """
+        SELECT t.id, t.title, t.description, t.priority, t.due_date, p.name AS project_name, sp.name AS subproject_name, t.created_at
+        FROM tasks t
+        LEFT JOIN projects p ON p.id = t.project_id
+        LEFT JOIN subprojects sp ON sp.id = t.subproject_id
+        WHERE t.assigned_to IS NULL OR t.assigned_to = '' OR t.assigned_type IS NULL OR t.assigned_type = ''
+        ORDER BY t.priority DESC, t.due_date IS NULL, t.due_date ASC, t.created_at DESC
+    """
     cur.execute(sql)
     rows = cur.fetchall()
 
@@ -668,7 +673,7 @@ def edit_task_view(request, task_id):
         cur.close()
         if not task:
             return render(request, "core/404.html", status=404)
-        return render(request, "core/edit_task.html", {"task": task, "saved": True})
+        return redirect("my_tasks")
 
     # GET
     cur.execute("SELECT id, title, description, status, priority, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
@@ -690,3 +695,23 @@ def edit_task_view(request, task_id):
         task['description'] = ''
 
     return render(request, "core/edit_task.html", {"task": task})
+
+@require_POST
+def delete_task_view(request, task_id): 
+    """Deletes the specified task."""
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    # Check if task exists
+    cur.execute("SELECT id FROM tasks WHERE id=%s", (task_id,))
+    task = cur.fetchone()
+    if not task:
+        cur.close()
+        return render(request, "core/404.html", status=404)
+
+    # Delete the task
+    cur.execute("DELETE FROM tasks WHERE id=%s", (task_id,))
+    conn.commit()
+    cur.close()
+
+    return redirect("my_tasks")

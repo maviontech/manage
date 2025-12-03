@@ -7,9 +7,14 @@
 
   <!-- HEADER -->
     <div class="mb-4">
-      <h4 class="fw-bold mb-1 text-gradient">
-        <i class="fa-solid fa-clipboard-list me-2"></i> My Tasks
-      </h4>
+        <div class="d-flex justify-content-between align-items-center">
+          <h4 class="fw-bold mb-1 text-gradient mb-0">
+            <i class="fa-solid fa-clipboard-list me-2"></i> My Tasks
+          </h4>
+          <a href="" onclick="window.location.reload(); return false;" class="btn btn-outline-gradient btn-lg px-3" title="Refresh" style="font-size:1rem;">
+            <i class="fa-solid fa-rotate-right me-2"></i> Refresh
+          </a>
+        </div>
       <p class="text-muted small mb-3">View, track and manage your assigned work items.</p>
       <div class="d-flex justify-content-center align-items-center gap-6" style="margin-bottom:1.5rem;">
         <a href="{% url 'create_task' %}" class="btn btn-gradient btn-lg px-4" style="font-size:1rem; margin-right:8px;">
@@ -85,9 +90,12 @@
                   <a href="{% url 'edit_task' t.id %}" class="btn btn-action-circle" title="Edit">
                       <i class="fa-solid fa-pen"></i>
                   </a>
-                  <button class="btn btn-action-circle btn-delete" title="Delete">
+                  <form method="post" action="{% url 'delete_task' t.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-action-circle btn-delete" title="Delete" onclick="return confirm('Are you sure you want to delete this task?');">
                       <i class="fa-solid fa-trash"></i>
-                  </button>
+                    </button>
+                  </form>
                 </div>
               </td>
             </tr>

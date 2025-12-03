@@ -1,3 +1,11 @@
+  <style>
+    .sidebar-collapsed {
+      width: 0 !important;
+      min-width: 0 !important;
+      overflow: hidden !important;
+      transition: width 0.2s;
+    }
+  </style>
 {% load static %}
 <!doctype html>
 <html lang="en">
@@ -444,5 +452,26 @@
   </script>
 
   {% block extra_js %}{% endblock %}
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var toggleBtn = document.getElementById('menu-toggle');
+    var sidebar = document.getElementById('sidebar');
+    if (toggleBtn && sidebar) {
+      toggleBtn.addEventListener('click', function() {
+        sidebar.classList.toggle('sidebar-collapsed');
+        // Optionally, persist state in localStorage
+        if (sidebar.classList.contains('sidebar-collapsed')) {
+          localStorage.setItem('sidebar-collapsed', '1');
+        } else {
+          localStorage.removeItem('sidebar-collapsed');
+        }
+      });
+      // Restore state on page load
+      if (localStorage.getItem('sidebar-collapsed') === '1') {
+        sidebar.classList.add('sidebar-collapsed');
+      }
+    }
+  });
+  </script>
 </body>
 </html>

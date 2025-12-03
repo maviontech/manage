@@ -49,6 +49,7 @@ urlpatterns = [
     path("tasks/api/subprojects/", views_tasks.api_get_subprojects, name="api_get_subprojects"),
     path("tasks/<int:task_id>/", views_tasks.task_detail_view, name="task_detail"),
     path("tasks/<int:task_id>/edit/", views_tasks.edit_task_view, name="edit_task"),
+    path("tasks/<int:task_id>/delete/", views_tasks.delete_task_view, name="delete_task"),
 
     # APIs
     path("tasks/api/assign/", views_tasks.assign_task_api, name="api_assign_task"),
