@@ -92,9 +92,6 @@
                   </a>
                   <form method="post" action="{% url 'delete_task' t.id %}" style="display:inline;">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-action-circle btn-delete" title="Delete" onclick="return confirm('Are you sure you want to delete this task?');">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
                   </form>
                 </div>
               </td>
@@ -186,16 +183,16 @@
 /* IN PROGRESS */
 .status-in-progress {
     background: #e8f0ff;
-    color: #2563eb;
-    border-color: #bfd4ff;
+    color: #d8d51f;
+    border-color: #dfd21a;
 }
 
 /* COMPLETED or CLOSED */
 .status-completed,
 .status-closed {
-    background: #fff6d9;
-    color: #c89c00;
-    border-color: #f3e19c;
+   background: #ffe5e5;
+    color: #b42323;
+    border-color: #f7b3b3; 
 }
 
 /* REVIEW */
@@ -214,9 +211,9 @@
 
 /* BLOCKED */
 .status-blocked {
-    background: #ffe5e5;
-    color: #b42323;
-    border-color: #f7b3b3;
+    background: #fff6d9;
+    color: #c89c00;
+    border-color: #f3e19c;
 }
 
 /* DEFAULT */
@@ -273,9 +270,6 @@
 
 
 /* Force vertical centering inside all table cells */
-.modern-table td {
-    vertical-align: middle !important;
-}
 
 /* Also center inner divs */
 .modern-table td > div {
