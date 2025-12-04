@@ -272,13 +272,13 @@ def dashboard_view(request):
     active_projects = 0
     try:
         cur.execute("""
-            SELECT COUNT(*) AS c FROM projects
-            WHERE (start_date IS NULL OR start_date <= CURDATE())
-              AND (end_date IS NULL OR end_date >= CURDATE())
-              AND (owner_id = %s OR members LIKE CONCAT('%', %s, '%'))
-        """, (member_id, member_id))
+            SELECT COUNT(*) AS c
+            FROM projects
+            WHERE status = 'Active'
+        """)
         active_projects = scalar_from_row(cur.fetchone(), 'c')
-    except Exception:
+    except Exception as e:
+        print("ERROR active_projects:", e)
         active_projects = 0
 
     projects_completed = 0
@@ -303,7 +303,8 @@ def dashboard_view(request):
             "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND NOT (status = 'Closed')",
             (member_id,))
         tasks_pending = scalar_from_row(cur.fetchone(), 'c')
-    except Exception:
+    except Exception as e:
+        print("ERROR tasks_pending:", e)
         tasks_pending = 0
 
     progress_completed = progress_inprogress = progress_pending = 0

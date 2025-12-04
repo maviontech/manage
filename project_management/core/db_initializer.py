@@ -29,7 +29,8 @@ TENANT_DDL = [
       name VARCHAR(255) NOT NULL,
       description TEXT,
       start_date DATE,
-      end_date DATE,
+      tentative_end_date DATE,
+      end_date DATETIME,
       status VARCHAR(50),
       created_by INT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

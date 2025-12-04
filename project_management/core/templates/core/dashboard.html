@@ -379,6 +379,82 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   });
 
+  // --- DASHBOARD SEARCH BAR ---
+  const searchInput = document.getElementById('global-search');
+  if (searchInput) {
+    // Create dropdown for results
+    let dropdown = document.createElement('div');
+    dropdown.className = 'search-dropdown';
+    dropdown.style.position = 'absolute';
+    dropdown.style.background = '#fff';
+    dropdown.style.border = '1px solid #e0e0e0';
+    dropdown.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)';
+    dropdown.style.zIndex = 1000;
+    dropdown.style.minWidth = '320px';
+    dropdown.style.display = 'none';
+    dropdown.style.maxHeight = '320px';
+    dropdown.style.overflowY = 'auto';
+    searchInput.parentNode.appendChild(dropdown);
+
+    function showDropdown(items) {
+      if (!items.length) {
+        dropdown.innerHTML = '<div style="padding:12px;color:#888;">No results found</div>';
+      } else {
+        dropdown.innerHTML = items.map(item =>
+          `<div class="search-result-item" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;" tabindex="0" data-url="${item.url}">
+            <span style="font-weight:600;color:#0b57a4;">${item.type}</span>
+            <span style="flex:1;">${item.label}</span>
+            <span style="color:#888;font-size:12px;">${item.extra||''}</span>
+          </div>`
+        ).join('');
+      }
+      dropdown.style.display = 'block';
+      const rect = searchInput.getBoundingClientRect();
+      dropdown.style.left = '0px';
+      dropdown.style.top = (searchInput.offsetHeight + 2) + 'px';
+    }
+
+    function hideDropdown() {
+      dropdown.style.display = 'none';
+    }
+
+    searchInput.addEventListener('input', function() {
+      const q = this.value.trim();
+      if (q.length < 2) {
+        hideDropdown();
+        return;
+      }
+      // AJAX search: query both tasks and projects
+      fetch(`/dashboard/search/?q=${encodeURIComponent(q)}`)
+        .then(r => r.ok ? r.json() : {results: []})
+        .then(data => {
+          showDropdown(data.results || []);
+        });
+    });
+
+    searchInput.addEventListener('focus', function() {
+      if (dropdown.innerHTML) dropdown.style.display = 'block';
+    });
+    searchInput.addEventListener('blur', function() {
+      setTimeout(hideDropdown, 180);
+    });
+
+    dropdown.addEventListener('mousedown', function(e) {
+      const item = e.target.closest('.search-result-item');
+      if (item && item.dataset.url) {
+        window.location = item.dataset.url;
+      }
+    });
+    dropdown.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const item = document.activeElement;
+        if (item && item.classList.contains('search-result-item') && item.dataset.url) {
+          window.location = item.dataset.url;
+        }
+      }
+    });
+  }
+
   // Donut chart
   const progressCtx = document.getElementById('progressChart')?.getContext('2d');
   if (progressCtx) {
@@ -387,9 +463,10 @@ document.addEventListener("DOMContentLoaded", function() {
       data: {
         labels: ['Completed','In Progress','Pending'],
         datasets: [{
-          data: [{{ progress_completed|default:0 }}, {{ progress_inprogress|default:0 }}, {{ progress_pending|default:0 }}],
+          data: [Number('{{ progress_completed|default:0 }}'), Number('{{ progress_inprogress|default:0 }}'), Number('{{ progress_pending|default:0 }}')],
           backgroundColor: ['#16a34a', '#1f86e3', '#eab308'],
-          hoverOffset: 6, borderWidth: 0
+          hoverOffset: 6,
+          borderWidth: 0
         }]
       },
       options: { responsive:true, cutout:'60%', plugins:{ legend:{display:false} } }
@@ -400,16 +477,16 @@ document.addEventListener("DOMContentLoaded", function() {
   const priCtx = document.getElementById('priorityChart')?.getContext('2d');
   if (priCtx) {
     const openArr = [
-      {{ pri_critical_open|default:0 }},
-      {{ pri_high_open|default:0 }},
-      {{ pri_normal_open|default:0 }},
-      {{ pri_low_open|default:0 }}
+      Number('{{ pri_critical_open|default:0 }}'),
+      Number('{{ pri_high_open|default:0 }}'),
+      Number('{{ pri_normal_open|default:0 }}'),
+      Number('{{ pri_low_open|default:0 }}')
     ];
     const closedArr = [
-      {{ pri_critical_closed|default:0 }},
-      {{ pri_high_closed|default:0 }},
-      {{ pri_normal_closed|default:0 }},
-      {{ pri_low_closed|default:0 }}
+      Number('{{ pri_critical_closed|default:0 }}'),
+      Number('{{ pri_high_closed|default:0 }}'),
+      Number('{{ pri_normal_closed|default:0 }}'),
+      Number('{{ pri_low_closed|default:0 }}')
     ];
     new Chart(priCtx, {
       type: 'bar',
@@ -502,7 +579,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
 
 });
 </script>
