@@ -49,25 +49,37 @@
 }
 
 /* Background colors for each metric */
+ 
 .metric-card.total-tasks {
-  background-color: #2e8ff7; /* Blue */
-  color:#333; /* White text for contrast */
+ 
+  background-color: #1E5788; /* Professional Blue */
+ 
+  color: white; /* White text for contrast */
+ 
 }
-
+ 
 .metric-card.active-projects {
-  background-color: #5df080; /* Green */
-  color: #333; /* Dark text for contrast */ 
+ 
+  background-color: #2BA388; /* Professional Teal/Green */
+ 
+  color: white; /* White text for contrast */
+ 
 }
-
+ 
 .metric-card.tasks-completed {
-  background-color: #ceac46; /* Yellow */
-  color: #333; /* Dark text for contrast */
+ 
+  background-color: #D6A650; /* Professional Gold/Yellow */
+ 
+  color: white; /* White text for contrast */
+ 
 }
-
+ 
 .metric-card.tasks-pending {
-  background-color: #f19f5b; /* Orange */
-  color: #333; /* Dark text for contrast */
-
+ 
+  background-color: #D97B55; /* Professional Orange */
+ 
+  color: white; /* White text for contrast */
+ 
 }
 
 /* Charts row styling (optional) */
@@ -155,7 +167,7 @@
   /* professional gradient palette for each button */
   .shortcut-blue   { background: linear-gradient(135deg,#2563eb,#60a5fa); }
   .shortcut-green  { background: linear-gradient(135deg,#059669,#34d399); }
-  .shortcut-violet { background: linear-gradient(135deg,#9333ea,#a855f7); }
+  .shortcut-violet { background: linear-gradient(135deg,#7c2bc7,#a855f7); }
   .shortcut-orange { background: linear-gradient(135deg,#ea580c,#f97316); }
 
   /* subtle hover glow */
@@ -494,10 +506,10 @@ document.addEventListener("DOMContentLoaded", function() {
         labels: ['Critical','High','Normal','Low'],
         datasets: [
           { label: 'Open', data: openArr, backgroundColor: '#ef4444', stack: 'a', borderRadius: 6 },
-          { label: 'Closed', data: closedArr, backgroundColor: '#16a34a', stack: 'a', borderRadius: 6 }
+          { label: 'Closed', data: closedArr, backgroundColor: '#2BA388', stack: 'a', borderRadius: 6 }
         ]
       },
-      options: { indexAxis: 'y', responsive: true, scales: { x: { beginAtZero: true } }, plugins: { legend: { position: 'top' } } }
+      options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'top' } } }
     });
   }
 
@@ -559,28 +571,48 @@ document.addEventListener("DOMContentLoaded", function() {
 
       // team priority stacked horizontal
       const tPriCtx = document.getElementById('teamPriorityChart').getContext('2d');
-      const openArr = [ data.totals.priorities?.Critical_open||0, data.totals.priorities?.High_open||0, data.totals.priorities?.Normal_open||0, data.totals.priorities?.Low_open||0 ];
-      const closeArr = [ data.totals.priorities?.Critical_closed||0, data.totals.priorities?.High_closed||0, data.totals.priorities?.Normal_closed||0, data.totals.priorities?.Low_closed||0 ];
+      const openArr = [
+        data.totals.priorities?.Critical_open || 0,
+        data.totals.priorities?.High_open || 0,
+        data.totals.priorities?.Normal_open || 0,
+        data.totals.priorities?.Low_open || 0
+      ];
+      const closeArr = [
+        data.totals.priorities?.Critical_closed || 0,
+        data.totals.priorities?.High_closed || 0,
+        data.totals.priorities?.Normal_closed || 0,
+        data.totals.priorities?.Low_closed || 0
+      ];
+
       if (window.teamPriChart) window.teamPriChart.destroy();
+
       window.teamPriChart = new Chart(tPriCtx, {
-        type:'bar',
-        data:{ labels:['Critical','High','Normal','Low'],
-          datasets:[
-            { label:'Open', data: openArr, backgroundColor:'#ef4444', stack:'a' },
-            { label:'Closed', data: closeArr, backgroundColor:'#16a34a', stack:'a' }
+        type: 'bar',
+        data: {
+          labels: ['Critical', 'High', 'Normal', 'Low'],
+          datasets: [
+            { label: 'Open', data: openArr, backgroundColor: '#ef4444', stack: 'a' },
+            { label: 'Closed', data: closeArr, backgroundColor: '#16a34a', stack: 'a' }
           ]
         },
-        options:{ indexAxis:'y', responsive:true, scales:{ x:{ beginAtZero:true } } }
+        options: {
+          responsive: true,
+          scales: {
+            x: { beginAtZero: true }
+          }
+        }
       });
 
-    } catch (err) {
-      console.error(err);
-      alert('Failed loading team data.');
-    }
-  }
+      } catch (err) {
+        console.error(err);
+        alert('Failed loading team data.');
+      }
 
-  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+      function escapeHtml(s){
+        if(!s) return '';
+        return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+      }
 
-});
+      }});
 </script>
 {% endblock %}

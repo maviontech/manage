@@ -20,13 +20,6 @@
         </div>
       </form>
     </div>
-
-    <div class="actions ms-md-3 d-flex align-items-center gap-2">
-      <a href="{% url 'subproject_create' project.id %}" class="btn btn-primary btn-create d-flex align-items-center">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="me-1" aria-hidden><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        Add Subproject
-      </a>
-    </div>
   </div>
 
   <div class="projects-card mb-4">
@@ -62,6 +55,12 @@
         <div class="small">Click <a href="{% url 'subproject_create' project.id %}">Add Subproject</a> to create the first Work Breakdown Structure item.</div>
       </div>
       {% endfor %}
+    </div>
+    <div class="d-flex justify-content-center" style="margin-top:32px;">
+      <a href="{% url 'subproject_create' project.id %}" class="btn btn-primary btn-create d-flex align-items-center">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="me-1" aria-hidden><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add Subproject
+      </a>
     </div>
   </div>
 
@@ -101,7 +100,7 @@
 .btn-create { padding:.6rem 1rem; border-radius:10px; font-weight: 600; box-shadow:0 8px 28px rgba(13,110,253,0.08); }
 
 /* card & list grid */
-.projects-card { padding:.5rem; border:0; } /* Removed card styling, keeping container for consistency */
+.projects-card { border:0; } /* Removed card styling, keeping container for consistency */
 .list-grid { display:flex; flex-direction:column; gap:16px; padding:0; } /* Increased gap */
 
 /* list item (now card-like) */
@@ -132,7 +131,7 @@
   .top-row { gap:1rem; }
   .title-block { width:100%; }
   .actions { width:100%; justify-content:flex-start; }
-  .list-item { flex-direction:column; gap:.8rem; padding:14px; }
+  .list-item { flex-direction:column; gap:.8rem; padding:14px; margin-top: 20px }
   .right { width:100%; display:flex; justify-content:space-between; align-items:center; flex-direction: row !important; }
   .right > div:first-child { order: 2; }
   .right .btn-row { order: 1; }

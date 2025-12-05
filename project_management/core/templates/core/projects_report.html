@@ -1,0 +1,297 @@
+{% extends "core/base.html" %}
+
+{% block title %}Projects Report{% endblock %}
+
+{% block content %}
+ <style>
+        /* --- CSS VARIABLES FOR EASY THEME CHANGES --- */
+        :root {
+            --primary-color: #2563eb; /* Royal Blue */
+            --secondary-color: #1e293b; /* Dark Slate */
+            --accent-color: #10b981; /* Emerald Green for Success */
+            --warning-color: #f59e0b; /* Amber for Pending */
+            --danger-color: #ef4444; /* Red for Issues */
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --text-light: #64748b;
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+ 
+        /* --- GLOBAL STYLES --- */
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+ 
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+ 
+        /* --- HEADER SECTION --- */
+        header {
+            background-color: var(--card-bg);
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-left: 5px solid var(--primary-color);
+        }
+ 
+        .header-title h1 {
+            margin: 0;
+            font-size: 24px;
+            color: var(--secondary-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+ 
+        .header-title p {
+            margin: 5px 0 0;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+ 
+        .report-meta {
+            text-align: right;
+        }
+ 
+        .status-badge {
+            background-color: #dbeafe;
+            color: var(--primary-color);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+ 
+        /* --- KPI CARDS SECTION --- */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+ 
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-top: 3px solid transparent;
+            transition: transform 0.2s;
+        }
+ 
+        .card:hover {
+            transform: translateY(-3px);
+        }
+ 
+        .card.blue { border-color: var(--primary-color); }
+        .card.green { border-color: var(--accent-color); }
+        .card.orange { border-color: var(--warning-color); }
+        .card.red { border-color: var(--danger-color); }
+ 
+        .card h3 {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+ 
+        .card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin: 10px 0;
+        }
+ 
+        .card .trend {
+            font-size: 13px;
+        }
+ 
+        .trend.up { color: var(--accent-color); }
+        .trend.down { color: var(--danger-color); }
+ 
+        /* --- DATA TABLE SECTION --- */
+        .table-container {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+ 
+        .section-title {
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--secondary-color);
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+ 
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+ 
+        thead tr {
+            background-color: #f8fafc;
+            text-align: left;
+        }
+ 
+        th, td {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+ 
+        th {
+            color: var(--text-light);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+ 
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+ 
+        /* --- STATUS INDICATORS IN TABLE --- */
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-completed { background-color: var(--accent-color); }
+        .status-pending { background-color: var(--warning-color); }
+        .status-delayed { background-color: var(--danger-color); }
+ 
+        /* --- FOOTER --- */
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 12px;
+            padding-bottom: 20px;
+        }
+ 
+        /* --- PRINT STYLES (PDF GENERATION) --- */
+        @media print {
+            body { background-color: #fff; }
+            .container { max-width: 100%; padding: 0; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+            header { box-shadow: none; border-bottom: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body>
+ 
+    <div class="container">
+        <header>
+            <div class="header-title">
+                <h1>Trakline Project Report</h1>
+                <p>Comprehensive Data Analysis & Tracking</p>
+            </div>
+            <div class="report-meta">
+                <p><strong>Date:</strong> December 04, 2025</p>
+                <p><strong>Generated By:</strong> System Admin</p>
+                <span class="status-badge">Professional Tier</span>
+            </div>
+        </header>
+ 
+        <section class="kpi-grid">
+            <div class="card blue">
+                <h3>Total Tracked Items</h3>
+                <div class="value">1,248</div>
+                <div class="trend up">↑ 12% from last month</div>
+            </div>
+            <div class="card green">
+                <h3>Completed Deliveries</h3>
+                <div class="value">982</div>
+                <div class="trend up">↑ 98% Success Rate</div>
+            </div>
+            <div class="card orange">
+                <h3>Pending Processing</h3>
+                <div class="value">214</div>
+                <div class="trend">Requires Action</div>
+            </div>
+            <div class="card red">
+                <h3>Critical Alerts</h3>
+                <div class="value">5</div>
+                <div class="trend down">↓ Urgent attention needed</div>
+            </div>
+        </section>
+ 
+        <section class="table-container">
+            <div class="section-title">Live Tracking Data</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Project Name</th>
+                        <th>Client</th>
+                        <th>Timeline</th>
+                        <th>Budget ($)</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>#TRK-001</td>
+                        <td><strong>Alpha Logistics Overhaul</strong></td>
+                        <td>Global Corp</td>
+                        <td>Dec 1 - Dec 15</td>
+                        <td>$45,000</td>
+                        <td><span class="status-dot status-completed"></span>Completed</td>
+                        <td><a href="#" style="color:var(--primary-color); text-decoration:none;">View</a></td>
+                    </tr>
+                    <tr>
+                        <td>#TRK-002</td>
+                        <td><strong>Beta Supply Chain</strong></td>
+                        <td>NexGen Retail</td>
+                        <td>Dec 4 - Jan 10</td>
+                        <td>$12,500</td>
+                        <td><span class="status-dot status-pending"></span>In Progress</td>
+                        <td><a href="#" style="color:var(--primary-color); text-decoration:none;">Track</a></td>
+                    </tr>
+                    <tr>
+                        <td>#TRK-003</td>
+                        <td><strong>Gamma Warehouse</strong></td>
+                        <td>BuildIt Inc.</td>
+                        <td>Nov 20 - Dec 02</td>
+                        <td>$8,200</td>
+                        <td><span class="status-dot status-delayed"></span>Delayed</td>
+                        <td><a href="#" style="color:var(--danger-color); text-decoration:none;">Resolve</a></td>
+                    </tr>
+                     <tr>
+                        <td>#TRK-004</td>
+                        <td><strong>Delta Fleet Mgmt</strong></td>
+                        <td>FastTrans</td>
+                        <td>Dec 05 - Dec 20</td>
+                        <td>$22,000</td>
+                        <td><span class="status-dot status-pending"></span>Scheduled</td>
+                        <td><a href="#" style="color:var(--primary-color); text-decoration:none;">Edit</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+ 
+        <footer>
+            Trakline Project Analytics System &copy; 2025. Confidential Report.
+        </footer>
+    </div>
+ 
+</body>
+</html>
+{% endblock %}

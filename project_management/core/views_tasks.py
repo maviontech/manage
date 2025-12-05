@@ -124,13 +124,22 @@ def unassigned_tasks_view(request):
     cur = conn.cursor()
 
     sql = """
-        SELECT t.id, t.title, t.description, t.priority, t.due_date, p.name AS project_name, sp.name AS subproject_name, t.created_at
-        FROM tasks t
-        LEFT JOIN projects p ON p.id = t.project_id
-        LEFT JOIN subprojects sp ON sp.id = t.subproject_id
-        WHERE t.assigned_to IS NULL OR t.assigned_to = '' OR t.assigned_type IS NULL OR t.assigned_type = ''
-        ORDER BY t.priority DESC, t.due_date IS NULL, t.due_date ASC, t.created_at DESC
-    """
+        SELECT 
+    t.id, 
+    t.title, 
+    t.priority,
+    t.due_date,
+    t.assigned_type, 
+    t.assigned_to,
+    p.name AS project_name,
+    sp.name AS subproject_name
+FROM tasks t
+LEFT JOIN projects p ON p.id = t.project_id
+LEFT JOIN subprojects sp ON sp.id = t.subproject_id
+WHERE t.assigned_to IS NOT NULL
+ORDER BY t.priority DESC                            
+    """    
+    # the change the query to fetch only unassigned tasks                              
     cur.execute(sql)
     rows = cur.fetchall()
 

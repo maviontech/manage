@@ -129,34 +129,34 @@
 
 /* === PRIORITY COLORS === */
 
-/* LOW */
-.priority-low {
-    background: #f2f2f2;
-    color: #6d6d6d;
-    border-color: #d9d9d9;
-}
 
 /* NORMAL */
 .priority-normal {
-    background: #e6f7ff;
-    color: #0077b6;
-    border-color: #b3e5ff;
+    background: #e7f7ef;   /* soft green background */
+    color: #0f7a42;        /* deep green text */
+    border-color: #b7e8c9; /* light green border */
 }
 
 /* HIGH */
 .priority-high {
-    background: #fff4cc;
-    color: #b88600;
-    border-color: #f4dda1;
+    background: #fff3e5;   /* light orange background */
+    color: #c96a10;        /* strong orange text */
+    border-color: #ffd7b1; /* warm orange border */
+}
+
+/* LOW */
+.priority-low {
+    background: #f2f2f2;   /* neutral gray background */
+    color: #6e6e6e;        /* medium gray text */
+    border-color: #d9d9d9; /* soft gray border */
 }
 
 /* CRITICAL */
 .priority-critical {
-    background: #ffe5e5;
-    color: #b42323;
-    border-color: #f5b3b3;
+    background: #ffe5e5;   /* light red background */
+    color: #b42323;        /* strong red text */
+    border-color: #f7b3b3; /* soft red border */
 }
-
 
 
 
@@ -175,45 +175,37 @@
 
 /* OPEN */
 .status-open {
-    background: #e7f7ef;
-    color: #0f7a42;
-    border-color: #b7e8c9;
+    background: #e7f7ef;   /* soft green background */
+    color: #0f7a42;        /* deep green text */
+    border-color: #b7e8c9; /* light green border */
 }
 
 /* IN PROGRESS */
 .status-in-progress {
-    background: #e8f0ff;
-    color: #d8d51f;
-    border-color: #dfd21a;
-}
-
-/* COMPLETED or CLOSED */
-.status-completed,
-.status-closed {
-   background: #ffe5e5;
-    color: #b42323;
-    border-color: #f7b3b3; 
-}
-
-/* REVIEW */
-.status-review {
-    background: #f2f2f2;
-    color: #6e6e6e;
-    border-color: #d9d9d9;
-}
-
-/* ON HOLD */
-.status-on-hold {
-    background: #fff3e5;
-    color: #c96a10;
-    border-color: #ffd7b1;
+    background: #fffbe6;   /* pale yellow background */
+    color: #a67c00;        /* amber text */
+    border-color: #ffe699; /* warm yellow border */
 }
 
 /* BLOCKED */
 .status-blocked {
-    background: #fff6d9;
-    color: #c89c00;
-    border-color: #f3e19c;
+    background: #ffe5e5;   /* light red background */
+    color: #b42323;        /* strong red text */
+    border-color: #f7b3b3; /* soft red border */
+}
+
+/* REVIEW */
+.status-review {
+    background: #f2f2f2;   /* neutral gray background */
+    color: #6e6e6e;        /* medium gray text */
+    border-color: #d9d9d9; /* light gray border */
+}
+
+/* CLOSED */
+.status-closed {
+    background: #e8f0ff;   /* light blue background */
+    color: #004085;        /* navy text */
+    border-color: #b3c7f7; /* soft blue border */
 }
 
 /* DEFAULT */
@@ -289,7 +281,8 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: center; /* horizontal center */
+    align-items: flex-start; /* horizontal center */
+    margin-left: 2rem; /* reset left margin */
 }
 
 

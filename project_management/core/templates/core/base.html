@@ -4,8 +4,9 @@
       min-width: 0 !important;
       overflow: hidden !important;
       transition: width 0.2s;
+      padding: 0 !important;   /* <--- ADD THIS LINE */
     }
-  </style>
+</style>
 {% load static %}
 <!doctype html>
 <html lang="en">
@@ -201,7 +202,7 @@
 
           <!-- Reports -->
           <li class="menu-item {% if page == 'reports' %}active{% endif %}">
-            <a href="#" class="menu-link ripple" role="menuitem">
+            <a href="{% url 'projects_report' %}" class="menu-link ripple" role="menuitem">
               <span class="icon" aria-hidden="true"><i class="fa-solid fa-chart-bar"></i></span>
               <span class="label">Reports</span>
             </a>

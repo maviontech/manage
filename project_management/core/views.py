@@ -802,3 +802,53 @@ def profile_change_password_view(request):
         error_msg = None
 
     return render(request, 'core/profile_change_password.html', {'error': error_msg})
+
+def projects_report_view(request):
+    """
+    Display a report of projects for the logged-in user.
+    """
+    user = request.session.get('user')
+    if not user:
+        return redirect('login_password')
+
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('login_password')
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    projects = []
+    try:
+        cur.execute("""
+            SELECT id, name, status, start_date, end_date, created_at
+            FROM projects
+            WHERE owner_id=%s OR members LIKE CONCAT('%', %s, '%')
+            ORDER BY created_at DESC
+        """, (member_id, member_id))
+        rows = cur.fetchall() or []
+        if rows:
+            if isinstance(rows[0], dict):
+                projects = [{
+                    'id': r['id'],
+                    'name': r.get('name'),
+                    'status': r.get('status'),
+                    'start_date': r.get('start_date'),
+                    'end_date': r.get('end_date'),
+                    'created_at': r.get('created_at'),
+                } for r in rows]
+            else:
+                projects = [{
+                    'id': r[0],
+                    'name': r[1],
+                    'status': r[2],
+                    'start_date': r[3],
+                    'end_date': r[4],
+                    'created_at': r[5],
+                } for r in rows]
+    except Exception:
+        projects = []
+    finally:
+        cur.close()
+        conn.close()
+
+    return render(request, 'core/projects_report.html', {'projects': projects})
