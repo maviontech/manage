@@ -1,3 +1,4 @@
+<!-- Improved, more professional, cleaner UI version of your modal (HTML + CSS + JS) -->
 {% extends "core/base.html" %}
 {% load static %}
 
@@ -31,11 +32,12 @@
     background: #ffffff;
     border-radius: 18px;
     padding: 32px 40px;
-    max-width: 640px;
+    max-width: 660px;
     width: 100%;
-    box-shadow: 0px 20px 60px rgba(0,0,0,0.25);
+    box-shadow: 0px 24px 70px rgba(0,0,0,0.18);
     position: relative;
     animation: slideUp 0.28s cubic-bezier(0.17, 0.84, 0.44, 1);
+    border: 1px solid #e5e7eb;
 }
 
 /* ---------------- CLOSE BUTTON ---------------- */
@@ -61,37 +63,37 @@
     transform: scale(1.08);
 }
 
-/* ---------------- MODAL HEADER ---------------- */
+/* ---------------- HEADER ---------------- */
 .task-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 14px;
+    margin-bottom: 22px;
 }
 
 .task-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
     background: #2563eb15;
     display: flex;
     align-items:center;
     justify-content:center;
-    font-size: 22px;
+    font-size: 24px;
     color: #2563eb;
 }
 
 .task-title {
-    font-size: 1.55rem;
+    font-size: 1.65rem;
     font-weight: 700;
-    margin: 0;
+    margin: 15;
     color: #1f2937;
 }
 
 .task-status {
     background: #2563eb;
     color: white;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     padding: 5px 10px;
     border-radius: 6px;
     font-weight: 600;
@@ -101,41 +103,43 @@
 
 /* ---------------- DETAILS ---------------- */
 .detail-section {
-    margin-top: 20px;
+    margin-top: 24px;
 }
 
 .detail-item {
-    margin-bottom: 22px;
+    margin-bottom: 26px;
 }
 
 .detail-label {
-    font-size: 0.85rem;
+    font-size: 0.87rem;
     font-weight: 600;
     color: #6b7280;
-    margin-bottom: 3px;
+    margin-bottom: 4px;
 }
 
 .detail-value {
-    font-size: 1rem;
-    color: #374151;
-    line-height: 1.5em;
+    font-size: 1.03rem;
+    color: #2d3748;
+    line-height: 1.55em;
 }
 
 /* ---------------- BUTTON ---------------- */
 .edit-btn {
     display: inline-block;
-    padding: 10px 22px;
+    padding: 11px 24px;
     background: #2563eb;
     color: white;
-    font-size: 0.95rem;
-    border-radius: 8px;
+    font-size: 0.98rem;
+    border-radius: 10px;
     text-decoration: none;
     font-weight: 600;
-    transition: background 0.2s, transform 0.2s;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0px 6px 18px rgba(37, 99, 235, 0.25);
 }
 .edit-btn:hover {
     background: #1d4ed8;
     transform: translateY(-2px);
+    box-shadow: 0px 8px 26px rgba(37, 99, 235, 0.32);
 }
 
 /* ---------------- ANIMATIONS ---------------- */
@@ -144,14 +148,17 @@
     to {opacity: 1;}
 }
 @keyframes slideUp {
-    from {transform: translateY(20px); opacity: 0;}
+    from {transform: translateY(22px); opacity: 0;}
     to {transform: translateY(0); opacity: 1;}
 }
 
 /* ---------------- MOBILE ---------------- */
 @media (max-width: 600px) {
     .task-modal-content {
-        padding: 24px;
+        padding: 26px;
+    }
+    .task-title {
+        font-size: 1.35rem;
     }
 }
 </style>
@@ -163,14 +170,10 @@
 <div class="task-modal" id="taskDetailModal">
     <div class="task-modal-content">
 
-        <!-- CLOSE BUTTON -->
         <button class="modal-close-btn" onclick="closeTaskModal()">&times;</button>
 
-        <!-- HEADER -->
         <div class="task-header">
-            <div class="task-icon">
-                📝
-            </div>
+            <div class="task-icon">📝</div>
             <div>
                 <h1 class="task-title">{{ task.title }}</h1>
                 <span class="task-status">{{ task.status }}</span>
@@ -179,7 +182,6 @@
 
         <hr class="mb-4">
 
-        <!-- DETAILS -->
         <div class="detail-section">
 
             <div class="detail-item">
@@ -211,11 +213,8 @@
 
         </div>
 
-        <!-- BUTTON -->
         <div class="text-center mt-4">
-            <a href="{% url 'edit_task' task.id %}" class="edit-btn">
-                ✏️ Edit Task
-            </a>
+            <a href="{% url 'edit_task' task.id %}" class="edit-btn">✏️ Edit Task</a>
         </div>
 
     </div>
@@ -223,8 +222,7 @@
 
 <script>
 function closeTaskModal() {
-    document.getElementById('taskDetailModal').style.display = 'none';
-    document.getElementById('modalBg').style.display = 'none';
+    window.location.href = '/tasks/my/';
 }
 
 document.addEventListener('DOMContentLoaded', function() {
