@@ -407,12 +407,15 @@ def dashboard_view(request):
     # My new tasks count: tasks assigned to user and status is 'New' (or similar)
     my_new_tasks_count = 0
     try:
-        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status = 'New'", (member_id,))
+        cur.execute("SELECT COUNT(*) FROM TASKS")
         my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
         print("DEBUG: my_new_tasks_count =", my_new_tasks_count)
     except Exception as e:
         print("ERROR: my_new_tasks_count", e)
         my_new_tasks_count = 0
+
+
+
 
     cur.close()
     conn.close()

@@ -3,6 +3,8 @@
 {% block title %}Projects Report{% endblock %}
 
 {% block content %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
  <style>
         /* --- CSS VARIABLES FOR EASY THEME CHANGES --- */
         :root {
@@ -126,6 +128,7 @@
             padding: 25px;
             border-radius: 8px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
         }
  
         .section-title {
@@ -192,31 +195,249 @@
             .card { box-shadow: none; border: 1px solid #ddd; }
             header { box-shadow: none; border-bottom: 1px solid #ddd; }
         }
+
+      /* ---------------- CONTAINER LAYOUT ---------------- */
+    .filter-toolbar {
+        display: flex;
+        align-items: flex-end; /* Ensures inputs align at bottom even if labels vary */
+        gap: 16px; /* Spacing between the 4 boxes */
+        flex-wrap: wrap; /* Important: Allows wrapping on smaller screens */
+        margin-bottom: 24px;
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb; /* Optional: puts them in a nice container box */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+ 
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1; /* Makes them grow evenly to fill space */
+        min-width: 200px; /* Prevents them from getting too squished */
+    }
+ 
+    /* ---------------- LABELS ---------------- */
+    .filter-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.03em;
+        margin-left: 2px;
+    }
+ 
+    /* ---------------- UNIVERSAL INPUT STYLE ---------------- */
+    .trakline-input {
+        width: 100%; /* Fills the group container */
+        appearance: none;
+        -webkit-appearance: none;
+        
+        background-color: #f9fafb; /* Very light gray background */
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 10px 14px;
+        height: 44px; /* Fixed height for perfect alignment */
+        
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 0.95rem;
+        color: #1f2937;
+        
+        transition: all 0.2s ease;
+    }
+ 
+    /* Input Interactions */
+    .trakline-input:hover {
+        background-color: #fff;
+        border-color: #9ca3af;
+    }
+ 
+    .trakline-input:focus {
+        background-color: #fff;
+        border-color: #2563eb;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+ 
+    /* ---------------- DROPDOWN ARROW FIX ---------------- */
+    .input-wrapper-select {
+        position: relative;
+        width: 100%;
+    }
+ 
+    /* The little arrow icon */
+    .input-wrapper-select::after {
+        content: "▼";
+        font-size: 0.65rem;
+        color: #6b7280;
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+ 
+    /* ---------------- DATE ICON FIX ---------------- */
+    ::-webkit-calendar-picker-indicator {
+        filter: invert(0.5);
+        cursor: pointer;
+    }
+
+    /* ---------------- PAGE SETUP ---------------- */
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+        }
+ 
+        /* ---------------- MAIN CONTAINER (Side-by-Side Layout) ---------------- */
+        .charts-container {
+            display: flex;
+            gap: 24px; /* Space between the three charts */
+            justify-content: space-between;
+            flex-wrap: wrap; /* Allows wrapping on smaller screens */
+            max-width: 1200px;
+            margin: 0 auto;
+            margin-bottom: 1.5rem;
+        }
+ 
+        /* ---------------- CHART CARD STYLES ---------------- */
+        .chart-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            flex: 1; /* Makes them grow evenly */
+            min-width: 300px; /* Minimum width before wrapping */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+ 
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+ 
+        /* ---------------- THE CSS DONUT CHART MAGIC ---------------- */
+        /* The outer circle with the colorful gradient */
+        .donut-chart {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            /* The conic-gradient creates the pie slices.
+               We set the actual colors and percentages inline in the HTML for flexibility */
+        }
+ 
+        /* The inner circle (the hole) */
+        .donut-chart::after {
+            content: "";
+            position: absolute;
+            width: 120px; /* Adjust donut thickness here */
+            height: 120px; /* Adjust donut thickness here */
+            background: #ffffff; /* Matches card background to create the "hole" */
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); /* Subtle inner depth */
+        }
+ 
+        /* Optional: Center text inside the donut hole */
+        .chart-center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            text-align: center;
+        }
+        .chart-center-text .number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1f2937;
+            display: block;
+            line-height: 1;
+        }
+        .chart-center-text .label {
+            font-size: 0.85rem;
+            color: #6b7280;
+            font-weight: 600;
+        }
+ 
+        /* ---------------- LEGEND STYLES ---------------- */
+        .chart-legend {
+            margin-top: 24px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+ 
+        .legend-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #4b5563;
+            font-weight: 500;
+        }
+ 
+        .legend-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+ 
+        /* Color dots for legend */
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+ 
+        /* ---------------- COLOR PALETTE CLASSES ---------------- */
+        /* Chart 1 Colors */
+        .bg-active { background-color: #2563eb; } /* Blue */
+        .bg-inprogress { background-color: #f59e0b; } /* Orange */
+        .bg-close { background-color: #10b981; } /* Green */
+        
+        /* Chart 2 Colors */
+        .bg-allocated { background-color: #8b5cf6; } /* Purple */
+        .bg-free { background-color: #d1d5db; } /* Gray */
+        
+        /* Chart 3 Colors */
+        .bg-acquired { background-color: #ef4444; } /* Red */
+        .bg-remaining { background-color: #3b82f6; } /* Light Blue */
+        .bg-potential { background-color: #10b981; } /* Green */
     </style>
 </head>
 <body>
- 
-    <div class="container">
-        <header>
-            <div class="header-title">
-                <h1>Trakline Project Report</h1>
-                <p>Comprehensive Data Analysis & Tracking</p>
-            </div>
-            <div class="report-meta">
-                <p><strong>Date:</strong> December 04, 2025</p>
-                <p><strong>Generated By:</strong> System Admin</p>
-                <span class="status-badge">Professional Tier</span>
-            </div>
+
+    <div class="top-row d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+    <div class="title-and-search w-100">
+      <div class="d-flex align-items-start gap-3 flex-column flex-md-row">
+        <div class="title-block">
+          <h1 class="page-title">Trakline Project Report</h1>
+          <p class="text-muted small mb-0">Comprehensive Data Analysis & Tracking</p>
+        </div>
+
         </header>
  
         <section class="kpi-grid">
             <div class="card blue">
-                <h3>Total Tracked Items</h3>
+                <h3>Total Tasks</h3>
                 <div class="value">1,248</div>
                 <div class="trend up">↑ 12% from last month</div>
             </div>
             <div class="card green">
-                <h3>Completed Deliveries</h3>
+                <h3>Completed Tasks</h3>
                 <div class="value">982</div>
                 <div class="trend up">↑ 98% Success Rate</div>
             </div>
@@ -226,11 +447,168 @@
                 <div class="trend">Requires Action</div>
             </div>
             <div class="card red">
-                <h3>Critical Alerts</h3>
+                <h3>Critical </h3>
                 <div class="value">5</div>
                 <div class="trend down">↓ Urgent attention needed</div>
             </div>
         </section>
+
+   <div class="filter-toolbar">
+ 
+    <div class="filter-group">
+        <label for="idFilter" class="filter-label"><b>Search ID:</b></label>
+        <div class="input-wrapper-text">
+            <input type="text" id="idFilter" class="trakline-input" placeholder="e.g. TRK-105">
+        </div>
+    </div>
+ 
+    <div class="filter-group">
+        <label for="dateFilter" class="filter-label"><b>Select Date:</b></label>
+        <div class="input-wrapper-date">
+            <input type="date" id="dateFilter" class="trakline-input">
+        </div>
+    </div>
+ 
+    <div class="filter-group">
+        <label for="teamFilter" class="filter-label"><b>Select Team:</b></label>
+        <div class="input-wrapper-select">
+            <select id="teamFilter" class="trakline-input trakline-select">
+                <option value="all" selected>All Teams</option>
+                <option value="logistics">Alpha Logistics</option>
+                <option value="operations">Operations Unit</option>
+                <option value="dev">Development Team</option>
+                <option value="support">Customer Support</option>
+            </select>
+            <div class="select-arrow"></div>
+        </div>
+    </div>
+ 
+    <div class="filter-group">
+        <label for="employeeFilter" class="filter-label"><b>Select Employee:</b></label>
+        <div class="input-wrapper-select">
+            <select id="employeeFilter" class="trakline-input trakline-select">
+                <option value="all" selected>All Employees</option>
+                <option value="john_doe">John Doe</option>
+                <option value="jane_smith">Jane Smith</option>
+                <option value="alice_johnson">Alice Johnson</option>
+                <option value="bob_brown">Bob Brown</option>
+            </select>
+            <div class="select-arrow"></div>
+        </div>
+    </div>
+ 
+</div>
+
+<div class="card mb-3 border-0 shadow-sm search-card" style="margin-top:18px;">
+    <div class="card-body py-3 d-flex flex-wrap align-items-center gap-3 search-card-body">
+      <div class="position-relative flex-fill search-input-wrap" style="min-width:260px;">
+      </div>
+
+<div class="charts-container">
+ 
+    <div class="chart-card">
+        <div class="chart-title">Project Status Overview</div>
+        
+        <div class="donut-chart" style="background: conic-gradient(
+            #2563eb 0% 45%,  /* Active */
+            #f59e0b 45% 75%, /* In Progress */
+            #10b981 75% 100% /* Close */
+        );">
+            <div class="chart-center-text">
+                <span class="number">142</span>
+                <span class="label">Total Projects</span>
+            </div>
+        </div>
+ 
+        <div class="chart-legend">
+            <div class="legend-item">
+                <span class="legend-label"><span class="color-dot bg-active"></span>Active</span>
+                <span>45% (64)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-label"><span class="color-dot bg-inprogress"></span>In Progress</span>
+                <span>30% (42)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-label"><span class="color-dot bg-close"></span>Closed</span>
+                <span>25% (36)</span>
+            </div>
+        </div>
+    </div>
+ 
+ 
+    <div class="chart-card">
+        <div class="chart-title">Resource Allocation</div>
+        
+        <div class="donut-chart" style="background: conic-gradient(
+            #8b5cf6 0% 70%,  /* Allocated */
+            #d1d5db 70% 100% /* Free */
+        );">
+             <div class="chart-center-text">
+                <span class="number">85</span>
+                <span class="label">Total Staff</span>
+            </div>
+        </div>
+ 
+        <div class="chart-legend">
+            <div class="legend-item">
+                <span class="legend-label"><span class="color-dot bg-allocated"></span>Allocated (Busy)</span>
+                <span>70% (60)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-label"><span class="color-dot bg-free"></span>Free Emp.</span>
+                <span>30% (25)</span>
+            </div>
+        </div>
+    </div>
+ 
+ 
+    <div class="chart-card">
+        <div class="chart-title">Customer</div>
+        
+        <div class="donut-chart" style="background: conic-gradient(
+            #ef4444 0% 45%,  /* Customers Acquired */
+            #3b82f6 45% 82%, /* Customers Remaining */
+            #10b981 82% 100% /* Customers Potential */
+
+        );">
+             <div class="chart-center-text">
+                <span class="number">82</span>
+                <span class="label">Total Customers</span>
+            </div>
+        </div>
+ 
+        <div class="chart-legend">
+            <div class="legend-item">
+                <span class="legend-label"><span class="color-dot bg-spent"></span>Customers Acquired</span>
+                <span>60% (50)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-label"><span class="color-dot bg-remaining"></span>Customers Remaining</span>
+                <span>40% (32)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-label"><span class="color-dot bg-remaining"></span>Customers Potential</span>
+                <span>18% (15)</span>
+            </div>
+        </div>
+    </div>
+ 
+</div>
+
+<div class="filter-group">
+        <label for="teamFilter" class="filter-label"><b>Select type </b></label>
+        <div class="input-wrapper-select">
+            <select id="teamFilter" class="trakline-input trakline-select">
+                <option value="all" selected>Tasks </option>
+                <option value="logistics">Projects</option>
+            </select>
+            <div class="select-arrow"></div>
+        </div>
+    </div>
+        
+        
+
  
         <section class="table-container">
             <div class="section-title">Live Tracking Data</div>
@@ -239,59 +617,145 @@
                     <tr>
                         <th>ID</th>
                         <th>Project Name</th>
-                        <th>Client</th>
+                        <th>Client_Name</th>
                         <th>Timeline</th>
-                        <th>Budget ($)</th>
+                        <th>Task</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>#TRK-001</td>
-                        <td><strong>Alpha Logistics Overhaul</strong></td>
-                        <td>Global Corp</td>
+                        <td>#01</td>
+                        <td><strong>Api Development</strong></td>
+                        <td>Alex</td>
                         <td>Dec 1 - Dec 15</td>
-                        <td>$45,000</td>
+                        <td>API Integration</td>
                         <td><span class="status-dot status-completed"></span>Completed</td>
                         <td><a href="#" style="color:var(--primary-color); text-decoration:none;">View</a></td>
                     </tr>
                     <tr>
-                        <td>#TRK-002</td>
-                        <td><strong>Beta Supply Chain</strong></td>
-                        <td>NexGen Retail</td>
+                        <td>#02</td>
+                        <td><strong>Data Migration</strong></td>
+                        <td>Emily clark</td>
                         <td>Dec 4 - Jan 10</td>
-                        <td>$12,500</td>
+                        <td>Data Transfer</td>
                         <td><span class="status-dot status-pending"></span>In Progress</td>
                         <td><a href="#" style="color:var(--primary-color); text-decoration:none;">Track</a></td>
                     </tr>
                     <tr>
-                        <td>#TRK-003</td>
-                        <td><strong>Gamma Warehouse</strong></td>
-                        <td>BuildIt Inc.</td>
+                        <td>#03</td>
+                        <td><strong>Security Upgrade</strong></td>
+                        <td>Sara lee</td>
                         <td>Nov 20 - Dec 02</td>
-                        <td>$8,200</td>
+                        <td>Security Patch</td>
                         <td><span class="status-dot status-delayed"></span>Delayed</td>
                         <td><a href="#" style="color:var(--danger-color); text-decoration:none;">Resolve</a></td>
                     </tr>
                      <tr>
-                        <td>#TRK-004</td>
-                        <td><strong>Delta Fleet Mgmt</strong></td>
-                        <td>FastTrans</td>
+                        <td>#04</td>
+                        <td><strong>Documentation</strong></td>
+                        <td>elmia pushkar</td>
                         <td>Dec 05 - Dec 20</td>
-                        <td>$22,000</td>
+                        <td>Documentation</td>
                         <td><span class="status-dot status-pending"></span>Scheduled</td>
                         <td><a href="#" style="color:var(--primary-color); text-decoration:none;">Edit</a></td>
                     </tr>
                 </tbody>
             </table>
         </section>
- 
-        <footer>
-            Trakline Project Analytics System &copy; 2025. Confidential Report.
-        </footer>
-    </div>
- 
+
+        <script>
+
+        function changeDateFormat() {
+            let dateValue = document.getElementById("dateInput").value;
+            if (!dateValue) return;
+
+            let date = new Date(dateValue);
+
+            // Formats
+            let ddmmyyyy = date.toLocaleDateString("en-GB"); 
+            let yyyymmdd = date.toISOString().slice(0, 10);
+            let mmddyyyy = (date.getMonth() + 1) + "-" + date.getDate() + "-" + date.getFullYear();
+
+            document.getElementById("convertedDate").innerHTML = `
+                DD-MM-YYYY: ${ddmmyyyy}<br>
+                YYYY-MM-DD: ${yyyymmdd}<br>
+                MM-DD-YYYY: ${mmddyyyy}
+            `;
+        }
+
+        // Four distinct colors for columns/segments
+        const colorCompleted = '#10b981';      // Emerald (Completed)
+        const colorInProgress = '#f59e0b';     // Amber (In Progress)
+        const colorDelayed = '#ef4444';        // Red (Delayed)
+        const colorScheduled = '#2563eb';      // Blue (Scheduled)
+
+        // Bar Chart Data
+        const barCtx = document.getElementById('barChart').getContext('2d');
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Completed', 'In Progress', 'Delayed', 'Scheduled'],
+                datasets: [{
+                    label: 'Projects',
+                    data: [982, 214, 5, 47],
+                    backgroundColor: [
+                        colorCompleted,
+                        colorInProgress,
+                        colorDelayed,
+                        colorScheduled
+                    ],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, grid: { color: '#e2e8f0' } }
+                }
+            }
+        });
+
+        // Donut Chart Data
+        const donutCtx = document.getElementById('donutChart').getContext('2d');
+        new Chart(donutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['API Integration', 'Data Transfer', 'Security Patch', 'Documentation'],
+                datasets: [{
+                    label: 'Tasks',
+                    data: [1, 1, 1, 1],
+                    backgroundColor: [
+                        colorCompleted,
+                        colorInProgress,
+                        colorDelayed,
+                        colorScheduled
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: 'var(--text-main)' }
+                    },
+                    title: {
+                        display: false
+                    }
+                }
+            }
+        });
+        </script>
 </body>
 </html>
 {% endblock %}
