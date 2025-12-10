@@ -309,146 +309,40 @@
 
 <!-- ===== JS Logic (board + modal + assignees load + projects load + improved population flow) ===== -->
 <script>
-
-// Per-column pagination state
-const STATUS_COLUMNS = {{ status_columns|json_script:"statusColumnsJson" }};
-const STATUS_COLUMNS_PARSED = JSON.parse(document.getElementById('statusColumnsJson').textContent);
+let CURRENT_BOARD_PAGE = 1;
 const PER_PAGE = 10;
+let ALL_TASKS = [];
 const TASK_DETAIL_API = "{% url 'api_task_detail' %}";
 const TASK_UPDATE_API = "{% url 'api_task_update' %}";
 const BOARD_DATA_API = "{% url 'board_data' %}";
 const CSRF_TOKEN = "{{ csrf_token }}";
-let COLUMN_PAGES = {};
-let COLUMN_TOTALS = {};
-let COLUMN_TOTAL_PAGES = {};
 
-// Initialize per-column state
-STATUS_COLUMNS.forEach(col => {
-  COLUMN_PAGES[col] = 1;
-  COLUMN_TOTALS[col] = 0;
-  COLUMN_TOTAL_PAGES[col] = 1;
-});
-
-// Load all columns
-async function loadBoardColumns() {
-  await Promise.all(STATUS_COLUMNS.map(col => loadColumn(col, COLUMN_PAGES[col])));
-}
-
-// Load a single column (status) and render its tasks and pagination
-async function loadColumn(status, page=1) {
-  const colBody = document.querySelector(`#col-${slugify(status)}`);
-  if (!colBody) return;
-  colBody.innerHTML = '<div class="text-muted text-center p-3">Loading...</div>';
+/* Load board (unchanged) */
+async function loadBoard(page=1){
   try {
-    const res = await fetch(`${BOARD_DATA_API}?status=${encodeURIComponent(status)}&page=${page}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load ${status}`);
+    CURRENT_BOARD_PAGE = page;
+    const res = await fetch(BOARD_DATA_API + "?page=" + page);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load board`);
     const payload = await res.json();
     const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
-    COLUMN_TOTALS[status] = payload.total_count || 0;
-    COLUMN_TOTAL_PAGES[status] = payload.total_pages || 1;
-    COLUMN_PAGES[status] = payload.page || 1;
-    renderColumn(status, tasks);
-    renderColumnPagination(status);
+    ALL_TASKS = tasks;
+    const pageNum = payload.page || 1;
+    const totalPages = payload.total_pages || 1;
+    const totalCount = payload.total_count || tasks.length;
+    renderAllColumns(tasks);
+    renderPagination(pageNum, totalPages);
+    updateSummary(pageNum, totalCount, totalPages);
   } catch (err) {
-    colBody.innerHTML = '<div class="text-muted text-center p-3">Error loading tasks</div>';
+    console.error("Board load failed", err);
+    document.querySelectorAll(".kanban-body").forEach(c => c.innerHTML = '<div class="text-muted text-center p-3">Error loading tasks</div>');
   }
 }
-
-// Render tasks for a column
-function renderColumn(status, tasks) {
-  const colBody = document.querySelector(`#col-${slugify(status)}`);
-  if (!colBody) return;
-  colBody.innerHTML = "";
-  tasks.forEach(t => renderCard(t, colBody));
+function renderAllColumns(tasks){
+  document.querySelectorAll(".kanban-body").forEach(c => c.innerHTML = "");
+  tasks.forEach(t => renderCard(t));
   initDragDrop();
+  initSearch(ALL_TASKS);
 }
-
-// Render pagination controls for a column
-function renderColumnPagination(status) {
-  let pagId = `pagination-${slugify(status)}`;
-  let pagWrap = document.getElementById(pagId);
-  if (!pagWrap) {
-    // Create pagination container below the column
-    const col = document.querySelector(`#col-${slugify(status)}`);
-    if (!col) return;
-    pagWrap = document.createElement('div');
-    pagWrap.id = pagId;
-    pagWrap.className = 'kanban-pagination mt-2 d-flex justify-content-center';
-    col.parentElement.appendChild(pagWrap);
-  }
-  pagWrap.innerHTML = "";
-  const totalPages = COLUMN_TOTAL_PAGES[status];
-  const current = COLUMN_PAGES[status];
-  if (totalPages <= 1) return;
-  function pageBtn(label, page, disabled=false, active=false) {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-sm btn-light mx-1' + (active ? ' active' : '');
-    btn.textContent = label;
-    btn.disabled = disabled;
-    btn.onclick = () => { COLUMN_PAGES[status] = page; loadColumn(status, page); };
-    return btn;
-  }
-  pagWrap.appendChild(pageBtn('Prev', Math.max(1, current-1), current<=1));
-  for (let p=1; p<=totalPages; p++) {
-    if (p === 1 || p === totalPages || Math.abs(p-current)<=2) {
-      pagWrap.appendChild(pageBtn(p, p, false, p===current));
-    } else if (p === current-3 || p === current+3) {
-      const ell = document.createElement('span'); ell.textContent = '...'; ell.className = 'mx-1'; pagWrap.appendChild(ell);
-    }
-  }
-  pagWrap.appendChild(pageBtn('Next', Math.min(totalPages, current+1), current>=totalPages));
-}
-
-// Utility: slugify for IDs
-function slugify(str) {
-  return String(str).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
-}
-
-// Patch renderCard to accept colBody
-function renderCard(t, colOverride) {
-  if (!t || !t.id || !t.status) {
-    console.warn("Invalid task data:", t);
-    return;
-  }
-  const col = colOverride || document.querySelector(`[data-status="${t.status}"]`) || document.querySelector(".kanban-body");
-  if (!col) return;
-  const card = document.createElement("div");
-  card.className = "task-card";
-  card.setAttribute("draggable", "true");
-  card.dataset.id = t.id;
-  card.setAttribute("tabindex","0");
-  card.setAttribute("role","button");
-  card.setAttribute("aria-label", "Open task " + (t.title || 'Untitled') );
-  let displayAssignee = "";
-  if (t.assigned_to_display) displayAssignee = t.assigned_to_display;
-  else if (t.assigned_to && typeof t.assigned_to === 'string' && t.assigned_to.startsWith("member:"))
-    displayAssignee = "Member " + t.assigned_to.split(":")[1];
-  else if (t.assigned_to && typeof t.assigned_to === 'string' && t.assigned_to.startsWith("team:"))
-    displayAssignee = "Team " + t.assigned_to.split(":")[1];
-  card.innerHTML = `
-    <div>
-      <div class="task-title">${escapeHtml(t.title || 'Untitled')}</div>
-      <div class="task-meta">
-        ${escapeHtml(t.priority || 'Normal')}${t.due_date ? ' • Due ' + escapeHtml(t.due_date) : ''}
-      </div>
-      ${displayAssignee ? `<div class="assignee-name"><i class="fa-solid fa-user me-1"></i>${escapeHtml(displayAssignee)}</div>` : ''}
-    </div>
-  `;
-  card.addEventListener("click", e => {
-    if (card.dataset.dragging === "1") return;
-    openTaskModal(t.id);
-  });
-  card.addEventListener("keydown", e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTaskModal(t.id); }
-  });
-  col.appendChild(card);
-}
-
-// On DOM ready, load all columns
-document.addEventListener("DOMContentLoaded", function(){
-  // ...existing modal and preload logic...
-  loadBoardColumns();
-});
 
 /* Card render */
 function renderCard(t){
