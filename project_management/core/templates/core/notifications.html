@@ -1,0 +1,471 @@
+{% extends "core/base.html" %}
+
+{% block title %}Notifications — Trackline{% endblock %}
+
+{% block extra_head %}
+<style>
+.notifications-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.notifications-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.notifications-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-action {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.btn-action.primary {
+  background: linear-gradient(135deg, #0b57a4, #1f86e3);
+  color: white;
+  border: none;
+}
+
+.btn-action.primary:hover {
+  opacity: 0.9;
+}
+
+.notifications-list {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.notification-item {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  gap: 16px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background: #f9fafb;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item.unread {
+  background: #eff6ff;
+}
+
+.notification-item.unread:hover {
+  background: #dbeafe;
+}
+
+.notification-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.notification-icon.info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.notification-icon.success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.notification-icon.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.notification-icon.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.notification-icon.task {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.notification-icon.project {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.notification-icon.team {
+  background: #fce7f3;
+  color: #9f1239;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.notification-message {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.notification-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.notification-btn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.notification-btn:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+  margin-left: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #9ca3af;
+}
+
+.empty-state i {
+  font-size: 64px;
+  color: #d1d5db;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  font-size: 14px;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="notifications-container">
+  <div class="notifications-header">
+    <div>
+      <h1><i class="fa fa-bell"></i> Notifications</h1>
+      <p style="color: #6b7280; margin: 4px 0 0 0; font-size: 14px;">Stay updated with your latest activities</p>
+    </div>
+    <div class="notifications-actions">
+      <button class="btn-action" onclick="markAllAsRead()">
+        <i class="fa fa-check-double"></i> Mark All Read
+      </button>
+      <button class="btn-action" onclick="loadNotifications()">
+        <i class="fa fa-sync"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <div id="notificationsList" class="notifications-list">
+    <div class="loading-state">
+      <i class="fa fa-spinner fa-spin" style="font-size: 32px;"></i>
+      <p style="margin-top: 12px;">Loading notifications...</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let notifications = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadNotifications();
+  
+  // Auto-refresh every 30 seconds
+  setInterval(loadNotifications, 30000);
+});
+
+function loadNotifications() {
+  console.log('Loading notifications...'); // Debug log
+  
+  fetch('{% url "api_notifications_list" %}')
+    .then(res => {
+      console.log('Response status:', res.status); // Debug log
+      return res.json();
+    })
+    .then(data => {
+      console.log('Received data:', data); // Debug log
+      
+      if (data.error) {
+        console.error('Error loading notifications:', data.error);
+        const container = document.getElementById('notificationsList');
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="fa fa-exclamation-triangle" style="color: #f59e0b;"></i>
+            <h3>Unable to Load Notifications</h3>
+            <p style="color: #ef4444; margin-top: 8px;">${data.error}</p>
+            ${data.message ? `<p style="font-size: 13px; margin-top: 4px;">${data.message}</p>` : ''}
+            <button onclick="location.reload()" style="margin-top: 16px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+              Retry
+            </button>
+          </div>
+        `;
+        return;
+      }
+      
+      notifications = data.notifications || [];
+      console.log('Parsed notifications:', notifications.length); // Debug log
+      renderNotifications();
+      updateBadge(data.unread_count || 0);
+    })
+    .catch(error => {
+      console.error('Fetch error:', error);
+      const container = document.getElementById('notificationsList');
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fa fa-exclamation-circle" style="color: #ef4444;"></i>
+          <h3>Connection Error</h3>
+          <p>Unable to connect to the server. Please check your connection.</p>
+          <button onclick="loadNotifications()" style="margin-top: 16px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Try Again
+          </button>
+        </div>
+      `;
+    });
+}
+
+function renderNotifications() {
+  const container = document.getElementById('notificationsList');
+  
+  console.log('Rendering notifications:', notifications); // Debug log
+  
+  if (!notifications || notifications.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fa fa-bell-slash"></i>
+        <h3>No notifications yet</h3>
+        <p>You're all caught up! New notifications will appear here.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = notifications.map(notif => {
+    const iconClass = getIconClass(notif.type);
+    const timeAgo = getTimeAgo(notif.created_at);
+    const unreadClass = notif.is_read ? '' : 'unread';
+    const title = notif.title || 'Notification';
+    const message = notif.message || '';
+    const link = notif.link || '';
+    
+    return `
+      <div class="notification-item ${unreadClass}" onclick="handleNotificationClick(${notif.id}, '${link}')">
+        <div class="notification-icon ${notif.type}">
+          <i class="${iconClass}"></i>
+        </div>
+        <div class="notification-content">
+          <div class="notification-title">
+            ${escapeHtml(title)}
+            ${!notif.is_read ? '<span class="unread-badge"></span>' : ''}
+          </div>
+          <div class="notification-message">${escapeHtml(message)}</div>
+          <div class="notification-time">
+            <i class="fa fa-clock"></i> ${timeAgo}
+          </div>
+        </div>
+        <div class="notification-actions">
+          ${!notif.is_read ? `<button class="notification-btn" onclick="event.stopPropagation(); markAsRead(${notif.id})" title="Mark as read"><i class="fa fa-check"></i></button>` : ''}
+          <button class="notification-btn" onclick="event.stopPropagation(); deleteNotification(${notif.id})" title="Delete"><i class="fa fa-trash"></i></button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getIconClass(type) {
+  const icons = {
+    'info': 'fa fa-info-circle',
+    'success': 'fa fa-check-circle',
+    'warning': 'fa fa-exclamation-triangle',
+    'error': 'fa fa-times-circle',
+    'task': 'fa fa-tasks',
+    'project': 'fa fa-folder',
+    'team': 'fa fa-users'
+  };
+  return icons[type] || 'fa fa-bell';
+}
+
+function getTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+  
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
+  if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+  if (seconds < 604800) return Math.floor(seconds / 86400) + ' days ago';
+  
+  return date.toLocaleDateString();
+}
+
+function handleNotificationClick(id, link) {
+  markAsRead(id);
+  if (link && link !== 'null' && link !== '') {
+    setTimeout(() => {
+      window.location.href = link;
+    }, 200);
+  }
+}
+
+function markAsRead(id) {
+  fetch('{% url "api_notifications_mark_read" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({ id: id })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      loadNotifications();
+    }
+  })
+  .catch(error => console.error('Error:', error));
+}
+
+function markAllAsRead() {
+  fetch('{% url "api_notifications_mark_read" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({ mark_all: true })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      loadNotifications();
+    }
+  })
+  .catch(error => console.error('Error:', error));
+}
+
+function deleteNotification(id) {
+  if (!confirm('Delete this notification?')) return;
+  
+  fetch('{% url "api_notifications_delete" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({ id: id })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      loadNotifications();
+    }
+  })
+  .catch(error => console.error('Error:', error));
+}
+
+function updateBadge(count) {
+  const badge = document.getElementById('notif-badge');
+  if (badge) {
+    if (count > 0) {
+      badge.textContent = count > 99 ? '99+' : count;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+</script>
+{% endblock %}

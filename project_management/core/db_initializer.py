@@ -32,8 +32,10 @@ TENANT_DDL = [
       tentative_end_date DATE,
       end_date DATETIME,
       status VARCHAR(50),
+      employee_id INT,
       created_by INT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
@@ -69,7 +71,38 @@ TENANT_DDL = [
       user_id INT,
       hours DOUBLE,
       date DATE,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      description TEXT,
+      status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+      approved_by INT,
+      approved_at TIMESTAMP NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL,
+      FOREIGN KEY (user_id) REFERENCES members(id) ON DELETE CASCADE,
+      FOREIGN KEY (approved_by) REFERENCES members(id) ON DELETE SET NULL,
+      INDEX idx_user_id (user_id),
+      INDEX idx_task_id (task_id),
+      INDEX idx_status (status),
+      INDEX idx_date (date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS timer_sessions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      task_id INT,
+      start_time DATETIME NOT NULL,
+      end_time DATETIME,
+      duration_seconds INT DEFAULT 0,
+      is_running TINYINT(1) DEFAULT 1,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES members(id) ON DELETE CASCADE,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL,
+      INDEX idx_user_id (user_id),
+      INDEX idx_task_id (task_id),
+      INDEX idx_is_running (is_running)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
@@ -140,6 +173,35 @@ TENANT_DDL = [
       UNIQUE KEY uk_team_member (team_id, member_id),
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS employees (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      employee_code VARCHAR(50) UNIQUE NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      first_name VARCHAR(120) NOT NULL,
+      last_name VARCHAR(120),
+      phone VARCHAR(50),
+      department VARCHAR(100),
+      designation VARCHAR(100),
+      date_of_joining DATE,
+      date_of_birth DATE,
+      address TEXT,
+      city VARCHAR(100),
+      state VARCHAR(100),
+      country VARCHAR(100),
+      postal_code VARCHAR(20),
+      emergency_contact_name VARCHAR(255),
+      emergency_contact_phone VARCHAR(50),
+      status ENUM('Active', 'Inactive', 'On Leave', 'Terminated') DEFAULT 'Active',
+      salary DECIMAL(10, 2),
+      created_by INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_employee_email (email),
+      INDEX idx_employee_code (employee_code),
+      INDEX idx_employee_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
 """
@@ -233,6 +295,21 @@ CREATE TABLE IF NOT EXISTS chat_conversation (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY tenant_pair (tenant_id, user_a, user_b)
 );
+""",
+    """
+CREATE TABLE IF NOT EXISTS notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  type ENUM('info', 'success', 'warning', 'error', 'task', 'project', 'team') DEFAULT 'info',
+  is_read TINYINT(1) DEFAULT 0,
+  link VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_id (user_id),
+  INDEX idx_is_read (is_read),
+  INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 """,
     """
 

@@ -12,6 +12,9 @@ from math import ceil
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
+# Import Excel export function
+from .views_export import export_projects_excel
+
 # Adjust these imports to match your project utilities (names used earlier in this project)
 
 
@@ -399,7 +402,6 @@ def dashboard_view(request):
     try:
         cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND NOT (status = 'Closed')", (member_id,))
         board_open_count = scalar_from_row(cur.fetchone(), 'c')
-        print("DEBUG: board_open_count =", board_open_count)
     except Exception as e:
         print("ERROR: board_open_count", e)
         board_open_count = 0
@@ -409,7 +411,6 @@ def dashboard_view(request):
     try:
         cur.execute("SELECT COUNT(*) FROM TASKS")
         my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
-        print("DEBUG: my_new_tasks_count =", my_new_tasks_count)
     except Exception as e:
         print("ERROR: my_new_tasks_count", e)
         my_new_tasks_count = 0
@@ -808,7 +809,7 @@ def profile_change_password_view(request):
 
 def projects_report_view(request):
     """
-    Display a report of projects for the logged-in user.
+    Display a comprehensive report of projects with task statistics, employee info, and live tracking data.
     """
     user = request.session.get('user')
     if not user:
@@ -819,39 +820,1307 @@ def projects_report_view(request):
         return redirect('login_password')
 
     conn = get_tenant_conn(request)
-    cur = conn.cursor()
     projects = []
+    tasks_list = []
+    summary = {}
+    
+    try:
+        # Fetch comprehensive project data with employee info and task statistics
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.status,
+                p.start_date,
+                p.tentative_end_date,
+                p.end_date,
+                p.created_at,
+                p.employee_id,
+                e.employee_code,
+                e.first_name AS emp_first_name,
+                e.last_name AS emp_last_name,
+                e.email AS emp_email,
+                e.department,
+                e.designation,
+                e.status AS employee_status,
+                u.full_name AS created_by_name,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id) AS total_tasks,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status = 'Completed') AS completed_tasks,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status IN ('New', 'In Progress', 'Pending')) AS pending_tasks,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status = 'In Progress') AS inprogress_tasks,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND priority = 'Critical') AS critical_tasks,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND priority = 'High') AS high_tasks,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND due_date < CURDATE() AND status != 'Completed') AS overdue_tasks
+            FROM projects p
+            LEFT JOIN employees e ON p.employee_id = e.id
+            LEFT JOIN users u ON p.created_by = u.id
+            ORDER BY p.created_at DESC
+        """)
+        rows = cur.fetchall()
+        
+        for r in rows:
+            # Calculate progress percentage
+            total = r['total_tasks'] or 0
+            completed = r['completed_tasks'] or 0
+            progress = round((completed / total * 100) if total > 0 else 0, 1)
+            
+            # Calculate timeline status
+            timeline_status = 'On Track'
+            if r['status'] == 'Completed':
+                timeline_status = 'Completed'
+            elif r['tentative_end_date']:
+                from datetime import datetime, date
+                today = date.today()
+                end_date = r['tentative_end_date']
+                if isinstance(end_date, str):
+                    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+                
+                if end_date < today and r['status'] != 'Completed':
+                    timeline_status = 'Overdue'
+                elif (end_date - today).days <= 7 and r['status'] != 'Completed':
+                    timeline_status = 'At Risk'
+            
+            # Employee full name
+            employee_name = ''
+            if r['emp_first_name']:
+                employee_name = f"{r['emp_first_name']} {r['emp_last_name'] or ''}".strip()
+            
+            projects.append({
+                'id': r['id'],
+                'name': r['name'],
+                'description': r['description'] or '',
+                'status': r['status'],
+                'start_date': r['start_date'],
+                'tentative_end_date': r['tentative_end_date'],
+                'end_date': r['end_date'],
+                'created_at': r['created_at'],
+                'created_by_name': r['created_by_name'] or 'Unknown',
+                'employee_code': r['employee_code'] or 'N/A',
+                'employee_name': employee_name or 'Not Assigned',
+                'employee_email': r['emp_email'] or '',
+                'department': r['department'] or 'N/A',
+                'designation': r['designation'] or 'N/A',
+                'employee_status': r['employee_status'] or 'Unknown',
+                'total_tasks': total,
+                'completed_tasks': completed,
+                'pending_tasks': r['pending_tasks'] or 0,
+                'inprogress_tasks': r['inprogress_tasks'] or 0,
+                'critical_tasks': r['critical_tasks'] or 0,
+                'high_tasks': r['high_tasks'] or 0,
+                'overdue_tasks': r['overdue_tasks'] or 0,
+                'progress': progress,
+                'timeline_status': timeline_status
+            })
+        
+        # Calculate summary statistics
+        total_projects = len(projects)
+        active_projects = len([p for p in projects if p['status'] == 'Active'])
+        completed_projects = len([p for p in projects if p['status'] == 'Completed'])
+        planned_projects = len([p for p in projects if p['status'] == 'Planned'])
+        onhold_projects = len([p for p in projects if p['status'] == 'On Hold'])
+        total_all_tasks = sum(p['total_tasks'] for p in projects)
+        total_completed_tasks = sum(p['completed_tasks'] for p in projects)
+        total_pending_tasks = sum(p['pending_tasks'] for p in projects)
+        total_overdue_tasks = sum(p['overdue_tasks'] for p in projects)
+        
+        # Calculate employee counts by status - get distinct employees from employees table
+        cur.execute("SELECT COUNT(*) as count FROM employees WHERE status = 'Active'")
+        active_employees = cur.fetchone()['count'] or 0
+        
+        cur.execute("SELECT COUNT(*) as count FROM employees WHERE status = 'Inactive'")
+        inactive_employees = cur.fetchone()['count'] or 0
+        
+        cur.execute("SELECT COUNT(*) as count FROM employees WHERE status = 'Terminated'")
+        terminated_employees = cur.fetchone()['count'] or 0
+        
+        cur.execute("SELECT COUNT(*) as count FROM employees WHERE status = 'On Leave'")
+        onleave_employees = cur.fetchone()['count'] or 0
+        
+        summary = {
+            'total_projects': total_projects,
+            'active_projects': active_projects,
+            'completed_projects': completed_projects,
+            'planned_projects': planned_projects,
+            'onhold_projects': onhold_projects,
+            'total_tasks': total_all_tasks,
+            'completed_tasks': total_completed_tasks,
+            'pending_tasks': total_pending_tasks,
+            'overdue_tasks': total_overdue_tasks,
+            'active_employees': active_employees,
+            'inactive_employees': inactive_employees,
+            'terminated_employees': terminated_employees,
+            'onleave_employees': onleave_employees,
+            'overall_progress': round((total_completed_tasks / total_all_tasks * 100) if total_all_tasks > 0 else 0, 1)
+        }
+        
+    except Exception as e:
+        print(f"Error in projects_report_view: {e}")
+        projects = []
+        summary = {
+            'total_projects': 0,
+            'active_projects': 0,
+            'completed_projects': 0,
+            'planned_projects': 0,
+            'onhold_projects': 0,
+            'active_employees': 0,
+            'inactive_employees': 0,
+            'terminated_employees': 0,
+            'onleave_employees': 0,
+            'total_tasks': 0,
+            'completed_tasks': 0,
+            'pending_tasks': 0,
+            'overdue_tasks': 0,
+            'overall_progress': 0
+        }
+    
+    # Fetch all tasks with project and assignee information (reuse same connection)
+    try:
+        cur = conn.cursor()
+        print("Fetching tasks...")
+        cur.execute("""
+            SELECT 
+                t.id,
+                t.title,
+                t.description,
+                t.status,
+                t.priority,
+                t.due_date,
+                t.created_at,
+                t.assigned_type,
+                t.assigned_to,
+                p.name AS project_name,
+                p.id AS project_id,
+                m.first_name AS member_first_name,
+                m.last_name AS member_last_name,
+                tm.name AS assigned_team_name,
+                creator.full_name AS created_by_name
+            FROM tasks t
+            LEFT JOIN projects p ON t.project_id = p.id
+            LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
+            LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
+            LEFT JOIN users creator ON t.created_by = creator.id
+            ORDER BY t.created_at DESC
+        """)
+        rows = cur.fetchall()
+        print(f"Found {len(rows)} tasks")
+        
+        for r in rows:
+            # Determine assigned name
+            assigned_name = 'Unassigned'
+            if r['assigned_type'] == 'member' and r['member_first_name']:
+                assigned_name = f"{r['member_first_name']} {r['member_last_name'] or ''}".strip()
+            elif r['assigned_type'] == 'team' and r['assigned_team_name']:
+                assigned_name = f"Team: {r['assigned_team_name']}"
+            
+            tasks_list.append({
+                'id': r['id'],
+                'title': r['title'],
+                'description': r['description'] or '',
+                'status': r['status'],
+                'priority': r['priority'],
+                'due_date': r['due_date'],
+                'created_at': r['created_at'],
+                'project_name': r['project_name'] or 'No Project',
+                'project_id': r['project_id'],
+                'assigned_name': assigned_name,
+                'assigned_type': r['assigned_type'],
+                'created_by_name': r['created_by_name'] or 'Unknown'
+            })
+        print(f"Tasks list prepared: {len(tasks_list)} tasks")
+    except Exception as e:
+        print(f"Error fetching tasks: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        # Close connection after all queries are complete
+        if conn:
+            conn.close()
+
+    # Fetch all teams for filter dropdown
+    teams = []
+    try:
+        conn = get_tenant_conn(request)
+        cur = conn.cursor()
+        cur.execute("SELECT id, name FROM teams ORDER BY name")
+        teams = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Error fetching teams: {e}")
+        teams = []
+
+    print(f"Rendering template with {len(projects)} projects, {len(tasks_list)} tasks, and {len(teams)} teams")
+    return render(request, 'core/projects_report.html', {
+        'projects': projects,
+        'tasks': tasks_list,
+        'summary': summary,
+        'teams': teams,
+        'page': 'reports'
+    })
+
+
+# ======================== EMPLOYEES VIEWS ========================
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+def employees_page(request):
+    """Display the employees management page."""
+    user = request.session.get('user')
+    if not user:
+        return redirect('identify')
+
+    return render(request, 'core/employees.html', {'page': 'employees'})
+
+
+def api_employees_list(request):
+    """Return a list of all employees."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    employees = []
     try:
         cur.execute("""
-            SELECT id, name, status, start_date, end_date, created_at
-            FROM projects
-            WHERE owner_id=%s OR members LIKE CONCAT('%', %s, '%')
+            SELECT id, employee_code, email, first_name, last_name, phone, 
+                   department, designation, date_of_joining, status, salary,
+                   created_at
+            FROM employees
             ORDER BY created_at DESC
-        """, (member_id, member_id))
-        rows = cur.fetchall() or []
-        if rows:
-            if isinstance(rows[0], dict):
-                projects = [{
-                    'id': r['id'],
-                    'name': r.get('name'),
-                    'status': r.get('status'),
-                    'start_date': r.get('start_date'),
-                    'end_date': r.get('end_date'),
-                    'created_at': r.get('created_at'),
-                } for r in rows]
-            else:
-                projects = [{
-                    'id': r[0],
-                    'name': r[1],
-                    'status': r[2],
-                    'start_date': r[3],
-                    'end_date': r[4],
-                    'created_at': r[5],
-                } for r in rows]
-    except Exception:
-        projects = []
+        """)
+        rows = cur.fetchall()
+        employees = [{
+            'id': r['id'],
+            'employee_code': r['employee_code'],
+            'email': r['email'],
+            'first_name': r['first_name'],
+            'last_name': r['last_name'],
+            'full_name': f"{r['first_name']} {r['last_name'] or ''}".strip(),
+            'phone': r['phone'] or '',
+            'department': r['department'] or '',
+            'designation': r['designation'] or '',
+            'date_of_joining': r['date_of_joining'].strftime('%Y-%m-%d') if r['date_of_joining'] else '',
+            'status': r['status'],
+            'salary': float(r['salary']) if r['salary'] else 0,
+            'created_at': r['created_at'].strftime('%Y-%m-%d %H:%M:%S') if r['created_at'] else ''
+        } for r in rows]
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
     finally:
         cur.close()
         conn.close()
 
-    return render(request, 'core/projects_report.html', {'projects': projects})
+    return JsonResponse({'employees': employees})
+
+
+@require_http_methods(["POST"])
+def api_create_employee(request):
+    """Create a new employee."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    import json
+    data = json.loads(request.body)
+    
+    employee_code = data.get('employee_code', '').strip()
+    email = data.get('email', '').strip()
+    first_name = data.get('first_name', '').strip()
+    last_name = data.get('last_name', '').strip()
+    phone = data.get('phone', '').strip()
+    department = data.get('department', '').strip()
+    designation = data.get('designation', '').strip()
+    date_of_joining = data.get('date_of_joining', '').strip()
+    date_of_birth = data.get('date_of_birth', '').strip()
+    address = data.get('address', '').strip()
+    city = data.get('city', '').strip()
+    state = data.get('state', '').strip()
+    country = data.get('country', '').strip()
+    postal_code = data.get('postal_code', '').strip()
+    emergency_contact_name = data.get('emergency_contact_name', '').strip()
+    emergency_contact_phone = data.get('emergency_contact_phone', '').strip()
+    status = data.get('status', 'Active')
+    salary = data.get('salary', None)
+
+    if not employee_code or not email or not first_name:
+        return JsonResponse({'error': 'Employee code, email, and first name are required'}, status=400)
+
+    member_id = request.session.get('member_id')
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            INSERT INTO employees (
+                employee_code, email, first_name, last_name, phone,
+                department, designation, date_of_joining, date_of_birth,
+                address, city, state, country, postal_code,
+                emergency_contact_name, emergency_contact_phone,
+                status, salary, created_by
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+        """, (
+            employee_code, email, first_name, last_name, phone,
+            department, designation, date_of_joining or None, date_of_birth or None,
+            address, city, state, country, postal_code,
+            emergency_contact_name, emergency_contact_phone,
+            status, salary, member_id
+        ))
+        conn.commit()
+        employee_id = cur.lastrowid
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+    return JsonResponse({'success': True, 'employee_id': employee_id})
+
+
+@require_http_methods(["POST"])
+def api_update_employee(request):
+    """Update an existing employee."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    import json
+    data = json.loads(request.body)
+    
+    employee_id = data.get('id')
+    if not employee_id:
+        return JsonResponse({'error': 'Employee ID is required'}, status=400)
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    try:
+        # Build dynamic update query
+        fields = []
+        values = []
+        
+        for field in ['employee_code', 'email', 'first_name', 'last_name', 'phone',
+                      'department', 'designation', 'date_of_joining', 'date_of_birth',
+                      'address', 'city', 'state', 'country', 'postal_code',
+                      'emergency_contact_name', 'emergency_contact_phone', 'status', 'salary']:
+            if field in data:
+                fields.append(f"{field} = %s")
+                values.append(data[field] if data[field] else None)
+        
+        if not fields:
+            return JsonResponse({'error': 'No fields to update'}, status=400)
+        
+        values.append(employee_id)
+        query = f"UPDATE employees SET {', '.join(fields)} WHERE id = %s"
+        
+        cur.execute(query, values)
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+    return JsonResponse({'success': True})
+
+
+@require_http_methods(["POST"])
+def api_delete_employee(request):
+    """Delete an employee."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    import json
+    data = json.loads(request.body)
+    
+    employee_id = data.get('id')
+    if not employee_id:
+        return JsonResponse({'error': 'Employee ID is required'}, status=400)
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    try:
+        cur.execute("DELETE FROM employees WHERE id = %s", (employee_id,))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+    return JsonResponse({'success': True})
+
+
+def api_employee_detail(request):
+    """Get details of a specific employee."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    employee_id = request.GET.get('id')
+    if not employee_id:
+        return JsonResponse({'error': 'Employee ID is required'}, status=400)
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            SELECT id, employee_code, email, first_name, last_name, phone,
+                   department, designation, date_of_joining, date_of_birth,
+                   address, city, state, country, postal_code,
+                   emergency_contact_name, emergency_contact_phone,
+                   status, salary, created_at, updated_at
+            FROM employees
+            WHERE id = %s
+        """, (employee_id,))
+        row = cur.fetchone()
+        
+        if not row:
+            return JsonResponse({'error': 'Employee not found'}, status=404)
+        
+        employee = {
+            'id': row['id'],
+            'employee_code': row['employee_code'],
+            'email': row['email'],
+            'first_name': row['first_name'],
+            'last_name': row['last_name'] or '',
+            'phone': row['phone'] or '',
+            'department': row['department'] or '',
+            'designation': row['designation'] or '',
+            'date_of_joining': row['date_of_joining'].strftime('%Y-%m-%d') if row['date_of_joining'] else '',
+            'date_of_birth': row['date_of_birth'].strftime('%Y-%m-%d') if row['date_of_birth'] else '',
+            'address': row['address'] or '',
+            'city': row['city'] or '',
+            'state': row['state'] or '',
+            'country': row['country'] or '',
+            'postal_code': row['postal_code'] or '',
+            'emergency_contact_name': row['emergency_contact_name'] or '',
+            'emergency_contact_phone': row['emergency_contact_phone'] or '',
+            'status': row['status'],
+            'salary': float(row['salary']) if row['salary'] else 0,
+            'created_at': row['created_at'].strftime('%Y-%m-%d %H:%M:%S') if row['created_at'] else '',
+            'updated_at': row['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if row['updated_at'] else ''
+        }
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+    return JsonResponse({'employee': employee})
+
+
+# ======================== NOTIFICATIONS ========================
+
+def notifications_page(request):
+    """Display notifications page."""
+    user = request.session.get('user')
+    if not user:
+        return redirect('identify')
+    
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('identify')
+    
+    return render(request, 'core/notifications.html', {'page': 'notifications'})
+
+
+def api_notifications_list(request):
+    """Get user notifications."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return JsonResponse({'error': 'Member ID not found'}, status=401)
+    
+    try:
+        conn = get_tenant_conn(request)
+        if not conn:
+            return JsonResponse({'error': 'Database connection failed'}, status=500)
+            
+        cur = conn.cursor()
+        
+        # Check if notifications table exists
+        cur.execute("""
+            SELECT COUNT(*) as count 
+            FROM information_schema.tables 
+            WHERE table_schema = DATABASE() AND table_name = 'notifications'
+        """)
+        table_exists = cur.fetchone()['count'] > 0
+        
+        if not table_exists:
+            # Table doesn't exist yet, return empty
+            cur.close()
+            conn.close()
+            return JsonResponse({
+                'notifications': [],
+                'unread_count': 0,
+                'message': 'Notifications table not found. Run migration script.'
+            })
+        
+        # Get all notifications for user
+        cur.execute("""
+            SELECT id, title, message, type, is_read, link, created_at
+            FROM notifications
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT 50
+        """, (member_id,))
+        notifications = cur.fetchall()
+        notifications_list = []
+        
+        for r in notifications:
+            notifications_list.append({
+                'id': r['id'],
+                'title': r['title'],
+                'message': r['message'],
+                'type': r['type'],
+                'is_read': bool(r['is_read']),
+                'link': r['link'],
+                'created_at': r['created_at'].strftime('%Y-%m-%d %H:%M:%S') if r['created_at'] else '',
+                'read_at': None
+            })
+        
+        # Get unread count
+        cur.execute("SELECT COUNT(*) as count FROM notifications WHERE user_id = %s AND is_read = 0", (member_id,))
+        unread_count = cur.fetchone()['count']
+        
+        cur.close()
+        conn.close()
+        
+        return JsonResponse({
+            'notifications': notifications,
+            'unread_count': unread_count
+        })
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Notification API Error: {error_detail}")
+        return JsonResponse({
+            'error': str(e),
+            'notifications': [],
+            'unread_count': 0
+        }, status=500)
+
+
+def api_notifications_mark_read(request):
+    """Mark notification(s) as read."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    data = json.loads(request.body)
+    notification_id = data.get('id')
+    mark_all = data.get('mark_all', False)
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        if mark_all:
+            cur.execute("""
+                UPDATE notifications 
+                SET is_read = 1
+                WHERE user_id = %s AND is_read = 0
+            """, (member_id,))
+        elif notification_id:
+            cur.execute("""
+                UPDATE notifications 
+                SET is_read = 1
+                WHERE id = %s AND user_id = %s
+            """, (notification_id, member_id))
+        
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+    
+    return JsonResponse({'success': True})
+
+
+def api_notifications_delete(request):
+    """Delete notification."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    data = json.loads(request.body)
+    notification_id = data.get('id')
+    
+    if not notification_id:
+        return JsonResponse({'error': 'Notification ID required'}, status=400)
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("DELETE FROM notifications WHERE id = %s AND user_id = %s", (notification_id, member_id))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+    
+    return JsonResponse({'success': True})
+
+
+def api_notifications_unread_count(request):
+    """Get unread notifications count."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'count': 0})
+    
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return JsonResponse({'count': 0})
+    
+    try:
+        conn = get_tenant_conn(request)
+        if not conn:
+            return JsonResponse({'count': 0})
+            
+        cur = conn.cursor()
+        
+        # Check if notifications table exists
+        cur.execute("""
+            SELECT COUNT(*) as count 
+            FROM information_schema.tables 
+            WHERE table_schema = DATABASE() AND table_name = 'notifications'
+        """)
+        table_exists = cur.fetchone()['count'] > 0
+        
+        if not table_exists:
+            cur.close()
+            conn.close()
+            return JsonResponse({'count': 0})
+        
+        cur.execute("SELECT COUNT(*) as count FROM notifications WHERE user_id = %s AND is_read = 0", (member_id,))
+        result = cur.fetchone()
+        count = result['count'] if result else 0
+        
+        cur.close()
+        conn.close()
+        
+        return JsonResponse({'count': count})
+        
+    except Exception as e:
+        print(f"Error getting unread count: {e}")
+        return JsonResponse({'count': 0})
+
+
+# ============================================================================
+# TIMER VIEWS
+# ============================================================================
+
+def timer_page(request):
+    """Timer page for tracking time on tasks."""
+    if not request.session.get('user'):
+        return redirect('identify')
+    
+    return render(request, 'core/timer.html', {'page': 'timer'})
+
+
+def api_timer_start(request):
+    """Start a new timer session."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    from datetime import datetime
+    data = json.loads(request.body)
+    task_id = data.get('task_id')
+    notes = data.get('notes', '')
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Check if there's already a running timer for this user
+        cur.execute("""
+            SELECT id FROM timer_sessions 
+            WHERE user_id = %s AND is_running = 1
+        """, (member_id,))
+        existing = cur.fetchone()
+        
+        if existing:
+            return JsonResponse({'error': 'A timer is already running. Please stop it first.'}, status=400)
+        
+        # Create new timer session
+        now = datetime.now()
+        cur.execute("""
+            INSERT INTO timer_sessions (user_id, task_id, start_time, notes, is_running)
+            VALUES (%s, %s, %s, %s, 1)
+        """, (member_id, task_id, now, notes))
+        
+        session_id = cur.lastrowid
+        conn.commit()
+        
+        return JsonResponse({
+            'success': True,
+            'session_id': session_id,
+            'start_time': now.isoformat()
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def api_timer_stop(request):
+    """Stop the current running timer."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    from datetime import datetime
+    data = json.loads(request.body)
+    session_id = data.get('session_id')
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Get the running timer
+        if session_id:
+            cur.execute("""
+                SELECT id, start_time FROM timer_sessions 
+                WHERE id = %s AND user_id = %s AND is_running = 1
+            """, (session_id, member_id))
+        else:
+            cur.execute("""
+                SELECT id, start_time FROM timer_sessions 
+                WHERE user_id = %s AND is_running = 1
+                ORDER BY start_time DESC LIMIT 1
+            """, (member_id,))
+        
+        timer = cur.fetchone()
+        
+        if not timer:
+            return JsonResponse({'error': 'No running timer found'}, status=404)
+        
+        # Calculate duration
+        now = datetime.now()
+        start_time = timer['start_time']
+        duration = int((now - start_time).total_seconds())
+        
+        # Update timer session
+        cur.execute("""
+            UPDATE timer_sessions 
+            SET end_time = %s, duration_seconds = %s, is_running = 0
+            WHERE id = %s
+        """, (now, duration, timer['id']))
+        
+        conn.commit()
+        
+        return JsonResponse({
+            'success': True,
+            'session_id': timer['id'],
+            'duration_seconds': duration,
+            'end_time': now.isoformat()
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def api_timer_current(request):
+    """Get the current running timer for the user."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            SELECT ts.*, t.title as task_title
+            FROM timer_sessions ts
+            LEFT JOIN tasks t ON ts.task_id = t.id
+            WHERE ts.user_id = %s AND ts.is_running = 1
+            ORDER BY ts.start_time DESC LIMIT 1
+        """, (member_id,))
+        
+        timer = cur.fetchone()
+        
+        if timer:
+            from datetime import datetime
+            start_time = timer['start_time']
+            elapsed = int((datetime.now() - start_time).total_seconds())
+            
+            return JsonResponse({
+                'running': True,
+                'session_id': timer['id'],
+                'task_id': timer['task_id'],
+                'task_title': timer['task_title'],
+                'start_time': start_time.isoformat(),
+                'elapsed_seconds': elapsed,
+                'notes': timer['notes']
+            })
+        else:
+            return JsonResponse({'running': False})
+            
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def api_timer_history(request):
+    """Get timer history for the user."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    limit = int(request.GET.get('limit', 50))
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            SELECT ts.*, t.title as task_title, t.status as task_status
+            FROM timer_sessions ts
+            LEFT JOIN tasks t ON ts.task_id = t.id
+            WHERE ts.user_id = %s
+            ORDER BY ts.start_time DESC
+            LIMIT %s
+        """, (member_id, limit))
+        
+        sessions = cur.fetchall()
+        
+        # Convert datetime objects to strings
+        for session in sessions:
+            if session['start_time']:
+                session['start_time'] = session['start_time'].isoformat()
+            if session['end_time']:
+                session['end_time'] = session['end_time'].isoformat()
+            if session['created_at']:
+                session['created_at'] = session['created_at'].isoformat()
+            if session['updated_at']:
+                session['updated_at'] = session['updated_at'].isoformat()
+        
+        return JsonResponse({'sessions': sessions})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ============================================================================
+# TIME ENTRIES VIEWS
+# ============================================================================
+
+def time_entries_page(request):
+    """Time entries page for logging and approving time."""
+    if not request.session.get('user'):
+        return redirect('identify')
+    
+    return render(request, 'core/time_entries.html', {'page': 'time_entries'})
+
+
+def api_time_entries_list(request):
+    """Get time entries list with filtering options."""
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    # Get filter parameters
+    filter_type = request.GET.get('filter', 'my')  # 'my', 'team', 'pending', 'all'
+    status_filter = request.GET.get('status', '')  # 'pending', 'approved', 'rejected'
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Base query
+        query = """
+            SELECT 
+                te.*,
+                m.first_name, m.last_name, m.email,
+                t.title as task_title, t.status as task_status,
+                p.name as project_name,
+                approver.first_name as approver_first_name,
+                approver.last_name as approver_last_name
+            FROM time_entries te
+            LEFT JOIN members m ON te.user_id = m.id
+            LEFT JOIN tasks t ON te.task_id = t.id
+            LEFT JOIN projects p ON t.project_id = p.id
+            LEFT JOIN members approver ON te.approved_by = approver.id
+            WHERE 1=1
+        """
+        params = []
+        
+        # Apply filters
+        if filter_type == 'my':
+            query += " AND te.user_id = %s"
+            params.append(member_id)
+        elif filter_type == 'pending':
+            query += " AND te.status = 'pending'"
+        
+        if status_filter:
+            query += " AND te.status = %s"
+            params.append(status_filter)
+        
+        if start_date:
+            query += " AND te.date >= %s"
+            params.append(start_date)
+        
+        if end_date:
+            query += " AND te.date <= %s"
+            params.append(end_date)
+        
+        query += " ORDER BY te.date DESC, te.created_at DESC LIMIT 100"
+        
+        cur.execute(query, params)
+        entries = cur.fetchall()
+        
+        # Convert datetime objects to strings
+        for entry in entries:
+            if entry.get('date'):
+                entry['date'] = entry['date'].isoformat()
+            if entry.get('created_at'):
+                entry['created_at'] = entry['created_at'].isoformat()
+            if entry.get('updated_at'):
+                entry['updated_at'] = entry['updated_at'].isoformat()
+            if entry.get('approved_at'):
+                entry['approved_at'] = entry['approved_at'].isoformat()
+        
+        return JsonResponse({'entries': entries})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def api_time_entries_create(request):
+    """Create a new time entry."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    data = json.loads(request.body)
+    task_id = data.get('task_id')
+    hours = data.get('hours')
+    date = data.get('date')
+    description = data.get('description', '')
+    
+    if not all([hours, date]):
+        return JsonResponse({'error': 'Hours and date are required'}, status=400)
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            INSERT INTO time_entries (user_id, task_id, hours, date, description, status)
+            VALUES (%s, %s, %s, %s, %s, 'pending')
+        """, (member_id, task_id, hours, date, description))
+        
+        entry_id = cur.lastrowid
+        conn.commit()
+        
+        return JsonResponse({'success': True, 'entry_id': entry_id})
+        
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def api_time_entries_update(request):
+    """Update an existing time entry."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    data = json.loads(request.body)
+    entry_id = data.get('id')
+    task_id = data.get('task_id')
+    hours = data.get('hours')
+    date = data.get('date')
+    description = data.get('description', '')
+    
+    if not entry_id:
+        return JsonResponse({'error': 'Entry ID required'}, status=400)
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Check ownership
+        cur.execute("SELECT user_id, status FROM time_entries WHERE id = %s", (entry_id,))
+        entry = cur.fetchone()
+        
+        if not entry:
+            return JsonResponse({'error': 'Entry not found'}, status=404)
+        
+        if entry['user_id'] != member_id:
+            return JsonResponse({'error': 'Not authorized'}, status=403)
+        
+        if entry['status'] != 'pending':
+            return JsonResponse({'error': 'Cannot edit approved/rejected entries'}, status=400)
+        
+        # Update entry
+        updates = []
+        params = []
+        
+        if task_id is not None:
+            updates.append("task_id = %s")
+            params.append(task_id)
+        
+        if hours is not None:
+            updates.append("hours = %s")
+            params.append(hours)
+        
+        if date is not None:
+            updates.append("date = %s")
+            params.append(date)
+        
+        if description is not None:
+            updates.append("description = %s")
+            params.append(description)
+        
+        if updates:
+            params.append(entry_id)
+            cur.execute(f"UPDATE time_entries SET {', '.join(updates)} WHERE id = %s", params)
+            conn.commit()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def api_time_entries_delete(request):
+    """Delete a time entry."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    data = json.loads(request.body)
+    entry_id = data.get('id')
+    
+    if not entry_id:
+        return JsonResponse({'error': 'Entry ID required'}, status=400)
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Check ownership
+        cur.execute("SELECT user_id, status FROM time_entries WHERE id = %s", (entry_id,))
+        entry = cur.fetchone()
+        
+        if not entry:
+            return JsonResponse({'error': 'Entry not found'}, status=404)
+        
+        if entry['user_id'] != member_id:
+            return JsonResponse({'error': 'Not authorized'}, status=403)
+        
+        if entry['status'] != 'pending':
+            return JsonResponse({'error': 'Cannot delete approved/rejected entries'}, status=400)
+        
+        cur.execute("DELETE FROM time_entries WHERE id = %s", (entry_id,))
+        conn.commit()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def api_time_entries_approve(request):
+    """Approve a time entry."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    from datetime import datetime
+    data = json.loads(request.body)
+    entry_id = data.get('id')
+    
+    if not entry_id:
+        return JsonResponse({'error': 'Entry ID required'}, status=400)
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Check if entry exists
+        cur.execute("SELECT id, status FROM time_entries WHERE id = %s", (entry_id,))
+        entry = cur.fetchone()
+        
+        if not entry:
+            return JsonResponse({'error': 'Entry not found'}, status=404)
+        
+        if entry['status'] != 'pending':
+            return JsonResponse({'error': 'Entry already processed'}, status=400)
+        
+        # Approve entry
+        now = datetime.now()
+        cur.execute("""
+            UPDATE time_entries 
+            SET status = 'approved', approved_by = %s, approved_at = %s
+            WHERE id = %s
+        """, (member_id, now, entry_id))
+        
+        conn.commit()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def api_time_entries_reject(request):
+    """Reject a time entry."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    from datetime import datetime
+    data = json.loads(request.body)
+    entry_id = data.get('id')
+    
+    if not entry_id:
+        return JsonResponse({'error': 'Entry ID required'}, status=400)
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Check if entry exists
+        cur.execute("SELECT id, status FROM time_entries WHERE id = %s", (entry_id,))
+        entry = cur.fetchone()
+        
+        if not entry:
+            return JsonResponse({'error': 'Entry not found'}, status=404)
+        
+        if entry['status'] != 'pending':
+            return JsonResponse({'error': 'Entry already processed'}, status=400)
+        
+        # Reject entry
+        now = datetime.now()
+        cur.execute("""
+            UPDATE time_entries 
+            SET status = 'rejected', approved_by = %s, approved_at = %s
+            WHERE id = %s
+        """, (member_id, now, entry_id))
+        
+        conn.commit()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()

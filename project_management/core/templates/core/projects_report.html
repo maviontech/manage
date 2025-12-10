@@ -1,761 +1,1278 @@
 {% extends "core/base.html" %}
 
-{% block title %}Projects Report{% endblock %}
+{% block title %}Trackline Projects Report{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #0b57a4;
+  --primary-light: #1f86e3;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+}
+
+.report-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.report-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  padding: 30px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+.report-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.report-header p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 15px;
+}
+
+.filters-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-input {
+  padding: 10px 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(11, 87, 164, 0.1);
+}
+
+.btn-filter {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-filter:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(11, 87, 164, 0.3);
+}
+
+.btn-reset {
+  padding: 10px 20px;
+  background: white;
+  color: var(--gray-700);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-reset:hover {
+  background: var(--gray-50);
+}
+
+.charts-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.chart-card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-container {
+  position: relative;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-left: 4px solid var(--primary);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.stat-card.success { border-left-color: var(--success); }
+.stat-card.warning { border-left-color: var(--warning); }
+.stat-card.danger { border-left-color: var(--danger); }
+.stat-card.info { border-left-color: var(--info); }
+
+.stat-label {
+  font-size: 13px;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--gray-800);
+  line-height: 1;
+}
+
+.stat-icon {
+  float: right;
+  font-size: 28px;
+  opacity: 0.2;
+}
+
+.projects-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.table-header {
+  padding: 20px 24px;
+  border-bottom: 2px solid var(--gray-100);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.table-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.search-box {
+  padding: 8px 16px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  width: 300px;
+  font-size: 14px;
+}
+
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.projects-table thead {
+  background: var(--gray-50);
+}
+
+.projects-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.projects-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 14px;
+  color: var(--gray-700);
+}
+
+.projects-table tbody tr:hover {
+  background: var(--gray-50);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-active {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-planned {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.status-onhold {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.timeline-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.timeline-ontrack {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.timeline-atrisk {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.timeline-overdue {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.timeline-completed {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--success), #34d399);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.task-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.task-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--gray-100);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.task-stat.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.task-stat.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.task-stat.overdue {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.employee-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.employee-name {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.employee-meta {
+  font-size: 12px;
+  color: var(--gray-600);
+}
+
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--gray-600);
+}
+
+.no-data i {
+  font-size: 48px;
+  color: var(--gray-200);
+  margin-bottom: 16px;
+}
+
+.btn-export {
+  background: white;
+  border: 1px solid var(--gray-200);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-export:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-300);
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .search-box {
+    width: 100%;
+    margin-top: 10px;
+  }
+  
+  .table-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .projects-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<!-- Chart.js CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
- <style>
-        /* --- CSS VARIABLES FOR EASY THEME CHANGES --- */
-        :root {
-            --primary-color: #2563eb; /* Royal Blue */
-            --secondary-color: #1e293b; /* Dark Slate */
-            --accent-color: #10b981; /* Emerald Green for Success */
-            --warning-color: #f59e0b; /* Amber for Pending */
-            --danger-color: #ef4444; /* Red for Issues */
-            --bg-color: #f1f5f9;
-            --card-bg: #ffffff;
-            --text-main: #334155;
-            --text-light: #64748b;
-            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
- 
-        /* --- GLOBAL STYLES --- */
-        body {
-            font-family: var(--font-main);
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
- 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
- 
-        /* --- HEADER SECTION --- */
-        header {
-            background-color: var(--card-bg);
-            padding: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            border-left: 5px solid var(--primary-color);
-        }
- 
-        .header-title h1 {
-            margin: 0;
-            font-size: 24px;
-            color: var(--secondary-color);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
- 
-        .header-title p {
-            margin: 5px 0 0;
-            color: var(--text-light);
-            font-size: 14px;
-        }
- 
-        .report-meta {
-            text-align: right;
-        }
- 
-        .status-badge {
-            background-color: #dbeafe;
-            color: var(--primary-color);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 12px;
-        }
- 
-        /* --- KPI CARDS SECTION --- */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
- 
-        .card {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            border-top: 3px solid transparent;
-            transition: transform 0.2s;
-        }
- 
-        .card:hover {
-            transform: translateY(-3px);
-        }
- 
-        .card.blue { border-color: var(--primary-color); }
-        .card.green { border-color: var(--accent-color); }
-        .card.orange { border-color: var(--warning-color); }
-        .card.red { border-color: var(--danger-color); }
- 
-        .card h3 {
-            margin: 0;
-            color: var(--text-light);
-            font-size: 14px;
-            text-transform: uppercase;
-        }
- 
-        .card .value {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--secondary-color);
-            margin: 10px 0;
-        }
- 
-        .card .trend {
-            font-size: 13px;
-        }
- 
-        .trend.up { color: var(--accent-color); }
-        .trend.down { color: var(--danger-color); }
- 
-        /* --- DATA TABLE SECTION --- */
-        .table-container {
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            margin-top: 2rem;
-        }
- 
-        .section-title {
-            margin-bottom: 20px;
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--secondary-color);
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f1f5f9;
-        }
- 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
- 
-        thead tr {
-            background-color: #f8fafc;
-            text-align: left;
-        }
- 
-        th, td {
-            padding: 15px;
-            border-bottom: 1px solid #e2e8f0;
-        }
- 
-        th {
-            color: var(--text-light);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 12px;
-        }
- 
-        tbody tr:hover {
-            background-color: #f8fafc;
-        }
- 
-        /* --- STATUS INDICATORS IN TABLE --- */
-        .status-dot {
-            height: 10px;
-            width: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        .status-completed { background-color: var(--accent-color); }
-        .status-pending { background-color: var(--warning-color); }
-        .status-delayed { background-color: var(--danger-color); }
- 
-        /* --- FOOTER --- */
-        footer {
-            margin-top: 40px;
-            text-align: center;
-            color: var(--text-light);
-            font-size: 12px;
-            padding-bottom: 20px;
-        }
- 
-        /* --- PRINT STYLES (PDF GENERATION) --- */
-        @media print {
-            body { background-color: #fff; }
-            .container { max-width: 100%; padding: 0; }
-            .card { box-shadow: none; border: 1px solid #ddd; }
-            header { box-shadow: none; border-bottom: 1px solid #ddd; }
-        }
+<div class="report-container">
+  <!-- Header -->
+  <div class="report-header">
+    <h1><i class="fa fa-chart-line"></i> Trackline Projects Report</h1>
+    <p>Comprehensive overview of all projects with live tracking data, task statistics, and employee assignments</p>
+  </div>
 
-      /* ---------------- CONTAINER LAYOUT ---------------- */
-    .filter-toolbar {
-        display: flex;
-        align-items: flex-end; /* Ensures inputs align at bottom even if labels vary */
-        gap: 16px; /* Spacing between the 4 boxes */
-        flex-wrap: wrap; /* Important: Allows wrapping on smaller screens */
-        margin-bottom: 24px;
-        background: #fff;
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid #e5e7eb; /* Optional: puts them in a nice container box */
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    }
- 
-    .filter-group {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        flex: 1; /* Makes them grow evenly to fill space */
-        min-width: 200px; /* Prevents them from getting too squished */
-    }
- 
-    /* ---------------- LABELS ---------------- */
-    .filter-label {
-        font-size: 0.8rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: #6b7280;
-        letter-spacing: 0.03em;
-        margin-left: 2px;
-    }
- 
-    /* ---------------- UNIVERSAL INPUT STYLE ---------------- */
-    .trakline-input {
-        width: 100%; /* Fills the group container */
-        appearance: none;
-        -webkit-appearance: none;
-        
-        background-color: #f9fafb; /* Very light gray background */
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 10px 14px;
-        height: 44px; /* Fixed height for perfect alignment */
-        
-        font-family: 'Segoe UI', sans-serif;
-        font-size: 0.95rem;
-        color: #1f2937;
-        
-        transition: all 0.2s ease;
-    }
- 
-    /* Input Interactions */
-    .trakline-input:hover {
-        background-color: #fff;
-        border-color: #9ca3af;
-    }
- 
-    .trakline-input:focus {
-        background-color: #fff;
-        border-color: #2563eb;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-    }
- 
-    /* ---------------- DROPDOWN ARROW FIX ---------------- */
-    .input-wrapper-select {
-        position: relative;
-        width: 100%;
-    }
- 
-    /* The little arrow icon */
-    .input-wrapper-select::after {
-        content: "▼";
-        font-size: 0.65rem;
-        color: #6b7280;
-        position: absolute;
-        right: 14px;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none;
-    }
- 
-    /* ---------------- DATE ICON FIX ---------------- */
-    ::-webkit-calendar-picker-indicator {
-        filter: invert(0.5);
-        cursor: pointer;
-    }
-
-    /* ---------------- PAGE SETUP ---------------- */
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f3f4f6;
-            margin: 0;
-        }
- 
-        /* ---------------- MAIN CONTAINER (Side-by-Side Layout) ---------------- */
-        .charts-container {
-            display: flex;
-            gap: 24px; /* Space between the three charts */
-            justify-content: space-between;
-            flex-wrap: wrap; /* Allows wrapping on smaller screens */
-            max-width: 1200px;
-            margin: 0 auto;
-            margin-bottom: 1.5rem;
-        }
- 
-        /* ---------------- CHART CARD STYLES ---------------- */
-        .chart-card {
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            flex: 1; /* Makes them grow evenly */
-            min-width: 300px; /* Minimum width before wrapping */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
- 
-        .chart-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #374151;
-            margin-bottom: 24px;
-            text-align: center;
-        }
- 
-        /* ---------------- THE CSS DONUT CHART MAGIC ---------------- */
-        /* The outer circle with the colorful gradient */
-        .donut-chart {
-            position: relative;
-            width: 180px;
-            height: 180px;
-            border-radius: 50%;
-            /* The conic-gradient creates the pie slices.
-               We set the actual colors and percentages inline in the HTML for flexibility */
-        }
- 
-        /* The inner circle (the hole) */
-        .donut-chart::after {
-            content: "";
-            position: absolute;
-            width: 120px; /* Adjust donut thickness here */
-            height: 120px; /* Adjust donut thickness here */
-            background: #ffffff; /* Matches card background to create the "hole" */
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); /* Subtle inner depth */
-        }
- 
-        /* Optional: Center text inside the donut hole */
-        .chart-center-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2;
-            text-align: center;
-        }
-        .chart-center-text .number {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #1f2937;
-            display: block;
-            line-height: 1;
-        }
-        .chart-center-text .label {
-            font-size: 0.85rem;
-            color: #6b7280;
-            font-weight: 600;
-        }
- 
-        /* ---------------- LEGEND STYLES ---------------- */
-        .chart-legend {
-            margin-top: 24px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
- 
-        .legend-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.9rem;
-            color: #4b5563;
-            font-weight: 500;
-        }
- 
-        .legend-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
- 
-        /* Color dots for legend */
-        .color-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-        }
- 
-        /* ---------------- COLOR PALETTE CLASSES ---------------- */
-        /* Chart 1 Colors */
-        .bg-active { background-color: #2563eb; } /* Blue */
-        .bg-inprogress { background-color: #f59e0b; } /* Orange */
-        .bg-close { background-color: #10b981; } /* Green */
-        
-        /* Chart 2 Colors */
-        .bg-allocated { background-color: #8b5cf6; } /* Purple */
-        .bg-free { background-color: #d1d5db; } /* Gray */
-        
-        /* Chart 3 Colors */
-        .bg-acquired { background-color: #ef4444; } /* Red */
-        .bg-remaining { background-color: #3b82f6; } /* Light Blue */
-        .bg-potential { background-color: #10b981; } /* Green */
-    </style>
-</head>
-<body>
-
-    <div class="top-row d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
-    <div class="title-and-search w-100">
-      <div class="d-flex align-items-start gap-3 flex-column flex-md-row">
-        <div class="title-block">
-          <h1 class="page-title">Trakline Project Report</h1>
-          <p class="text-muted small mb-0">Comprehensive Data Analysis & Tracking</p>
-        </div>
-
-        </header>
- 
-        <section class="kpi-grid">
-            <div class="card blue">
-                <h3>Total Tasks</h3>
-                <div class="value">1,248</div>
-                <div class="trend up">↑ 12% from last month</div>
-            </div>
-            <div class="card green">
-                <h3>Completed Tasks</h3>
-                <div class="value">982</div>
-                <div class="trend up">↑ 98% Success Rate</div>
-            </div>
-            <div class="card orange">
-                <h3>Pending Processing</h3>
-                <div class="value">214</div>
-                <div class="trend">Requires Action</div>
-            </div>
-            <div class="card red">
-                <h3>Critical </h3>
-                <div class="value">5</div>
-                <div class="trend down">↓ Urgent attention needed</div>
-            </div>
-        </section>
-
-   <div class="filter-toolbar">
- 
-    <div class="filter-group">
-        <label for="idFilter" class="filter-label"><b>Search ID:</b></label>
-        <div class="input-wrapper-text">
-            <input type="text" id="idFilter" class="trakline-input" placeholder="e.g. TRK-105">
-        </div>
-    </div>
- 
-    <div class="filter-group">
-        <label for="dateFilter" class="filter-label"><b>Select Date:</b></label>
-        <div class="input-wrapper-date">
-            <input type="date" id="dateFilter" class="trakline-input">
-        </div>
-    </div>
- 
-    <div class="filter-group">
-        <label for="teamFilter" class="filter-label"><b>Select Team:</b></label>
-        <div class="input-wrapper-select">
-            <select id="teamFilter" class="trakline-input trakline-select">
-                <option value="all" selected>All Teams</option>
-                <option value="logistics">Alpha Logistics</option>
-                <option value="operations">Operations Unit</option>
-                <option value="dev">Development Team</option>
-                <option value="support">Customer Support</option>
-            </select>
-            <div class="select-arrow"></div>
-        </div>
-    </div>
- 
-    <div class="filter-group">
-        <label for="employeeFilter" class="filter-label"><b>Select Employee:</b></label>
-        <div class="input-wrapper-select">
-            <select id="employeeFilter" class="trakline-input trakline-select">
-                <option value="all" selected>All Employees</option>
-                <option value="john_doe">John Doe</option>
-                <option value="jane_smith">Jane Smith</option>
-                <option value="alice_johnson">Alice Johnson</option>
-                <option value="bob_brown">Bob Brown</option>
-            </select>
-            <div class="select-arrow"></div>
-        </div>
-    </div>
- 
-</div>
-
-<div class="card mb-3 border-0 shadow-sm search-card" style="margin-top:18px;">
-    <div class="card-body py-3 d-flex flex-wrap align-items-center gap-3 search-card-body">
-      <div class="position-relative flex-fill search-input-wrap" style="min-width:260px;">
+  <!-- Date Filters -->
+  <div class="filters-section">
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label class="filter-label">
+          <i class="fa fa-calendar"></i> Start Date From
+        </label>
+        <input type="date" id="startDateFrom" class="filter-input">
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">
+          <i class="fa fa-calendar"></i> Start Date To
+        </label>
+        <input type="date" id="startDateTo" class="filter-input">
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">
+          <i class="fa fa-filter"></i> Status
+        </label>
+        <select id="statusFilter" class="filter-input">
+          <option value="">All Statuses</option>
+          <option value="Active">Active</option>
+          <option value="Completed">Completed</option>
+          <option value="Planned">Planned</option>
+          <option value="On Hold">On Hold</option>
+        </select>
       </div>
 
-<div class="charts-container">
- 
-    <div class="chart-card">
-        <div class="chart-title">Project Status Overview</div>
-        
-        <div class="donut-chart" style="background: conic-gradient(
-            #2563eb 0% 45%,  /* Active */
-            #f59e0b 45% 75%, /* In Progress */
-            #10b981 75% 100% /* Close */
-        );">
-            <div class="chart-center-text">
-                <span class="number">142</span>
-                <span class="label">Total Projects</span>
-            </div>
+      <!-- All Team Option -->
+      <div class="filter-group">
+        <label class="filter-label">
+          <i class="fa fa-users"></i> Team
+        </label>
+        <select id="teamFilter" class="filter-input" onchange="handleTeamChange()">
+          <option value="all">All Team</option>
+          {% for team in teams %}
+            <option value="{{ team.id }}">{{ team.name }}</option>
+          {% endfor %}
+        </select>
+        <div id="allTeamSearchContainer" style="display:none; margin-top:8px;">
+          <input type="text" id="allTeamSearchInput" class="filter-input" placeholder="Search teams..." oninput="filterAllTeams()">
         </div>
- 
-        <div class="chart-legend">
-            <div class="legend-item">
-                <span class="legend-label"><span class="color-dot bg-active"></span>Active</span>
-                <span>45% (64)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-label"><span class="color-dot bg-inprogress"></span>In Progress</span>
-                <span>30% (42)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-label"><span class="color-dot bg-close"></span>Closed</span>
-                <span>25% (36)</span>
-            </div>
-        </div>
-    </div>
- 
- 
-    <div class="chart-card">
-        <div class="chart-title">Resource Allocation</div>
-        
-        <div class="donut-chart" style="background: conic-gradient(
-            #8b5cf6 0% 70%,  /* Allocated */
-            #d1d5db 70% 100% /* Free */
-        );">
-             <div class="chart-center-text">
-                <span class="number">85</span>
-                <span class="label">Total Staff</span>
-            </div>
-        </div>
- 
-        <div class="chart-legend">
-            <div class="legend-item">
-                <span class="legend-label"><span class="color-dot bg-allocated"></span>Allocated (Busy)</span>
-                <span>70% (60)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-label"><span class="color-dot bg-free"></span>Free Emp.</span>
-                <span>30% (25)</span>
-            </div>
-        </div>
-    </div>
- 
- 
-    <div class="chart-card">
-        <div class="chart-title">Customer</div>
-        
-        <div class="donut-chart" style="background: conic-gradient(
-            #ef4444 0% 45%,  /* Customers Acquired */
-            #3b82f6 45% 82%, /* Customers Remaining */
-            #10b981 82% 100% /* Customers Potential */
-
-        );">
-             <div class="chart-center-text">
-                <span class="number">82</span>
-                <span class="label">Total Customers</span>
-            </div>
-        </div>
- 
-        <div class="chart-legend">
-            <div class="legend-item">
-                <span class="legend-label"><span class="color-dot bg-spent"></span>Customers Acquired</span>
-                <span>60% (50)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-label"><span class="color-dot bg-remaining"></span>Customers Remaining</span>
-                <span>40% (32)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-label"><span class="color-dot bg-remaining"></span>Customers Potential</span>
-                <span>18% (15)</span>
-            </div>
-        </div>
-    </div>
- 
-</div>
-
-<div class="filter-group">
-        <label for="teamFilter" class="filter-label"><b>Select type </b></label>
-        <div class="input-wrapper-select">
-            <select id="teamFilter" class="trakline-input trakline-select">
-                <option value="all" selected>Tasks </option>
-                <option value="logistics">Projects</option>
-            </select>
-            <div class="select-arrow"></div>
-        </div>
-    </div>
-        
-        
-
- 
-        <section class="table-container">
-            <div class="section-title">Live Tracking Data</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Project Name</th>
-                        <th>Client_Name</th>
-                        <th>Timeline</th>
-                        <th>Task</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>#01</td>
-                        <td><strong>Api Development</strong></td>
-                        <td>Alex</td>
-                        <td>Dec 1 - Dec 15</td>
-                        <td>API Integration</td>
-                        <td><span class="status-dot status-completed"></span>Completed</td>
-                        <td><a href="#" style="color:var(--primary-color); text-decoration:none;">View</a></td>
-                    </tr>
-                    <tr>
-                        <td>#02</td>
-                        <td><strong>Data Migration</strong></td>
-                        <td>Emily clark</td>
-                        <td>Dec 4 - Jan 10</td>
-                        <td>Data Transfer</td>
-                        <td><span class="status-dot status-pending"></span>In Progress</td>
-                        <td><a href="#" style="color:var(--primary-color); text-decoration:none;">Track</a></td>
-                    </tr>
-                    <tr>
-                        <td>#03</td>
-                        <td><strong>Security Upgrade</strong></td>
-                        <td>Sara lee</td>
-                        <td>Nov 20 - Dec 02</td>
-                        <td>Security Patch</td>
-                        <td><span class="status-dot status-delayed"></span>Delayed</td>
-                        <td><a href="#" style="color:var(--danger-color); text-decoration:none;">Resolve</a></td>
-                    </tr>
-                     <tr>
-                        <td>#04</td>
-                        <td><strong>Documentation</strong></td>
-                        <td>elmia pushkar</td>
-                        <td>Dec 05 - Dec 20</td>
-                        <td>Documentation</td>
-                        <td><span class="status-dot status-pending"></span>Scheduled</td>
-                        <td><a href="#" style="color:var(--primary-color); text-decoration:none;">Edit</a></td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
         <script>
-
-        function changeDateFormat() {
-            let dateValue = document.getElementById("dateInput").value;
-            if (!dateValue) return;
-
-            let date = new Date(dateValue);
-
-            // Formats
-            let ddmmyyyy = date.toLocaleDateString("en-GB"); 
-            let yyyymmdd = date.toISOString().slice(0, 10);
-            let mmddyyyy = (date.getMonth() + 1) + "-" + date.getDate() + "-" + date.getFullYear();
-
-            document.getElementById("convertedDate").innerHTML = `
-                DD-MM-YYYY: ${ddmmyyyy}<br>
-                YYYY-MM-DD: ${yyyymmdd}<br>
-                MM-DD-YYYY: ${mmddyyyy}
-            `;
+        function handleTeamChange() {
+          var teamFilter = document.getElementById('teamFilter');
+          var allTeamSearchContainer = document.getElementById('allTeamSearchContainer');
+          if (teamFilter.value === 'all') {
+            allTeamSearchContainer.style.display = 'block';
+          } else {
+            allTeamSearchContainer.style.display = 'none';
+          }
         }
 
-        // Four distinct colors for columns/segments
-        const colorCompleted = '#10b981';      // Emerald (Completed)
-        const colorInProgress = '#f59e0b';     // Amber (In Progress)
-        const colorDelayed = '#ef4444';        // Red (Delayed)
-        const colorScheduled = '#2563eb';      // Blue (Scheduled)
-
-        // Bar Chart Data
-        const barCtx = document.getElementById('barChart').getContext('2d');
-        new Chart(barCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Completed', 'In Progress', 'Delayed', 'Scheduled'],
-                datasets: [{
-                    label: 'Projects',
-                    data: [982, 214, 5, 47],
-                    backgroundColor: [
-                        colorCompleted,
-                        colorInProgress,
-                        colorDelayed,
-                        colorScheduled
-                    ],
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    title: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, grid: { color: '#e2e8f0' } }
-                }
+        function filterAllTeams() {
+          var input = document.getElementById('allTeamSearchInput').value.toLowerCase();
+          var teamFilter = document.getElementById('teamFilter');
+          for (var i = 0; i < teamFilter.options.length; i++) {
+            var option = teamFilter.options[i];
+            if (option.value !== 'all' && option.value !== '') {
+              option.style.display = option.text.toLowerCase().includes(input) ? '' : 'none';
             }
-        });
-
-        // Donut Chart Data
-        const donutCtx = document.getElementById('donutChart').getContext('2d');
-        new Chart(donutCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['API Integration', 'Data Transfer', 'Security Patch', 'Documentation'],
-                datasets: [{
-                    label: 'Tasks',
-                    data: [1, 1, 1, 1],
-                    backgroundColor: [
-                        colorCompleted,
-                        colorInProgress,
-                        colorDelayed,
-                        colorScheduled
-                    ],
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { color: 'var(--text-main)' }
-                    },
-                    title: {
-                        display: false
-                    }
-                }
-            }
-        });
+          }
+        }
         </script>
-</body>
-</html>
+        <div id="allTeamSearchContainer" style="display:none; margin-top:8px;">
+          <input type="text" id="allTeamSearchInput" class="filter-input" placeholder="Search teams..." oninput="filterAllTeams()">
+        </div>
+      </div>
+      
+      <div class="filter-group">
+        <button class="btn-filter" onclick="applyFilters()">
+          <i class="fa fa-search"></i> Apply Filters
+        </button>
+      </div>
+      
+      <div class="filter-group">
+        <button class="btn-reset" onclick="resetFilters()">
+          <i class="fa fa-redo"></i> Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script>
+function handleTeamChange() {
+  var teamFilter = document.getElementById('teamFilter');
+  var allTeamSearchContainer = document.getElementById('allTeamSearchContainer');
+  if (teamFilter.value === 'all') {
+    allTeamSearchContainer.style.display = 'block';
+  } else {
+    allTeamSearchContainer.style.display = 'none';
+  }
+}
+
+function filterAllTeams() {
+  var input = document.getElementById('allTeamSearchInput').value.toLowerCase();
+  var teamFilter = document.getElementById('teamFilter');
+  for (var i = 0; i < teamFilter.options.length; i++) {
+    var option = teamFilter.options[i];
+    if (option.value !== 'all' && option.value !== '') {
+      option.style.display = option.text.toLowerCase().includes(input) ? '' : 'none';
+    }
+  }
+}
+</script>
+
+  <!-- Charts Section -->
+  <div class="charts-section">
+    <!-- Project Status Donut Chart -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="fa fa-chart-pie"></i> Projects by Status
+      </div>
+      <div class="chart-container">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Task Completion Donut Chart -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="fa fa-tasks"></i> Tasks Overview
+      </div>
+      <div class="chart-container">
+        <canvas id="tasksChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Employee Status Donut Chart -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="fa fa-users"></i> Employee Status
+      </div>
+      <div class="chart-container">
+        <canvas id="employeeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Statistics -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <i class="fa fa-folder-open stat-icon"></i>
+      <div class="stat-label">Total Projects</div>
+      <div class="stat-value">{{ summary.total_projects }}</div>
+    </div>
+
+    <div class="stat-card success">
+      <i class="fa fa-check-circle stat-icon"></i>
+      <div class="stat-label">Active Projects</div>
+      <div class="stat-value">{{ summary.active_projects }}</div>
+    </div>
+
+
+    <div class="stat-card warning">
+      <i class="fa fa-hourglass-half stat-icon"></i>
+      <div class="stat-label">Pending Tasks</div>
+      <div class="stat-value">{{ summary.pending_tasks }}</div>
+    </div>
+
+    <div class="stat-card danger">
+      <i class="fa fa-exclamation-triangle stat-icon"></i>
+      <div class="stat-label">Overdue Tasks</div>
+      <div class="stat-value">{{ summary.overdue_tasks }}</div>
+    </div>
+
+    <div class="stat-card info">
+      <i class="fa fa-trophy stat-icon"></i>
+      <div class="stat-label">Completed Projects</div>
+      <div class="stat-value">{{ summary.completed_projects }}</div>
+    </div>
+  </div>
+
+  <!-- Projects Table -->
+  <div class="projects-table-container">
+    <div class="table-header">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <h2 style="margin: 0;"><i class="fa fa-list"></i> <span id="viewTitle">Project Details</span></h2>
+        <select id="viewModeSelector" class="filter-input" style="width: auto; min-width: 200px;" onchange="switchViewMode()">
+          <option value="projects">Projects View ({{ projects|length }})</option>
+          <option value="tasks">Tasks View ({{ tasks|length }})</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="text" id="searchInput" class="search-box" placeholder="Search...">
+        <button class="btn-export" onclick="exportToCSV()">
+          <i class="fa fa-file-excel"></i> Export to Excel
+        </button>
+      </div>
+    </div>
+
+    {% if projects %}
+    <table class="projects-table" id="projectsTable">
+      <thead>
+        <tr>
+          <th>Project Name</th>
+          <th>Employee</th>
+          <th>Status</th>
+          <th>Timeline</th>
+          <th>Tasks</th>
+          <th>Progress</th>
+          <th>Dates</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in projects %}
+        <tr>
+          <!-- Project Name & Description -->
+          <td>
+            <div style="max-width: 250px;">
+              <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">
+                {{ project.name }}
+              </div>
+              {% if project.description %}
+              <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">
+                {{ project.description|truncatewords:15 }}
+              </div>
+              {% endif %}
+              <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">
+                Created by: {{ project.created_by_name }}
+              </div>
+            </div>
+          </td>
+
+          <!-- Employee Information -->
+          <td>
+            <div class="employee-info">
+              <div class="employee-name">
+                <i class="fa fa-user-tie" style="color: #0b57a4;"></i>
+                {{ project.employee_name }}
+              </div>
+              {% if project.employee_name != 'Not Assigned' %}
+              <div class="employee-meta">
+                <i class="fa fa-id-badge"></i> {{ project.employee_code }}
+              </div>
+              <div class="employee-meta">
+                <i class="fa fa-building"></i> {{ project.department }}
+              </div>
+              <div class="employee-meta">
+                <i class="fa fa-briefcase"></i> {{ project.designation }}
+              </div>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="status-badge status-{{ project.status|lower|cut:' ' }}">
+              {{ project.status }}
+            </span>
+          </td>
+
+          <!-- Timeline Status -->
+          <td>
+            <span class="timeline-badge timeline-{{ project.timeline_status|lower|cut:' ' }}">
+              {{ project.timeline_status }}
+            </span>
+          </td>
+
+          <!-- Task Statistics -->
+          <td>
+            <div class="task-stats">
+              <div class="task-stat">
+                <i class="fa fa-tasks"></i>
+                <span>{{ project.total_tasks }} Total</span>
+              </div>
+              <div class="task-stat completed">
+                <i class="fa fa-check"></i>
+                <span>{{ project.completed_tasks }} Done</span>
+              </div>
+              <div class="task-stat pending">
+                <i class="fa fa-clock"></i>
+                <span>{{ project.pending_tasks }} Pending</span>
+              </div>
+              {% if project.overdue_tasks > 0 %}
+              <div class="task-stat overdue">
+                <i class="fa fa-exclamation-circle"></i>
+                <span>{{ project.overdue_tasks }} Overdue</span>
+              </div>
+              {% endif %}
+              {% if project.critical_tasks > 0 %}
+              <div class="task-stat" style="background: #fee2e2; color: #991b1b;">
+                <i class="fa fa-fire"></i>
+                <span>{{ project.critical_tasks }} Critical</span>
+              </div>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Progress -->
+          <td>
+            <div style="min-width: 100px;">
+              <div style="font-weight: 600; color: #374151; margin-bottom: 4px;">
+                {{ project.progress }}%
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" style="width: {{ project.progress }}%;"></div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Dates -->
+          <td>
+            <div style="font-size: 12px; line-height: 1.6;">
+              {% if project.start_date %}
+              <div><strong>Start:</strong> {{ project.start_date|date:"M d, Y" }}</div>
+              {% endif %}
+              {% if project.tentative_end_date %}
+              <div><strong>Due:</strong> {{ project.tentative_end_date|date:"M d, Y" }}</div>
+              {% endif %}
+              {% if project.end_date %}
+              <div style="color: #10b981;"><strong>Completed:</strong> {{ project.end_date|date:"M d, Y" }}</div>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="no-data">
+      <i class="fa fa-folder-open"></i>
+      <p style="font-size: 16px; margin-top: 12px;">No projects found</p>
+      <p style="font-size: 14px; color: #9ca3af;">Create your first project to get started</p>
+    </div>
+    {% endif %}
+
+    <!-- Tasks Table (Hidden by default) -->
+    {% if tasks %}
+    <table class="projects-table" id="tasksTable" style="display: none;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Task Title</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Due Date</th>
+          <th>Assigned To</th>
+          <th>Project</th>
+          <th>Created At</th>
+          <th>Created By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr>
+          <!-- Task ID -->
+          <td>
+            <div style="font-weight: 600; color: #0b57a4; font-size: 14px;">
+              #{{ task.id }}
+            </div>
+          </td>
+
+          <!-- Task Title & Description -->
+          <td>
+            <div style="max-width: 300px;">
+              <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">
+                {{ task.title }}
+              </div>
+              {% if task.description %}
+              <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">
+                {{ task.description|truncatewords:20 }}
+              </div>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Priority -->
+          <td>
+            <span class="timeline-badge {% if task.priority == 'Critical' %}timeline-overdue{% elif task.priority == 'High' %}timeline-atrisk{% elif task.priority == 'Normal' %}timeline-ontrack{% else %}timeline-completed{% endif %}">
+              {{ task.priority }}
+            </span>
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="status-badge {% if task.status == 'Completed' %}status-completed{% elif task.status == 'In Progress' %}status-active{% elif task.status == 'Open' or task.status == 'New' %}status-planned{% else %}status-onhold{% endif %}">
+              {{ task.status }}
+            </span>
+          </td>
+
+          <!-- Due Date -->
+          <td>
+            <div style="font-size: 13px;">
+              {% if task.due_date %}
+                <div style="font-weight: 500; color: #374151;">
+                  {{ task.due_date|date:"M d, Y" }}
+                </div>
+              {% else %}
+                <span style="color: #9ca3af; font-style: italic;">No due date</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Assigned To -->
+          <td>
+            <div style="font-weight: 500;">
+              {% if task.assigned_type == 'team' %}
+                <i class="fa fa-users" style="color: #8b5cf6;"></i>
+              {% else %}
+                <i class="fa fa-user" style="color: #10b981;"></i>
+              {% endif %}
+              {{ task.assigned_name }}
+            </div>
+          </td>
+
+          <!-- Project Name -->
+          <td>
+            <div style="font-size: 13px; color: #6b7280;">
+              {% if task.project_name and task.project_name != 'No Project' %}
+                <i class="fa fa-folder" style="color: #0b57a4;"></i>
+                {{ task.project_name }}
+              {% else %}
+                <span style="color: #9ca3af; font-style: italic;">No Project</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Created At -->
+          <td>
+            <div style="font-size: 13px; font-weight: 500; color: #374151;">
+              {{ task.created_at|date:"M d, Y" }}
+              <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">
+                {{ task.created_at|date:"h:i A" }}
+              </div>
+            </div>
+          </td>
+
+          <!-- Created By -->
+          <td>
+            <div style="font-size: 13px; color: #6b7280;">
+              <i class="fa fa-user" style="color: #6b7280;"></i>
+              {{ task.created_by_name }}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Chart instances
+let statusChart, tasksChart, employeeChart;
+
+// Initialize charts on page load
+document.addEventListener('DOMContentLoaded', function() {
+  initializeCharts();
+});
+
+// Switch between Projects and Tasks view
+function switchViewMode() {
+  const selector = document.getElementById('viewModeSelector');
+  const viewTitle = document.getElementById('viewTitle');
+  const projectsTable = document.getElementById('projectsTable');
+  const tasksTable = document.getElementById('tasksTable');
+  const searchInput = document.getElementById('searchInput');
+  
+  if (selector.value === 'tasks') {
+    // Show tasks table, hide projects table
+    if (projectsTable) projectsTable.style.display = 'none';
+    if (tasksTable) tasksTable.style.display = 'table';
+    viewTitle.textContent = 'Task Details';
+    searchInput.placeholder = 'Search tasks...';
+  } else {
+    // Show projects table, hide tasks table
+    if (projectsTable) projectsTable.style.display = 'table';
+    if (tasksTable) tasksTable.style.display = 'none';
+    viewTitle.textContent = 'Project Details';
+    searchInput.placeholder = 'Search projects...';
+  }
+  
+  // Clear search when switching views
+  searchInput.value = '';
+  
+  // Reset any active filters
+  const rows = (selector.value === 'tasks' ? tasksTable : projectsTable)?.querySelectorAll('tbody tr');
+  if (rows) {
+    rows.forEach(row => {
+      if (!row.classList.contains('no-results-row')) {
+        row.style.display = '';
+      }
+    });
+  }
+}
+
+function initializeCharts() {
+  // Project Status Donut Chart
+  const statusCtx = document.getElementById('statusChart').getContext('2d');
+  const statusData = {
+    labels: ['Active', 'Completed', 'Planned', 'On Hold'],
+    datasets: [{
+      data: [
+        {{ summary.active_projects }},
+        {{ summary.completed_projects }},
+        {{ summary.planned_projects|default:0 }},
+        {{ summary.onhold_projects|default:0 }}
+      ],
+      backgroundColor: [
+        '#3b82f6',  // Blue for Active
+        '#10b981',  // Green for Completed
+        '#8b5cf6',  // Purple for Planned
+        '#f59e0b'   // Orange for On Hold
+      ],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  };
+
+  statusChart = new Chart(statusCtx, {
+    type: 'doughnut',
+    data: statusData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            padding: 15,
+            font: { size: 12, weight: '600' },
+            usePointStyle: true
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      },
+      cutout: '65%'
+    }
+  });
+
+  // Tasks Overview Donut Chart
+  const tasksCtx = document.getElementById('tasksChart').getContext('2d');
+  const tasksData = {
+    labels: ['Completed', 'Pending', 'Overdue'],
+    datasets: [{
+      data: [
+        {{ summary.completed_tasks }},
+        {{ summary.pending_tasks }},
+        {{ summary.overdue_tasks|default:0 }}
+      ],
+      backgroundColor: [
+        '#10b981',  // Green for Completed
+        '#f59e0b',  // Orange for Pending
+        '#ef4444'   // Red for Overdue
+      ],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  };
+
+  tasksChart = new Chart(tasksCtx, {
+    type: 'doughnut',
+    data: tasksData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            padding: 15,
+            font: { size: 12, weight: '600' },
+            usePointStyle: true
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      },
+      cutout: '65%'
+    }
+  });
+
+  // Employee Status Donut Chart
+  const employeeCtx = document.getElementById('employeeChart').getContext('2d');
+  
+  const employeeData = {
+    labels: ['Active', 'Inactive', 'On Leave'],
+    datasets: [{
+      data: [
+        {{ summary.active_employees }},
+        {{ summary.inactive_employees|default:0 }},
+        {{ summary.onleave_employees|default:0 }}
+      ],
+      backgroundColor: [
+        '#10b981',  // Green for Active
+        '#f59e0b',  // Orange for Inactive
+        '#8b5cf6'   // Purple for On Leave
+      ],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  };
+
+  employeeChart = new Chart(employeeCtx, {
+    type: 'doughnut',
+    data: employeeData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            padding: 15,
+            font: { size: 12, weight: '600' },
+            usePointStyle: true
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      },
+      cutout: '65%'
+    }
+  });
+}
+
+// Filter functionality
+function applyFilters() {
+  const startDateFrom = document.getElementById('startDateFrom').value;
+  const startDateTo = document.getElementById('startDateTo').value;
+  const statusFilter = document.getElementById('statusFilter').value;
+  
+  const table = document.getElementById('projectsTable');
+  if (!table) return;
+  
+  const rows = table.querySelectorAll('tbody tr');
+  let visibleCount = 0;
+  
+  rows.forEach(row => {
+    let show = true;
+    
+    // Get row data
+    const startDateCell = row.querySelector('td:nth-last-child(2)');
+    const statusCell = row.querySelector('.status-badge');
+    
+    if (!startDateCell || !statusCell) {
+      row.style.display = 'none';
+      return;
+    }
+    
+    const rowStartDate = startDateCell.textContent.trim().split('Start:')[1]?.trim().split('\\n')[0];
+    const rowStatus = statusCell.textContent.trim();
+    
+    // Apply date filters
+    if (startDateFrom && rowStartDate) {
+      const rowDate = new Date(rowStartDate);
+      const filterDate = new Date(startDateFrom);
+      if (rowDate < filterDate) show = false;
+    }
+    
+    if (startDateTo && rowStartDate) {
+      const rowDate = new Date(rowStartDate);
+      const filterDate = new Date(startDateTo);
+      if (rowDate > filterDate) show = false;
+    }
+    
+    // Apply status filter
+    if (statusFilter && rowStatus !== statusFilter) {
+      show = false;
+    }
+    
+    row.style.display = show ? '' : 'none';
+    if (show) visibleCount++;
+  });
+  
+  // Show message if no results
+  const tbody = table.querySelector('tbody');
+  const noResults = tbody.querySelector('.no-results-row');
+  
+  if (visibleCount === 0 && !noResults) {
+    const tr = document.createElement('tr');
+    tr.className = 'no-results-row';
+    tr.innerHTML = '<td colspan="9" style="text-align:center;padding:40px;color:#9ca3af;"><i class="fa fa-filter" style="font-size:32px;margin-bottom:12px;display:block;"></i>No projects match the selected filters</td>';
+    tbody.appendChild(tr);
+  } else if (visibleCount > 0 && noResults) {
+    noResults.remove();
+  }
+}
+
+function resetFilters() {
+  document.getElementById('startDateFrom').value = '';
+  document.getElementById('startDateTo').value = '';
+  document.getElementById('statusFilter').value = '';
+  
+  const table = document.getElementById('projectsTable');
+  if (table) {
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      if (!row.classList.contains('no-results-row')) {
+        row.style.display = '';
+      }
+    });
+    
+    const noResults = table.querySelector('.no-results-row');
+    if (noResults) noResults.remove();
+  }
+}
+
+// Search functionality
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+  searchInput.addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const viewMode = document.getElementById('viewModeSelector').value;
+    const table = viewMode === 'tasks' ? document.getElementById('tasksTable') : document.getElementById('projectsTable');
+    
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+      if (row.classList.contains('no-results-row')) return;
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+  });
+}
+
+// Export to Excel with Professional Styling
+function exportToCSV() {
+  const viewMode = document.getElementById('viewModeSelector').value;
+  const exportBtn = document.querySelector('.btn-export');
+  
+  // Show loading state
+  const originalHTML = exportBtn.innerHTML;
+  exportBtn.disabled = true;
+  exportBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Exporting...';
+  
+  // Build URL with view mode parameter
+  const url = "{% url 'export_projects_excel' %}?view_mode=" + viewMode;
+  
+  // Create a temporary link to trigger download
+  fetch(url)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      return response.blob();
+    })
+    .then(blob => {
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      
+      // Set filename based on view mode
+      const date = new Date().toISOString().split('T')[0];
+      if (viewMode === 'tasks') {
+        a.download = `Trackline_Tasks_Report_${date}.xlsx`;
+      } else {
+        a.download = `Trackline_Projects_Report_${date}.xlsx`;
+      }
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      // Reset button
+      exportBtn.disabled = false;
+      exportBtn.innerHTML = originalHTML;
+      
+      // Show success message
+      showNotification('Excel file downloaded successfully!', 'success');
+    })
+    .catch(error => {
+      console.error('Export error:', error);
+      exportBtn.disabled = false;
+      exportBtn.innerHTML = originalHTML;
+      showNotification('Failed to export Excel file. Please try again.', 'error');
+    });
+}
+
+// Notification helper
+function showNotification(message, type) {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    background: ${type === 'success' ? '#10b981' : '#ef4444'};
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    font-weight: 600;
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+  `;
+  notification.innerHTML = `<i class="fa fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+</script>
 {% endblock %}

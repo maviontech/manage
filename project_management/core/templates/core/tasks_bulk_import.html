@@ -1,80 +1,584 @@
 {% extends "core/base.html" %}
 {% load static %}
 {% block content %}
-<div class="container-fluid py-4">
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-    <div>
-      <h4 class="fw-bold text-gradient mb-2"><i class="fa-solid fa-file-csv me-2"></i> Bulk Task Import</h4>
-      <p class="small text-muted mb-2">Upload CSV to create tasks in bulk. You will be shown a summary after import.</p>
-    </div>
-    <div class="d-flex align-items-center" style="gap: 12px; margin-top: 16px; margin-bottom: 16px;">
-      <a href="{% url 'task_board' %}" class="btn btn-outline-gradient"><i class="fa-solid fa-th-large me-1"></i> Board</a>
-    </div>
-  </div>
+<style>
+  /* ============================================
+     PROFESSIONAL COLOR PALETTE & VARIABLES
+     ============================================ */
+  :root {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #dbeafe;
+    --success-color: #10b981;
+    --success-hover: #059669;
+    --success-light: #d1fae5;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --danger-light: #fee2e2;
+    --info-color: #0ea5e9;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --white: #ffffff;
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
 
-  <div class="card soft-card p-4 mb-4">
-    <form id="bulkForm" method="post" enctype="multipart/form-data">
-      {% csrf_token %}
-      <div class="row g-4 align-items-center mb-4">
-        <div class="col-md-8 mb-3">
-          <label class="form-label fw-semibold text-primary mb-2">CSV file</label>
-          <input type="file" name="csv_file" id="csv_file" accept=".csv" required class="form-control mb-4">
+  /* ============================================
+     PROFESSIONAL PAGE HEADER
+     ============================================ */
+  .page-header-professional {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-lg);
+    color: var(--white);
+  }
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  .header-title-section {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .icon-wrapper {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    width: 64px;
+    height: 64px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .page-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.5px;
+  }
+
+  .page-subtitle {
+    font-size: 15px;
+    margin: 0.5rem 0 0 0;
+    opacity: 0.95;
+    font-weight: 400;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  /* ============================================
+     PROFESSIONAL BUTTONS
+     ============================================ */
+  .btn-professional {
+    padding: 10px 20px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary-professional {
+    background: var(--primary-color);
+    color: var(--white);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-primary-professional:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .btn-outline-professional {
+    background: var(--white);
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    box-shadow: var(--shadow);
+  }
+
+  .btn-outline-professional:hover {
+    background: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ============================================
+     PROFESSIONAL CARDS
+     ============================================ */
+  .professional-card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .professional-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-section-header {
+    padding: 1.25rem 1.5rem;
+    background: var(--gray-50);
+    border-bottom: 2px solid var(--gray-200);
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title i {
+    color: var(--primary-color);
+    font-size: 20px;
+  }
+
+  .card-content {
+    padding: 2rem;
+  }
+
+  /* ============================================
+     UPLOAD SECTION
+     ============================================ */
+  .upload-area {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--border-radius);
+    padding: 2.5rem;
+    text-align: center;
+    color: var(--white);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-area::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .upload-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .upload-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .upload-description {
+    font-size: 15px;
+    opacity: 0.95;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ============================================
+     FORM STYLING
+     ============================================ */
+  .form-group-professional {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label-professional {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-label-professional i {
+    color: var(--primary-color);
+    font-size: 16px;
+  }
+
+  .form-control-professional {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    color: var(--gray-800);
+    background: var(--white);
+    transition: all 0.3s ease;
+    font-family: inherit;
+  }
+
+  .form-control-professional:hover {
+    border-color: var(--primary-color);
+  }
+
+  .form-control-professional:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+
+  /* ============================================
+     INFO BOX
+     ============================================ */
+  .info-box {
+    background: var(--primary-light);
+    border-left: 4px solid var(--primary-color);
+    border-radius: var(--border-radius-sm);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .info-box-title {
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .info-box-content {
+    font-size: 14px;
+    color: var(--gray-700);
+    margin: 0;
+  }
+
+  .info-box code {
+    background: rgba(37, 99, 235, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--primary-color);
+    font-weight: 600;
+  }
+
+  /* ============================================
+     RESULT SECTION
+     ============================================ */
+  .result-summary {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .result-stat {
+    flex: 1;
+    min-width: 200px;
+    background: linear-gradient(135deg, var(--success-color) 0%, var(--success-hover) 100%);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    color: var(--white);
+    box-shadow: var(--shadow-md);
+  }
+
+  .result-stat.error {
+    background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+  }
+
+  .result-stat-label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.95;
+    margin-bottom: 0.5rem;
+  }
+
+  .result-stat-value {
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  /* ============================================
+     PROFESSIONAL TABLE
+     ============================================ */
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  .professional-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .professional-table thead th {
+    background: var(--gray-50);
+    padding: 1rem 1.25rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--gray-200);
+  }
+
+  .professional-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .professional-table tbody tr:hover {
+    background: var(--gray-50);
+  }
+
+  .professional-table tbody td {
+    padding: 1rem 1.25rem;
+    font-size: 14px;
+    color: var(--gray-700);
+  }
+
+  .error-text {
+    color: var(--danger-color);
+    font-weight: 500;
+  }
+
+  /* ============================================
+     RESPONSIVE DESIGN
+     ============================================ */
+  @media (max-width: 768px) {
+    .page-header-professional {
+      padding: 1.5rem;
+    }
+
+    .header-title-section {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .page-title {
+      font-size: 22px;
+    }
+
+    .upload-area {
+      padding: 2rem 1.5rem;
+    }
+
+    .card-content {
+      padding: 1.5rem;
+    }
+
+    .result-summary {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<div class="container-fluid py-4">
+  <!-- Professional Page Header -->
+  <div class="page-header-professional">
+    <div class="header-content">
+      <div class="header-title-section">
+        <div class="icon-wrapper">
+          <i class="fas fa-file-csv"></i>
         </div>
-        <div class="col-md-4 d-grid mb-3">
-          <button type="submit" class="btn btn-gradient btn-lg mt-4 mb-2" style="margin-top: 10px;"><i class="fa-solid fa-upload me-1"></i> Upload & Import</button>
+        <div>
+          <h1 class="page-title">Bulk Task Import</h1>
+          <p class="page-subtitle">Upload CSV to create multiple tasks at once. You will see a summary after import.</p>
         </div>
       </div>
-    </form>
-
-    <div class="alert alert-light border mt-4 mb-3 px-3 py-2" style="margin-top: 10px;">
-      <strong>Columns:</strong>
-      <code>title, description, project_id, subproject_id, status, priority, assigned_to, due_date</code>
-      <p class="small text-muted mt-2 mb-0">Use <code>member:ID</code> or <code>team:ID</code> in <code>assigned_to</code>. Dates: <code>YYYY-MM-DD</code>.</p>
+      <div class="header-actions">
+        <a href="{% url 'task_board' %}" class="btn-professional btn-outline-professional">
+          <i class="fas fa-th-large"></i> Task Board
+        </a>
+      </div>
     </div>
-
-    <a href="{% static 'samples/sample_tasks_import.csv' %}" download class="btn btn-outline-gradient mt-4 btn-sm">
-      <i class="fa-solid fa-download me-1"></i> Download Sample CSV
-    </a>
   </div>
 
-  <!-- Import result panel (rendered server-side after POST) -->
+  <!-- Upload Form Card -->
+  <div class="professional-card">
+    <div class="upload-area">
+      <div class="upload-icon">
+        <i class="fas fa-cloud-upload-alt"></i>
+      </div>
+      <h2 class="upload-title">Upload Your CSV File</h2>
+      <p class="upload-description">Select a properly formatted CSV file to import tasks in bulk</p>
+      
+      <form id="bulkForm" method="post" enctype="multipart/form-data" style="position: relative; z-index: 1;">
+        {% csrf_token %}
+        <div class="form-group-professional" style="max-width: 500px; margin: 0 auto 1.5rem;">
+          <input type="file" name="csv_file" id="csv_file" accept=".csv" required class="form-control-professional" style="background: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.5);">
+        </div>
+        <button type="submit" class="btn-professional btn-primary-professional" style="padding: 14px 32px; font-size: 16px;">
+          <i class="fas fa-upload"></i> Upload & Import Tasks
+        </button>
+      </form>
+    </div>
+
+    <div class="card-content">
+      <!-- Info Box -->
+      <div class="info-box">
+        <div class="info-box-title">
+          <i class="fas fa-info-circle"></i>
+          CSV Format Requirements
+        </div>
+        <p class="info-box-content" style="margin-bottom: 0.75rem;">
+          Your CSV file must include the following columns:
+        </p>
+        <p class="info-box-content" style="font-weight: 600; margin-bottom: 0.75rem;">
+          <code>title</code>, <code>description</code>, <code>project_id</code>, <code>subproject_id</code>, 
+          <code>status</code>, <code>priority</code>, <code>assigned_to</code>, <code>due_date</code>
+        </p>
+        <p class="info-box-content" style="margin-bottom: 0;">
+          <strong>Tips:</strong> Use <code>member:ID</code> or <code>team:ID</code> format in the <code>assigned_to</code> column. 
+          Dates should be in <code>YYYY-MM-DD</code> format.
+        </p>
+      </div>
+
+      <!-- Download Sample -->
+      <div style="text-align: center;">
+        <a href="{% static 'samples/sample_tasks_import.csv' %}" download class="btn-professional btn-outline-professional">
+          <i class="fas fa-download"></i> Download Sample CSV Template
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Result Panel -->
   {% if inserted is defined %}
-  <div class="card mt-4 soft-card">
-    <div class="card-body">
-      <h5 class="mb-3">Import Result</h5>
-      <p class="mb-3">Inserted: <strong>{{ inserted }}</strong> &nbsp;&nbsp; Errors: <strong>{{ errors|length }}</strong></p>
+  <div class="professional-card">
+    <div class="card-section-header">
+      <h2 class="section-title">
+        <i class="fas fa-check-circle"></i>
+        Import Results
+      </h2>
+    </div>
+    <div class="card-content">
+      <!-- Result Summary -->
+      <div class="result-summary">
+        <div class="result-stat">
+          <div class="result-stat-label">Tasks Created</div>
+          <div class="result-stat-value">{{ inserted }}</div>
+        </div>
+        <div class="result-stat error">
+          <div class="result-stat-label">Errors Found</div>
+          <div class="result-stat-value">{{ errors|length }}</div>
+        </div>
+      </div>
+
+      <!-- Error Table -->
       {% if errors %}
+      <div class="info-box" style="background: var(--danger-light); border-left-color: var(--danger-color); margin-bottom: 1.5rem;">
+        <div class="info-box-title" style="color: var(--danger-color);">
+          <i class="fas fa-exclamation-triangle"></i>
+          Import Errors Detected
+        </div>
+        <p class="info-box-content">
+          The following rows could not be imported due to errors. Please review and fix them.
+        </p>
+      </div>
+
       <div class="table-responsive">
-        <table class="table table-sm">
-          <thead><tr><th>#</th><th>Row</th><th>Error</th></tr></thead>
+        <table class="professional-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">#</th>
+              <th style="width: 100px;">Row</th>
+              <th>Error Message</th>
+            </tr>
+          </thead>
           <tbody>
             {% for e in errors %}
-            <tr><td>{{ forloop.counter }}</td><td>{{ e.row }}</td><td class="text-danger">{{ e.error }}</td></tr>
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td><strong>{{ e.row }}</strong></td>
+              <td class="error-text">{{ e.error }}</td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      {% else %}
+      <div class="info-box" style="background: var(--success-light); border-left-color: var(--success-color);">
+        <div class="info-box-title" style="color: var(--success-color);">
+          <i class="fas fa-check-circle"></i>
+          All Tasks Imported Successfully
+        </div>
+        <p class="info-box-content" style="margin: 0;">
+          All {{ inserted }} tasks were imported without any errors. You can view them on the task board.
+        </p>
+      </div>
       {% endif %}
+
+      <!-- Action Buttons -->
+      <div style="text-align: center; margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url 'task_board' %}" class="btn-professional btn-primary-professional">
+          <i class="fas fa-th-large"></i> View Task Board
+        </a>
+        <a href="{% url 'bulk_import' %}" class="btn-professional btn-outline-professional">
+          <i class="fas fa-redo"></i> Import More Tasks
+        </a>
+      </div>
     </div>
   </div>
   {% endif %}
 </div>
 
-<style>
-.soft-card { border-radius:12px; box-shadow:0 6px 18px rgba(13,38,71,0.04); border:none; }
-.btn-gradient { background: linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border-radius:8px; }
-.btn-outline-gradient { border:1px solid #38bdf8; color:#0b57a4; border-radius:8px; padding:6px 10px; }
-.card.soft-card { margin-bottom: 1.5rem; }
-.form-label { margin-bottom: 0.5rem; }
-.alert-light { margin-bottom: 1rem; }
-</style>
-
 <script>
 document.getElementById('bulkForm')?.addEventListener('submit', async function(ev){
-  // Let server handle large imports synchronously for simplicity; but show UI feedback
   const btn = ev.target.querySelector('button[type="submit"]');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Importing...';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing Tasks...';
 });
 </script>
 {% endblock %}

@@ -62,27 +62,85 @@ def projects_search_ajax(request):
     return JsonResponse({"results": rows})
 
 def project_create(request):
+    # Fetch employees for dropdown
+    conn, cur = get_tenant_conn_and_cursor(request)
+    try:
+        cur.execute("""
+            SELECT id, employee_code, first_name, last_name 
+            FROM employees 
+            WHERE status = 'Active' 
+            ORDER BY first_name, last_name
+        """)
+        employees = cur.fetchall()
+    finally:
+        cur.close(); conn.close()
+    
+    # Build employee choices
+    employee_choices = [('', '-- Select Employee --')] + [
+        (str(emp['id']), f"{emp['first_name']} {emp['last_name'] or ''} ({emp['employee_code']})")
+        for emp in employees
+    ]
+    
     if request.method == "POST":
         form = ProjectForm(request.POST)
+        form.fields['employee_id'].choices = employee_choices
         if form.is_valid():
             data = form.cleaned_data
             conn, cur = get_tenant_conn_and_cursor(request)
             try:
+                employee_id = data.get('employee_id') or None
+                if employee_id == '':
+                    employee_id = None
                 cur.execute("""
-                    INSERT INTO projects (name, description, start_date, tentative_end_date, status, created_by)
-                    VALUES (%s,%s,%s,%s,%s,%s)
+                    INSERT INTO projects (name, description, start_date, tentative_end_date, status, employee_id, created_by)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s)
                 """, (data['name'], data['description'], data['start_date'] or None, data['tentative_end_date'] or None,
-                      data['status'], request.session.get('user_id')))
+                      data['status'], employee_id, request.session.get('user_id')))
                 new_id = cur.lastrowid
                 # optional activity log
                 cur.execute("INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
                             ("project", new_id, "created project", request.session.get('user_id')))
+                
+                # Create notification for assigned employee
+                if employee_id:
+                    # Get employee's member_id (assuming employees table has member_id or we use id)
+                    cur.execute("SELECT first_name, last_name FROM employees WHERE id=%s", (employee_id,))
+                    emp = cur.fetchone()
+                    if emp:
+                        # Get creator name
+                        cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (request.session.get('user_id'),))
+                        creator = cur.fetchone()
+                        creator_name = creator['name'] if creator else 'Someone'
+                        
+                        # Note: We need to find the member_id for this employee
+                        # If employees table has a member_id field, use it. Otherwise, match by email or name
+                        cur.execute("""
+                            SELECT m.id FROM members m 
+                            JOIN employees e ON (m.email = e.email OR (m.first_name = e.first_name AND m.last_name = e.last_name))
+                            WHERE e.id = %s LIMIT 1
+                        """, (employee_id,))
+                        member = cur.fetchone()
+                        
+                        if member:
+                            cur.execute("""
+                                INSERT INTO notifications (user_id, title, message, type, link)
+                                VALUES (%s, %s, %s, %s, %s)
+                            """, (
+                                member['id'],
+                                "Assigned to New Project",
+                                f"{creator_name} assigned you to project '{data['name']}'",
+                                "project",
+                                f"/projects/{new_id}"
+                            ))
+                
+                conn.commit()
             finally:
                 cur.close(); conn.close()
             messages.success(request, "Project created.")
             return redirect(reverse('projects_list'))
     else:
         form = ProjectForm()
+        form.fields['employee_id'].choices = employee_choices
 
     return render(request, "core/project_create.html", {"form": form})
 
@@ -95,16 +153,36 @@ def project_edit(request, project_id):
         project = cur.fetchone()
         if not project:
             return HttpResponseBadRequest("Project not found")
+        
+        # Fetch employees for dropdown
+        cur.execute("""
+            SELECT id, employee_code, first_name, last_name 
+            FROM employees 
+            WHERE status = 'Active' 
+            ORDER BY first_name, last_name
+        """)
+        employees = cur.fetchall()
     finally:
         cur.close(); conn.close()
+    
+    # Build employee choices
+    employee_choices = [('', '-- Select Employee --')] + [
+        (str(emp['id']), f"{emp['first_name']} {emp['last_name'] or ''} ({emp['employee_code']})")
+        for emp in employees
+    ]
 
     if request.method == "POST":
         form = ProjectForm(request.POST)
+        form.fields['employee_id'].choices = employee_choices
         if form.is_valid():
             data = form.cleaned_data
             conn, cur = get_tenant_conn_and_cursor(request)
 
             try:
+                employee_id = data.get('employee_id') or None
+                if employee_id == '':
+                    employee_id = None
+                    
                 if data['status'] == 'Completed':
                     # END DATE HANDLED BY TRIGGER (NO NEED TO SET MANUALLY)
                     cur.execute("""
@@ -113,7 +191,8 @@ def project_edit(request, project_id):
                             description=%s,
                             start_date=%s,
                             tentative_end_date=%s,
-                            status=%s
+                            status=%s,
+                            employee_id=%s
                         WHERE id=%s
                     """, (
                         data['name'],
@@ -121,6 +200,7 @@ def project_edit(request, project_id):
                         data['start_date'] or None,
                         data['tentative_end_date'] or None,
                         'Completed',
+                        employee_id,
                         project_id
                     ))
                 else:
@@ -131,6 +211,7 @@ def project_edit(request, project_id):
                             start_date=%s,
                             tentative_end_date=%s,
                             status=%s,
+                            employee_id=%s,
                             end_date=NULL
                         WHERE id=%s
                     """, (
@@ -139,6 +220,7 @@ def project_edit(request, project_id):
                         data['start_date'] or None,
                         data['tentative_end_date'] or None,
                         data['status'],
+                        employee_id,
                         project_id
                     ))
 
@@ -147,6 +229,74 @@ def project_edit(request, project_id):
                     INSERT INTO activity_log (entity_type, entity_id, action, performed_by)
                     VALUES (%s, %s, %s, %s)
                 """, ("project", project_id, "updated project", request.session.get('user_id')))
+
+                # Create notification if employee assignment changed
+                if employee_id and str(employee_id) != str(project.get('employee_id')):
+                    # Get updater name
+                    cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (request.session.get('user_id'),))
+                    updater = cur.fetchone()
+                    updater_name = updater['name'] if updater else 'Someone'
+                    
+                    # Find member_id for the employee
+                    cur.execute("""
+                        SELECT m.id FROM members m 
+                        JOIN employees e ON (m.email = e.email OR (m.first_name = e.first_name AND m.last_name = e.last_name))
+                        WHERE e.id = %s LIMIT 1
+                    """, (employee_id,))
+                    member = cur.fetchone()
+                    
+                    if member:
+                        cur.execute("""
+                            INSERT INTO notifications (user_id, title, message, type, link)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, (
+                            member['id'],
+                            "Assigned to Project",
+                            f"{updater_name} assigned you to project '{data['name']}'",
+                            "project",
+                            f"/projects/{project_id}"
+                        ))
+                
+                # Notify if project is completed
+                if data['status'] == 'Completed' and project.get('status') != 'Completed':
+                    # Get updater name
+                    cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (request.session.get('user_id'),))
+                    updater = cur.fetchone()
+                    updater_name = updater['name'] if updater else 'Someone'
+                    
+                    # Notify project creator if different from updater
+                    if project.get('created_by') and str(project.get('created_by')) != str(request.session.get('user_id')):
+                        cur.execute("""
+                            INSERT INTO notifications (user_id, title, message, type, link)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, (
+                            project['created_by'],
+                            "Project Completed",
+                            f"{updater_name} marked project '{data['name']}' as completed",
+                            "success",
+                            f"/projects/{project_id}"
+                        ))
+                    
+                    # Notify assigned employee
+                    if employee_id:
+                        cur.execute("""
+                            SELECT m.id FROM members m 
+                            JOIN employees e ON (m.email = e.email OR (m.first_name = e.first_name AND m.last_name = e.last_name))
+                            WHERE e.id = %s LIMIT 1
+                        """, (employee_id,))
+                        member = cur.fetchone()
+                        
+                        if member and str(member['id']) != str(request.session.get('user_id')):
+                            cur.execute("""
+                                INSERT INTO notifications (user_id, title, message, type, link)
+                                VALUES (%s, %s, %s, %s, %s)
+                            """, (
+                                member['id'],
+                                "Project Completed",
+                                f"Project '{data['name']}' has been completed",
+                                "success",
+                                f"/projects/{project_id}"
+                            ))
 
                 conn.commit()
             finally:
@@ -162,8 +312,10 @@ def project_edit(request, project_id):
             'description': project['description'],
             'start_date': project['start_date'],
             'tentative_end_date': project.get('tentative_end_date'),
-            'status': project['status']
+            'status': project['status'],
+            'employee_id': str(project.get('employee_id')) if project.get('employee_id') else ''
         })
+        form.fields['employee_id'].choices = employee_choices
 
     return render(request, "core/project_create.html", {"form": form, "editing": True, "project": project})
 def subprojects_list(request, project_id):
@@ -216,7 +368,11 @@ def subproject_create(request, project_id):
     else:
         form = SubprojectForm()
 
-    return render(request, "core/subproject_create.html", {"form": form, "project": project})
+    return render(request, "core/subproject_create.html", {
+        "form": form, 
+        "project": project,
+        "project_id": project_id
+    })
 def subproject_edit(request, project_id, sub_id):
     conn, cur = get_tenant_conn_and_cursor(request)
     try:
@@ -271,4 +427,10 @@ def subproject_edit(request, project_id, sub_id):
             'description': subproject['description']
         })
 
-    return render(request, "core/subproject_create.html", {"form": form, "editing": True, "project": project, "subproject": subproject})
+    return render(request, "core/subproject_create.html", {
+        "form": form, 
+        "editing": True, 
+        "project": project, 
+        "subproject": subproject,
+        "project_id": project_id
+    })

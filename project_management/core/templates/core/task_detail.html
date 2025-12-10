@@ -217,6 +217,45 @@
             <a href="{% url 'edit_task' task.id %}" class="edit-btn">✏️ Edit Task</a>
         </div>
 
+        <!-- Timer History Section -->
+        <div class="detail-section mt-5">
+            <h2 style="font-size:1.2rem;font-weight:700;color:#2563eb;margin-bottom:18px;">⏱️ Timer History</h2>
+            {% if timer_history and timer_history|length > 0 %}
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;background:#f9fafb;border-radius:10px;">
+                    <thead>
+                        <tr style="background:#e5e7eb;">
+                            <th style="padding:10px 8px;font-size:13px;color:#374151;text-align:left;">User</th>
+                            <th style="padding:10px 8px;font-size:13px;color:#374151;text-align:left;">Start Time</th>
+                            <th style="padding:10px 8px;font-size:13px;color:#374151;text-align:left;">End Time</th>
+                            <th style="padding:10px 8px;font-size:13px;color:#374151;text-align:left;">Duration</th>
+                            <th style="padding:10px 8px;font-size:13px;color:#374151;text-align:left;">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in timer_history %}
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding:8px 6px;">
+                                {% if session.first_name or session.last_name %}
+                                    {{ session.first_name }} {{ session.last_name }}
+                                {% else %}
+                                    {{ session.user_id }}
+                                {% endif %}
+                            </td>
+                            <td style="padding:8px 6px;">{{ session.start_time }}</td>
+                            <td style="padding:8px 6px;">{{ session.end_time|default:'-' }}</td>
+                            <td style="padding:8px 6px;">{{ session.duration_seconds }}s</td>
+                            <td style="padding:8px 6px;">{{ session.notes|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div style="color:#6b7280;font-size:14px;">No timer history found for this task.</div>
+            {% endif %}
+        </div>
+
     </div>
 </div>
 

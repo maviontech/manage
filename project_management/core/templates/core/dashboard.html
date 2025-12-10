@@ -6,204 +6,573 @@
 <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
+  /* ============================================
+     PROFESSIONAL COLOR PALETTE & VARIABLES
+     ============================================ */
+  :root {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #dbeafe;
+    --success-color: #10b981;
+    --success-hover: #059669;
+    --success-light: #d1fae5;
+    --warning-color: #f59e0b;
+    --warning-hover: #d97706;
+    --info-color: #0ea5e9;
+    --info-hover: #0284c7;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --white: #ffffff;
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ============================================
+     PROFESSIONAL WELCOME BANNER
+     ============================================ */
   .welcome-banner {
-    background: linear-gradient(90deg,#0b57a4,#1f86e3);
-    color: #fff; padding: 16px 20px; border-radius: 10px; margin-bottom: 14px;
-    box-shadow: 0 8px 30px rgba(11,87,164,0.08);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: var(--white);
+    padding: 2rem 2.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
   }
- .dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-top: 14px;
-}
 
-.metric-card {
-  border-radius: 10px;
-  padding: 14px;
-  box-shadow: 0 6px 18px rgba(12, 38, 63, 0.05);
-  color: #fff; /* Text color */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  .welcome-banner::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: floatBubble 8s ease-in-out infinite;
+  }
 
-  
-  /* Center content */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
+  @keyframes floatBubble {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
 
-.metric-card .label {
-  font-weight: 600;
-  margin-bottom: 6px;
-}
+  .welcome-banner h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
 
-.metric-card .value {
-  font-size: 26px;
-  font-weight: 700;
-}
+  .welcome-banner .user-email-info {
+    opacity: 0.95;
+    font-size: 15px;
+    font-weight: 400;
+  }
 
-/* Background colors for each metric */
- 
-.metric-card.total-tasks {
- 
-  background-color: #1E5788; /* Professional Blue */
- 
-  color: white; /* White text for contrast */
- 
-}
- 
-.metric-card.active-projects {
- 
-  background-color: #2BA388; /* Professional Teal/Green */
- 
-  color: white; /* White text for contrast */
- 
-}
- 
-.metric-card.tasks-completed {
- 
-  background-color: #D6A650; /* Professional Gold/Yellow */
- 
-  color: white; /* White text for contrast */
- 
-}
- 
-.metric-card.tasks-pending {
- 
-  background-color: #D97B55; /* Professional Orange */
- 
-  color: white; /* White text for contrast */
- 
-}
+  .welcome-banner .user-email-info strong {
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-left: 4px;
+  }
 
-/* Charts row styling (optional) */
-.charts-row {
-  display: grid;
-  grid-template-columns: 1fr 420px;
-  gap: 18px;
-  margin-top: 18px;
-}
+  /* ============================================
+     TOP ACTIONS
+     ============================================ */
+  .top-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
 
-@media (max-width: 1000px) {
+  .btn-team {
+    background: var(--white);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: var(--primary-color);
+    padding: 10px 20px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-team:hover {
+    background: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .btn-logout {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    color: var(--white);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 10px 18px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .btn-logout:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+  }
+
+  /* ============================================
+     PROFESSIONAL METRICS GRID
+     ============================================ */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .metric-card {
+    border-radius: var(--border-radius);
+    padding: 2rem 1.5rem;
+    box-shadow: var(--shadow-lg);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    transition: all 0.5s ease;
+  }
+
+  .metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-xl);
+  }
+
+  .metric-card:hover::before {
+    transform: scale(1.1);
+  }
+
+  .metric-card .label {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.95;
+    position: relative;
+    z-index: 1;
+  }
+
+  .metric-card .value {
+    font-size: 42px;
+    font-weight: 800;
+    position: relative;
+    z-index: 1;
+    line-height: 1;
+  }
+
+  /* Professional gradient backgrounds for metrics */
+  .metric-card.total-tasks {
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  }
+
+  .metric-card.active-projects {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  }
+
+  .metric-card.tasks-completed {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  }
+
+  .metric-card.tasks-pending {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  }
+
+  /* ============================================
+     PROFESSIONAL CHARTS SECTION
+     ============================================ */
   .charts-row {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: 1fr 440px;
+    gap: 1.5rem;
+    margin-top: 2rem;
   }
-}
 
-.chart-card {
-  background: var(--panel, #f9f9f9);
-  border-radius: 12px;
-  padding: 14px;
-  box-shadow: 0 6px 16px rgba(12, 38, 63, 0.05);
-}
+  @media (max-width: 1100px) {
+    .charts-row {
+      grid-template-columns: 1fr;
+    }
+  }
 
-.chart-card h3 {
-  margin: 0 0 8px;
-  font-size: 16px;
-  color: var(--text, #333);
-}
+  .chart-card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+    transition: all 0.3s ease;
+  }
 
+  .chart-card:hover {
+    box-shadow: var(--shadow-md);
+  }
 
+  .chart-card h3 {
+    margin: 0 0 1rem 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gray-800);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
 
-  /* donut reduced size */
-  #progressChart { max-width:420px; margin: 0 auto; display:block; height:260px !important; }
+  /* ============================================
+     QUICK ACTIONS & CHART SPLIT
+     ============================================ */
+  .chart-split {
+    display: flex;
+    gap: 2rem;
+    align-items: stretch;
+  }
 
-  /* stacked horizontal bars */
-  #priorityChart { width:100%; height:300px !important; }
+  .chart-split .shortcuts-area,
+  .chart-split .donut-pane {
+    flex: 1 1 50%;
+    min-width: 0;
+  }
 
-  /* Team view button / logout */
-  .top-actions { display:flex; gap:10px; align-items:center; }
-  .btn-team { background:#fff; border:1px solid #1f86e3; color:#0b57a4; padding:8px 12px; border-radius:8px; font-weight:600; }
-  .btn-logout { background:transparent; color:white; border:none; padding:6px 10px; }
+  .shortcuts-area h3,
+  .donut-pane h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-  /* modal tweaks */
-  .team-modal .modal-dialog { max-width:900px; }
-  .team-table { width:100%; border-collapse:collapse; }
-  .team-table th, .team-table td { padding:8px 10px; text-align:left; border-bottom:1px solid rgba(0,0,0,0.04); }
-  .team-chart { width:100%; height:160px; }
-  .donut-legend { display:flex; gap:12px; margin-top:12px; align-items:center; flex-wrap:wrap; font-size:13px; color:var(--muted); }
-  .dot { width:14px; height:10px; border-radius:3px; display:inline-block; }
-
-  /* ---- Split layout + Quick Actions ---- */
-  .chart-split{ display:flex; gap:14px; align-items:stretch; }
-  .chart-split .shortcuts-area, .chart-split .donut-pane{ flex:1 1 50%; min-width:0; }
-
-  /* shortcuts grid */
+  /* Quick Actions Grid */
   .shortcuts {
-    display:grid;
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap:12px;
-    align-content:start;
+    gap: 1rem;
+    align-content: start;
   }
-  .shortcut-btn{
-    position:relative;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    padding:18px;
-    border-radius:12px;
-    color:#fff;
-    box-shadow: 0 6px 16px rgba(12,38,63,0.04);
-    cursor:pointer;
-    transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
-    font-weight:700;
-    font-size:13px;
-    height:110px; /* square-ish */
-    text-align:center;
-    overflow:hidden;
+
+  .shortcut-btn {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    color: var(--white);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 700;
+    font-size: 14px;
+    height: 120px;
+    text-align: center;
+    overflow: hidden;
     border: none;
   }
-  .shortcut-btn svg { width:36px; height:36px; color:rgba(255,255,255,0.95); }
-  .shortcut-btn .lbl { font-size:13px; opacity:0.95; color:rgba(255,255,255,0.95); }
 
-  /* professional gradient palette for each button */
-  .shortcut-blue   { background: linear-gradient(135deg,#2563eb,#60a5fa); }
-  .shortcut-green  { background: linear-gradient(135deg,#059669,#34d399); }
-  .shortcut-violet { background: linear-gradient(135deg,#7c2bc7,#a855f7); }
-  .shortcut-orange { background: linear-gradient(135deg,#ea580c,#f97316); }
-
-  /* subtle hover glow */
-  .shortcut-btn:hover { transform: translateY(-5px); filter:brightness(1.03); box-shadow: 0 18px 40px rgba(20,40,80,0.12); }
-
-  /* badge */
-  .shortcut-badge {
-    position:absolute;
-    top:10px;
-    right:10px;
-    min-width:22px;
-    height:22px;
-    padding:0 6px;
-    border-radius:12px;
-    background:rgba(255,255,255,0.95);
-    color:#0b57a4;
-    font-size:12px;
-    font-weight:800;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow: 0 8px 20px rgba(11,87,164,0.08);
+  .shortcut-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
 
-  .shortcuts-area h3 { font-size:16px; font-weight:700; color:var(--text); margin:6px 0 12px; }
-  .donut-pane h3 { font-size:16px; font-weight:700; color:var(--text); margin:6px 0 12px; }
+  .shortcut-btn:hover::before {
+    opacity: 1;
+  }
 
-  /* donut pane layout */
-  .donut-pane { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding-left:6px; }
+  .shortcut-btn svg {
+    width: 40px;
+    height: 40px;
+    color: rgba(255, 255, 255, 0.95);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  }
 
-  /* responsive */
-  @media (max-width:1000px){
-    .chart-split { flex-direction:column; }
-    .shortcut-btn { height:92px; }
-    #progressChart { max-width:420px; height:220px !important; }
-    .shortcuts { grid-template-columns: repeat(3, 1fr); }
+  .shortcut-btn .lbl {
+    font-size: 14px;
+    opacity: 0.98;
+    color: rgba(255, 255, 255, 0.98);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  /* Professional gradient palette */
+  .shortcut-blue {
+    background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+  }
+
+  .shortcut-green {
+    background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+  }
+
+  .shortcut-violet {
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  }
+
+  .shortcut-orange {
+    background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  }
+
+  .shortcut-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* Badge styling */
+  .shortcut-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--primary-color);
+    font-size: 13px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ============================================
+     DONUT PANE
+     ============================================ */
+  .donut-pane {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    padding-left: 1rem;
+  }
+
+  #progressChart {
+    max-width: 100%;
+    margin: 0 auto;
+    display: block;
+    height: 240px !important;
+  }
+
+  #priorityChart {
+    width: 100%;
+    height: 280px !important;
+  }
+
+  .donut-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--gray-700);
+    justify-content: center;
+  }
+
+  .donut-legend .item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+  }
+
+  .dot {
+    width: 16px;
+    height: 12px;
+    border-radius: 4px;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  /* ============================================
+     TEAM MODAL
+     ============================================ */
+  .team-modal .modal-dialog {
+    max-width: 980px;
+  }
+
+  .team-modal .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: var(--white);
+    border-bottom: none;
+    padding: 1.5rem 2rem;
+  }
+
+  .team-modal .modal-title {
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .team-modal .btn-close {
+    filter: brightness(0) invert(1);
+  }
+
+  .team-modal .modal-body {
+    padding: 2rem;
+  }
+
+  .team-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .team-table thead th {
+    background: var(--gray-50);
+    padding: 1rem 1.25rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--gray-200);
+  }
+
+  .team-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .team-table tbody tr:hover {
+    background: var(--gray-50);
+  }
+
+  .team-table tbody td {
+    padding: 1rem 1.25rem;
+    font-size: 14px;
+    color: var(--gray-700);
+  }
+
+  .team-chart {
+    width: 100%;
+    height: 180px;
+  }
+
+  /* ============================================
+     SEARCH DROPDOWN
+     ============================================ */
+  .search-dropdown {
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+  }
+
+  .search-result-item {
+    transition: background 0.2s ease;
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .search-result-item:last-child {
+    border-bottom: none;
+  }
+
+  .search-result-item:hover,
+  .search-result-item:focus {
+    background: var(--gray-50);
+    outline: none;
+  }
+
+  /* ============================================
+     RESPONSIVE DESIGN
+     ============================================ */
+  @media (max-width: 1000px) {
+    .chart-split {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .shortcuts {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .shortcut-btn {
+      height: 100px;
+    }
+
+    #progressChart {
+      max-width: 100%;
+      height: 200px !important;
+    }
+
+    .dashboard-grid {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .welcome-banner {
+      padding: 1.5rem;
+    }
+
+    .welcome-banner h3 {
+      font-size: 22px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .shortcuts {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .top-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .btn-team,
+    .btn-logout {
+      width: 100%;
+      text-align: center;
+    }
   }
 </style>
 {% endblock %}
@@ -213,19 +582,23 @@
 
 {% block content %}
 <div class="welcome-banner">
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <div>
-      <h3 style="margin:0;">Welcome {{ user.first_name|default:user.email }}</h3>
-      <div style="opacity:0.9;font-size:13px;">Your registered email: <strong>{{ user.email }}</strong></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+    <div style="position:relative;z-index:1;">
+      <h3>Welcome, {{ user.first_name|default:user.email }}</h3>
+      <div class="user-email-info">Your registered email: <strong>{{ user.email }}</strong></div>
     </div>
 
     <div class="top-actions">
       {% if is_team_lead %}
-        <button id="teamViewBtn" class="btn-team" title="Team view (if you are a team lead)">Team View</button>
+        <button id="teamViewBtn" class="btn-team" title="Team view (if you are a team lead)">
+          <i class="fas fa-users"></i> Team View
+        </button>
       {% endif %}
       <form method="post" action="{% url 'logout' %}" style="display:inline;">
         {% csrf_token %}
-        <button class="btn-logout" type="submit">Logout</button>
+        <button class="btn-logout" type="submit">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
       </form>
     </div>
   </div>

@@ -22,6 +22,7 @@ urlpatterns = [
     path('projects/create/', projects.project_create, name='project_create'),
     path('projects/<int:project_id>/edit/', projects.project_edit, name='project_edit'),
     path('report/', views.projects_report_view, name='projects_report'),
+    path('report/export-excel/', views.export_projects_excel, name='export_projects_excel'),
     path('projects/<int:project_id>/subprojects/', projects.subprojects_list, name='subprojects_list'),
     path('projects/<int:project_id>/subprojects/create/', projects.subproject_create, name='subproject_create'),
     path('projects/<int:project_id>/subprojects/<int:sub_id>/edit/', projects.subproject_edit, name='subproject_edit'),
@@ -72,10 +73,40 @@ urlpatterns = [
 
     path('settings/password-policy/', vp.password_policy_page, name='password_policy_page'),
     
+    # Employees
+    path('employees/', views.employees_page, name='employees_page'),
+    path('api/employees/list', views.api_employees_list, name='api_employees_list'),
+    path('api/employees/create', views.api_create_employee, name='api_create_employee'),
+    path('api/employees/update', views.api_update_employee, name='api_update_employee'),
+    path('api/employees/delete', views.api_delete_employee, name='api_delete_employee'),
+    path('api/employees/detail', views.api_employee_detail, name='api_employee_detail'),
+    
+    # Notifications
+    path('notifications/', views.notifications_page, name='notifications_page'),
+    path('api/notifications/list', views.api_notifications_list, name='api_notifications_list'),
+    path('api/notifications/mark-read', views.api_notifications_mark_read, name='api_notifications_mark_read'),
+    path('api/notifications/delete', views.api_notifications_delete, name='api_notifications_delete'),
+    path('api/notifications/unread-count', views.api_notifications_unread_count, name='api_notifications_unread_count'),
     
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.profile_edit_view, name='profile_edit'),
     path('profile/change-password/', views.profile_change_password_view, name='profile_change_password'),
+    
+    # Timer
+    path('timer/', views.timer_page, name='timer_page'),
+    path('api/timer/start', views.api_timer_start, name='api_timer_start'),
+    path('api/timer/stop', views.api_timer_stop, name='api_timer_stop'),
+    path('api/timer/current', views.api_timer_current, name='api_timer_current'),
+    path('api/timer/history', views.api_timer_history, name='api_timer_history'),
+    
+    # Time Entries
+    path('time-entries/', views.time_entries_page, name='time_entries_page'),
+    path('api/time-entries/list', views.api_time_entries_list, name='api_time_entries_list'),
+    path('api/time-entries/create', views.api_time_entries_create, name='api_time_entries_create'),
+    path('api/time-entries/update', views.api_time_entries_update, name='api_time_entries_update'),
+    path('api/time-entries/delete', views.api_time_entries_delete, name='api_time_entries_delete'),
+    path('api/time-entries/approve', views.api_time_entries_approve, name='api_time_entries_approve'),
+    path('api/time-entries/reject', views.api_time_entries_reject, name='api_time_entries_reject'),
     
 ]
 

@@ -28,7 +28,6 @@
   <div class="card mb-4 border-0 shadow-sm search-card">
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
       <div class="position-relative flex-fill" style="min-width:280px;">
-        <i class="fa-solid fa-magnifying-glass search-icon"></i>
         <input type="text" id="taskSearch" class="form-control search-input" placeholder="Search tasks by title, assignee or priority...">
       </div>
 
@@ -180,8 +179,8 @@
 /* Board styles kept */
 .header-actions .btn { display:inline-flex; align-items:center; gap:8px; }
 .search-card { border-radius:10px; }
-.search-input { padding-left:40px; border-radius:8px; border:1px solid #e6eef6; box-shadow:none; height:44px; }
-.search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#6c757d; font-size:14px; }
+.search-input { border-radius:8px; border:1px solid #e6eef6; box-shadow:none; height:44px; }
+/* .search-icon removed */
 .btn-lg { padding:10px 16px; border-radius:10px; font-weight:600; }
 .header-actions { margin-left:12px; }
 
@@ -310,62 +309,177 @@
 
 <!-- ===== JS Logic (board + modal + assignees load + projects load + improved population flow) ===== -->
 <script>
-let CURRENT_BOARD_PAGE = 1;
+
+// Per-column pagination state
+const STATUS_COLUMNS = {{ status_columns|json_script:"statusColumnsJson" }};
+const STATUS_COLUMNS_PARSED = JSON.parse(document.getElementById('statusColumnsJson').textContent);
 const PER_PAGE = 10;
-let ALL_TASKS = [];
 const TASK_DETAIL_API = "{% url 'api_task_detail' %}";
 const TASK_UPDATE_API = "{% url 'api_task_update' %}";
 const BOARD_DATA_API = "{% url 'board_data' %}";
 const CSRF_TOKEN = "{{ csrf_token }}";
+let COLUMN_PAGES = {};
+let COLUMN_TOTALS = {};
+let COLUMN_TOTAL_PAGES = {};
 
-/* Load board (unchanged) */
-async function loadBoard(page=1){
+// Initialize per-column state
+STATUS_COLUMNS.forEach(col => {
+  COLUMN_PAGES[col] = 1;
+  COLUMN_TOTALS[col] = 0;
+  COLUMN_TOTAL_PAGES[col] = 1;
+});
+
+// Load all columns
+async function loadBoardColumns() {
+  await Promise.all(STATUS_COLUMNS.map(col => loadColumn(col, COLUMN_PAGES[col])));
+}
+
+// Load a single column (status) and render its tasks and pagination
+async function loadColumn(status, page=1) {
+  const colBody = document.querySelector(`#col-${slugify(status)}`);
+  if (!colBody) return;
+  colBody.innerHTML = '<div class="text-muted text-center p-3">Loading...</div>';
   try {
-    CURRENT_BOARD_PAGE = page;
-    const res = await fetch(BOARD_DATA_API + "?page=" + page);
+    const res = await fetch(`${BOARD_DATA_API}?status=${encodeURIComponent(status)}&page=${page}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load ${status}`);
     const payload = await res.json();
-    const tasks = payload.tasks || [];
-    ALL_TASKS = tasks;
-    const pageNum = payload.page || 1;
-    const totalPages = payload.total_pages || 1;
-    const totalCount = payload.total_count || tasks.length;
-    renderAllColumns(tasks);
-    renderPagination(pageNum, totalPages);
-    updateSummary(pageNum, totalCount, totalPages);
+    const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
+    COLUMN_TOTALS[status] = payload.total_count || 0;
+    COLUMN_TOTAL_PAGES[status] = payload.total_pages || 1;
+    COLUMN_PAGES[status] = payload.page || 1;
+    renderColumn(status, tasks);
+    renderColumnPagination(status);
   } catch (err) {
-    console.error("Board load failed", err);
+    colBody.innerHTML = '<div class="text-muted text-center p-3">Error loading tasks</div>';
   }
 }
-function renderAllColumns(tasks){
-  document.querySelectorAll(".kanban-body").forEach(c => c.innerHTML = "");
-  tasks.forEach(t => renderCard(t));
+
+// Render tasks for a column
+function renderColumn(status, tasks) {
+  const colBody = document.querySelector(`#col-${slugify(status)}`);
+  if (!colBody) return;
+  colBody.innerHTML = "";
+  tasks.forEach(t => renderCard(t, colBody));
   initDragDrop();
-  initSearch(ALL_TASKS);
 }
 
-/* Card render */
-function renderCard(t){
-  const col = document.querySelector(`[data-status="${t.status}"]`) || document.querySelector(".kanban-body");
+// Render pagination controls for a column
+function renderColumnPagination(status) {
+  let pagId = `pagination-${slugify(status)}`;
+  let pagWrap = document.getElementById(pagId);
+  if (!pagWrap) {
+    // Create pagination container below the column
+    const col = document.querySelector(`#col-${slugify(status)}`);
+    if (!col) return;
+    pagWrap = document.createElement('div');
+    pagWrap.id = pagId;
+    pagWrap.className = 'kanban-pagination mt-2 d-flex justify-content-center';
+    col.parentElement.appendChild(pagWrap);
+  }
+  pagWrap.innerHTML = "";
+  const totalPages = COLUMN_TOTAL_PAGES[status];
+  const current = COLUMN_PAGES[status];
+  if (totalPages <= 1) return;
+  function pageBtn(label, page, disabled=false, active=false) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm btn-light mx-1' + (active ? ' active' : '');
+    btn.textContent = label;
+    btn.disabled = disabled;
+    btn.onclick = () => { COLUMN_PAGES[status] = page; loadColumn(status, page); };
+    return btn;
+  }
+  pagWrap.appendChild(pageBtn('Prev', Math.max(1, current-1), current<=1));
+  for (let p=1; p<=totalPages; p++) {
+    if (p === 1 || p === totalPages || Math.abs(p-current)<=2) {
+      pagWrap.appendChild(pageBtn(p, p, false, p===current));
+    } else if (p === current-3 || p === current+3) {
+      const ell = document.createElement('span'); ell.textContent = '...'; ell.className = 'mx-1'; pagWrap.appendChild(ell);
+    }
+  }
+  pagWrap.appendChild(pageBtn('Next', Math.min(totalPages, current+1), current>=totalPages));
+}
+
+// Utility: slugify for IDs
+function slugify(str) {
+  return String(str).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+}
+
+// Patch renderCard to accept colBody
+function renderCard(t, colOverride) {
+  if (!t || !t.id || !t.status) {
+    console.warn("Invalid task data:", t);
+    return;
+  }
+  const col = colOverride || document.querySelector(`[data-status="${t.status}"]`) || document.querySelector(".kanban-body");
+  if (!col) return;
   const card = document.createElement("div");
   card.className = "task-card";
   card.setAttribute("draggable", "true");
   card.dataset.id = t.id;
   card.setAttribute("tabindex","0");
   card.setAttribute("role","button");
-  card.setAttribute("aria-label", "Open task " + (t.title || '') );
+  card.setAttribute("aria-label", "Open task " + (t.title || 'Untitled') );
+  let displayAssignee = "";
+  if (t.assigned_to_display) displayAssignee = t.assigned_to_display;
+  else if (t.assigned_to && typeof t.assigned_to === 'string' && t.assigned_to.startsWith("member:"))
+    displayAssignee = "Member " + t.assigned_to.split(":")[1];
+  else if (t.assigned_to && typeof t.assigned_to === 'string' && t.assigned_to.startsWith("team:"))
+    displayAssignee = "Team " + t.assigned_to.split(":")[1];
+  card.innerHTML = `
+    <div>
+      <div class="task-title">${escapeHtml(t.title || 'Untitled')}</div>
+      <div class="task-meta">
+        ${escapeHtml(t.priority || 'Normal')}${t.due_date ? ' • Due ' + escapeHtml(t.due_date) : ''}
+      </div>
+      ${displayAssignee ? `<div class="assignee-name"><i class="fa-solid fa-user me-1"></i>${escapeHtml(displayAssignee)}</div>` : ''}
+    </div>
+  `;
+  card.addEventListener("click", e => {
+    if (card.dataset.dragging === "1") return;
+    openTaskModal(t.id);
+  });
+  card.addEventListener("keydown", e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTaskModal(t.id); }
+  });
+  col.appendChild(card);
+}
+
+// On DOM ready, load all columns
+document.addEventListener("DOMContentLoaded", function(){
+  // ...existing modal and preload logic...
+  loadBoardColumns();
+});
+
+/* Card render */
+function renderCard(t){
+  if (!t || !t.id || !t.status) {
+    console.warn("Invalid task data:", t);
+    return;
+  }
+  
+  const col = document.querySelector(`[data-status="${t.status}"]`) || document.querySelector(".kanban-body");
+  if (!col) return;
+  
+  const card = document.createElement("div");
+  card.className = "task-card";
+  card.setAttribute("draggable", "true");
+  card.dataset.id = t.id;
+  card.setAttribute("tabindex","0");
+  card.setAttribute("role","button");
+  card.setAttribute("aria-label", "Open task " + (t.title || 'Untitled') );
 
   let displayAssignee = "";
   if (t.assigned_to_display) displayAssignee = t.assigned_to_display;
-  else if (t.assigned_to && t.assigned_to.startsWith("member:"))
+  else if (t.assigned_to && typeof t.assigned_to === 'string' && t.assigned_to.startsWith("member:"))
     displayAssignee = "Member " + t.assigned_to.split(":")[1];
-  else if (t.assigned_to && t.assigned_to.startsWith("team:"))
+  else if (t.assigned_to && typeof t.assigned_to === 'string' && t.assigned_to.startsWith("team:"))
     displayAssignee = "Team " + t.assigned_to.split(":")[1];
 
   card.innerHTML = `
     <div>
-      <div class="task-title">${escapeHtml(t.title)}</div>
+      <div class="task-title">${escapeHtml(t.title || 'Untitled')}</div>
       <div class="task-meta">
-        ${escapeHtml(t.priority || '')}${t.due_date ? ' • Due ' + escapeHtml(t.due_date) : ''}
+        ${escapeHtml(t.priority || 'Normal')}${t.due_date ? ' • Due ' + escapeHtml(t.due_date) : ''}
       </div>
       ${displayAssignee ? `<div class="assignee-name"><i class="fa-solid fa-user me-1"></i>${escapeHtml(displayAssignee)}</div>` : ''}
     </div>
@@ -403,6 +517,10 @@ function initDragDrop(){
       e.preventDefault(); col.classList.remove("drag-over");
       const id = e.dataTransfer.getData("text/plain");
       const newStatus = col.dataset.status;
+      if (!id || !newStatus) {
+        console.warn("Invalid drag data: id or status missing");
+        return;
+      }
       try {
         const fd = new FormData();
         fd.append("task_id", id);
@@ -412,9 +530,10 @@ function initDragDrop(){
           headers: { "X-CSRFToken": CSRF_TOKEN },
           body: fd
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        if(json.ok){ loadBoard(1); } else { alert("Status update failed"); }
-      } catch (err) { console.error(err); alert("Network error."); }
+        if(json.ok){ loadBoard(1); } else { console.error("Status update failed:", json.error); alert("Status update failed: " + (json.error || 'Unknown error')); }
+      } catch (err) { console.error("Drag drop error:", err); alert("Network error while updating status."); }
     });
   });
 }
@@ -442,46 +561,89 @@ function initSearch(allTasks){
   const priorityFilter = document.getElementById("priorityFilter");
   const clearBtn = document.getElementById("clearFilters");
   function applyFilter(){
-    const term = (searchInput.value || '').trim().toLowerCase();
-    const pri = priorityFilter.value;
+    if (!Array.isArray(allTasks)) return;
+    const term = (searchInput?.value || '').trim().toLowerCase();
+    const pri = priorityFilter?.value || '';
     document.querySelectorAll(".task-card").forEach(card => card.style.display = "none");
     allTasks.forEach(t => {
-      const matchTerm = (t.title && t.title.toLowerCase().includes(term)) || (t.priority && t.priority.toLowerCase().includes(term)) || (t.assigned_to_display && t.assigned_to_display.toLowerCase().includes(term));
+      if (!t || !t.id) return;
+      const titleMatch = t.title ? t.title.toLowerCase().includes(term) : false;
+      const priorityMatch = t.priority ? t.priority.toLowerCase().includes(term) : false;
+      const assigneeMatch = t.assigned_to_display ? t.assigned_to_display.toLowerCase().includes(term) : false;
+      const matchTerm = (titleMatch || priorityMatch || assigneeMatch);
       const matchPri = !pri || (t.priority === pri);
       if ((term === "" || matchTerm) && matchPri) {
-        const cardEl = document.querySelector(`.task-card[data-id="${t.id}"]`); if (cardEl) cardEl.style.display = "";
+        const cardEl = document.querySelector(`.task-card[data-id="${t.id}"]`);
+        if (cardEl) cardEl.style.display = "";
       }
     });
   }
   if (searchInput) searchInput.addEventListener('input', applyFilter);
   if (priorityFilter) priorityFilter.addEventListener('change', applyFilter);
-  if (clearBtn) clearBtn.addEventListener('click', function(){ searchInput.value=''; priorityFilter.value=''; applyFilter(); });
+  if (clearBtn) clearBtn.addEventListener('click', function(){ 
+    if (searchInput) searchInput.value = '';
+    if (priorityFilter) priorityFilter.value = '';
+    applyFilter();
+  });
 }
 
 /* Pagination */
 function renderPagination(current, total){
-  const container = document.getElementById("boardPagination"); if(!container) return; container.innerHTML = "";
+  const container = document.getElementById("boardPagination");
+  if(!container) return;
+  container.innerHTML = "";
+  
+  if (!Number.isInteger(current) || !Number.isInteger(total) || total < 1) {
+    console.warn("Invalid pagination params:", { current, total });
+    return;
+  }
+  
   function pageItem(label, page, disabled=false, active=false){
     const li = document.createElement("li");
     li.className = "page-item" + (disabled ? " disabled" : "") + (active ? " active" : "");
-    const a = document.createElement("a"); a.className = "page-link"; a.href = "#"; a.textContent = label;
-    a.addEventListener("click", (ev) => { ev.preventDefault(); if(disabled || page === current) return; loadBoard(page); });
-    li.appendChild(a); return li;
+    const a = document.createElement("a");
+    a.className = "page-link";
+    a.href = "#";
+    a.textContent = label;
+    a.addEventListener("click", (ev) => { 
+      ev.preventDefault();
+      if(disabled || page === current) return;
+      loadBoard(page);
+    });
+    li.appendChild(a);
+    return li;
   }
+  
   container.appendChild(pageItem("Prev", Math.max(1, current-1), current<=1));
-  const pages = new Set(); pages.add(1); pages.add(total);
-  for(let p=current-2; p<=current+2; p++) if(p>1 && p<total) pages.add(p);
+  const pages = new Set();
+  pages.add(1);
+  if (total > 1) pages.add(total);
+  for(let p=current-2; p<=current+2; p++) {
+    if(p>1 && p<total) pages.add(p);
+  }
   const pagesArr = Array.from(pages).sort((a,b)=>a-b);
   let last = 0;
   pagesArr.forEach(p=>{
-    if(last && p - last > 1){ const ell = document.createElement("li"); ell.className = "page-item disabled"; ell.innerHTML = '<span class="page-link">…</span>'; container.appendChild(ell); }
-    container.appendChild(pageItem(p, p, false, p===current)); last = p;
+    if(last && p - last > 1){ 
+      const ell = document.createElement("li");
+      ell.className = "page-item disabled";
+      ell.innerHTML = '<span class="page-link">…</span>';
+      container.appendChild(ell);
+    }
+    container.appendChild(pageItem(p, p, false, p===current));
+    last = p;
   });
   container.appendChild(pageItem("Next", Math.min(total, current+1), current>=total));
 }
 function updateSummary(page, totalCount, totalPages){
-  const summary = document.getElementById("boardSummary"); if(!summary) return;
-  const start = (page-1)*PER_PAGE + 1; const end = Math.min(page*PER_PAGE, totalCount);
+  const summary = document.getElementById("boardSummary");
+  if(!summary) return;
+  if (!Number.isInteger(page) || !Number.isInteger(totalCount) || totalCount < 0) {
+    summary.textContent = "Error loading summary";
+    return;
+  }
+  const start = Math.max(1, (page-1)*PER_PAGE + 1);
+  const end = Math.min(page*PER_PAGE, totalCount);
   summary.textContent = `Showing ${start}-${end} of ${totalCount} tasks`;
 }
 
@@ -528,21 +690,22 @@ async function loadProjects(q = '') {
   if (!select) return;
   select.innerHTML = '<option>Loading...</option>';
   try {
-    // projects/ajax/search/ returns JSON list of projects (this route exists in urls.py)
     const res = await fetch(`/projects/ajax/search/?q=${encodeURIComponent(q)}`);
-    if (!res.ok) throw new Error('no projects');
+    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load projects`);
     const data = await res.json();
-    // support both array and {projects: [...]}
     const list = Array.isArray(data) ? data : (data.projects || []);
     select.innerHTML = '<option value="">-- Choose Project --</option>';
-    list.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p.id;
-      o.textContent = p.name || p.title || (`Project ${p.id}`);
-      select.appendChild(o);
-    });
+    if (Array.isArray(list)) {
+      list.forEach(p => {
+        if (p && p.id) {
+          const o = document.createElement('option');
+          o.value = p.id;
+          o.textContent = p.name || p.title || (`Project ${p.id}`);
+          select.appendChild(o);
+        }
+      });
+    }
   } catch (err) {
-    // fallback: leave empty list
     select.innerHTML = '<option value="">-- Choose Project --</option>';
     console.warn('projects load failed', err);
   }
@@ -557,66 +720,75 @@ async function loadAssignees(){
     let res = await fetch('/api/people/list');
     if (res.ok) {
       const data = await res.json();
-      const memGroup = document.createElement('optgroup'); memGroup.label = 'Members';
-      if (Array.isArray(data)) {
-        data.forEach(m => {
-          const o = document.createElement('option');
-          o.value = `member:${m.id}`;
-          o.textContent = `${m.first_name} ${m.last_name}${m.email ? ' — ' + m.email : ''}`;
-          memGroup.appendChild(o);
-        });
-      } else if (data.members) {
-        data.members.forEach(m => {
-          const o = document.createElement('option');
-          o.value = `member:${m.id}`;
-          o.textContent = `${m.first_name} ${m.last_name}${m.email ? ' — ' + m.email : ''}`;
-          memGroup.appendChild(o);
+      const memGroup = document.createElement('optgroup');
+      memGroup.label = 'Members';
+      const memberList = Array.isArray(data) ? data : (data.members || []);
+      if (Array.isArray(memberList)) {
+        memberList.forEach(m => {
+          if (m && m.id && m.first_name !== undefined && m.last_name !== undefined) {
+            const o = document.createElement('option');
+            o.value = `member:${m.id}`;
+            o.textContent = `${m.first_name} ${m.last_name}${m.email ? ' — ' + m.email : ''}`;
+            memGroup.appendChild(o);
+          }
         });
       }
       if (memGroup.children.length) select.appendChild(memGroup);
     }
-  } catch(e){ console.warn('members load failed', e); }
+  } catch(e){ 
+    console.warn('members load failed', e); 
+  }
 
   try {
     let res2 = await fetch('/api/teams/list');
     if (res2.ok) {
       const data2 = await res2.json();
-      const tGroup = document.createElement('optgroup'); tGroup.label = 'Teams';
-      if (Array.isArray(data2)) {
-        data2.forEach(t => {
-          const o = document.createElement('option');
-          o.value = `team:${t.id}`;
-          o.textContent = `Team: ${t.name}`;
-          tGroup.appendChild(o);
-        });
-      } else if (data2.teams) {
-        data2.teams.forEach(t => {
-          const o = document.createElement('option');
-          o.value = `team:${t.id}`;
-          o.textContent = `Team: ${t.name}`;
-          tGroup.appendChild(o);
+      const tGroup = document.createElement('optgroup');
+      tGroup.label = 'Teams';
+      const teamList = Array.isArray(data2) ? data2 : (data2.teams || []);
+      if (Array.isArray(teamList)) {
+        teamList.forEach(t => {
+          if (t && t.id && t.name) {
+            const o = document.createElement('option');
+            o.value = `team:${t.id}`;
+            o.textContent = `Team: ${t.name}`;
+            tGroup.appendChild(o);
+          }
         });
       }
       if (tGroup.children.length) select.appendChild(tGroup);
     }
-  } catch(e){ console.warn('teams load failed', e); }
+  } catch(e){ 
+    console.warn('teams load failed', e); 
+  }
 }
 
 /* Load subprojects for modal (returns Promise) */
 function loadModalSubprojects(pid, selectValue=null){
   const sp = document.getElementById('modal_subproject');
-  if(!sp) return Promise.resolve();
+  if(!sp || !pid) return Promise.resolve();
   sp.innerHTML = '<option>Loading...</option>';
-  return fetch(`/tasks/api/subprojects/?project_id=${pid}`).then(r=>{
-    if (!r.ok) throw new Error('no data');
+  return fetch(`/tasks/api/subprojects/?project_id=${encodeURIComponent(pid)}`).then(r=>{
+    if (!r.ok) throw new Error(`HTTP ${r.status}: Failed to load subprojects`);
     return r.json();
   }).then(data=>{
     sp.innerHTML = '<option value="">-- Optional Subproject --</option>';
-    (data.subprojects || []).forEach(s => {
-      const o = document.createElement('option'); o.value = s.id; o.textContent = s.name; sp.appendChild(o);
-    });
-    if (selectValue) sp.value = selectValue;
+    const subprojects = data.subprojects || [];
+    if (Array.isArray(subprojects)) {
+      subprojects.forEach(s => {
+        if (s && s.id && s.name) {
+          const o = document.createElement('option');
+          o.value = s.id;
+          o.textContent = s.name;
+          sp.appendChild(o);
+        }
+      });
+    }
+    if (selectValue && Array.from(sp.options).some(opt => opt.value == selectValue)) {
+      sp.value = selectValue;
+    }
   }).catch(err=>{
+    console.warn('subprojects load failed', err);
     sp.innerHTML = '<option value="">-- Optional Subproject --</option>';
   });
 }
@@ -764,7 +936,17 @@ function showModalAlert(type, text){
 document.getElementById('taskDetailForm')?.addEventListener('submit', async function(e){
   e.preventDefault();
   const btn = document.getElementById('saveTaskBtn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Saving...'; }
+  const taskIdField = document.getElementById('modal_task_id');
+  
+  if (!taskIdField || !taskIdField.value) {
+    showModalAlert('error', 'Error: No task ID found');
+    return;
+  }
+  
+  if (btn) { 
+    btn.disabled = true; 
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Saving...';
+  }
 
   const fd = new FormData(this);
   try {
@@ -773,22 +955,31 @@ document.getElementById('taskDetailForm')?.addEventListener('submit', async func
       headers: { 'X-CSRFToken': CSRF_TOKEN },
       body: fd
     });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
     const json = await res.json();
     if (json && json.ok) {
       showModalAlert('success', 'Saved successfully');
       setTimeout(() => {
         try { if (taskModalInstance) taskModalInstance.hide(); } catch (e) {}
         hideModalFallback(document.getElementById('taskDetailModal'));
-        loadBoard(CURRENT_BOARD_PAGE);
+        loadBoard(1);
       }, 450);
     } else {
+      console.error('Save error:', json);
       showModalAlert('error', json.error || 'Save failed');
     }
   } catch (err) {
-    console.error(err);
-    showModalAlert('error', 'Network error while saving.');
+    console.error('Save exception:', err);
+    showModalAlert('error', 'Network error while saving: ' + err.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Save changes'; }
+    if (btn) { 
+      btn.disabled = false; 
+      btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Save changes';
+    }
   }
 });
 
@@ -817,31 +1008,57 @@ document.addEventListener('keydown', function(ev){
 /* DOM ready: ensure modal exists on body, wire events */
 document.addEventListener("DOMContentLoaded", function(){
   const modalEl = document.getElementById('taskDetailModal');
-  if (modalEl && modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+  if (!modalEl) {
+    console.warn("taskDetailModal not found in DOM");
+    return;
+  }
+  
+  if (modalEl.parentElement !== document.body) {
+    document.body.appendChild(modalEl);
+  }
 
   const closeCircle = document.querySelector('.modal-close-circle');
   if (closeCircle && modalEl) {
     closeCircle.setAttribute('role','button');
     closeCircle.setAttribute('tabindex','0');
     closeCircle.setAttribute('aria-controls','taskDetailModal');
-    closeCircle.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeCircle.click(); }});
+    closeCircle.addEventListener('keydown', function(e){ 
+      if (e.key === 'Enter' || e.key === ' ') { 
+        e.preventDefault(); 
+        closeCircle.click(); 
+      }
+    });
   }
 
-  document.getElementById('modal_project')?.addEventListener('change', function(e){
-    const pid = e.target.value;
-    if(pid) loadModalSubprojects(pid);
-    else {
-      const sp = document.getElementById('modal_subproject'); if (sp) sp.innerHTML = '<option value=\"\">-- Optional Subproject --</option>';
-    }
-  });
+  const projectSelect = document.getElementById('modal_project');
+  if (projectSelect) {
+    projectSelect.addEventListener('change', function(e){
+      const pid = e.target.value;
+      if(pid) {
+        loadModalSubprojects(pid);
+      } else {
+        const sp = document.getElementById('modal_subproject');
+        if (sp) sp.innerHTML = '<option value="">-- Optional Subproject --</option>';
+      }
+    });
+  }
 
   // preload lists to speed up modal
-  loadProjects().catch(()=>{});
-  loadAssignees().catch(()=>{});
+  loadProjects().catch(err => console.warn('Failed to preload projects:', err));
+  loadAssignees().catch(err => console.warn('Failed to preload assignees:', err));
   loadBoard(1);
 });
 
 /* Utilities */
-function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeHtml(s){
+  if (!s) return "";
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
 </script>
 {% endblock %}

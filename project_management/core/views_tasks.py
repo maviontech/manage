@@ -72,6 +72,46 @@ def create_task_view(request):
             ("task", task_id, "created", created_by),
         )
 
+        # Create notification if task is assigned to a member
+        if assigned_type == "member" and assigned_to:
+            # Get creator name
+            cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (created_by,))
+            creator = cur.fetchone()
+            creator_name = creator['name'] if creator else 'Someone'
+            
+            cur.execute("""
+                INSERT INTO notifications (user_id, title, message, type, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                assigned_to,
+                "New Task Assigned",
+                f"{creator_name} assigned you to '{title}'",
+                "task",
+                f"/tasks/detail/{task_id}"
+            ))
+        
+        # Create notification for team members if assigned to a team
+        elif assigned_type == "team" and assigned_to:
+            cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (created_by,))
+            creator = cur.fetchone()
+            creator_name = creator['name'] if creator else 'Someone'
+            
+            # Get all team members
+            cur.execute("SELECT member_id FROM team_members WHERE team_id=%s", (assigned_to,))
+            team_members = cur.fetchall()
+            
+            for member in team_members:
+                cur.execute("""
+                    INSERT INTO notifications (user_id, title, message, type, link)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    member['member_id'],
+                    "New Team Task Assigned",
+                    f"{creator_name} assigned a task to your team: '{title}'",
+                    "task",
+                    f"/tasks/detail/{task_id}"
+                ))
+
         conn.commit()
         cur.close()
         return redirect("task_board")
@@ -96,19 +136,53 @@ def create_task_view(request):
 #  MY TASKS
 # ==============================
 def my_tasks_view(request):
+
     conn = get_tenant_conn(request)
     cur = conn.cursor()
-    user_id = request.session.get("user_id")
 
-    # Match both assigned_to and assigned_type='member'
-    cur.execute(
-        """SELECT id, title, status, priority, due_date, closure_date
-           FROM tasks
-           WHERE assigned_type='member' AND assigned_to = %s
-           ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
-                    due_date IS NULL, due_date ASC""",
-        (user_id,),
-    )
+    # Ensure user_id is set in session (should be set at login)
+    user_id = request.session.get("user_id")
+    if not user_id:
+        # Try to resolve from email if available
+        email = request.session.get("auth_email")
+        if email:
+            cur.execute("SELECT id FROM members WHERE email = %s", (email,))
+            row = cur.fetchone()
+            if row:
+                user_id = row["id"]
+                request.session["user_id"] = user_id
+    if not user_id:
+        return redirect("login")
+
+    # Get all team IDs for this user
+    cur.execute("SELECT team_id FROM team_memberships WHERE member_id = %s", (user_id,))
+    team_rows = cur.fetchall()
+    team_ids = [row['team_id'] for row in team_rows] if team_rows else []
+
+    # Show tasks assigned directly to user, to any of their teams, or created by them
+    if team_ids:
+        format_strings = ','.join(['%s'] * len(team_ids))
+        query = f"""
+            SELECT id, title, status, priority, due_date, closure_date
+            FROM tasks
+            WHERE (assigned_type='member' AND assigned_to = %s)
+               OR (assigned_type='team' AND assigned_to IN ({format_strings}))
+               OR (created_by = %s)
+            ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
+                     due_date IS NULL, due_date ASC
+        """
+        params = [user_id] + team_ids + [user_id]
+        cur.execute(query, params)
+    else:
+        cur.execute(
+            """SELECT id, title, status, priority, due_date, closure_date
+               FROM tasks
+               WHERE assigned_type='member' AND assigned_to = %s
+                  OR created_by = %s
+               ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
+                        due_date IS NULL, due_date ASC""",
+            (user_id, user_id),
+        )
     tasks = cur.fetchall()
     cur.close()
 
@@ -125,20 +199,20 @@ def unassigned_tasks_view(request):
 
     sql = """
         SELECT 
-    t.id, 
-    t.title, 
-    t.priority,
-    t.due_date,
-    t.assigned_type, 
-    t.assigned_to,
-    p.name AS project_name,
-    sp.name AS subproject_name
-FROM tasks t
-LEFT JOIN projects p ON p.id = t.project_id
-LEFT JOIN subprojects sp ON sp.id = t.subproject_id
-WHERE t.assigned_to IS NOT NULL
-ORDER BY t.priority DESC                            
-    """    
+            t.id, 
+            t.title, 
+            t.priority,
+            t.due_date,
+            t.assigned_type, 
+            t.assigned_to,
+            p.name AS project_name,
+            sp.name AS subproject_name
+        FROM tasks t
+        LEFT JOIN projects p ON p.id = t.project_id
+        LEFT JOIN subprojects sp ON sp.id = t.subproject_id
+        WHERE t.assigned_to IS NOT NULL
+        ORDER BY t.priority DESC                            
+            """    
     # the change the query to fetch only unassigned tasks                              
     cur.execute(sql)
     rows = cur.fetchall()
@@ -183,9 +257,9 @@ def board_data_api(request):
     if page < 1:
         page = 1
 
-    # Show all tasks on one page (disable pagination)
-    per_page = 10000  # or a very large number
-    offset = 0
+    # Enable pagination: 10 tasks per page
+    per_page = 10
+    offset = (page - 1) * per_page
 
     # ---- Total count ----
     cur.execute("SELECT COUNT(*) AS total FROM tasks")
@@ -198,9 +272,13 @@ def board_data_api(request):
     else:
         total_count = 0
 
-    total_pages = 1
+    # Calculate total pages
+    import math
+    total_pages = math.ceil(total_count / per_page) if total_count > 0 else 1
 
-    # ---- Main query (no f-string) ----
+
+    # ---- Status filter ----
+    status = request.GET.get("status")
     sql = """
         SELECT
             t.id,
@@ -220,16 +298,14 @@ def board_data_api(request):
                 ELSE NULL
             END AS assigned_to_display
         FROM tasks t
-        ORDER BY
-            FIELD(t.status, 'Open', 'In Progress', 'Review', 'Blocked', 'Closed'),
-            FIELD(t.priority, 'Critical', 'High', 'Normal', 'Low'),
-            t.due_date IS NULL ASC,
-            t.due_date ASC,
-            t.created_at DESC
-        LIMIT %s OFFSET %s
     """
-
-    cur.execute(sql, (per_page, offset))
+    params = []
+    if status:
+        sql += " WHERE t.status = %s"
+        params.append(status)
+    sql += " ORDER BY FIELD(t.status, 'open', 'In Progress', 'Review', 'Blocked','closed'), FIELD(t.priority, 'Critical', 'High', 'Normal', 'Low'), t.due_date IS NULL ASC, t.due_date ASC, t.created_at DESC LIMIT %s OFFSET %s"
+    params.extend([per_page, offset])
+    cur.execute(sql, tuple(params))
 
     # ---- Convert rows to list of dicts ----
     rows = cur.fetchall()
@@ -274,6 +350,11 @@ def assign_task_api(request):
     else:
         assigned_type, assigned_to = "member", assignee
 
+    # Get task details for notification
+    cur.execute("SELECT title FROM tasks WHERE id=%s", (task_id,))
+    task = cur.fetchone()
+    task_title = task['title'] if task else 'A task'
+    
     cur.execute(
         "UPDATE tasks SET assigned_to=%s, assigned_type=%s, updated_at=NOW() WHERE id=%s",
         (assigned_to, assigned_type, task_id),
@@ -282,6 +363,46 @@ def assign_task_api(request):
         "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
         ("task", task_id, f"assigned_to:{assignee}", assigned_by),
     )
+    
+    # Create notification for assigned member/team
+    if assigned_type == "member":
+        # Get assigner name
+        cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (assigned_by,))
+        assigner = cur.fetchone()
+        assigner_name = assigner['name'] if assigner else 'Someone'
+        
+        cur.execute("""
+            INSERT INTO notifications (user_id, title, message, type, link)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            assigned_to,
+            "Task Assigned to You",
+            f"{assigner_name} assigned you to '{task_title}'",
+            "task",
+            f"/tasks/detail/{task_id}"
+        ))
+    
+    elif assigned_type == "team":
+        cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (assigned_by,))
+        assigner = cur.fetchone()
+        assigner_name = assigner['name'] if assigner else 'Someone'
+        
+        # Get all team members
+        cur.execute("SELECT member_id FROM team_members WHERE team_id=%s", (assigned_to,))
+        team_members = cur.fetchall()
+        
+        for member in team_members:
+            cur.execute("""
+                INSERT INTO notifications (user_id, title, message, type, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                member['member_id'],
+                "Team Task Assignment",
+                f"{assigner_name} assigned a task to your team: '{task_title}'",
+                "task",
+                f"/tasks/detail/{task_id}"
+            ))
+    
     conn.commit()
     cur.close()
     return JsonResponse({"ok": True, "task_id": task_id, "assignee": assignee})
@@ -330,7 +451,49 @@ def api_update_status(request):
         VALUES (%s, %s, %s, %s)
     """, ("task", task_id, f"status_changed:{new_status}", user_id))
 
-    # 5. SAVE CHANGES
+    # 5. CREATE NOTIFICATION WHEN TASK IS COMPLETED
+    if new_status == "Closed" or new_status == "Completed":
+        # Get task details and creator
+        cur.execute("""
+            SELECT t.title, t.created_by, t.assigned_to, t.assigned_type,
+                   CONCAT(m.first_name, ' ', m.last_name) as updater_name
+            FROM tasks t
+            LEFT JOIN members m ON m.id = %s
+            WHERE t.id = %s
+        """, (user_id, task_id))
+        task_info = cur.fetchone()
+        
+        if task_info:
+            updater_name = task_info['updater_name'] or 'Someone'
+            task_title = task_info['title'] or 'A task'
+            
+            # Notify task creator if they're not the one who completed it
+            if task_info['created_by'] and str(task_info['created_by']) != str(user_id):
+                cur.execute("""
+                    INSERT INTO notifications (user_id, title, message, type, link)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    task_info['created_by'],
+                    "Task Completed",
+                    f"{updater_name} completed task '{task_title}'",
+                    "success",
+                    f"/tasks/detail/{task_id}"
+                ))
+            
+            # Notify assigned member if they're not the one who completed it
+            if task_info['assigned_type'] == 'member' and task_info['assigned_to'] and str(task_info['assigned_to']) != str(user_id):
+                cur.execute("""
+                    INSERT INTO notifications (user_id, title, message, type, link)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    task_info['assigned_to'],
+                    "Task Completed",
+                    f"{updater_name} marked '{task_title}' as complete",
+                    "success",
+                    f"/tasks/detail/{task_id}"
+                ))
+
+    # 6. SAVE CHANGES
     conn.commit()
     cur.close()
 
@@ -354,6 +517,12 @@ def bulk_import_csv_view(request):
 
         for i, row in enumerate(reader, start=1):
             try:
+                # Validate required fields
+                if not row.get("title"):
+                    raise Exception("Missing required field: title")
+                if not row.get("project_id"):
+                    raise Exception("Missing required field: project_id")
+
                 assigned_raw = row.get("assigned_to") or None
                 assigned_to, assigned_type = None, None
                 if assigned_raw:
@@ -382,7 +551,8 @@ def bulk_import_csv_view(request):
                 )
                 inserted += 1
             except Exception as e:
-                errors.append({"row": i, "error": str(e)})
+                # Add row data to error for easier debugging
+                errors.append({"row": i, "error": str(e), "data": dict(row)})
 
         conn.commit()
         cur.close()
@@ -651,12 +821,22 @@ def task_detail_view(request, task_id):
     cur.execute("SELECT id, title, description, status, priority, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
     print("Executing SQL for task detail:", task_id)
     task = cur.fetchone()
+
+    # Fetch timer history for this task
+    cur.execute("""
+        SELECT ts.id, ts.user_id, m.first_name, m.last_name, ts.start_time, ts.end_time, ts.duration_seconds, ts.notes
+        FROM timer_sessions ts
+        LEFT JOIN members m ON ts.user_id = m.id
+        WHERE ts.task_id = %s
+        ORDER BY ts.start_time DESC
+    """, (task_id,))
+    timer_history = cur.fetchall()
     cur.close()
 
     if not task:
         return render(request, "core/404.html", status=404)
 
-    return render(request, "core/task_detail.html", {"task": task})
+    return render(request, "core/task_detail.html", {"task": task, "timer_history": timer_history})
 def edit_task_view(request, task_id):
     conn = get_tenant_conn(request)
     cur = conn.cursor()

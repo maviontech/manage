@@ -1,0 +1,64 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="fw-bold mb-3">Bulk Import Results</h2>
+  {% if import_success %}
+    <div class="alert alert-success">Successfully imported tasks.</div>
+  {% else %}
+    <div class="alert alert-danger">Some tasks could not be imported.</div>
+  {% endif %}
+  {% if errors %}
+    <div class="professional-card">
+      <div class="card-section-header">
+        <h2 class="section-title">
+          <i class="fas fa-exclamation-triangle" style="color:var(--danger-color);"></i>
+          Import Errors
+        </h2>
+      </div>
+      <div class="card-content">
+        <div class="table-responsive">
+          <table class="professional-table">
+            <thead>
+              <tr>
+                <th style="width:60px;">Row</th>
+                <th style="width:220px;">Error Message</th>
+                <th>Row Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in errors %}
+              <tr>
+                <td>{{ e.row }}</td>
+                <td class="error-text">{{ e.error }}</td>
+                <td>
+                  <pre style="font-size:13px;white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:8px;">
+                    {{ e.data|json_script:"rowdata" }}
+                    <script>
+                      try {
+                        const pretty = JSON.stringify(JSON.parse(document.getElementById('rowdata').textContent), null, 2);
+                        document.currentScript.parentElement.textContent = pretty;
+                      } catch(e) {}
+                    </script>
+                  </pre>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="info-box" style="background: var(--success-light); border-left-color: var(--success-color);">
+      <div class="info-box-title" style="color: var(--success-color);">
+        <i class="fas fa-check-circle"></i>
+        All Tasks Imported Successfully
+      </div>
+      <p class="info-box-content" style="margin: 0;">
+        All tasks were imported without any errors. You can view them on the task board.
+      </p>
+    </div>
+  {% endif %}
+  <a href="{% url 'bulk_import' %}" class="btn btn-gradient mt-3">Back to Import</a>
+</div>
+{% endblock %}

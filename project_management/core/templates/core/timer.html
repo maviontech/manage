@@ -1,0 +1,1051 @@
+{% extends "core/base.html" %}
+
+{% block title %}Timer - Trackline{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <!-- Professional Header -->
+  <div class="page-header-professional">
+    <div class="header-content">
+      <div class="header-title-section">
+        <div class="icon-wrapper">
+          <i class="fa-solid fa-stopwatch"></i>
+        </div>
+        <div>
+          <h1 class="page-title">Time Tracker</h1>
+          <p class="page-subtitle">Track and monitor time spent on your tasks in real-time</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current Timer Section -->
+  <div class="professional-card timer-card">
+    <div class="card-section-header">
+      <h3 class="section-title">
+        <i class="fa-solid fa-clock"></i>
+        Active Timer
+      </h3>
+      <div id="timer-status-badge"></div>
+    </div>
+    <div class="card-content">
+      <div id="timer-status">
+        <!-- No Timer State -->
+        <div id="no-timer" class="timer-state-container" style="display: none;">
+          <div class="empty-timer-state">
+            <div class="timer-icon-large">
+              <i class="fa-solid fa-stopwatch"></i>
+            </div>
+            <h3>No Active Timer</h3>
+            <p>Start tracking time on a task to begin</p>
+          </div>
+        </div>
+
+        <!-- Active Timer State -->
+        <div id="active-timer" class="timer-state-container" style="display: none;">
+          <div class="active-timer-display">
+            <div class="timer-circle">
+              <div class="timer-elapsed-wrapper">
+                <div id="timer-elapsed" class="timer-elapsed">00:00:00</div>
+                <div class="timer-label">Elapsed Time</div>
+              </div>
+            </div>
+            <div class="timer-task-info">
+              <i class="fa-solid fa-tasks"></i>
+              <span id="timer-task-title">No task assigned</span>
+            </div>
+            <button id="stop-timer-btn" class="btn-stop-timer">
+              <i class="fa-solid fa-stop-circle"></i>
+              Stop Timer
+            </button>
+          </div>
+        </div>
+
+        <!-- Start Timer Form -->
+        <div id="start-timer-form" class="start-timer-section">
+          <div class="form-header">
+            <h4><i class="fa-solid fa-play-circle"></i> Start New Timer</h4>
+          </div>
+          
+          <div class="timer-form-grid">
+            <div class="form-group-timer">
+              <label class="timer-label">
+                <i class="fa-solid fa-tasks"></i>
+                Select Task (Optional)
+              </label>
+              <div class="select-wrapper">
+                <select id="task-select" class="form-select-timer">
+                  <option value="">-- No Task --</option>
+                </select>
+                <i class="fa-solid fa-chevron-down select-icon"></i>
+              </div>
+            </div>
+
+            <div class="form-group-timer">
+              <label class="timer-label">
+                <i class="fa-solid fa-note-sticky"></i>
+                Notes (Optional)
+              </label>
+              <textarea id="timer-notes" class="form-textarea-timer" rows="3" placeholder="What are you working on?"></textarea>
+            </div>
+          </div>
+
+          <button id="start-timer-btn" class="btn-start-timer">
+            <i class="fa-solid fa-play-circle"></i>
+            Start Timer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timer History Section -->
+  <div class="professional-card">
+    <div class="card-section-header">
+      <h3 class="section-title">
+        <i class="fa-solid fa-history"></i>
+        Timer History
+      </h3>
+      <div class="header-actions">
+        <span class="history-count" id="history-count">0 sessions</span>
+      </div>
+    </div>
+    <div class="card-content no-padding">
+      <div id="timer-history" class="table-responsive">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading history...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ============================================
+   PROFESSIONAL COLOR PALETTE & VARIABLES
+   ============================================ */
+:root {
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #dbeafe;
+  --success-color: #10b981;
+  --success-hover: #059669;
+  --success-light: #d1fae5;
+  --warning-color: #f59e0b;
+  --warning-hover: #d97706;
+  --warning-light: #fef3c7;
+  --danger-color: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: #fee2e2;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-500: #6b7280;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --white: #ffffff;
+  --border-radius: 12px;
+  --border-radius-sm: 8px;
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* ============================================
+   PROFESSIONAL PAGE HEADER
+   ============================================ */
+.page-header-professional {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-lg);
+  color: var(--white);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.header-title-section {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.icon-wrapper {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  width: 64px;
+  height: 64px;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  box-shadow: var(--shadow-md);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 15px;
+  margin: 0.5rem 0 0 0;
+  opacity: 0.95;
+  font-weight: 400;
+}
+
+/* ============================================
+   PROFESSIONAL CARDS
+   ============================================ */
+.professional-card {
+  background: var(--white);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+  transition: box-shadow 0.3s ease;
+}
+
+.professional-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.timer-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+}
+
+.timer-card .card-section-header {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.timer-card .section-title,
+.timer-card .section-title i {
+  color: var(--white);
+}
+
+.timer-card .card-content {
+  background: var(--white);
+}
+
+.card-section-header {
+  padding: 1.25rem 1.5rem;
+  background: var(--gray-50);
+  border-bottom: 2px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title i {
+  color: var(--primary-color);
+  font-size: 20px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.history-count {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#timer-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-badge {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: var(--white);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-badge.active {
+  background: var(--success-light);
+  color: var(--success-hover);
+}
+
+.status-badge i {
+  font-size: 12px;
+}
+
+.card-content {
+  padding: 2rem;
+}
+
+.card-content.no-padding {
+  padding: 0;
+}
+
+/* ============================================
+   TIMER STATES
+   ============================================ */
+.timer-state-container {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Empty Timer State */
+.empty-timer-state {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.timer-icon-large {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 2rem;
+  background: var(--gray-100);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  color: var(--gray-500);
+}
+
+.empty-timer-state h3 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-timer-state p {
+  font-size: 15px;
+  color: var(--gray-500);
+  margin: 0;
+}
+
+/* Active Timer Display */
+.active-timer-display {
+  text-align: center;
+  padding: 2rem;
+  width: 100%;
+}
+
+.timer-circle {
+  width: 280px;
+  height: 280px;
+  margin: 0 auto 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  animation: timerPulse 2s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 20px rgba(102, 126, 234, 0);
+  }
+}
+
+.timer-elapsed-wrapper {
+  background: var(--white);
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset var(--shadow-lg);
+}
+
+.timer-elapsed {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--gray-800);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+}
+
+.timer-label {
+  font-size: 14px;
+  color: var(--gray-500);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 0.5rem;
+}
+
+.timer-task-info {
+  background: var(--gray-100);
+  padding: 1rem 1.5rem;
+  border-radius: var(--border-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.timer-task-info i {
+  color: var(--primary-color);
+  font-size: 18px;
+}
+
+/* ============================================
+   START TIMER FORM
+   ============================================ */
+.start-timer-section {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.form-header {
+  margin-bottom: 1.5rem;
+}
+
+.form-header h4 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-header h4 i {
+  color: var(--success-color);
+  font-size: 24px;
+}
+
+.timer-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group-timer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timer-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-700);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timer-label i {
+  color: var(--primary-color);
+  font-size: 16px;
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.form-select-timer,
+.form-textarea-timer {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--gray-300);
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  color: var(--gray-800);
+  background: var(--white);
+  transition: all 0.3s ease;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.form-select-timer {
+  appearance: none;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+.select-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-500);
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.form-select-timer:hover,
+.form-textarea-timer:hover {
+  border-color: var(--primary-color);
+}
+
+.form-select-timer:focus,
+.form-textarea-timer:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.form-textarea-timer {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ============================================
+   TIMER BUTTONS
+   ============================================ */
+.btn-start-timer {
+  background: var(--success-color);
+  color: var(--white);
+  border: none;
+  padding: 14px 32px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
+  width: 100%;
+}
+
+.btn-start-timer:hover {
+  background: var(--success-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-start-timer i {
+  font-size: 20px;
+}
+
+.btn-stop-timer {
+  background: var(--danger-color);
+  color: var(--white);
+  border: none;
+  padding: 14px 32px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-stop-timer:hover {
+  background: var(--danger-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-stop-timer i {
+  font-size: 20px;
+}
+
+/* ============================================
+   PROFESSIONAL TABLE
+   ============================================ */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.professional-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.professional-table thead th {
+  background: var(--gray-50);
+  padding: 1rem 1.25rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--gray-200);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.professional-table tbody tr {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.professional-table tbody tr:hover {
+  background: var(--gray-50);
+}
+
+.professional-table tbody td {
+  padding: 1rem 1.25rem;
+  font-size: 14px;
+  color: var(--gray-700);
+  vertical-align: middle;
+}
+
+.professional-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 6px;
+}
+
+.professional-badge i {
+  font-size: 10px;
+}
+
+.badge-success {
+  background: var(--success-light);
+  color: #065f46;
+}
+
+.badge-warning {
+  background: var(--warning-light);
+  color: #92400e;
+}
+
+/* ============================================
+   LOADING STATE
+   ============================================ */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: var(--gray-500);
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--gray-200);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--gray-500);
+}
+
+.empty-state i {
+  font-size: 64px;
+  color: var(--gray-300);
+  margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state p {
+  font-size: 15px;
+  margin: 0;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+@media (max-width: 768px) {
+  .page-header-professional {
+    padding: 1.5rem;
+  }
+  
+  .header-title-section {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .page-title {
+    font-size: 24px;
+  }
+  
+  .timer-circle {
+    width: 220px;
+    height: 220px;
+  }
+  
+  .timer-elapsed-wrapper {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .timer-elapsed {
+    font-size: 36px;
+  }
+  
+  .professional-table {
+    font-size: 12px;
+  }
+  
+  .professional-table thead th,
+  .professional-table tbody td {
+    padding: 0.75rem;
+  }
+}
+</style>
+
+<script>
+let timerInterval = null;
+let currentSessionId = null;
+let startTime = null;
+
+// Format seconds to HH:MM:SS
+function formatTime(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+// Update timer display
+function updateTimerDisplay() {
+  if (startTime) {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('timer-elapsed').textContent = formatTime(elapsed);
+  }
+}
+
+// Update status badge
+function updateStatusBadge(isRunning) {
+  const badgeContainer = document.getElementById('timer-status-badge');
+  if (isRunning) {
+    badgeContainer.innerHTML = '<span class="status-badge active"><i class="fas fa-circle"></i> Timer Running</span>';
+  } else {
+    badgeContainer.innerHTML = '<span class="status-badge"><i class="fas fa-circle"></i> Timer Idle</span>';
+  }
+}
+
+// Load current timer status
+async function loadCurrentTimer() {
+  try {
+    const response = await fetch('/api/timer/current');
+    const data = await response.json();
+    
+    if (data.running) {
+      // Show active timer
+      document.getElementById('no-timer').style.display = 'none';
+      document.getElementById('active-timer').style.display = 'block';
+      document.getElementById('start-timer-form').style.display = 'none';
+      
+      currentSessionId = data.session_id;
+      startTime = new Date(data.start_time).getTime();
+      
+      if (data.task_title) {
+        document.getElementById('timer-task-title').innerHTML = 
+          `<i class="fas fa-tasks"></i> ${data.task_title}`;
+      } else {
+        document.getElementById('timer-task-title').innerHTML = 
+          '<i class="fas fa-clock"></i> No task assigned';
+      }
+      
+      // Update status badge
+      updateStatusBadge(true);
+      
+      // Start updating the display
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(updateTimerDisplay, 1000);
+      updateTimerDisplay();
+    } else {
+      // Show start timer form
+      document.getElementById('no-timer').style.display = 'block';
+      document.getElementById('active-timer').style.display = 'none';
+      document.getElementById('start-timer-form').style.display = 'block';
+      
+      // Update status badge
+      updateStatusBadge(false);
+      
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading current timer:', error);
+  }
+}
+
+// Load user's tasks for the dropdown
+async function loadTasks() {
+  try {
+    const response = await fetch('/tasks/api/board-data/');
+    const data = await response.json();
+    
+    const select = document.getElementById('task-select');
+    select.innerHTML = '<option value="">-- No Task --</option>';
+    
+    if (data.tasks && data.tasks.length > 0) {
+      data.tasks.forEach(task => {
+        const option = document.createElement('option');
+        option.value = task.id;
+        option.textContent = `${task.title} (${task.status})`;
+        select.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading tasks:', error);
+  }
+}
+
+// Start timer
+async function startTimer() {
+  const taskId = document.getElementById('task-select').value;
+  const notes = document.getElementById('timer-notes').value;
+  
+  try {
+    const response = await fetch('/api/timer/start', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({
+        task_id: taskId || null,
+        notes: notes
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      document.getElementById('timer-notes').value = '';
+      loadCurrentTimer();
+      loadTimerHistory();
+    } else {
+      alert(data.error || 'Failed to start timer');
+    }
+  } catch (error) {
+    console.error('Error starting timer:', error);
+    alert('Failed to start timer');
+  }
+}
+
+// Stop timer
+async function stopTimer() {
+  try {
+    const response = await fetch('/api/timer/stop', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({
+        session_id: currentSessionId
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      loadCurrentTimer();
+      loadTimerHistory();
+    } else {
+      alert(data.error || 'Failed to stop timer');
+    }
+  } catch (error) {
+    console.error('Error stopping timer:', error);
+    alert('Failed to stop timer');
+  }
+}
+
+// Load timer history
+async function loadTimerHistory() {
+  const historyDiv = document.getElementById('timer-history');
+  const historyCount = document.getElementById('history-count');
+  
+  // Show loading state
+  historyDiv.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading history...</p>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch('/api/timer/history?limit=20');
+    const data = await response.json();
+    
+    if (data.sessions && data.sessions.length > 0) {
+      // Update count
+      historyCount.textContent = `${data.sessions.length} entries`;
+      
+      // Build professional table
+      let html = `
+        <div class="table-responsive">
+          <table class="professional-table">
+            <thead>
+              <tr>
+                <th><i class="fas fa-user"></i> User_id</th>
+                <th><i class="fas fa-calendar-alt"></i> Date & Time</th>
+                <th><i class="fas fa-tasks"></i> Task</th>
+                <th><i class="fas fa-hourglass-half"></i> Duration</th>
+                <th><i class="fas fa-info-circle"></i> Status</th>
+                <th><i class="fas fa-sticky-note"></i> Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      data.sessions.forEach(session => {
+        const startDate = new Date(session.start_time).toLocaleString();
+        const duration = session.duration_seconds ? formatTime(session.duration_seconds) : 'Running';
+        const status = session.is_running ? 
+          '<span class="professional-badge badge-warning"><i class="fas fa-circle"></i> Running</span>' : 
+          '<span class="professional-badge badge-success"><i class="fas fa-check-circle"></i> Completed</span>';
+        const user = session.user_name || session.user_id || '-';
+        html += '<tr>';
+        html += `<td>${user}</td>`;
+        html += `<td>${startDate}</td>`;
+        html += `<td>${session.task_title || '<em>No task</em>'}</td>`;
+        html += `<td><strong>${duration}</strong></td>`;
+        html += `<td>${status}</td>`;
+        html += `<td>${session.notes || '-'}</td>`;
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table></div>';
+      historyDiv.innerHTML = html;
+    } else {
+      // Show empty state
+      historyCount.textContent = '0 entries';
+      historyDiv.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-history"></i>
+          <h3>No Timer History</h3>
+          <p>Your timer sessions will appear here once you start tracking time.</p>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Error loading timer history:', error);
+    historyDiv.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>Failed to Load History</h3>
+        <p>There was an error loading your timer history. Please try again.</p>
+      </div>
+    `;
+  }
+}
+
+// Get CSRF token
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+// Event listeners
+document.getElementById('start-timer-btn').addEventListener('click', startTimer);
+document.getElementById('stop-timer-btn').addEventListener('click', stopTimer);
+
+// Initialize
+loadCurrentTimer();
+loadTasks();
+loadTimerHistory();
+
+// Refresh current timer every 30 seconds to stay in sync
+setInterval(() => {
+  if (!timerInterval) {
+    loadCurrentTimer();
+  }
+}, 30000);
+</script>
+{% endblock %}
