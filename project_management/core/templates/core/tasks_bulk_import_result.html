@@ -1,64 +1,136 @@
 {% extends "core/base.html" %}
 {% block content %}
-<div class="container py-4">
-  <h2 class="fw-bold mb-3">Bulk Import Results</h2>
-  {% if import_success %}
-    <div class="alert alert-success">Successfully imported tasks.</div>
-  {% else %}
-    <div class="alert alert-danger">Some tasks could not be imported.</div>
-  {% endif %}
-  {% if errors %}
-    <div class="professional-card">
-      <div class="card-section-header">
-        <h2 class="section-title">
-          <i class="fas fa-exclamation-triangle" style="color:var(--danger-color);"></i>
-          Import Errors
-        </h2>
-      </div>
-      <div class="card-content">
-        <div class="table-responsive">
-          <table class="professional-table">
-            <thead>
-              <tr>
-                <th style="width:60px;">Row</th>
-                <th style="width:220px;">Error Message</th>
-                <th>Row Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for e in errors %}
-              <tr>
-                <td>{{ e.row }}</td>
-                <td class="error-text">{{ e.error }}</td>
-                <td>
-                  <pre style="font-size:13px;white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:8px;">
-                    {{ e.data|json_script:"rowdata" }}
-                    <script>
-                      try {
-                        const pretty = JSON.stringify(JSON.parse(document.getElementById('rowdata').textContent), null, 2);
-                        document.currentScript.parentElement.textContent = pretty;
-                      } catch(e) {}
-                    </script>
-                  </pre>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+<div class="bulk-import-results-pro">
+  <div class="header-section">
+    <h2 class="import-title"><i class="fa fa-upload"></i> Bulk Import Results</h2>
+    <p class="import-subtitle">Some tasks could not be imported.</p>
+  </div>
+  <div class="card import-errors-card">
+    <div class="card-header">
+      <h3 class="error-title"><i class="fa fa-exclamation-triangle"></i> Import Errors</h3>
     </div>
-  {% else %}
-    <div class="info-box" style="background: var(--success-light); border-left-color: var(--success-color);">
-      <div class="info-box-title" style="color: var(--success-color);">
-        <i class="fas fa-check-circle"></i>
-        All Tasks Imported Successfully
-      </div>
-      <p class="info-box-content" style="margin: 0;">
-        All tasks were imported without any errors. You can view them on the task board.
-      </p>
+    <div class="card-content">
+      <table class="professional-table">
+        <thead>
+          <tr>
+            <th style="width:60px;">Row</th>
+            <th style="width:220px;">Error Message</th>
+            <th>Row Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for error in errors %}
+          <tr>
+            <td><span class="badge badge-warning">{{ error.row }}</span></td>
+            <td><span class="badge badge-danger"><i class="fa fa-times-circle"></i> {{ error.message }}</span></td>
+            <td><pre class="row-data-json">{{ error.data|safe }}</pre></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  {% endif %}
-  <a href="{% url 'bulk_import' %}" class="btn btn-gradient mt-3">Back to Import</a>
+  </div>
 </div>
+
+<style>
+.bulk-import-results-pro {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 24px;
+}
+.header-section {
+  text-align: left;
+  margin-bottom: 24px;
+}
+.import-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.import-title i {
+  color: #f59e0b;
+  font-size: 1.5rem;
+}
+.import-subtitle {
+  font-size: 1.1rem;
+  color: #6b7280;
+  margin-bottom: 0;
+}
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(37,99,235,0.08);
+  border: 1px solid #e5e7eb;
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+.card-header {
+  background: #f9fafb;
+  padding: 18px 28px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.error-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #ef4444;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-content {
+  padding: 24px 28px;
+}
+.professional-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 1rem;
+}
+.professional-table th {
+  background: #f3f4f6;
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+.professional-table td {
+  padding: 14px 12px;
+  vertical-align: top;
+  border-bottom: 1px solid #e5e7eb;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  gap: 8px;
+}
+.badge-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+.badge-danger {
+  background: #fee2e2;
+  color: #ef4444;
+}
+.row-data-json {
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.97rem;
+  color: #374151;
+  font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+</style>
 {% endblock %}

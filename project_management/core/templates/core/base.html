@@ -1,10 +1,85 @@
-  <style>
+<style>
     .sidebar-collapsed {
       width: 0 !important;
       min-width: 0 !important;
       overflow: hidden !important;
       transition: width 0.2s;
       padding: 0 !important;   /* <--- ADD THIS LINE */
+    }
+
+    /* Header Timer Circle Animation */
+    #header-timer {
+      transition: box-shadow 0.2s;
+    }
+    .header-timer-progress {
+      width:36px !important;
+      height:36px !important;
+      position:relative;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .header-timer-progress svg {
+      width:36px !important;
+      height:36px !important;
+      display:block;
+    }
+    .header-timer-progress .header-timer-play {
+      position:absolute;
+      left:0;
+      top:0;
+      width:36px;
+      height:36px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events:none;
+    }
+    .header-timer-play svg {
+      width:20px;
+      height:20px;
+      display:block;
+    }
+    #header-timer {
+      padding:6px 18px 6px 10px !important;
+      min-width:220px !important;
+      border-radius:24px !important;
+      gap:10px !important;
+    }
+    #header-timer-label {
+      font-size:1.1rem !important;
+      font-weight:700;
+      color:#222;
+      font-family:'Inter',sans-serif;
+      letter-spacing:1px;
+    }
+    #header-timer-task {
+      font-size:0.95rem !important;
+      color:#374151;
+      font-weight:500;
+      margin-left:0;
+      max-width:120px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    #header-timer-status {
+      font-size:0.9rem !important;
+      margin-left:6px;
+    }
+    .header-timer-status-badge {
+      background:#22c55e;
+      color:#fff;
+      border-radius:12px;
+      padding:2px 10px;
+      font-size:0.9rem !important;
+      font-weight:600;
+      margin-left:4px;
+      display:inline-block;
+    }
+    @keyframes headerTimerPulse {
+      0%, 100% { box-shadow: 0 2px 8px rgba(37,99,235,0.08); transform: scale(1); }
+      50% { box-shadow: 0 0 16px 2px #2563eb33; transform: scale(1.07); }
     }
 </style>
 {% load static %}
@@ -293,22 +368,44 @@
         </div>
 
         <div class="header-right">
-          <div style="position: relative;">
-            <button id="notifications" class="btn-ghost" aria-label="Notifications" title="Notifications" onclick="toggleNotificationsDropdown()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6 6 0 0 0-5-5.917V4a2 2 0 1 0-4 0v1.083A6 6 0 0 0 4 11v3.159c0 .538-.214 1.055-.595 1.436L2 17h5m8 0a3 3 0 0 1-6 0"/></svg>
-              <span id="notif-badge" class="hidden" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;font-size:11px;font-weight:600;padding:2px 6px;border-radius:10px;min-width:20px;text-align:center;">0</span>
-            </button>
-            
-            <!-- Notifications Dropdown -->
-            <div id="notifications-dropdown" style="display:none;position:absolute;right:0;top:calc(100% + 8px);width:380px;max-height:500px;overflow-y:auto;background:white;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:9999;">
-              <div style="padding:16px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
-                <h3 style="margin:0;font-size:16px;font-weight:700;color:#1f2937;">Notifications</h3>
-                <a href="{% url 'notifications_page' %}" style="font-size:13px;color:#3b82f6;text-decoration:none;font-weight:500;">View All</a>
-              </div>
-              <div id="notifications-list" style="max-height:400px;overflow-y:auto;">
-                <div style="text-align:center;padding:40px 20px;color:#9ca3af;">
-                  <i class="fa fa-spinner fa-spin" style="font-size:24px;"></i>
-                  <p style="margin-top:12px;font-size:14px;">Loading...</p>
+          <div style="display: flex; align-items: center; gap: 18px;">
+            <!-- Timer Display in Header (always present, event-driven) -->
+            <span id="header-timer" style="display:none;align-items:center;gap:18px;background:#fff;padding:6px 18px 6px 10px;border-radius:24px;box-shadow:0 2px 16px 0 rgba(37,99,235,0.08);min-width:220px;">
+              <span class="header-timer-progress">
+                <svg width="36" height="36" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15" fill="#f3f4f6" stroke="#e5e7eb" stroke-width="3"/>
+                  <circle id="header-timer-progress-bar" cx="18" cy="18" r="15" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-dasharray="94.2" stroke-dashoffset="94.2"/>
+                </svg>
+                <span class="header-timer-play">
+                  <svg width="20" height="20" viewBox="0 0 20 20">
+                    <circle cx="10" cy="10" r="9" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+                    <polygon points="8,6 15,10 8,14" fill="#2563eb" stroke="#2563eb" stroke-width="1"/>
+                  </svg>
+                </span>
+              </span>
+              <span style="display:flex;flex-direction:row;align-items:center;gap:10px;">
+                <span id="header-timer-label" style="font-size:1.1rem;font-weight:700;color:#222;font-family:'Inter',sans-serif;letter-spacing:1px;">00:00:00</span>
+                <span id="header-timer-task" style="font-size:0.95rem;color:#374151;font-weight:500;margin-left:0;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+                <span id="header-timer-status" style="font-size:0.9rem;margin-left:6px;"></span>
+              </span>
+            </span>
+            <!-- Notifications -->
+            <div style="position: relative;">
+              <button id="notifications" class="btn-ghost" aria-label="Notifications" title="Notifications" onclick="toggleNotificationsDropdown()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6 6 0 0 0-5-5.917V4a2 2 0 1 0-4 0v1.083A6 6 0 0 0 4 11v3.159c0 .538-.214 1.055-.595 1.436L2 17h5m8 0a3 3 0 0 1-6 0"/></svg>
+                <span id="notif-badge" class="hidden" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;font-size:11px;font-weight:600;padding:2px 6px;border-radius:10px;min-width:20px;text-align:center;">0</span>
+              </button>
+              <!-- Notifications Dropdown -->
+              <div id="notifications-dropdown" style="display:none;position:absolute;right:0;top:calc(100% + 8px);width:380px;max-height:500px;overflow-y:auto;background:white;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:9999;">
+                <div style="padding:16px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+                  <h3 style="margin:0;font-size:16px;font-weight:700;color:#1f2937;">Notifications</h3>
+                  <a href="{% url 'notifications_page' %}" style="font-size:13px;color:#3b82f6;text-decoration:none;font-weight:500;">View All</a>
+                </div>
+                <div id="notifications-list" style="max-height:400px;overflow-y:auto;">
+                  <div style="text-align:center;padding:40px 20px;color:#9ca3af;">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;"></i>
+                    <p style="margin-top:12px;font-size:14px;">Loading...</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -477,6 +574,100 @@
   </script>
 
   {% block extra_js %}{% endblock %}
+  <script>
+  // --- Header Timer Logic ---
+  let headerTimerInterval = null;
+  let headerTimerActive = false;
+  let headerTimerStart = null;
+  let headerTimerTask = null;
+
+  // Restore timer state from localStorage on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const timerState = localStorage.getItem('headerTimerState');
+    if (timerState) {
+      try {
+        const state = JSON.parse(timerState);
+        if (state.active && state.startTime) {
+          showHeaderTimer(state.startTime, state.taskName || '');
+        }
+      } catch (e) {}
+    }
+  });
+
+  function showHeaderTimer(startTime, taskName) {
+    headerTimerActive = true;
+    headerTimerStart = startTime ? new Date(startTime) : new Date();
+    headerTimerTask = taskName || '';
+    document.getElementById('header-timer').style.display = 'inline-flex';
+    document.getElementById('header-timer-task').textContent = taskName ? `Task: ${taskName}` : '';
+    document.getElementById('header-timer-status').innerHTML = `<span class='header-timer-status-badge'>Open</span>`;
+    updateHeaderTimerDisplay();
+    if (headerTimerInterval) clearInterval(headerTimerInterval);
+    headerTimerInterval = setInterval(updateHeaderTimerDisplay, 1000);
+
+    // Persist timer state
+    localStorage.setItem('headerTimerState', JSON.stringify({
+      active: true,
+      startTime: headerTimerStart.toISOString(),
+      taskName: headerTimerTask
+    }));
+  }
+
+  function hideHeaderTimer() {
+    headerTimerActive = false;
+    document.getElementById('header-timer').style.display = 'none';
+    document.getElementById('header-timer-label').textContent = '00:00:00';
+    document.getElementById('header-timer-task').textContent = '';
+    document.getElementById('header-timer-status').innerHTML = '';
+    setHeaderTimerProgress(0);
+    if (headerTimerInterval) clearInterval(headerTimerInterval);
+
+    // Remove timer state
+    localStorage.removeItem('headerTimerState');
+  }
+
+  function updateHeaderTimerDisplay() {
+    if (!headerTimerActive || !headerTimerStart) return;
+    const now = new Date();
+    let elapsed = Math.floor((now - headerTimerStart) / 1000);
+    document.getElementById('header-timer-label').textContent = formatHeaderTime(elapsed);
+    // Animate progress bar (0-60s loop for demo, or you can use task duration/goal)
+    setHeaderTimerProgress((elapsed % 60) / 60);
+  }
+
+  function setHeaderTimerProgress(progress) {
+    // progress: 0.0 to 1.0
+    const circle = document.getElementById('header-timer-progress-bar');
+    if (!circle) return;
+    const total = 2 * Math.PI * 24; // r=24
+    const offset = total * (1 - progress);
+    circle.setAttribute('stroke-dashoffset', offset);
+  }
+
+  function formatHeaderTime(seconds) {
+    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  // Example: Integrate with timer start/stop events
+  window.addEventListener('startTaskTimer', function(e) {
+    // e.detail = { startTime, taskName }
+    if (headerTimerActive) {
+      alert('Please stop or pause the current timer before starting a new one.');
+      return;
+    }
+    showHeaderTimer(e.detail.startTime, e.detail.taskName);
+  });
+
+  window.addEventListener('stopTaskTimer', function(e) {
+    hideHeaderTimer();
+  });
+
+  // To trigger: dispatchEvent(new CustomEvent('startTaskTimer', { detail: { startTime: ..., taskName: ... } }))
+  // To stop: dispatchEvent(new CustomEvent('stopTaskTimer'))
+  </script>
   
   <!-- Global Search Functionality -->
   <style>

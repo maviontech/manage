@@ -248,37 +248,41 @@ def board_data_api(request):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
+    # ---- Status Filter ----
+    status = request.GET.get("status")
+
     # ---- Pagination ----
     try:
         page = int(request.GET.get("page", "1"))
-    except Exception:
+    except:
         page = 1
-
     if page < 1:
         page = 1
 
-    # Enable pagination: 10 tasks per page
-    per_page = 10
+    per_page = 20
     offset = (page - 1) * per_page
 
-    # ---- Total count ----
-    cur.execute("SELECT COUNT(*) AS total FROM tasks")
+    # ---- Total Count Query ----
+    count_sql = "SELECT COUNT(*) FROM tasks"
+    count_params = []
+
+    if status:
+        count_sql += " WHERE status = %s"
+        count_params.append(status)
+
+    cur.execute(count_sql, tuple(count_params))
     row = cur.fetchone()
 
+    # Handle dict / tuple cursor
     if isinstance(row, dict):
-        total_count = row.get("total", 0)
-    elif isinstance(row, (list, tuple)):
-        total_count = row[0]
+        total_count = row.get("COUNT(*)", 0)
     else:
-        total_count = 0
+        total_count = row[0]
 
     # Calculate total pages
-    import math
-    total_pages = math.ceil(total_count / per_page) if total_count > 0 else 1
+    total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
 
-
-    # ---- Status filter ----
-    status = request.GET.get("status")
+    # ---- MAIN QUERY ----
     sql = """
         SELECT
             t.id,
@@ -286,28 +290,39 @@ def board_data_api(request):
             COALESCE(t.status, 'Open') AS status,
             COALESCE(t.priority, 'Normal') AS priority,
             t.due_date,
+
             CONCAT_WS(':', t.assigned_type, t.assigned_to) AS assigned_to,
+
             CASE
                 WHEN t.assigned_type = 'member' THEN (
                     SELECT CONCAT(m.first_name, ' ', m.last_name)
-                    FROM members m WHERE m.id = t.assigned_to
+                    FROM members m
+                    WHERE m.id = t.assigned_to
                 )
                 WHEN t.assigned_type = 'team' THEN (
-                    SELECT tm.name FROM teams tm WHERE tm.id = t.assigned_to
+                    SELECT tm.name
+                    FROM teams tm
+                    WHERE tm.id = t.assigned_to
                 )
                 ELSE NULL
             END AS assigned_to_display
+
         FROM tasks t
     """
+
+    # ---- Apply Status Filter ----
     params = []
     if status:
         sql += " WHERE t.status = %s"
         params.append(status)
-    sql += " ORDER BY FIELD(t.status, 'open', 'In Progress', 'Review', 'Blocked','closed'), FIELD(t.priority, 'Critical', 'High', 'Normal', 'Low'), t.due_date IS NULL ASC, t.due_date ASC, t.created_at DESC LIMIT %s OFFSET %s"
+
+    # ---- ORDER + Pagination ----
+    sql += " ORDER BY t.id DESC LIMIT %s OFFSET %s"
     params.extend([per_page, offset])
+
     cur.execute(sql, tuple(params))
 
-    # ---- Convert rows to list of dicts ----
+    # ---- Convert rows ----
     rows = cur.fetchall()
 
     if not rows:
@@ -327,6 +342,8 @@ def board_data_api(request):
         "total_count": total_count,
         "total_pages": total_pages
     })
+
+
 
 
 

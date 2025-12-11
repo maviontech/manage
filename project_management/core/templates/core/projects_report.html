@@ -636,13 +636,25 @@ function filterAllTeams() {
         </button>
       </div>
     </div>
+    <!-- Team/Member Toggle -->
+    <div style="display: flex; gap: 20px; align-items: center; margin: 18px 0 8px 0; justify-content: flex-start;">
+      <div class="toggle-group" style="display: flex; gap: 12px;">
+        <label class="toggle-label" style="font-weight:600; font-size:15px; color:#374151;">
+          <input type="checkbox" id="teamToggle" checked style="accent-color: #0b57a4; margin-right:6px;"> Team
+        </label>
+        <label class="toggle-label" style="font-weight:600; font-size:15px; color:#374151;">
+          <input type="checkbox" id="memberToggle" style="accent-color: #10b981; margin-right:6px;"> Member
+        </label>
+      </div>
+      <span style="font-size:13px; color:#6b7280;">Select to view Team or Member data</span>
+    </div>
 
     {% if projects %}
     <table class="projects-table" id="projectsTable">
       <thead>
         <tr>
           <th>Project Name</th>
-          <th>Employee</th>
+          <th>Team / Member</th>
           <th>Status</th>
           <th>Timeline</th>
           <th>Tasks</th>
@@ -671,23 +683,35 @@ function filterAllTeams() {
           </td>
 
           <!-- Employee Information -->
-          <td>
-            <div class="employee-info">
-              <div class="employee-name">
-                <i class="fa fa-user-tie" style="color: #0b57a4;"></i>
-                {{ project.employee_name }}
+          <td class="team-member-cell">
+            <div class="team-data" style="display:block;">
+              <div style="font-weight:600; color:#0b57a4; margin-bottom:4px;">
+                <i class="fa fa-users"></i> {{ project.team_name|default:'No Team' }}
               </div>
-              {% if project.employee_name != 'Not Assigned' %}
-              <div class="employee-meta">
-                <i class="fa fa-id-badge"></i> {{ project.employee_code }}
-              </div>
-              <div class="employee-meta">
-                <i class="fa fa-building"></i> {{ project.department }}
-              </div>
-              <div class="employee-meta">
-                <i class="fa fa-briefcase"></i> {{ project.designation }}
+              {% if project.team_name and project.team_lead %}
+              <div style="font-size:12px; color:#6b7280;">
+                <i class="fa fa-user-tie"></i> Lead: {{ project.team_lead }}
               </div>
               {% endif %}
+            </div>
+            <div class="member-data" style="display:none;">
+              <div class="employee-info">
+                <div class="employee-name">
+                  <i class="fa fa-user-tie" style="color: #0b57a4;"></i>
+                  {{ project.employee_name }}
+                </div>
+                {% if project.employee_name != 'Not Assigned' %}
+                <div class="employee-meta">
+                  <i class="fa fa-id-badge"></i> {{ project.employee_code }}
+                </div>
+                <div class="employee-meta">
+                  <i class="fa fa-building"></i> {{ project.department }}
+                </div>
+                <div class="employee-meta">
+                  <i class="fa fa-briefcase"></i> {{ project.designation }}
+                </div>
+                {% endif %}
+              </div>
             </div>
           </td>
 
@@ -783,7 +807,7 @@ function filterAllTeams() {
           <th>Priority</th>
           <th>Status</th>
           <th>Due Date</th>
-          <th>Assigned To</th>
+          <th>Assigned To (Team/Member)</th>
           <th>Project</th>
           <th>Created At</th>
           <th>Created By</th>
@@ -841,14 +865,20 @@ function filterAllTeams() {
           </td>
 
           <!-- Assigned To -->
-          <td>
-            <div style="font-weight: 500;">
+          <td class="task-team-member-cell">
+            <div class="task-team-data" style="display:block;">
               {% if task.assigned_type == 'team' %}
-                <i class="fa fa-users" style="color: #8b5cf6;"></i>
+                <i class="fa fa-users" style="color: #8b5cf6;"></i> {{ task.assigned_name }}
               {% else %}
-                <i class="fa fa-user" style="color: #10b981;"></i>
+                <span style="color:#9ca3af; font-style:italic;">No Team</span>
               {% endif %}
-              {{ task.assigned_name }}
+            </div>
+            <div class="task-member-data" style="display:none;">
+              {% if task.assigned_type != 'team' %}
+                <i class="fa fa-user" style="color: #10b981;"></i> {{ task.assigned_name }}
+              {% else %}
+                <span style="color:#9ca3af; font-style:italic;">No Member</span>
+              {% endif %}
             </div>
           </td>
 
@@ -898,6 +928,54 @@ let statusChart, tasksChart, employeeChart;
 // Initialize charts on page load
 document.addEventListener('DOMContentLoaded', function() {
   initializeCharts();
+  // Team/Member Toggle Logic
+  const teamToggle = document.getElementById('teamToggle');
+  const memberToggle = document.getElementById('memberToggle');
+  function updateTeamMemberDisplay() {
+    // Projects Table
+    const projectCells = document.querySelectorAll('.team-member-cell');
+    projectCells.forEach(cell => {
+      const teamData = cell.querySelector('.team-data');
+      const memberData = cell.querySelector('.member-data');
+      if (teamToggle.checked && !memberToggle.checked) {
+        if (teamData) teamData.style.display = 'block';
+        if (memberData) memberData.style.display = 'none';
+      } else if (!teamToggle.checked && memberToggle.checked) {
+        if (teamData) teamData.style.display = 'none';
+        if (memberData) memberData.style.display = 'block';
+      } else if (teamToggle.checked && memberToggle.checked) {
+        if (teamData) teamData.style.display = 'block';
+        if (memberData) memberData.style.display = 'block';
+      } else {
+        if (teamData) teamData.style.display = 'none';
+        if (memberData) memberData.style.display = 'none';
+      }
+    });
+    // Tasks Table
+    const taskCells = document.querySelectorAll('.task-team-member-cell');
+    taskCells.forEach(cell => {
+      const teamData = cell.querySelector('.task-team-data');
+      const memberData = cell.querySelector('.task-member-data');
+      if (teamToggle.checked && !memberToggle.checked) {
+        if (teamData) teamData.style.display = 'block';
+        if (memberData) memberData.style.display = 'none';
+      } else if (!teamToggle.checked && memberToggle.checked) {
+        if (teamData) teamData.style.display = 'none';
+        if (memberData) memberData.style.display = 'block';
+      } else if (teamToggle.checked && memberToggle.checked) {
+        if (teamData) teamData.style.display = 'block';
+        if (memberData) memberData.style.display = 'block';
+      } else {
+        if (teamData) teamData.style.display = 'none';
+        if (memberData) memberData.style.display = 'none';
+      }
+    });
+  }
+  if (teamToggle && memberToggle) {
+    teamToggle.addEventListener('change', updateTeamMemberDisplay);
+    memberToggle.addEventListener('change', updateTeamMemberDisplay);
+    updateTeamMemberDisplay();
+  }
 });
 
 // Switch between Projects and Tasks view

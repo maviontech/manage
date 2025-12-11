@@ -177,6 +177,100 @@
 
 <!-- ===== Styles ===== -->
 <style>
+/* --- Professional Unassigned Tasks UI Enhancements --- */
+.soft-card {
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(37,99,235,0.08);
+  border: none;
+  background: #fff;
+  transition: box-shadow 0.22s;
+}
+.soft-card:hover {
+  box-shadow: 0 16px 48px rgba(37,99,235,0.13);
+}
+.modern-table {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f9fafb;
+}
+.modern-table thead {
+  background: linear-gradient(90deg, #2563eb22, #38bdf822);
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+}
+.modern-table th, .modern-table td {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+.modern-table tbody tr {
+  transition: box-shadow 0.18s, background 0.18s;
+}
+.modern-table tbody tr:hover {
+  background: #e0e7ff !important;
+  box-shadow: 0 2px 12px rgba(37,99,235,0.08);
+}
+.modern-table td {
+  vertical-align: middle !important;
+  text-align: center !important;
+  font-size: 1rem;
+  padding: 1.1rem 1.25rem !important;
+}
+.modern-table td .fw-semibold {
+  font-size: 1.08rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+.action-btn-row {
+  gap: 14px !important;
+}
+.btn-action-circle {
+  width: 42px;
+  height: 42px;
+  font-size: 22px;
+  background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+  color: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.10);
+  border: none;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-action-circle:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  box-shadow: 0 4px 16px rgba(37,99,235,0.18);
+  transform: scale(1.08);
+}
+.btn-action-circle i {
+  margin: 0;
+}
+.priority-badge, .status-badge {
+  font-size: 13px;
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  box-shadow: 0 1px 4px rgba(37,99,235,0.04);
+}
+.priority-normal { background: #e0f7fa; color: #0f7a42; border-color: #b7e8c9; }
+.priority-high { background: #fff3e5; color: #c96a10; border-color: #ffd7b1; }
+.priority-low { background: #f2f2f2; color: #6e6e6e; border-color: #d9d9d9; }
+.priority-critical { background: #ffe5e5; color: #b42323; border-color: #f7b3b3; }
+.status-open { background: #e7f7ef; color: #0f7a42; border-color: #b7e8c9; }
+.status-in-progress { background: #fffbe6; color: #a67c00; border-color: #ffe699; }
+.status-blocked { background: #ffe5e5; color: #b42323; border-color: #f7b3b3; }
+.status-review { background: #f2f2f2; color: #6e6e6e; border-color: #d9d9d9; }
+.status-closed { background: #e8f0ff; color: #004085; border-color: #b3c7f7; }
+.status-unknown { background: #f0f0f0; color: #666; border-color: #dcdcdc; }
+.modern-table .thead-row th {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #2563eb;
+  background: #f3f4f6;
+  border-bottom: 2px solid #e5e7eb !important;
+}
 /* Reuse Task Board look tokens */
 .page-title { font-size:1.4rem; color:#103a63; font-weight:700; }
 .search-input { border-radius:8px; border:1px solid #e6eef6; height:44px; }

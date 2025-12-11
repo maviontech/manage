@@ -532,21 +532,112 @@
         <table class="professional-table">
           <thead>
             <tr>
-              <th style="width: 60px;">#</th>
-              <th style="width: 100px;">Row</th>
-              <th>Error Message</th>
+              <th style="width: 60px;">Row</th>
+              <th style="width: 220px;">Error Message</th>
+              <th>Row Data</th>
             </tr>
           </thead>
           <tbody>
             {% for e in errors %}
             <tr>
-              <td>{{ forloop.counter }}</td>
-              <td><strong>{{ e.row }}</strong></td>
-              <td class="error-text">{{ e.error }}</td>
+              <td>
+                <span class="circle-badge">{{ e.row }}</span>
+              </td>
+              <td>
+                <span class="badge badge-danger"><i class="fa fa-times-circle"></i> {{ e.error }}</span>
+              </td>
+              <td>
+                <div class="row-data-list">
+                  {% for key, value in e.data.items %}
+                  <div class="row-data-item">
+                    <span class="row-data-key">{{ key }}</span>
+                    <span class="row-data-sep">:</span>
+                    <span class="row-data-value">{{ value }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+                <style>
+                .row-data-list {
+                  background: #f3f4f6;
+                  border-radius: 8px;
+                  padding: 14px 18px;
+                  font-size: 1rem;
+                  color: #374151;
+                  font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
+                  margin: 0;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 8px;
+                }
+                .row-data-item {
+                  display: flex;
+                  align-items: baseline;
+                  gap: 8px;
+                  border-bottom: 1px solid #e5e7eb;
+                  padding-bottom: 4px;
+                }
+                .row-data-item:last-child {
+                  border-bottom: none;
+                }
+                .row-data-key {
+                  font-weight: 600;
+                  color: #2563eb;
+                  min-width: 160px;
+                  display: inline-block;
+                }
+                .row-data-sep {
+                  color: #6b7280;
+                  font-weight: 400;
+                }
+                .row-data-value {
+                  color: #374151;
+                  font-weight: 500;
+                  word-break: break-word;
+                }
+                </style>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
+        <style>
+        .circle-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: #fef3c7;
+          color: #92400e;
+          font-weight: 700;
+          font-size: 1.1rem;
+          box-shadow: 0 2px 8px rgba(37,99,235,0.08);
+          border: 2px solid #fde68a;
+        }
+        .badge-danger {
+          background: #fee2e2;
+          color: #ef4444;
+          border-radius: 16px;
+          padding: 6px 14px;
+          font-size: 0.95rem;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .row-data-json {
+          background: #f3f4f6;
+          border-radius: 8px;
+          padding: 12px;
+          font-size: 0.97rem;
+          color: #374151;
+          font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+          white-space: pre-wrap;
+          word-break: break-word;
+          margin: 0;
+        }
+        </style>
       </div>
       {% else %}
       <div class="info-box" style="background: var(--success-light); border-left-color: var(--success-color);">

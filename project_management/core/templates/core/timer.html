@@ -54,10 +54,25 @@
               <i class="fa-solid fa-tasks"></i>
               <span id="timer-task-title">No task assigned</span>
             </div>
-            <button id="stop-timer-btn" class="btn-stop-timer">
-              <i class="fa-solid fa-stop-circle"></i>
-              Stop Timer
-            </button>
+            <div style="display:flex;gap:12px;justify-content:center;">
+              <button id="pause-timer-btn" class="btn-stop-timer">
+                <i class="fa-solid fa-pause-circle"></i>
+                Pause Timer
+              </button>
+              <button id="stop-timer-btn" class="btn-stop-timer">
+                <i class="fa-solid fa-stop-circle"></i>
+                Complete Timer
+              </button>
+            </div>
+            <div id="resume-switch-section" style="display:none;margin-top:18px;">
+              <button id="resume-timer-btn" class="btn-start-timer" style="width:auto;">
+                <i class="fa-solid fa-play-circle"></i> Resume Timer
+              </button>
+              <span style="margin:0 10px;">or</span>
+              <button id="switch-task-btn" class="btn-start-timer" style="background:#2563eb;width:auto;">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i> Start Timer for Another Task
+              </button>
+            </div>
           </div>
         </div>
 
@@ -777,6 +792,9 @@
 let timerInterval = null;
 let currentSessionId = null;
 let startTime = null;
+let paused = false;
+let pausedAt = null;
+let pausedDuration = 0;
 
 // Format seconds to HH:MM:SS
 function formatTime(seconds) {
@@ -789,7 +807,12 @@ function formatTime(seconds) {
 // Update timer display
 function updateTimerDisplay() {
   if (startTime) {
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    let elapsed;
+    if (paused) {
+      elapsed = Math.floor((pausedAt - startTime - pausedDuration) / 1000);
+    } else {
+      elapsed = Math.floor((Date.now() - startTime - pausedDuration) / 1000);
+    }
     document.getElementById('timer-elapsed').textContent = formatTime(elapsed);
   }
 }
@@ -815,10 +838,13 @@ async function loadCurrentTimer() {
       document.getElementById('no-timer').style.display = 'none';
       document.getElementById('active-timer').style.display = 'block';
       document.getElementById('start-timer-form').style.display = 'none';
-      
+
       currentSessionId = data.session_id;
       startTime = new Date(data.start_time).getTime();
-      
+      paused = !!data.paused;
+      pausedAt = data.paused_at ? new Date(data.paused_at).getTime() : null;
+      pausedDuration = data.paused_duration || 0;
+
       if (data.task_title) {
         document.getElementById('timer-task-title').innerHTML = 
           `<i class="fas fa-tasks"></i> ${data.task_title}`;
@@ -826,10 +852,15 @@ async function loadCurrentTimer() {
         document.getElementById('timer-task-title').innerHTML = 
           '<i class="fas fa-clock"></i> No task assigned';
       }
-      
+
       // Update status badge
-      updateStatusBadge(true);
-      
+      updateStatusBadge(!paused);
+
+      // Show/hide pause/resume/switch UI
+      document.getElementById('pause-timer-btn').style.display = paused ? 'none' : 'inline-flex';
+      document.getElementById('stop-timer-btn').style.display = paused ? 'none' : 'inline-flex';
+      document.getElementById('resume-switch-section').style.display = paused ? 'flex' : 'none';
+
       // Start updating the display
       if (timerInterval) clearInterval(timerInterval);
       timerInterval = setInterval(updateTimerDisplay, 1000);
@@ -881,6 +912,11 @@ async function startTimer() {
   const notes = document.getElementById('timer-notes').value;
   
   try {
+    // If a timer is running and not paused, require pause before starting another
+    if (!paused && currentSessionId) {
+      alert('Pause the current timer before starting a new one.');
+      return;
+    }
     const response = await fetch('/api/timer/start', {
       method: 'POST',
       headers: {
@@ -899,6 +935,18 @@ async function startTimer() {
       document.getElementById('timer-notes').value = '';
       loadCurrentTimer();
       loadTimerHistory();
+      // Dispatch event to update header timer
+      let taskName = '';
+      const select = document.getElementById('task-select');
+      if (select && select.selectedIndex > 0) {
+        taskName = select.options[select.selectedIndex].text;
+      }
+      window.dispatchEvent(new CustomEvent('startTaskTimer', {
+        detail: {
+          startTime: Date.now(),
+          taskName: taskName
+        }
+      }));
     } else {
       alert(data.error || 'Failed to start timer');
     }
@@ -921,12 +969,14 @@ async function stopTimer() {
         session_id: currentSessionId
       })
     });
-    
     const data = await response.json();
-    
     if (data.success) {
       loadCurrentTimer();
       loadTimerHistory();
+      window.dispatchEvent(new CustomEvent('stopTaskTimer'));
+      paused = false;
+      pausedAt = null;
+      pausedDuration = 0;
     } else {
       alert(data.error || 'Failed to stop timer');
     }
@@ -934,6 +984,69 @@ async function stopTimer() {
     console.error('Error stopping timer:', error);
     alert('Failed to stop timer');
   }
+}
+
+// Pause timer
+async function pauseTimer() {
+  try {
+    const response = await fetch('/api/timer/pause', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({
+        session_id: currentSessionId
+      })
+    });
+    const data = await response.json();
+    if (data.success) {
+      paused = true;
+      pausedAt = Date.now();
+      loadCurrentTimer();
+      loadTimerHistory();
+    } else {
+      alert(data.error || 'Failed to pause timer');
+    }
+  } catch (error) {
+    console.error('Error pausing timer:', error);
+    alert('Failed to pause timer');
+  }
+}
+
+// Resume timer
+async function resumeTimer() {
+  try {
+    const response = await fetch('/api/timer/resume', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({
+        session_id: currentSessionId
+      })
+    });
+    const data = await response.json();
+    if (data.success) {
+      paused = false;
+      pausedAt = null;
+      loadCurrentTimer();
+      loadTimerHistory();
+    } else {
+      alert(data.error || 'Failed to resume timer');
+    }
+  } catch (error) {
+    console.error('Error resuming timer:', error);
+    alert('Failed to resume timer');
+  }
+}
+
+// Switch task (start new timer after pausing current)
+async function switchTask() {
+  await resumeTimer(); // Resume and immediately stop current
+  await stopTimer();
+  document.getElementById('start-timer-form').scrollIntoView({behavior:'smooth'});
 }
 
 // Load timer history
@@ -1033,8 +1146,12 @@ function getCookie(name) {
 }
 
 // Event listeners
+
 document.getElementById('start-timer-btn').addEventListener('click', startTimer);
 document.getElementById('stop-timer-btn').addEventListener('click', stopTimer);
+document.getElementById('pause-timer-btn').addEventListener('click', pauseTimer);
+document.getElementById('resume-timer-btn').addEventListener('click', resumeTimer);
+document.getElementById('switch-task-btn').addEventListener('click', switchTask);
 
 // Initialize
 loadCurrentTimer();
