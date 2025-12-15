@@ -413,7 +413,9 @@
 
           <a href="{% url 'profile' %}" class="user-mini-box" title="View Profile">
             <div class="avatar-sm">
-              {% if request.session.cn and request.session.cn|length > 0 %}
+              {% if request.session.profile_photo %}
+                <img src="{{ MEDIA_URL }}{{ request.session.profile_photo }}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+              {% elif request.session.cn and request.session.cn|length > 0 %}
                 {{ request.session.cn|first|upper }}
               {% elif request.session.member_name and request.session.member_name|length > 0 %}
                 {{ request.session.member_name|first|upper }}

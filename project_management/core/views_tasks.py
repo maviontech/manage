@@ -97,7 +97,7 @@ def create_task_view(request):
             creator_name = creator['name'] if creator else 'Someone'
             
             # Get all team members
-            cur.execute("SELECT member_id FROM team_members WHERE team_id=%s", (assigned_to,))
+            cur.execute("SELECT member_id FROM team_memberships WHERE team_id=%s", (assigned_to,))
             team_members = cur.fetchall()
             
             for member in team_members:
@@ -405,7 +405,7 @@ def assign_task_api(request):
         assigner_name = assigner['name'] if assigner else 'Someone'
         
         # Get all team members
-        cur.execute("SELECT member_id FROM team_members WHERE team_id=%s", (assigned_to,))
+        cur.execute("SELECT member_id FROM team_memberships WHERE team_id=%s", (assigned_to,))
         team_members = cur.fetchall()
         
         for member in team_members:

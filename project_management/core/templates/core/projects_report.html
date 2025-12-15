@@ -1715,7 +1715,9 @@ function viewTeamMembers(teamId, teamName) {
   fetch(`/api/team-members/?team_id=${teamId}`)
     .then(response => response.json())
     .then(data => {
-      displayTeamMembers(data.members || []);
+      const members = data.members || [];
+      displayTeamMembers(members);
+      // (debug panel removed)
     })
     .catch(error => {
       console.error('Error fetching team members:', error);

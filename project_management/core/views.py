@@ -122,16 +122,18 @@ def login_password_view(request):
         conn = get_tenant_conn(request)
         cur = conn.cursor()
         # Find or create member row
-        cur.execute("SELECT id, first_name, last_name FROM members WHERE email=%s LIMIT 1", (email,))
+        cur.execute("SELECT id, first_name, last_name, profile_photo FROM members WHERE email=%s LIMIT 1", (email,))
         r = cur.fetchone()
         if r:
             # Dict or tuple
             if isinstance(r, dict):
                 member_id = int(r['id'])
                 member_name = (r.get('first_name', '') + ' ' + r.get('last_name', '')).strip() or user_fullname
+                profile_photo = r.get('profile_photo')
             else:
                 member_id = int(r[0])
                 member_name = (r[1] + ' ' + r[2]).strip() or user_fullname
+                profile_photo = r[3] if len(r) > 3 else None
         else:
             # Create member row
             first_name = user_fullname.split()[0] if user_fullname else email.split('@')[0]
@@ -152,6 +154,7 @@ def login_password_view(request):
     request.session['member_id'] = member_id
     request.session['member_name'] = member_name
     request.session['user_id'] = member_id  # Ensure user_id is set for task views
+    request.session['profile_photo'] = profile_photo if 'profile_photo' in locals() else None
     print("Login successful for user:", member_id)
     print("Login successful for user:", member_name)
 
@@ -580,11 +583,11 @@ def api_team_list(request):
             else:
                 teams = [{'id': r[0], 'name': r[1]} for r in rows]
         else:
-            # fallback: teams where user is member (team_members table)
+            # fallback: teams where user is member (team_memberships table)
             cur.execute("""
                 SELECT t.id, t.name
                 FROM teams t
-                JOIN team_members tm ON tm.team_id = t.id
+                JOIN team_memberships tm ON tm.team_id = t.id
                 WHERE tm.member_id = %s
             """, (user['id'],))
             rows = cur.fetchall() or []
@@ -621,8 +624,8 @@ def api_team_summary(request):
     # First: try to fetch members for the given team
     members = []
     try:
-        # Preferred: a team_members table
-        cur.execute("SELECT m.id, CONCAT(m.first_name, ' ', m.last_name) AS name, m.email FROM members m JOIN team_members tm ON tm.member_id = m.id WHERE tm.team_id = %s", (team_id,))
+        # Preferred: the canonical team membership table
+        cur.execute("SELECT m.id, CONCAT(m.first_name, ' ', m.last_name) AS name, m.email FROM members m JOIN team_memberships tm ON tm.member_id = m.id WHERE tm.team_id = %s", (team_id,))
         rows = cur.fetchall() or []
         if rows:
             if isinstance(rows[0], dict):
@@ -752,11 +755,11 @@ def api_get_team_members(request):
     members = []
     
     try:
-        # Try team_members table first (preferred approach)
+        # Try join against canonical membership table (team_memberships)
         cur.execute("""
             SELECT m.id, m.first_name, m.last_name, m.email, m.phone
             FROM members m
-            JOIN team_members tm ON tm.member_id = m.id
+            JOIN team_memberships tm ON tm.member_id = m.id
             WHERE tm.team_id = %s
             ORDER BY m.first_name, m.last_name
         """, (team_id,))
@@ -795,8 +798,40 @@ def api_get_team_members(request):
     finally:
         cur.close()
         conn.close()
-    
-    return JsonResponse({'members': members})
+    # Include debug info when DEBUG is True to aid troubleshooting
+    debug_info = {}
+    try:
+        from django.conf import settings
+        if getattr(settings, 'DEBUG', False):
+            try:
+                debug_info['rows_count'] = len(rows) if 'rows' in locals() and rows is not None else 0
+                # build a small sample for inspection
+                sample = []
+                if 'rows' in locals() and rows:
+                    for r in rows[:5]:
+                        if isinstance(r, dict):
+                            sample.append({
+                                'id': r.get('id'),
+                                'first_name': r.get('first_name'),
+                                'last_name': r.get('last_name')
+                            })
+                        else:
+                            sample.append({
+                                'id': r[0] if len(r) > 0 else None,
+                                'first_name': r[1] if len(r) > 1 else None,
+                                'last_name': r[2] if len(r) > 2 else None,
+                            })
+                debug_info['sample'] = sample
+            except Exception as _e:
+                debug_info['error'] = str(_e)
+    except Exception:
+        debug_info = {}
+
+    resp = {'members': members}
+    if debug_info:
+        resp['debug'] = debug_info
+
+    return JsonResponse(resp)
 
 def profile_view(request):
     """
@@ -893,7 +928,7 @@ def profile_edit_view(request):
         phone = request.POST.get('phone', '').strip()
         meta = json.dumps(request.POST.get('meta', '').strip())
         city = request.POST.get('city', '').strip()
-        dob = request.POST.get('dob', '').strip() or None
+        dob = request.POST.get('dob', '').strip() # Expecting 'YYYY-MM-DD' format
         address = request.POST.get('address', '').strip()
         github_url = request.POST.get('github_url', '').strip()
         twitter_url = request.POST.get('twitter_url', '').strip()
@@ -942,6 +977,11 @@ def profile_edit_view(request):
                     linkedin_url=VALUES(linkedin_url)
             """, (member_id, github_url, twitter_url, facebook_url, linkedin_url))
             conn.commit()
+            
+            # Update session with new profile photo if uploaded
+            if profile_photo_path:
+                request.session['profile_photo'] = profile_photo_path
+            
             return redirect('profile')
         except Exception as e:
             conn.rollback()
