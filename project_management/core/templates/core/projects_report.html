@@ -123,6 +123,262 @@
   background: var(--gray-50);
 }
 
+/* Custom Team Dropdown Styles */
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-toggle {
+  width: 100%;
+  padding: 10px 40px 10px 12px;
+  background: white;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--gray-700);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.dropdown-toggle:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(11, 87, 164, 0.1);
+}
+
+.dropdown-toggle::after {
+  content: "▼";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--gray-500);
+  transition: transform 0.2s;
+}
+
+.dropdown-toggle.active::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  display: none;
+}
+
+.dropdown-menu.active {
+  display: block;
+}
+
+.dropdown-search {
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 8px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.dropdown-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.dropdown-search input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(11, 87, 164, 0.1);
+}
+
+.dropdown-item {
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.dropdown-item:hover {
+  background: var(--gray-50);
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.team-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--gray-700);
+}
+
+.view-members-btn {
+  padding: 4px 10px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-members-btn:hover {
+  background: var(--primary-dark);
+  transform: scale(1.05);
+}
+
+/* Members Modal Styles */
+.members-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.members-modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--gray-500);
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-modal:hover {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.modal-search {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-search input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.modal-search input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(11, 87, 164, 0.1);
+}
+
+.modal-body {
+  padding: 20px 24px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.member-card {
+  padding: 16px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+}
+
+.member-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(11, 87, 164, 0.1);
+}
+
+.member-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: 8px;
+}
+
+.member-info {
+  font-size: 14px;
+  color: var(--gray-600);
+  line-height: 1.6;
+}
+
+.no-members {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--gray-500);
+  font-size: 14px;
+}
+
 .charts-section {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -474,44 +730,50 @@
         </select>
       </div>
 
-      <!-- All Team Option -->
+      <!-- Team Selector with Search -->
       <div class="filter-group">
         <label class="filter-label">
           <i class="fa fa-users"></i> Team
         </label>
-        <select id="teamFilter" class="filter-input" onchange="handleTeamChange()">
-          <option value="all">All Team</option>
-          {% for team in teams %}
-            <option value="{{ team.id }}">{{ team.name }}</option>
-          {% endfor %}
-        </select>
-        <div id="allTeamSearchContainer" style="display:none; margin-top:8px;">
-          <input type="text" id="allTeamSearchInput" class="filter-input" placeholder="Search teams..." oninput="filterAllTeams()">
+        <div style="position: relative;">
+          <input type="text" id="teamSearchInput" class="filter-input" 
+                 placeholder="Search teams..." 
+                 onclick="toggleTeamDropdown()" 
+                 oninput="searchTeams()" 
+                 readonly
+                 style="cursor: pointer; background: white;">
+          <i class="fa fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #6b7280;"></i>
         </div>
-        <script>
-        function handleTeamChange() {
-          var teamFilter = document.getElementById('teamFilter');
-          var allTeamSearchContainer = document.getElementById('allTeamSearchContainer');
-          if (teamFilter.value === 'all') {
-            allTeamSearchContainer.style.display = 'block';
-          } else {
-            allTeamSearchContainer.style.display = 'none';
-          }
-        }
-
-        function filterAllTeams() {
-          var input = document.getElementById('allTeamSearchInput').value.toLowerCase();
-          var teamFilter = document.getElementById('teamFilter');
-          for (var i = 0; i < teamFilter.options.length; i++) {
-            var option = teamFilter.options[i];
-            if (option.value !== 'all' && option.value !== '') {
-              option.style.display = option.text.toLowerCase().includes(input) ? '' : 'none';
-            }
-          }
-        }
-        </script>
-        <div id="allTeamSearchContainer" style="display:none; margin-top:8px;">
-          <input type="text" id="allTeamSearchInput" class="filter-input" placeholder="Search teams..." oninput="filterAllTeams()">
+        <input type="hidden" id="teamFilter" value="all">
+        
+        <!-- Team Dropdown -->
+        <div id="teamDropdown" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); max-height: 400px; overflow-y: auto; margin-top: 4px; min-width: 300px;">
+          <div style="padding: 12px; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; background: white; z-index: 1;">
+            <input type="text" id="teamSearchField" class="filter-input" 
+                   placeholder="🔍 Search teams..." 
+                   oninput="searchTeams()"
+                   style="margin: 0;">
+          </div>
+          <div id="teamList" style="max-height: 300px; overflow-y: auto;">
+            <div class="team-option" data-team-id="all" onclick="selectTeam('all', 'All Teams')" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 600; color: #1f2937;">All Teams</div>
+                <div style="font-size: 12px; color: #6b7280;">View all teams</div>
+              </div>
+            </div>
+            {% for team in teams %}
+            <div class="team-option" data-team-id="{{ team.id }}" data-team-name="{{ team.name|lower }}" onclick="selectTeam('{{ team.id }}', '{{ team.name|escapejs }}')" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #1f2937;">{{ team.name }}</div>
+                <div style="font-size: 12px; color: #6b7280;">Team ID: {{ team.id }}</div>
+              </div>
+              <button onclick="event.stopPropagation(); viewTeamMembers('{{ team.id }}', '{{ team.name|escapejs }}')" 
+                      style="padding: 6px 12px; background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                <i class="fa fa-eye"></i> Members
+              </button>
+            </div>
+            {% endfor %}
+          </div>
         </div>
       </div>
       
@@ -1351,6 +1613,176 @@ function showNotification(message, type) {
     notification.style.animation = 'slideOut 0.3s ease';
     setTimeout(() => notification.remove(), 300);
   }, 3000);
+}
+
+// Team Dropdown Functions
+function toggleTeamDropdown() {
+  const dropdown = document.getElementById('teamDropdown');
+  const isVisible = dropdown.style.display === 'block';
+  dropdown.style.display = isVisible ? 'none' : 'block';
+  if (!isVisible) {
+    document.getElementById('teamSearchField').focus();
+  }
+}
+
+function searchTeams() {
+  const input = document.getElementById('teamSearchField').value.toLowerCase();
+  const teamOptions = document.querySelectorAll('.team-option');
+  
+  teamOptions.forEach(option => {
+    const teamName = option.getAttribute('data-team-name') || '';
+    const teamId = option.getAttribute('data-team-id');
+    if (teamId === 'all' || teamName.includes(input)) {
+      option.style.display = 'flex';
+    } else {
+      option.style.display = 'none';
+    }
+  });
+}
+
+function selectTeam(teamId, teamName) {
+  document.getElementById('teamFilter').value = teamId;
+  document.getElementById('teamSearchInput').value = teamName;
+  document.getElementById('teamDropdown').style.display = 'none';
+  document.getElementById('teamSearchField').value = '';
+  searchTeams();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+  const dropdown = document.getElementById('teamDropdown');
+  const teamInput = document.getElementById('teamSearchInput');
+  if (dropdown && !dropdown.contains(event.target) && event.target !== teamInput) {
+    dropdown.style.display = 'none';
+  }
+});
+
+// Team Members Modal
+function viewTeamMembers(teamId, teamName) {
+  // Create modal
+  const modal = document.createElement('div');
+  modal.id = 'teamMembersModal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+  `;
+  
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 700px; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+      <div style="padding: 24px; border-bottom: 1px solid #e5e7eb; background: linear-gradient(135deg, #2563eb, #3b82f6); color: white;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">
+              <i class="fa fa-users"></i> ${teamName}
+            </h2>
+            <p style="margin: 0; opacity: 0.9; font-size: 14px;">Team Members</p>
+          </div>
+          <button onclick="closeTeamMembersModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px; transition: all 0.2s;">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div style="padding: 20px;">
+        <div style="margin-bottom: 16px;">
+          <input type="text" id="memberSearchInput" placeholder="🔍 Search members..." 
+                 oninput="filterMembers()" 
+                 style="width: 100%; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; box-sizing: border-box;">
+        </div>
+        
+        <div id="membersListContainer" style="max-height: 400px; overflow-y: auto;">
+          <div style="text-align: center; padding: 40px; color: #6b7280;">
+            <i class="fa fa-spinner fa-spin" style="font-size: 32px; color: #3b82f6;"></i>
+            <p style="margin-top: 16px;">Loading members...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Fetch team members
+  fetch(`/api/team-members/?team_id=${teamId}`)
+    .then(response => response.json())
+    .then(data => {
+      displayTeamMembers(data.members || []);
+    })
+    .catch(error => {
+      console.error('Error fetching team members:', error);
+      document.getElementById('membersListContainer').innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #ef4444;">
+          <i class="fa fa-exclamation-circle" style="font-size: 32px;"></i>
+          <p style="margin-top: 16px;">Failed to load members</p>
+        </div>
+      `;
+    });
+}
+
+function displayTeamMembers(members) {
+  const container = document.getElementById('membersListContainer');
+  
+  if (members.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #6b7280;">
+        <i class="fa fa-users" style="font-size: 32px;"></i>
+        <p style="margin-top: 16px;">No members found</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = members.map(member => `
+    <div class="member-item" data-member-name="${(member.first_name + ' ' + member.last_name).toLowerCase()}" 
+         style="padding: 16px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 16px; transition: background 0.2s;">
+      <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #2563eb); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">
+        ${(member.first_name || 'U').charAt(0).toUpperCase()}
+      </div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">${member.first_name || ''} ${member.last_name || ''}</div>
+        <div style="font-size: 13px; color: #6b7280;">
+          <i class="fa fa-envelope"></i> ${member.email || 'No email'}
+          ${member.phone ? ` • <i class="fa fa-phone"></i> ${member.phone}` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+  
+  // Add hover effect
+  document.querySelectorAll('.member-item').forEach(item => {
+    item.addEventListener('mouseenter', function() {
+      this.style.background = '#f9fafb';
+    });
+    item.addEventListener('mouseleave', function() {
+      this.style.background = 'transparent';
+    });
+  });
+}
+
+function filterMembers() {
+  const input = document.getElementById('memberSearchInput').value.toLowerCase();
+  const memberItems = document.querySelectorAll('.member-item');
+  
+  memberItems.forEach(item => {
+    const memberName = item.getAttribute('data-member-name') || '';
+    item.style.display = memberName.includes(input) ? 'flex' : 'none';
+  });
+}
+
+function closeTeamMembersModal() {
+  const modal = document.getElementById('teamMembersModal');
+  if (modal) {
+    modal.remove();
+  }
 }
 </script>
 {% endblock %}

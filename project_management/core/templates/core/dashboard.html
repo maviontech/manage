@@ -818,7 +818,7 @@
   </div>
   <!-- Table Card -->
   <div class="chart-card chart-card-modern">
-    <h3 class="chart-title-modern">🗂️ Recent Tasks</h3>
+    <h3 class="chart-title-modern">� Planned Tasks</h3>
     <div class="table-responsive-modern">
       <table class="modern-table">
         <thead>
@@ -829,7 +829,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for task in recent_tasks %}
+          {% for task in planned_tasks %}
           <tr>
             <td class="modern-td-title">{{ task.title }}</td>
             <td>
@@ -846,7 +846,7 @@
             <td class="modern-td-date">{{ task.due_date|date:'d M Y' }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="3" class="modern-td-empty">No recent tasks.</td></tr>
+          <tr><td colspan="3" class="modern-td-empty">No planned tasks in the next 7 days.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -1055,11 +1055,11 @@ document.addEventListener("DOMContentLoaded", function() {
     new Chart(lineCtx, {
       type: 'line',
       data: {
-        labels: JSON.parse('{{ line_chart_labels|default:"[\"Mon\",\"Tue\",\"Wed\",\"Thu\",\"Fri\",\"Sat\",\"Sun\"]"|escapejs }}'),
+        labels: {{ line_chart_labels|default:'["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]'|safe }},
         datasets: [
           {
             label: 'Created',
-            data: JSON.parse('{{ line_chart_created|default:"[3,5,2,8,4,6,7]"|escapejs }}'),
+            data: {{ line_chart_created|default:'[0,0,0,0,0,0,0]'|safe }},
             borderColor: '#2563eb',
             backgroundColor: 'rgba(37,99,235,0.08)',
             tension: 0.3,
@@ -1067,7 +1067,7 @@ document.addEventListener("DOMContentLoaded", function() {
           },
           {
             label: 'Completed',
-            data: JSON.parse('{{ line_chart_completed|default:"[2,3,4,6,3,5,6]"|escapejs }}'),
+            data: {{ line_chart_completed|default:'[0,0,0,0,0,0,0]'|safe }},
             borderColor: '#10b981',
             backgroundColor: 'rgba(16,185,129,0.08)',
             tension: 0.3,

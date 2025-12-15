@@ -415,49 +415,92 @@ def dashboard_view(request):
         print("ERROR: my_new_tasks_count", e)
         my_new_tasks_count = 0
 
-    # ---------------------- LAST WEEK TASK DATA + RECENT TASKS ----------------------
+    # ---------------------- PLANNED TASKS (Show all pending tasks) ----------------------
     from datetime import datetime, timedelta
-    recent_tasks = []
+    import json
+    planned_tasks = []
     try:
-        today = datetime.now().date()
-        week_ago = today - timedelta(days=7)
+        # Show all tasks that are not completed or closed
+        # This includes overdue tasks and upcoming tasks
         cur.execute("""
             SELECT id, title, status, due_date, created_at
             FROM tasks
             WHERE assigned_type='member' AND assigned_to=%s
-            AND created_at >= %s AND created_at <= %s
-            ORDER BY created_at DESC
-            LIMIT 5
-        """, (member_id, week_ago, today))
+            AND status NOT IN ('Completed', 'Closed', 'completed', 'closed')
+            AND due_date IS NOT NULL
+            ORDER BY due_date ASC
+            LIMIT 10
+        """, (member_id,))
         rows = cur.fetchall() or []
+        print(f"DEBUG: planned_tasks found {len(rows)} pending tasks for member_id={member_id}")
+        
         for r in rows:
             if isinstance(r, dict):
-                due_date = r.get('due_date')
-                if due_date and hasattr(due_date, 'strftime'):
-                    due_date_fmt = due_date.strftime('%b %d %Y')
-                else:
-                    due_date_fmt = due_date
-                recent_tasks.append({
+                planned_tasks.append({
                     'id': r.get('id'),
                     'title': r.get('title'),
                     'status': r.get('status'),
                     'due_date': r.get('due_date'),
                 })
             else:
-                due_date = r[3]
-                if due_date and hasattr(due_date, 'strftime'):
-                    due_date_fmt = due_date.strftime('%b %d %Y')
-                else:
-                    due_date_fmt = due_date
-                recent_tasks.append({
+                planned_tasks.append({
                     'id': r[0],
                     'title': r[1],
                     'status': r[2],
-                    'due_date': due_date_fmt,
+                    'due_date': r[3],
                 })
     except Exception as e:
-        print("ERROR: recent_tasks", e)
-        recent_tasks = []
+        print("ERROR: planned_tasks", e)
+        import traceback
+        traceback.print_exc()
+        planned_tasks = []
+
+    # ---------------------- LINE CHART DATA (Tasks created/completed last 7 days) ----------------------
+    line_chart_labels = []
+    line_chart_created = []
+    line_chart_completed = []
+    try:
+        today = datetime.now().date()
+        # Get day names for last 7 days
+        day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        for i in range(6, -1, -1):
+            day = today - timedelta(days=i)
+            line_chart_labels.append(day_names[day.weekday()])
+            
+            # Count tasks created on this day
+            cur.execute("""
+                SELECT COUNT(*) as cnt FROM tasks 
+                WHERE assigned_type='member' AND assigned_to=%s 
+                AND DATE(created_at) = %s
+            """, (member_id, day))
+            created_row = cur.fetchone()
+            if created_row:
+                if isinstance(created_row, dict):
+                    line_chart_created.append(created_row.get('cnt', 0) or 0)
+                else:
+                    line_chart_created.append(created_row[0] or 0)
+            else:
+                line_chart_created.append(0)
+            
+            # Count tasks completed on this day
+            cur.execute("""
+                SELECT COUNT(*) as cnt FROM tasks 
+                WHERE assigned_type='member' AND assigned_to=%s 
+                AND status='Completed' AND DATE(updated_at) = %s
+            """, (member_id, day))
+            completed_row = cur.fetchone()
+            if completed_row:
+                if isinstance(completed_row, dict):
+                    line_chart_completed.append(completed_row.get('cnt', 0) or 0)
+                else:
+                    line_chart_completed.append(completed_row[0] or 0)
+            else:
+                line_chart_completed.append(0)
+    except Exception as e:
+        print("ERROR: line_chart_data", e)
+        line_chart_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        line_chart_created = [0, 0, 0, 0, 0, 0, 0]
+        line_chart_completed = [0, 0, 0, 0, 0, 0, 0]
 
         
     
@@ -492,7 +535,10 @@ def dashboard_view(request):
         'is_team_lead': is_team_lead,
         'board_open_count': board_open_count,
         'my_new_tasks_count': my_new_tasks_count,
-        'recent_tasks': recent_tasks,
+        'planned_tasks': planned_tasks,
+        'line_chart_labels': json.dumps(line_chart_labels),
+        'line_chart_created': json.dumps(line_chart_created),
+        'line_chart_completed': json.dumps(line_chart_completed),
     }
 
     return render(request, 'core/dashboard.html', ctx)
@@ -687,6 +733,71 @@ def api_team_summary(request):
     conn.close()
     return JsonResponse({'members': member_summaries, 'totals': totals})
 
+def api_get_team_members(request):
+    """
+    Returns team members for a given team_id.
+    Query: ?team_id=ID
+    Response: { members: [{id, first_name, last_name, email, phone}, ...] }
+    """
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated', 'members': []}, status=401)
+    
+    team_id = request.GET.get('team_id')
+    if not team_id:
+        return JsonResponse({'error': 'team_id required', 'members': []}, status=400)
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    members = []
+    
+    try:
+        # Try team_members table first (preferred approach)
+        cur.execute("""
+            SELECT m.id, m.first_name, m.last_name, m.email, m.phone
+            FROM members m
+            JOIN team_members tm ON tm.member_id = m.id
+            WHERE tm.team_id = %s
+            ORDER BY m.first_name, m.last_name
+        """, (team_id,))
+        rows = cur.fetchall() or []
+        
+        if not rows:
+            # Fallback: check if members table has team_id column
+            cur.execute("""
+                SELECT id, first_name, last_name, email, phone
+                FROM members
+                WHERE team_id = %s
+                ORDER BY first_name, last_name
+            """, (team_id,))
+            rows = cur.fetchall() or []
+        
+        if rows:
+            if isinstance(rows[0], dict):
+                members = [{
+                    'id': r['id'],
+                    'first_name': r.get('first_name', ''),
+                    'last_name': r.get('last_name', ''),
+                    'email': r.get('email', ''),
+                    'phone': r.get('phone', '')
+                } for r in rows]
+            else:
+                members = [{
+                    'id': r[0],
+                    'first_name': r[1] or '',
+                    'last_name': r[2] or '',
+                    'email': r[3] or '',
+                    'phone': r[4] or ''
+                } for r in rows]
+    except Exception as e:
+        print(f"Error fetching team members: {e}")
+        members = []
+    finally:
+        cur.close()
+        conn.close()
+    
+    return JsonResponse({'members': members})
+
 def profile_view(request):
     """
     Display the profile of the logged-in user.
@@ -704,7 +815,7 @@ def profile_view(request):
     profile = {}
     social_links = {}
     try:
-        cur.execute("SELECT email, first_name, last_name, phone, meta, created_at, city, dob, address FROM members WHERE id=%s LIMIT 1", (member_id,))
+        cur.execute("SELECT email, first_name, last_name, phone, meta, created_at, city, dob, address, profile_photo FROM members WHERE id=%s LIMIT 1", (member_id,))
         row = cur.fetchone()
         if row:
             if isinstance(row, dict):
@@ -718,6 +829,7 @@ def profile_view(request):
                     'city': row.get('city'),
                     'dob': row.get('dob'),  
                     'address': row.get('address'),
+                    'profile_photo': row.get('profile_photo'),
                 }
             else:
                 profile = {
@@ -730,6 +842,7 @@ def profile_view(request):
                     'city': row[6],
                     'dob': row[7],
                     'address': row[8],
+                    'profile_photo': row[9] if len(row) > 9 else None,
                 }
         # Fetch social links
         cur.execute("SELECT github_url, twitter_url, facebook_url, linkedin_url FROM member_social_links WHERE member_id=%s LIMIT 1", (member_id,))
@@ -759,6 +872,9 @@ def profile_view(request):
     return render(request, 'core/profile_view.html', {'profile': profile, 'social_links': social_links})
 def profile_edit_view(request):
     """Display the profile edit form and handle profile updates."""
+    import os
+    from django.conf import settings
+    
     user = request.session.get('user')
     member_id = request.session.get('member_id')
 
@@ -783,13 +899,38 @@ def profile_edit_view(request):
         twitter_url = request.POST.get('twitter_url', '').strip()
         facebook_url = request.POST.get('facebook_url', '').strip()
         linkedin_url = request.POST.get('linkedin_url', '').strip()
+        
+        # Handle profile photo upload
+        profile_photo_path = None
+        if 'profile_photo' in request.FILES:
+            photo = request.FILES['profile_photo']
+            # Create directory if it doesn't exist
+            upload_dir = os.path.join(settings.MEDIA_ROOT, 'profile_photos')
+            os.makedirs(upload_dir, exist_ok=True)
+            # Generate unique filename
+            file_ext = os.path.splitext(photo.name)[1]
+            filename = f"member_{member_id}{file_ext}"
+            file_path = os.path.join(upload_dir, filename)
+            # Save file
+            with open(file_path, 'wb+') as destination:
+                for chunk in photo.chunks():
+                    destination.write(chunk)
+            profile_photo_path = f"profile_photos/{filename}"
 
         try:
-            cur.execute("""
-                UPDATE members
-                SET first_name=%s, last_name=%s, phone=%s, meta=%s, city=%s, dob=%s, address=%s
-                WHERE id=%s
-            """, (first_name, last_name, phone, meta, city, dob, address, member_id))
+            # Update member info
+            if profile_photo_path:
+                cur.execute("""
+                    UPDATE members
+                    SET first_name=%s, last_name=%s, phone=%s, meta=%s, city=%s, dob=%s, address=%s, profile_photo=%s
+                    WHERE id=%s
+                """, (first_name, last_name, phone, meta, city, dob, address, profile_photo_path, member_id))
+            else:
+                cur.execute("""
+                    UPDATE members
+                    SET first_name=%s, last_name=%s, phone=%s, meta=%s, city=%s, dob=%s, address=%s
+                    WHERE id=%s
+                """, (first_name, last_name, phone, meta, city, dob, address, member_id))
             # Upsert social links
             cur.execute("""
                 INSERT INTO member_social_links (member_id, github_url, twitter_url, facebook_url, linkedin_url)
@@ -812,7 +953,7 @@ def profile_edit_view(request):
     social_links = {}
     try:
         cur.execute("""
-            SELECT email, first_name, last_name, phone, meta, city, dob, address
+            SELECT email, first_name, last_name, phone, meta, city, dob, address, profile_photo
             FROM members
             WHERE id=%s
             LIMIT 1
@@ -837,6 +978,7 @@ def profile_edit_view(request):
                     'city': row.get('city'),
                     'dob': row.get('dob'),
                     'address': row.get('address'),
+                    'profile_photo': row.get('profile_photo'),
                 }
             else:
                 profile = {
@@ -848,6 +990,7 @@ def profile_edit_view(request):
                     'city': row[5],
                     'dob': row[6],
                     'address': row[7],
+                    'profile_photo': row[8] if len(row) > 8 else None,
                 }
         # Fetch social links
         cur.execute("SELECT github_url, twitter_url, facebook_url, linkedin_url FROM member_social_links WHERE member_id=%s LIMIT 1", (member_id,))

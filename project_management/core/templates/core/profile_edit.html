@@ -155,12 +155,17 @@ body {
 
 <div class="profile-page-container">
 
-    <div class="card profile-header-edit">
+    <form class="card profile-header-edit" method="post" enctype="multipart/form-data" action="">
+        {% csrf_token %}
         <div class="profile-avatar-edit-group">
-            <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="John Doe Avatar" class="profile-avatar">
+            {% if profile.profile_photo %}
+                <img src="{{ MEDIA_URL }}{{ profile.profile_photo }}" alt="Profile Photo" class="profile-avatar" id="avatar-preview">
+            {% else %}
+                <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="Default Avatar" class="profile-avatar" id="avatar-preview">
+            {% endif %}
             <div class="upload-controls">
                 <h6>Change Photo</h6>
-                <input type="file" id="photo-upload" class="photo-input">
+                <input type="file" id="photo-upload" name="profile_photo" class="photo-input" accept="image/*" onchange="previewImage(this)">
                 <label for="photo-upload" class="btn btn-upload">Upload New Image</label>
             </div>
         </div>
@@ -168,10 +173,12 @@ body {
             <h2>{{profile.first_name}} {{profile.last_name}}</h2>
             <p>{{ profile.meta|default:"Member" }}</p>
         </div>
-    </div>
+    </form>
 
-    <form class="card contact-info-form" method="post" action="">
+    <form class="card contact-info-form" method="post" enctype="multipart/form-data" action="">
         {% csrf_token %}
+        <!-- Hidden file input to sync photo upload -->
+        <input type="file" id="profile_photo_hidden" name="profile_photo" style="display:none;" accept="image/*">
         <h2 class="card-title">Personal and Contact Information</h2>
         <div class="form-grid">
             <div class="form-group">
@@ -228,4 +235,28 @@ body {
         </div>
     </form>
 </div>
+
+<script>
+// Preview image before upload
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('avatar-preview').src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+        
+        // Copy the file to the hidden input in the main form
+        var mainFormInput = document.getElementById('profile_photo_hidden');
+        var dataTransfer = new DataTransfer();
+        dataTransfer.items.add(input.files[0]);
+        mainFormInput.files = dataTransfer.files;
+    }
+}
+
+// Sync photo upload from header form to main form
+document.getElementById('photo-upload').addEventListener('change', function() {
+    previewImage(this);
+});
+</script>
 {% endblock %}
