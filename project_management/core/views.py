@@ -702,6 +702,7 @@ def profile_view(request):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
     profile = {}
+    social_links = {}
     try:
         cur.execute("SELECT email, first_name, last_name, phone, meta, created_at, city, dob, address FROM members WHERE id=%s LIMIT 1", (member_id,))
         row = cur.fetchone()
@@ -730,13 +731,32 @@ def profile_view(request):
                     'dob': row[7],
                     'address': row[8],
                 }
+        # Fetch social links
+        cur.execute("SELECT github_url, twitter_url, facebook_url, linkedin_url FROM member_social_links WHERE member_id=%s LIMIT 1", (member_id,))
+        social_row = cur.fetchone()
+        if social_row:
+            if isinstance(social_row, dict):
+                social_links = {
+                    'github_url': social_row.get('github_url', ''),
+                    'twitter_url': social_row.get('twitter_url', ''),
+                    'facebook_url': social_row.get('facebook_url', ''),
+                    'linkedin_url': social_row.get('linkedin_url', ''),
+                }
+            else:
+                social_links = {
+                    'github_url': social_row[0],
+                    'twitter_url': social_row[1],
+                    'facebook_url': social_row[2],
+                    'linkedin_url': social_row[3],
+                }
     except Exception:
         profile = {}
+        social_links = {}
     finally:
         cur.close()
         conn.close()
 
-    return render(request, 'core/profile_view.html', {'profile': profile})
+    return render(request, 'core/profile_view.html', {'profile': profile, 'social_links': social_links})
 def profile_edit_view(request):
     """Display the profile edit form and handle profile updates."""
     user = request.session.get('user')
@@ -750,14 +770,19 @@ def profile_edit_view(request):
     error_msg = None
 
     # ---------------------- POST: Save Updates ----------------------
+    import json
     if request.method == 'POST':
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
         phone = request.POST.get('phone', '').strip()
-        meta = request.POST.get('meta', '').strip()
+        meta = json.dumps(request.POST.get('meta', '').strip())
         city = request.POST.get('city', '').strip()
-        dob = request.POST.get('dob', '').strip()
+        dob = request.POST.get('dob', '').strip() or None
         address = request.POST.get('address', '').strip()
+        github_url = request.POST.get('github_url', '').strip()
+        twitter_url = request.POST.get('twitter_url', '').strip()
+        facebook_url = request.POST.get('facebook_url', '').strip()
+        linkedin_url = request.POST.get('linkedin_url', '').strip()
 
         try:
             cur.execute("""
@@ -765,16 +790,26 @@ def profile_edit_view(request):
                 SET first_name=%s, last_name=%s, phone=%s, meta=%s, city=%s, dob=%s, address=%s
                 WHERE id=%s
             """, (first_name, last_name, phone, meta, city, dob, address, member_id))
+            # Upsert social links
+            cur.execute("""
+                INSERT INTO member_social_links (member_id, github_url, twitter_url, facebook_url, linkedin_url)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    github_url=VALUES(github_url),
+                    twitter_url=VALUES(twitter_url),
+                    facebook_url=VALUES(facebook_url),
+                    linkedin_url=VALUES(linkedin_url)
+            """, (member_id, github_url, twitter_url, facebook_url, linkedin_url))
             conn.commit()
-
-            return redirect('profile_view')
-
+            return redirect('profile')
         except Exception as e:
             conn.rollback()
+            print("Profile update failed:", e)  # Debug print
             error_msg = f"Update failed: {str(e)}"
 
     # ---------------------- GET: Fetch Profile Data ----------------------
     profile = {}
+    social_links = {}
     try:
         cur.execute("""
             SELECT email, first_name, last_name, phone, meta, city, dob, address
@@ -784,35 +819,57 @@ def profile_edit_view(request):
         """, (member_id,))
         row = cur.fetchone()
 
+        def parse_meta(val):
+            import json
+            try:
+                return json.loads(val) if val else ''
+            except Exception:
+                return val or ''
+
         if row:
-            # If row is a dict-like cursor result
             if isinstance(row, dict):
                 profile = {
                     'email': row.get('email'),
                     'first_name': row.get('first_name'),
                     'last_name': row.get('last_name'),
                     'phone': row.get('phone'),
-                    'meta': row.get('meta'),
+                    'meta': parse_meta(row.get('meta')),
                     'city': row.get('city'),
                     'dob': row.get('dob'),
                     'address': row.get('address'),
                 }
             else:
-                # Row is a tuple
                 profile = {
                     'email': row[0],
                     'first_name': row[1],
                     'last_name': row[2],
                     'phone': row[3],
-                    'meta': row[4],
+                    'meta': parse_meta(row[4]),
                     'city': row[5],
                     'dob': row[6],
                     'address': row[7],
                 }
-
+        # Fetch social links
+        cur.execute("SELECT github_url, twitter_url, facebook_url, linkedin_url FROM member_social_links WHERE member_id=%s LIMIT 1", (member_id,))
+        social_row = cur.fetchone()
+        if social_row:
+            if isinstance(social_row, dict):
+                social_links = {
+                    'github_url': social_row.get('github_url', ''),
+                    'twitter_url': social_row.get('twitter_url', ''),
+                    'facebook_url': social_row.get('facebook_url', ''),
+                    'linkedin_url': social_row.get('linkedin_url', ''),
+                }
+            else:
+                social_links = {
+                    'github_url': social_row[0],
+                    'twitter_url': social_row[1],
+                    'facebook_url': social_row[2],
+                    'linkedin_url': social_row[3],
+                }
     except Exception as e:
         error_msg = f"Error loading profile: {str(e)}"
-
+        social_links = {}
     finally:
         cur.close()
         conn.close()
@@ -820,6 +877,7 @@ def profile_edit_view(request):
     # ---------------------- RENDER PAGE ----------------------
     return render(request, 'core/profile_edit.html', {
         'profile': profile,
+        'social_links': social_links,
         'error': error_msg
     })
 
@@ -855,7 +913,7 @@ def profile_change_password_view(request):
                     try:
                         cur.execute("UPDATE users SET password=%s WHERE email=%s", (new_password, email))
                         conn.commit()
-                        return redirect('profile_view')
+                        return redirect('profile')
                     except Exception as e:
                         conn.rollback()
                         error_msg = "Failed to update password: " + str(e)

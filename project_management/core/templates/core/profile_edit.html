@@ -175,20 +175,28 @@ body {
         <h2 class="card-title">Personal and Contact Information</h2>
         <div class="form-grid">
             <div class="form-group">
-                <label for="full-name">Full Name</label>
-                <input type="text" id="full-name" name="full_name" value="{{profile.first_name}} {{profile.last_name}}" placeholder="Enter your full name">
+                <label for="first-name">First Name</label>
+                <input type="text" id="first-name" name="first_name" value="{{ profile.first_name|default:'' }}" placeholder="Enter your first name">
             </div>
             <div class="form-group">
-                <label for="job-title">Job Title</label>
-                <input type="text" id="job-title" name="job_title" value="{{ profile.meta|default:'Member' }}" placeholder="e.g., Senior Designer">
+                <label for="last-name">Last Name</label>
+                <input type="text" id="last-name" name="last_name" value="{{ profile.last_name|default:'' }}" placeholder="Enter your last name">
             </div>
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" value="{{ profile.email|default:'' }}" placeholder="Enter your email address">
+                <label for="meta">Job Title</label>
+                <input type="text" id="meta" name="meta" value="{{ profile.meta|default:'Member' }}" placeholder="e.g., Senior Designer">
             </div>
             <div class="form-group">
                 <label for="phone">Phone</label>
                 <input type="tel" id="phone" name="phone" value="{{ profile.phone|default:'' }}" placeholder="Enter phone number">
+            </div>
+            <div class="form-group">
+                <label for="city">City</label>
+                <input type="text" id="city" name="city" value="{{ profile.city|default:'' }}" placeholder="Enter your city">
+            </div>
+            <div class="form-group">
+                <label for="dob">Date of Birth</label>
+                <input type="date" id="dob" name="dob" value="{{ profile.dob|default:'' }}">
             </div>
             <div class="form-group wide-span">
                 <label for="address">Address / Location</label>
@@ -198,12 +206,20 @@ body {
         <h2 class="card-title social-title">Social Profiles</h2>
         <div class="form-grid social-grid">
             <div class="form-group">
-                <label for="github">GitHub Profile</label>
-                <input type="url" id="github" name="github" value="https://github.com/johndoe" placeholder="https://github.com/yourusername">
+                <label for="github_url">GitHub URL</label>
+                <input type="url" id="github_url" name="github_url" value="{{ social_links.github_url|default:'' }}" placeholder="https://github.com/yourusername">
             </div>
             <div class="form-group">
-                <label for="twitter">Twitter Handle</label>
-                <input type="text" id="twitter" name="twitter" value="@johndoe" placeholder="@yourhandle">
+                <label for="twitter_url">Twitter URL</label>
+                <input type="url" id="twitter_url" name="twitter_url" value="{{ social_links.twitter_url|default:'' }}" placeholder="https://twitter.com/yourhandle">
+            </div>
+            <div class="form-group">
+                <label for="facebook_url">Facebook URL</label>
+                <input type="url" id="facebook_url" name="facebook_url" value="{{ social_links.facebook_url|default:'' }}" placeholder="https://facebook.com/yourprofile">
+            </div>
+            <div class="form-group">
+                <label for="linkedin_url">LinkedIn URL</label>
+                <input type="url" id="linkedin_url" name="linkedin_url" value="{{ social_links.linkedin_url|default:'' }}" placeholder="https://linkedin.com/in/yourprofile">
             </div>
         </div>
         <div class="form-actions">
