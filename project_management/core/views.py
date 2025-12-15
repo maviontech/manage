@@ -415,6 +415,52 @@ def dashboard_view(request):
         print("ERROR: my_new_tasks_count", e)
         my_new_tasks_count = 0
 
+    # ---------------------- LAST WEEK TASK DATA + RECENT TASKS ----------------------
+    from datetime import datetime, timedelta
+    recent_tasks = []
+    try:
+        today = datetime.now().date()
+        week_ago = today - timedelta(days=7)
+        cur.execute("""
+            SELECT id, title, status, due_date, created_at
+            FROM tasks
+            WHERE assigned_type='member' AND assigned_to=%s
+            AND created_at >= %s AND created_at <= %s
+            ORDER BY created_at DESC
+            LIMIT 5
+        """, (member_id, week_ago, today))
+        rows = cur.fetchall() or []
+        for r in rows:
+            if isinstance(r, dict):
+                due_date = r.get('due_date')
+                if due_date and hasattr(due_date, 'strftime'):
+                    due_date_fmt = due_date.strftime('%b %d %Y')
+                else:
+                    due_date_fmt = due_date
+                recent_tasks.append({
+                    'id': r.get('id'),
+                    'title': r.get('title'),
+                    'status': r.get('status'),
+                    'due_date': r.get('due_date'),
+                })
+            else:
+                due_date = r[3]
+                if due_date and hasattr(due_date, 'strftime'):
+                    due_date_fmt = due_date.strftime('%b %d %Y')
+                else:
+                    due_date_fmt = due_date
+                recent_tasks.append({
+                    'id': r[0],
+                    'title': r[1],
+                    'status': r[2],
+                    'due_date': due_date_fmt,
+                })
+    except Exception as e:
+        print("ERROR: recent_tasks", e)
+        recent_tasks = []
+
+        
+    
 
 
 
@@ -446,6 +492,7 @@ def dashboard_view(request):
         'is_team_lead': is_team_lead,
         'board_open_count': board_open_count,
         'my_new_tasks_count': my_new_tasks_count,
+        'recent_tasks': recent_tasks,
     }
 
     return render(request, 'core/dashboard.html', ctx)
@@ -656,7 +703,7 @@ def profile_view(request):
     cur = conn.cursor()
     profile = {}
     try:
-        cur.execute("SELECT email, first_name, last_name, phone, meta, created_at FROM members WHERE id=%s LIMIT 1", (member_id,))
+        cur.execute("SELECT email, first_name, last_name, phone, meta, created_at, city, dob, address FROM members WHERE id=%s LIMIT 1", (member_id,))
         row = cur.fetchone()
         if row:
             if isinstance(row, dict):
@@ -667,6 +714,9 @@ def profile_view(request):
                     'phone': row.get('phone'),
                     'meta': row.get('meta'),
                     'created_at': row.get('created_at'),
+                    'city': row.get('city'),
+                    'dob': row.get('dob'),  
+                    'address': row.get('address'),
                 }
             else:
                 profile = {
@@ -676,6 +726,9 @@ def profile_view(request):
                     'phone': row[3],
                     'meta': row[4],
                     'created_at': row[5],
+                    'city': row[6],
+                    'dob': row[7],
+                    'address': row[8],
                 }
     except Exception:
         profile = {}
@@ -702,13 +755,16 @@ def profile_edit_view(request):
         last_name = request.POST.get('last_name', '').strip()
         phone = request.POST.get('phone', '').strip()
         meta = request.POST.get('meta', '').strip()
+        city = request.POST.get('city', '').strip()
+        dob = request.POST.get('dob', '').strip()
+        address = request.POST.get('address', '').strip()
 
         try:
             cur.execute("""
                 UPDATE members
-                SET first_name=%s, last_name=%s, phone=%s, meta=%s
+                SET first_name=%s, last_name=%s, phone=%s, meta=%s, city=%s, dob=%s, address=%s
                 WHERE id=%s
-            """, (first_name, last_name, phone, meta, member_id))
+            """, (first_name, last_name, phone, meta, city, dob, address, member_id))
             conn.commit()
 
             return redirect('profile_view')
@@ -721,7 +777,7 @@ def profile_edit_view(request):
     profile = {}
     try:
         cur.execute("""
-            SELECT email, first_name, last_name, phone, meta
+            SELECT email, first_name, last_name, phone, meta, city, dob, address
             FROM members
             WHERE id=%s
             LIMIT 1
@@ -737,6 +793,9 @@ def profile_edit_view(request):
                     'last_name': row.get('last_name'),
                     'phone': row.get('phone'),
                     'meta': row.get('meta'),
+                    'city': row.get('city'),
+                    'dob': row.get('dob'),
+                    'address': row.get('address'),
                 }
             else:
                 # Row is a tuple
@@ -746,6 +805,9 @@ def profile_edit_view(request):
                     'last_name': row[2],
                     'phone': row[3],
                     'meta': row[4],
+                    'city': row[5],
+                    'dob': row[6],
+                    'address': row[7],
                 }
 
     except Exception as e:

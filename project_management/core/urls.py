@@ -98,7 +98,6 @@ urlpatterns = [
     path('api/timer/stop', views.api_timer_stop, name='api_timer_stop'),
     path('api/timer/current', views.api_timer_current, name='api_timer_current'),
     path('api/timer/history', views.api_timer_history, name='api_timer_history'),
-    
     # Time Entries
     path('time-entries/', views.time_entries_page, name='time_entries_page'),
     path('api/time-entries/list', views.api_time_entries_list, name='api_time_entries_list'),

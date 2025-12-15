@@ -165,49 +165,47 @@ body {
             </div>
         </div>
         <div class="basic-info-display">
-            <h2>John Doe</h2>
-            <p>Full Stack Developer</p>
+            <h2>{{profile.first_name}} {{profile.last_name}}</h2>
+            <p>{{ profile.meta|default:"Member" }}</p>
         </div>
     </div>
 
-    <form class="card contact-info-form">
+    <form class="card contact-info-form" method="post" action="">
+        {% csrf_token %}
         <h2 class="card-title">Personal and Contact Information</h2>
-        
         <div class="form-grid">
             <div class="form-group">
                 <label for="full-name">Full Name</label>
-                <input type="text" id="full-name" value="John Doe" placeholder="Enter your full name">
+                <input type="text" id="full-name" name="full_name" value="{{profile.first_name}} {{profile.last_name}}" placeholder="Enter your full name">
             </div>
             <div class="form-group">
                 <label for="job-title">Job Title</label>
-                <input type="text" id="job-title" value="Full Stack Developer" placeholder="e.g., Senior Designer">
+                <input type="text" id="job-title" name="job_title" value="{{ profile.meta|default:'Member' }}" placeholder="e.g., Senior Designer">
             </div>
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" value="john@example.com" placeholder="Enter your email address">
+                <input type="email" id="email" name="email" value="{{ profile.email|default:'' }}" placeholder="Enter your email address">
             </div>
             <div class="form-group">
                 <label for="phone">Phone</label>
-                <input type="tel" id="phone" value="(123) 456-7890" placeholder="Enter phone number">
+                <input type="tel" id="phone" name="phone" value="{{ profile.phone|default:'' }}" placeholder="Enter phone number">
             </div>
             <div class="form-group wide-span">
                 <label for="address">Address / Location</label>
-                <input type="text" id="address" value="Bay Area, San Francisco, CA" placeholder="City, State, Country">
+                <input type="text" id="address" name="address" value="{{ profile.address|default:'' }}" placeholder="City, State, Country">
             </div>
         </div>
-
         <h2 class="card-title social-title">Social Profiles</h2>
         <div class="form-grid social-grid">
             <div class="form-group">
                 <label for="github">GitHub Profile</label>
-                <input type="url" id="github" value="https://github.com/johndoe" placeholder="https://github.com/yourusername">
+                <input type="url" id="github" name="github" value="https://github.com/johndoe" placeholder="https://github.com/yourusername">
             </div>
             <div class="form-group">
                 <label for="twitter">Twitter Handle</label>
-                <input type="text" id="twitter" value="@johndoe" placeholder="@yourhandle">
+                <input type="text" id="twitter" name="twitter" value="@johndoe" placeholder="@yourhandle">
             </div>
         </div>
-        
         <div class="form-actions">
             <button type="submit" class="btn btn-save">Save Changes</button>
             <a href="{% url 'profile' %}" class="btn btn-cancel">Cancel</a>

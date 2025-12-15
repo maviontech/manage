@@ -134,6 +134,9 @@ TENANT_DDL = [
       meta JSON DEFAULT NULL,
       created_by INT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      city VARCHAR(100),
+      dob DATE,
+      address TEXT,
       UNIQUE KEY uk_member_email (email)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
@@ -159,6 +162,9 @@ TENANT_DDL = [
       meta JSON DEFAULT NULL,
       created_by INT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      city VARCHAR(100),
+      dob DATE,
+      address TEXT,
       UNIQUE KEY uk_member_email (email)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
