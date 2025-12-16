@@ -306,7 +306,7 @@ def dashboard_view(request):
     tasks_pending = 0
     try:
         cur.execute(
-            "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND NOT (status = 'Closed')",
+            "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status NOT IN ('Closed', 'In Progress', 'Review', 'In-Progress')",
             (member_id,))
         tasks_pending = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
@@ -412,7 +412,7 @@ def dashboard_view(request):
     # My new tasks count: tasks assigned to user and status is 'New' (or similar)
     my_new_tasks_count = 0
     try:
-        cur.execute("SELECT COUNT(*) FROM TASKS")
+        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status IN ('New','Open')", (member_id,))
         my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         print("ERROR: my_new_tasks_count", e)
@@ -423,20 +423,23 @@ def dashboard_view(request):
     import json
     planned_tasks = []
     try:
-        # Show all tasks that are not completed or closed
-        # This includes overdue tasks and upcoming tasks
+        # Show tasks with due dates within the next 7 days (inclusive)
+        from datetime import date, timedelta
+        start_date = date.today()
+        end_date = start_date + timedelta(days=7)
         cur.execute("""
             SELECT id, title, status, due_date, created_at
             FROM tasks
             WHERE assigned_type='member' AND assigned_to=%s
-            AND status NOT IN ('Completed', 'Closed', 'completed', 'closed')
-            AND due_date IS NOT NULL
+              AND status NOT IN ('Completed', 'Closed', 'completed', 'closed')
+              AND due_date IS NOT NULL
+              AND DATE(due_date) BETWEEN %s AND %s
             ORDER BY due_date ASC
-            LIMIT 10
-        """, (member_id,))
+                        LIMIT 10
+                """, (member_id, start_date, end_date))
         rows = cur.fetchall() or []
-        print(f"DEBUG: planned_tasks found {len(rows)} pending tasks for member_id={member_id}")
-        
+        print(f"DEBUG: planned_tasks found {len(rows)} tasks for member_id={member_id} between {start_date} and {end_date}")
+
         for r in rows:
             if isinstance(r, dict):
                 planned_tasks.append({
@@ -542,6 +545,9 @@ def dashboard_view(request):
         'line_chart_labels': json.dumps(line_chart_labels),
         'line_chart_created': json.dumps(line_chart_created),
         'line_chart_completed': json.dumps(line_chart_completed),
+        'planned_start': start_date,
+        'planned_end': end_date,
+        'planned_limit': 10,
     }
 
     return render(request, 'core/dashboard.html', ctx)

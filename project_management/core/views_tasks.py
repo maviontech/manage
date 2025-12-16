@@ -154,35 +154,16 @@ def my_tasks_view(request):
     if not user_id:
         return redirect("login")
 
-    # Get all team IDs for this user
-    cur.execute("SELECT team_id FROM team_memberships WHERE member_id = %s", (user_id,))
-    team_rows = cur.fetchall()
-    team_ids = [row['team_id'] for row in team_rows] if team_rows else []
-
-    # Show tasks assigned directly to user, to any of their teams, or created by them
-    if team_ids:
-        format_strings = ','.join(['%s'] * len(team_ids))
-        query = f"""
-            SELECT id, title, status, priority, due_date, closure_date
-            FROM tasks
-            WHERE (assigned_type='member' AND assigned_to = %s)
-               OR (assigned_type='team' AND assigned_to IN ({format_strings}))
-               OR (created_by = %s)
-            ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
-                     due_date IS NULL, due_date ASC
-        """
-        params = [user_id] + team_ids + [user_id]
-        cur.execute(query, params)
-    else:
-        cur.execute(
-            """SELECT id, title, status, priority, due_date, closure_date
-               FROM tasks
-               WHERE assigned_type='member' AND assigned_to = %s
-                  OR created_by = %s
-               ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
-                        due_date IS NULL, due_date ASC""",
-            (user_id, user_id),
-        )
+    # Only show tasks explicitly assigned to this member (exclude team assignments and tasks
+    # simply created by the user). This ensures each user sees only their own assigned tasks.
+    cur.execute(
+        """SELECT id, title, status, priority, due_date, closure_date
+           FROM tasks
+           WHERE assigned_type='member' AND assigned_to = %s
+           ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
+                    due_date IS NULL, due_date ASC""",
+        (user_id,),
+    )
     tasks = cur.fetchall()
     cur.close()
 
