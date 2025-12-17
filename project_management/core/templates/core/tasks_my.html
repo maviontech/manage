@@ -4,485 +4,535 @@
 {% block content %}
 <div class="container-fluid py-4">
 
-
   <!-- HEADER -->
-    <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center">
-          <h4 class="fw-bold mb-1 text-gradient mb-0">
-            <i class="fa-solid fa-clipboard-list me-2"></i> My Tasks
-          </h4>
-          <a href="" onclick="window.location.reload(); return false;" class="btn btn-outline-gradient btn-lg px-3" title="Refresh" style="font-size:1rem;">
-            <i class="fa-solid fa-rotate-right me-2"></i> Refresh
-          </a>
-        </div>
-      <p class="text-muted small mb-3">View, track and manage your assigned work items.</p>
-      <div class="d-flex justify-content-center align-items-center gap-6" style="margin-bottom:1.5rem;">
-        <a href="{% url 'create_task' %}" class="btn btn-gradient btn-lg px-4" style="font-size:1rem; margin-right:8px;">
-          <i class="fa-solid fa-plus me-2"></i> New Task
+  <div class="page-header-card">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="page-title">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M9 11l3 3L22 4"></path>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+          My Tasks
+        </h1>
+        <p class="page-subtitle">View, track and manage your assigned work items</p>
+      </div>
+      <div class="header-actions">
+        <a href="" onclick="window.location.reload(); return false;" class="btn-modern btn-outline" title="Refresh">
+          <i class="fa-solid fa-rotate-right"></i>
+          Refresh
         </a>
-        <a href="{% url 'task_board' %}" class="btn btn-gradient btn-lg px-4" style="font-size:1rem;">
-          <i class="fa-solid fa-th-large me-4"></i> Board View
+        <a href="{% url 'create_task' %}" class="btn-modern btn-primary">
+          <i class="fa-solid fa-plus"></i>
+          New Task
+        </a>
+        <a href="{% url 'task_board' %}" class="btn-modern btn-primary">
+          <i class="fa-solid fa-th-large"></i>
+          Board View
         </a>
       </div>
     </div>
+  </div>
 
   <!-- TABLE CARD -->
-  <div class="card soft-card">
-    <div class="card-body p-0">
-      {% if tasks %}
-      <div class="table-responsive">
-        <table class="table align-middle mb-0 table-hover modern-table margin-center-auto">
-          <thead>
-            <thead>
-            <tr class="thead-row">
-              <th scope="col" style="min-width: 30px;">id</th>
-              <th scope="col" style="min-width: 400px;">Title</th>
-              <th scope="col" class="d-none d-lg-table-cell" style="width: 110px;">Priority</th>
-              <th scope="col" class="d-none d-lg-table-cell" style="width: 150px;">Status</th>
-              <th scope="col" class="text-center" style="width: 200px;">Due</th>
-              <th scope="col" class="text-center" style="width: 200px;">Closure Date</th>
-              <th scope="col" class="text-end" style="width: 225px;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for t in tasks %}
-            <tr>
-              <td class="text-muted small">#{{ t.id }}</td>
-              <td>
-                <div class="fw-semibold text-truncate">{{ t.title }}</div>
-              </td>
-              <td class="text-center">
-                  <span class="priority-badge priority-{{ t.priority|lower }}">
-                      {{ t.priority }}
-                  </span>
-              </td>
-
-              <td class="text-center">
-                  <span class="status-badge status-{{ t.status|slugify }}">
-                      {{ t.status }}
-                  </span>
-              </td>
-
-              <td>
-                {% if t.due_date %}
-                  <span class="{% if t.due_date < today %}text-danger fw-semibold{% else %}text-muted{% endif %}">
-                    <i class="fa-regular me-1"></i>{{ t.due_date }}
-                  </span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if t.closure_date %}
-                  <span class="text-success fw-semibold">
-                    <i class="fa-regular me-1"></i>
-                    {{ t.closure_date|date:"d M Y" }}
-                  </span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
+  <div class="tasks-table-card">
+    {% if tasks %}
+    <div class="table-responsive">
+      <table class="tasks-table">
+        <thead>
+          <tr>
+            <th style="width: 80px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+              ID
+            </th>
+            <th style="min-width: 350px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              Title
+            </th>
+            <th style="width: 130px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              Priority
+            </th>
+            <th style="width: 150px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              Status
+            </th>
+            <th style="width: 170px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              Due Date
+            </th>
+            <th style="width: 170px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              Closed
+            </th>
+            <th style="width: 180px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tasks %}
+          <tr>
+            <td>
+              <span class="task-id">#{{ t.id }}</span>
             </td>
-              <td class="text-end">
-                <div class="d-flex flex-row gap-2 align-items-center action-btn-row">
-                  <a href="{% url 'task_detail' t.id %}" class="btn btn-action-circle" title="View">
-                      <i class="fa-solid fa-eye"></i>
-                  </a>
-                  <a href="{% url 'edit_task' t.id %}" class="btn btn-action-circle" title="Edit">
-                      <i class="fa-solid fa-pen"></i>
-                  </a>
-                  <form method="post" action="{% url 'delete_task' t.id %}" style="display:inline;">
-                    {% csrf_token %}
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="p-5 text-center text-muted">
-        <i class="fa-regular fa-circle-check fa-2x mb-3"></i><br>
-        You have no assigned tasks.
-      </div>
-      {% endif %}
+            <td>
+              <div class="task-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="flex-shrink: 0;">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                {{ t.title }}
+              </div>
+            </td>
+            <td>
+              <span class="priority-badge priority-{{ t.priority|lower }}">
+                {% if t.priority == 'Critical' %}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12" stroke="white" stroke-width="2"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16" stroke="white" stroke-width="2"></line>
+                  </svg>
+                {% elif t.priority == 'High' %}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                    <polyline points="18 15 12 9 6 15"></polyline>
+                  </svg>
+                {% elif t.priority == 'Low' %}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                {% endif %}
+                {{ t.priority }}
+              </span>
+            </td>
+            <td>
+              <span class="status-badge status-{{ t.status|slugify }}">
+                {{ t.status }}
+              </span>
+            </td>
+            <td>
+              {% if t.due_date %}
+                <span class="date-badge {% if t.due_date < today %}date-overdue{% else %}date-normal{% endif %}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  {{ t.due_date|date:"M d, Y" }}
+                </span>
+              {% else %}
+                <span class="date-badge date-empty">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if t.closure_date %}
+                <span class="date-badge date-completed">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  {{ t.closure_date|date:"M d, Y" }}
+                </span>
+              {% else %}
+                <span class="date-badge date-empty">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="action-buttons">
+                <a href="{% url 'task_detail' t.id %}" class="btn-action btn-view" title="View Details">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </a>
+                <a href="{% url 'edit_task' t.id %}" class="btn-action btn-edit" title="Edit Task">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% else %}
+    <div class="empty-state">
+      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2">
+        <path d="M9 11l3 3L22 4"></path>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+      </svg>
+      <h3>All Caught Up!</h3>
+      <p>You have no assigned tasks at the moment</p>
+    </div>
+    {% endif %}
   </div>
 </div>
 
-<!-- appended CSS: keeps your original styles and forces the submenu to viewport-fixed right center -->
 <style>
-/* --- Professional My Tasks UI Enhancements --- */
-.soft-card {
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(37,99,235,0.08);
-  border: none;
-  background: #fff;
-  transition: box-shadow 0.22s;
+/* === Page Header === */
+.page-header-card {
+  background: linear-gradient(to right, #3b82f6 3px, transparent 3px);
+  background-color: #fff;
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
 }
-.soft-card:hover {
-  box-shadow: 0 16px 48px rgba(37,99,235,0.13);
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
 }
-.modern-table {
-  border-radius: 12px;
-  overflow: hidden;
-  background: #f9fafb;
+
+.header-left {
+  flex: 1;
 }
-.modern-table thead {
-  background: linear-gradient(90deg, #2563eb22, #38bdf822);
-  color: #2563eb;
+
+.page-title {
+  margin: 0;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 32px;
   font-weight: 700;
-  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+}
+
+.page-subtitle {
+  color: #64748b;
+  margin: 8px 0 0 0;
+  font-size: 15px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn-modern {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  color: white;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #e2e8f0;
+  color: #64748b;
+}
+
+.btn-outline:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+  color: #3b82f6;
+  transform: translateY(-2px);
+}
+
+/* === Tasks Table === */
+.tasks-table-card {
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+}
+
+.tasks-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tasks-table thead {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.tasks-table th {
+  padding: 18px 20px;
+  text-align: left;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.modern-table th, .modern-table td {
-  border-bottom: 1px solid #e5e7eb !important;
+
+.tasks-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
 }
-.modern-table tbody tr {
-  transition: box-shadow 0.18s, background 0.18s;
+
+.tasks-table tbody tr:hover {
+  background: linear-gradient(90deg, #f0f9ff, #ffffff);
+  transform: translateX(4px);
 }
-.modern-table tbody tr:hover {
-  background: #e0e7ff !important;
-  box-shadow: 0 2px 12px rgba(37,99,235,0.08);
+
+.tasks-table td {
+  padding: 20px;
+  vertical-align: middle;
+  font-size: 14px;
+  color: #334155;
 }
-.modern-table td {
-  vertical-align: middle !important;
-  text-align: center !important;
-  font-size: 1rem;
-  padding: 1.1rem 1.25rem !important;
-}
-.modern-table td .fw-semibold {
-  font-size: 1.08rem;
-  color: #1e293b;
+
+/* === Task ID === */
+.task-id {
+  display: inline-block;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  color: #0284c7;
+  border-radius: 8px;
   font-weight: 700;
-}
-.action-btn-row {
-  gap: 14px !important;
-}
-.btn-action-circle {
-  width: 42px;
-  height: 42px;
-  font-size: 22px;
-  background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
-  color: #fff;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(37,99,235,0.10);
-  border: none;
-  transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.btn-action-circle:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-  box-shadow: 0 4px 16px rgba(37,99,235,0.18);
-  transform: scale(1.08);
-}
-.btn-action-circle i {
-  margin: 0;
-}
-.priority-badge, .status-badge {
   font-size: 13px;
-  padding: 7px 18px;
-  border-radius: 20px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  box-shadow: 0 1px 4px rgba(37,99,235,0.04);
-}
-.priority-normal { background: #e0f7fa; color: #0f7a42; border-color: #b7e8c9; }
-.priority-high { background: #fff3e5; color: #c96a10; border-color: #ffd7b1; }
-.priority-low { background: #f2f2f2; color: #6e6e6e; border-color: #d9d9d9; }
-.priority-critical { background: #ffe5e5; color: #b42323; border-color: #f7b3b3; }
-.status-open { background: #e7f7ef; color: #0f7a42; border-color: #b7e8c9; }
-.status-in-progress { background: #fffbe6; color: #a67c00; border-color: #ffe699; }
-.status-blocked { background: #ffe5e5; color: #b42323; border-color: #f7b3b3; }
-.status-review { background: #f2f2f2; color: #6e6e6e; border-color: #d9d9d9; }
-.status-closed { background: #e8f0ff; color: #004085; border-color: #b3c7f7; }
-.status-unknown { background: #f0f0f0; color: #666; border-color: #dcdcdc; }
-.modern-table .thead-row th {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #2563eb;
-  background: #f3f4f6;
-  border-bottom: 2px solid #e5e7eb !important;
 }
 
-/* Base badge design */
+/* === Task Title === */
+.task-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 15px;
+}
 
-/* Base priority badge style */
+/* === Priority Badges === */
 .priority-badge {
-    display: inline-block;
-    padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 25px;
-    border: 1px solid transparent;
-    text-transform: capitalize;
-    letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
 }
 
-/* === PRIORITY COLORS === */
-
-
-/* NORMAL */
-.priority-normal {
-    background: #e7f7ef;   /* soft green background */
-    color: #0f7a42;        /* deep green text */
-    border-color: #b7e8c9; /* light green border */
-}
-
-/* HIGH */
-.priority-high {
-    background: #fff3e5;   /* light orange background */
-    color: #c96a10;        /* strong orange text */
-    border-color: #ffd7b1; /* warm orange border */
-}
-
-/* LOW */
 .priority-low {
-    background: #f2f2f2;   /* neutral gray background */
-    color: #6e6e6e;        /* medium gray text */
-    border-color: #d9d9d9; /* soft gray border */
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  color: #64748b;
 }
 
-/* CRITICAL */
+.priority-normal {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1e40af;
+}
+
+.priority-high {
+  background: linear-gradient(135deg, #fed7aa, #fdba74);
+  color: #9a3412;
+}
+
 .priority-critical {
-    background: #ffe5e5;   /* light red background */
-    color: #b42323;        /* strong red text */
-    border-color: #f7b3b3; /* soft red border */
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
+  color: #991b1b;
 }
 
-
-
+/* === Status Badges === */
 .status-badge {
-    display: inline-block;
-    padding: 6px 16px;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 25px;
-    border: 1px solid transparent;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
-/* === STATUS COLORS === */
-
-/* OPEN */
 .status-open {
-    background: #e7f7ef;   /* soft green background */
-    color: #0f7a42;        /* deep green text */
-    border-color: #b7e8c9; /* light green border */
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  color: #065f46;
 }
 
-/* IN PROGRESS */
 .status-in-progress {
-    background: #fffbe6;   /* pale yellow background */
-    color: #a67c00;        /* amber text */
-    border-color: #ffe699; /* warm yellow border */
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
 }
 
-/* BLOCKED */
 .status-blocked {
-    background: #ffe5e5;   /* light red background */
-    color: #b42323;        /* strong red text */
-    border-color: #f7b3b3; /* soft red border */
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
+  color: #991b1b;
 }
 
-/* REVIEW */
 .status-review {
-    background: #f2f2f2;   /* neutral gray background */
-    color: #6e6e6e;        /* medium gray text */
-    border-color: #d9d9d9; /* light gray border */
+  background: linear-gradient(135deg, #e9d5ff, #d8b4fe);
+  color: #6b21a8;
 }
 
-/* CLOSED */
 .status-closed {
-    background: #e8f0ff;   /* light blue background */
-    color: #004085;        /* navy text */
-    border-color: #b3c7f7; /* soft blue border */
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1e40af;
 }
 
-/* DEFAULT */
-.status-unknown {
-    background: #f0f0f0;
-    color: #666;
-    border-color: #dcdcdc;
+/* === Date Badges === */
+.date-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
+.date-normal {
+  background: #f8fafc;
+  color: #64748b;
+}
 
+.date-overdue {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  color: #991b1b;
+}
 
-/* preserve the original visual tokens */
-.text-gradient { background: linear-gradient(90deg,#0b57a4,#38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.btn-gradient { background: linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border:none; border-radius:8px; padding:8px 14px; }
-.btn-outline-gradient { border:1px solid #38bdf8; color:#0b57a4; border-radius:8px; padding:6px 12px; }
-.soft-card { border-radius:12px; box-shadow:0 6px 18px rgba(13,38,71,0.06); border:none; }
-.modern-table thead { background: linear-gradient(90deg, rgba(11,87,164,0.06), rgba(31,134,227,0.04)); color:#0b57a4; font-weight:600; }
-.priority.low { background:#adb5bd; color:#fff; } .priority.normal { background:#0dcaf0; color:#00303f; } .priority.high { background:#ffc107; color:#1f1f1f; } .priority.critical { background:#dc3545; color:#fff; }
-/* .status.closed { background:#198754; color:#fff; } .status.blocked { background:#212529; color:#fff; } .status.review { background:#ffc107; } .status.in-progress { background:#0b57a4; color:#fff; } */
-.action-btn { border-radius:8px; border:1px solid rgba(0,0,0,0.04); }
-/* Circle action buttons for table actions */
-.btn-action-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #15aaff;
-  color: #fff;
+.date-completed {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  color: #065f46;
+}
+
+.date-empty {
+  color: #cbd5e1;
+  background: transparent;
+}
+
+/* === Action Buttons === */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn-action {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
   border: none;
-  box-shadow: 0 2px 8px rgba(30,144,255,0.08);
-  transition: background 0.18s, box-shadow 0.18s;
-  margin-right: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
 }
-.btn-action-circle:last-child {
-  margin-right: 0;
+
+.btn-view {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
 }
-.btn-action-circle:hover {
-  background: #007bff;
-  box-shadow: 0 4px 16px rgba(30,144,255,0.12);
-  color: #fff;
+
+.btn-view:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
-.btn-action-circle.text-danger {
-  background: #dc3545;
+
+.btn-edit {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
 }
-.btn-action-circle.text-danger:hover {
-  background: #b02a37;
+
+.btn-edit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
 }
-.btn-action-circle i {
+
+/* === Empty State === */
+.empty-state {
+  text-align: center;
+  padding: 80px 40px;
+}
+
+.empty-state svg {
+  margin-bottom: 24px;
+}
+
+.empty-state h3 {
+  margin: 0 0 12px 0;
+  color: #1e293b;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.empty-state p {
+  color: #64748b;
+  font-size: 16px;
   margin: 0;
 }
 
-
-/* Force vertical centering inside all table cells */
-
-/* Also center inner divs */
-.modern-table td > div {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-/* center cell content horizontally */
-.modern-table td {
-    vertical-align: middle !important;
-    text-align: center !important;
-}
-
-/* center inner divs (like Title column) */
-.modern-table td > div {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start; /* horizontal center */
-    margin-left: 2rem; /* reset left margin */
-}
-
-
-
-/* ---------- FIX: Position submenu fixed to viewport right and vertically centered ---------- */
-
-/* make sure main container doesn't trap submenu positioning */
-.container-fluid { position: relative; }
-
-/* Position submenu fixed to viewport so it stays vertically centered regardless of page layout */
-.task-submenu {
-  position: fixed !important;
-  right: 48px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  z-index: 1200 !important;
-  pointer-events: auto !important;
-  width: 320px !important;
-  margin: 0 !important;
-}
-
-/* Force horizontal row, stop vertical stacking */
-.action-btn-row {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 10px !important;
-    align-items: center;
-    justify-content: flex-end;
-}
-
-/* Remove strange margin stacking */
-.btn-action-circle {
-    margin-right: 0 !important;
-}
-
-/* Delete button coloring */
-.btn-delete {
-    background: #dc3545 !important;
-    color: #fff !important;
-}
-.btn-delete:hover {
-    background: #b02a37 !important;
-}
-
-
-
-/* submenu card */
-.submenu-card {
-  border-radius: 12px;
-  padding: 10px;
-  color: #fff;
-  background: linear-gradient(180deg, rgba(11,87,164,0.96), rgba(31,134,227,0.92));
-  box-shadow: 0 20px 40px rgba(11,87,164,0.09), inset 0 1px 0 rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.04);
-  backdrop-filter: blur(6px);
-  overflow: visible;
-}
-
-/* compact list */
-.submenu-list-compact { display:flex; flex-direction:column; gap:10px; padding:6px; }
-
-/* items & hover glow */
-.submenu-item-compact {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px; border-radius:10px;
-  color:rgba(255,255,255,0.95); text-decoration:none; font-weight:600;
-  transition: box-shadow .18s ease, transform .12s ease, background-color .12s ease, color .12s;
-  border-left: 3px solid transparent; background: transparent; position:relative;
-}
-.submenu-item-compact:hover {
-  transform: translateY(-2px);
-  color: #fff !important;
-  background: rgba(255,255,255,0.16) !important;
-  box-shadow:
-    0 0 18px rgba(255,255,255,0.65),
-    0 0 36px rgba(255,255,255,0.35),
-    0 0 60px rgba(255,255,255,0.18);
-  border-left-color: rgba(255,255,255,0.95) !important;
-}
-.submenu-item-compact::after {
-  content: "";
-  position: absolute; left: -40%; top: -30%;
-  width: 140%; height: 80%;
-  background: linear-gradient(90deg, rgba(255,255,255,0.00), rgba(255,255,255,0.22), rgba(255,255,255,0.00));
-  transform: rotate(-20deg);
-  opacity: 0; transition: transform .45s ease, opacity .25s ease; pointer-events:none;
-}
-.submenu-item-compact:hover::after { transform: rotate(-18deg) translateX(-6%); opacity: 1; }
-
-.submenu-item-compact.active {
-  background: rgba(255,255,255,0.12) !important;
-  color: #ffffff !important;
-  border-left-color: #10b981 !important;
-  box-shadow: 0 0 18px rgba(16,185,129,0.18) !important;
-}
-.submenu-card, .submenu-item-compact { overflow: visible !important; }
-
-/* Responsive behavior: on narrow screens stack submenu below content */
+/* === Responsive === */
 @media (max-width: 992px) {
-  .task-submenu {
-    position: static !important;
-    transform: none !important;
-    width: 100% !important;
-    margin-top: 12px !important;
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
   }
-  .container-fluid { position: static; }
+  
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .btn-modern {
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .tasks-table {
+    font-size: 13px;
+  }
+  
+  .tasks-table th,
+  .tasks-table td {
+    padding: 12px 10px;
+  }
 }
-</style>
+
 {% endblock %}

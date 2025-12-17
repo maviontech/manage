@@ -203,7 +203,7 @@ body {
             </div>
             <div class="form-group">
                 <label for="dob">Date of Birth</label>
-                <input type="date" id="dob" name="dob" value="{{ profile.dob|default:'' }}">
+                <input type="date" id="dob" name="dob" value="{% if profile.dob %}{{ profile.dob|date:'Y-m-d' }}{% endif %}">
             </div>
             <div class="form-group wide-span">
                 <label for="address">Address / Location</label>

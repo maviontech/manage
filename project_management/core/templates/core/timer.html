@@ -884,15 +884,21 @@ async function loadCurrentTimer() {
   }
 }
 
-// Load user's tasks for the dropdown
+// Load user's tasks for the dropdown (only tasks assigned to current member)
 async function loadTasks() {
   try {
-    const response = await fetch('/tasks/api/board-data/');
+    const memberId = '{{ member_id|default:"" }}';
+    let url = '/tasks/api/board-data/';
+    if (memberId) {
+      url += '?assigned_to=' + encodeURIComponent(memberId);
+    }
+
+    const response = await fetch(url);
     const data = await response.json();
-    
+
     const select = document.getElementById('task-select');
     select.innerHTML = '<option value="">-- No Task --</option>';
-    
+
     if (data.tasks && data.tasks.length > 0) {
       data.tasks.forEach(task => {
         const option = document.createElement('option');

@@ -5,98 +5,208 @@
 {% block content %}
 <div class="mavion-container">
 
-  <div class="top-row d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-2">
-    <div class="title-and-search w-100">
-      <div class="d-flex align-items-start gap-3 flex-column flex-md-row">
-        <div class="title-block">
-          <h1 class="page-title">Project Directory</h1>
-          <p class="text-muted small mb-0">Manage and track projects across your organization</p>
-        </div>
-
-        <form method="get" class="search-form ms-md-4 mt-3 mt-md-0" role="search" aria-label="Search projects">
-          <div class="input-group search-group">
+  <div class="page-header-card">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="page-title">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 10px;">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Project Directory
+        </h1>
+        <p class="page-subtitle">Manage and track projects across your organization</p>
+      </div>
+      <div class="header-actions">
+        <form method="get" class="search-form" role="search" aria-label="Search projects">
+          <div class="search-group">
             <span class="input-icon" aria-hidden>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2"/>
                 <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </span>
-            <input id="projects-search" name="q" class="form-control search-input" placeholder="Search projects..." value="{{ q|default:'' }}" aria-label="Search projects">
-            <button class="btn btn-primary search-btn" type="submit">Search</button>
+            <input id="projects-search" name="q" class="search-input" placeholder="Search projects..." value="{{ q|default:'' }}" aria-label="Search projects">
           </div>
         </form>
+        <a href="{% url 'project_create' %}" class="btn-create">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+            <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+          </svg>
+          Create Project
+        </a>
       </div>
-    </div>
-
-    <div class="action-col ms-md-3 d-flex align-items-center">
-      <a href="{% url 'project_create' %}" class="btn btn-primary btn-create">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="me-1" aria-hidden>
-          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        Create New Project
-      </a>
     </div>
   </div>
 
-  <div class="card projects-card mb-4">
+  <div class="projects-card">
     <div class="table-responsive">
-      <table class="table projects-table mb-0">
+      <table class="projects-table">
         <thead>
-          <tr class="thead-row">
-            <th scope="col" style="width: 250px;">Project</th>
-            <th scope="col" style="width: auto; min-width: 400px;">Description</th>
-            <th scope="col" class="width:auto; min-width: 105px;" style="width: 105px;">Start</th>
-            <th scope="col" class="text-center" style="width: 115px;">Tentative End</th>
-            <th scope="col" class="text-center" style="width: 100px;">Status</th>
-            <th scope="col" class="width:auto; min-width: 105px;" style="width: 105px;">End Date</th>
-            <th scope="col" class="d-none d-md-table-cell" style="width: 140px;">Created By</th>
-            <th scope="col" class="text-center" style="width: 110px;">Actions</th>
+          <tr>
+            <th style="width: 15%;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Project
+            </th>
+            <th style="width: 20%;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              Description
+            </th>
+            <th style="width: 11%;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              Start
+            </th>
+            <th style="width: 11%;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              Target End
+            </th>
+            <th style="width: 10%;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              Status
+            </th>
+            <th style="width: 11%;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              Completed
+            </th>
+            <th style="width: 12%;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              Created By
+            </th>
+            <th style="width: 10%;">Actions</th>
           </tr>
         </thead>
 
         <tbody>
           {% for p in projects %}
           <tr class="project-row">
-            <td class="project-col" style="width: 200px;">
-              <div class="project-name">{{ p.name }}</div>
-              <div class="project-meta small text-muted">#{{ p.id }}</div>
+            <td>
+              <div class="project-name-card">
+                <div class="project-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="project-name">{{ p.name }}</div>
+                  <div class="project-meta">#{{ p.id }}</div>
+                </div>
+              </div>
             </td>
-
-            <td class="text-muted desc-col" style="width: auto; min-width: 200px;">{{ p.description|default:"—"|truncatechars:100 }}</td>
-            <td class="d-none d-lg-table-cell text-center" style="width: 105px; white-space: nowrap;">{{ p.start_date|date:"d M Y" }}</td>
-            <td class="d-none d-lg-table-cell text-center" style="width: 115px; white-space: nowrap;">{{ p.tentative_end_date|date:"d M Y" }}</td>
-
-            <td class="text-center" style="width: 100px;">
+            <td class="desc-col">{{ p.description|default:"—"|truncatechars:100 }}</td>
+            <td class="date-cell">
+              <span class="date-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                {{ p.start_date|date:"M d, Y" }}
+              </span>
+            </td>
+            <td class="date-cell">
+              <span class="date-badge date-target">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                {{ p.tentative_end_date|date:"M d, Y" }}
+              </span>
+            </td>
+            <td>
               {% if p.status == "Active" %}
-                <span class="badge status status-active">Active</span>
+                <span class="status-badge status-active">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                  </svg>
+                  Active
+                </span>
               {% elif p.status == "Completed" %}
-                <span class="badge status status-completed">Completed</span>
+                <span class="status-badge status-completed">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  Completed
+                </span>
               {% elif p.status == "On Hold" %}
-                <span class="badge status status-onhold">On Hold</span>
+                <span class="status-badge status-onhold">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <rect x="14" y="4" width="4" height="16"></rect>
+                  </svg>
+                  On Hold
+                </span>
               {% else %}
-                <span class="badge status status-unknown">{{ p.status|default:"—" }}</span>
+                <span class="status-badge status-unknown">{{ p.status|default:"—" }}</span>
               {% endif %}
             </td>
-            <td class="d-none d-lg-table-cell text-center" style="width: 105px; white-space: nowrap;">{{ p.end_date|date:"d M Y"|default:"—" }}</td>
-
-            <td class="d-none d-md-table-cell" style="width: 140px;">{{ p.created_by_name|default:"—" }}</td>
-            <td class="text-center actions-col" style="width: 110px;">
-              <div class="d-flex align-items-center justify-content-center" style="gap: 8px;">
-                <a href="{% url 'subprojects_list' p.id %}" class="btn btn-icon btn-primary" title="Subprojects" aria-label="Open subprojects">
-                  <i class="fas fa-plus"></i>
+            <td class="date-cell">
+              {% if p.end_date %}
+                <span class="date-badge date-completed">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  {{ p.end_date|date:"M d, Y" }}
+                </span>
+              {% else %}
+                <span class="date-badge date-empty">—</span>
+              {% endif %}
+            </td>
+            <td class="creator-cell">
+              <div class="creator-badge">
+                <div class="creator-avatar">{{ p.created_by_name|default:"?"|slice:":1"|upper }}</div>
+                <span>{{ p.created_by_name|default:"—" }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <a href="{% url 'subprojects_list' p.id %}" class="btn-action btn-view" title="View Subprojects" aria-label="Open subprojects">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
                 </a>
-                <a href="{% url 'project_edit' p.id %}" class="btn btn-icon btn-primary" title="Edit" aria-label="Edit project">
-                  <i class="fas fa-edit"></i>
+                <a href="{% url 'project_edit' p.id %}" class="btn-action btn-edit" title="Edit Project" aria-label="Edit project">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
                 </a>
               </div>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="7" class="text-center py-6 text-muted">
-              <div class="empty-emoji mb-2" aria-hidden>📁</div>
-              <div class="fw-semibold mb-1">No projects found</div>
-              <div class="small">Click <a href="{% url 'project_create' %}">Create New Project</a> to add your first project.</div>
+            <td colspan="8" class="empty-state-cell">
+              <div class="empty-state">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <h3>No Projects Found</h3>
+                <p>Get started by creating your first project</p>
+                <a href="{% url 'project_create' %}" class="btn-create-empty">Create New Project</a>
+              </div>
             </td>
           </tr>
           {% endfor %}
@@ -106,345 +216,682 @@
   </div>
 
   {% if pages|default:0 > 1 %}
-  <nav aria-label="Projects pagination" class="d-flex justify-content-center">
-    <ul class="pagination mavion-pagination">
-      {% if page > 1 %}
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page|add:-1 }}{% if q %}&q={{ q }}{% endif %}">Previous</a>
-      </li>
-      {% endif %}
+  <nav aria-label="Projects pagination" class="pagination-wrapper">
+    <div class="pagination-container">
+      <ul class="pagination mavion-pagination">
+        {% if page > 1 %}
+        <li class="page-item">
+          <a class="page-link page-link-nav" href="?page=1{% if q %}&q={{ q }}{% endif %}" title="First page">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 17L13 12L18 7M11 17L6 12L11 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </li>
+        <li class="page-item">
+          <a class="page-link page-link-nav" href="?page={{ page|add:-1 }}{% if q %}&q={{ q }}{% endif %}" title="Previous page">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="ms-1 d-none d-sm-inline">Previous</span>
+          </a>
+        </li>
+        {% endif %}
 
-      {% for i in page_range %}
-      <li class="page-item {% if i == page %}active{% endif %}">
-        <a class="page-link" href="?page={{ i }}{% if q %}&q={{ q }}{% endif %}">{{ i }}</a>
-      </li>
-      {% endfor %}
+        {% for i in page_range %}
+        <li class="page-item {% if i == page %}active{% endif %}">
+          <a class="page-link page-link-number" href="?page={{ i }}{% if q %}&q={{ q }}{% endif %}">{{ i }}</a>
+        </li>
+        {% endfor %}
 
-      {% if page < pages %}
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page|add:1 }}{% if q %}&q={{ q }}{% endif %}">Next</a>
-      </li>
-      {% endif %}
-    </ul>
+        {% if page < pages %}
+        <li class="page-item">
+          <a class="page-link page-link-nav" href="?page={{ page|add:1 }}{% if q %}&q={{ q }}{% endif %}" title="Next page">
+            <span class="me-1 d-none d-sm-inline">Next</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </li>
+        <li class="page-item">
+          <a class="page-link page-link-nav" href="?page={{ pages }}{% if q %}&q={{ q }}{% endif %}" title="Last page">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 17L11 12L6 7M13 17L18 12L13 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+      
+      <div class="pagination-info">
+        <span class="page-info-text">Page <strong>{{ page }}</strong> of <strong>{{ pages }}</strong></span>
+      </div>
+    </div>
   </nav>
   {% endif %}
 
 </div>
 
 <style>
-/* ---------- container ---------- */
+/* === Container === */
 .mavion-container {
-  max-width: 1400px;
+  max-width: 1800px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #e8f0fe 100%);
+  padding: 1.5rem 1.5rem;
   min-height: 100vh;
 }
 
-/* ---------- header ---------- */
-.page-title { 
-  font-size: 2rem; 
-  font-weight: 800; 
-  margin: 0; 
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+/* === Page Header === */
+.page-header-card {
+  background: linear-gradient(to right, #3b82f6 3px, transparent 3px);
+  background-color: #fff;
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.page-title {
+  margin: 0;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: -0.5px;
-}
-.title-and-search { display:flex; align-items:center; gap:1rem; }
-.text-muted { color: #64748b !important; font-weight: 500; }
-
-/* action column spacing */
-.action-col {
-  margin-bottom: 1rem;
+  font-size: 32px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
 }
 
-/* search group */
-.search-group { 
-  display:flex; 
-  border-radius:12px; 
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
-  overflow:hidden; 
-  border: 2px solid rgba(59, 130, 246, 0.1);
+.page-subtitle {
+  color: #64748b;
+  margin: 8px 0 0 0;
+  font-size: 15px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* === Search Form === */
+.search-form {
+  display: flex;
+}
+
+.search-group {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 16px;
   transition: all 0.3s ease;
+  min-width: 320px;
 }
+
 .search-group:focus-within {
-  border-color: rgba(59, 130, 246, 0.4);
-  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
-.input-icon { display:flex; align-items:center; padding:0 14px; color:#64748b; }
-.search-input { 
-  border:0; 
-  padding:.75rem 1rem; 
-  min-width:300px; 
-  outline:none; 
+
+.input-icon {
+  display: flex;
+  align-items: center;
+  color: #64748b;
+  margin-right: 8px;
+}
+
+.search-input {
+  border: 0;
+  padding: 12px 0;
   background: transparent;
-  font-size: 0.95rem;
+  outline: none;
+  font-size: 14px;
   font-weight: 500;
   color: #1e293b;
-}
-.search-input:focus { box-shadow:none; }
-.search-input::placeholder { color: #94a3b8; }
-.search-btn { 
-  border-radius:0 10px 10px 0; 
-  padding:0 1.5rem; 
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-.search-btn:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  transform: translateX(2px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  width: 100%;
 }
 
-/* create button */
-.btn-create { 
-  display:inline-flex; 
-  align-items:center; 
-  gap:.8rem; 
-  padding:1rem 2rem; 
-  border-radius:14px; 
-  font-weight: 700; 
-  font-size: 1.05rem;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.search-input:focus {
+  box-shadow: none;
+}
+
+.search-input::placeholder {
+  color: #94a3b8;
+}
+
+/* === Create Button === */
+.btn-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  background: linear-gradient(135deg, #10b981, #059669);
   border: none;
   color: white;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25), 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
   transition: all 0.3s ease;
-  letter-spacing: 0.3px;
+  text-decoration: none;
+  white-space: nowrap;
 }
+
 .btn-create:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.35), 0 4px 12px rgba(0, 0, 0, 0.15);
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #059669, #047857);
+  color: white;
 }
 
-/* ---------- card & table ---------- */
-.projects-card { 
-  border-radius:16px; 
-  background: #ffffff;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  padding:0; 
-  border:0;
+/* === Projects Table === */
+.projects-card {
+  background: #fff;
+  border-radius: 20px;
   overflow: hidden;
-  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
 }
+
 .table-responsive {
-  border-radius: 16px;
+  border-radius: 20px;
   overflow: hidden;
 }
-.projects-table { 
-  border-collapse:separate; 
-  border-spacing:0; 
-  width:100%; 
-  table-layout: fixed; 
-  margin: 0;
-}
-.thead-row th { 
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-  color: #ffffff;
-  font-size:.85rem; 
-  padding:18px 12px; 
-  border-bottom: none;
-  text-transform:uppercase; 
-  letter-spacing:0.8px; 
-  font-weight: 700;
-  vertical-align: middle;
-  position: relative;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-.thead-row th::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
 }
 
-/* table body rows */
-.project-row { 
-  transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-bottom:1px solid #e2e8f0;
-  position: relative;
+.projects-table thead {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
 }
-.project-row td { 
-  padding: 18px 12px; 
-  vertical-align: middle;
-  background: #ffffff;
-}
-.project-row:nth-child(odd) td { background:#ffffff; }
-.project-row:nth-child(even) td { background:#f8fafc; }
-.project-row:hover td { 
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  transform: scale(1.01);
-}
-.project-row:hover { 
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15), 0 2px 8px rgba(0, 0, 0, 0.05);
-  z-index: 10;
-  border-color: #3b82f6;
-}
-.projects-table tbody tr:last-child { border-bottom: none; }
-.projects-table tbody tr:last-child td { border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; }
 
-.project-col { width: 200px; }
-.project-name { 
-  font-weight:800; 
-  color:#0f172a; 
-  font-size:1.05rem; 
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis;
-  letter-spacing: -0.3px;
-  margin-bottom: 4px;
-}
-.project-meta { 
-  margin-top:.3rem; 
-  color:#94a3b8; 
-  font-size:0.8rem;
+.projects-table th {
+  padding: 16px 12px;
+  text-align: left;
+  color: white;
   font-weight: 600;
-  display: inline-block;
-  padding: 2px 8px;
-  background: #f1f5f9;
-  border-radius: 6px;
-}
-
-.desc-col { 
-  color: #475569; 
-  font-size:0.9rem; 
-  overflow: hidden; 
-  text-overflow: ellipsis;
-  line-height: 1.5;
-  font-weight: 500;
-}
-
-/* status badges */
-.badge.status { 
-  display:inline-block; 
-  padding:.4rem .9rem; 
-  border-radius:20px; 
-  font-weight:700; 
-  font-size:.75rem; 
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-.badge.status:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-.status-active { 
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
-  border: none;
-}
-.status-completed { 
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  border: none;
-}
-.status-onhold { 
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: #ffffff;
-  border: none;
-}
-.status-unknown { 
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-  color: #ffffff;
-  border: none;
+  white-space: nowrap;
 }
 
-/* action buttons */
-.btn-icon { 
-  display:inline-flex;
-  align-items:center; 
-  justify-content:center; 
-  width:40px; 
-  height:40px; 
-  border-radius:10px; 
-  border: none;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color:#ffffff; 
-  transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+.projects-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+}
+
+.projects-table tbody tr:hover {
+  background: linear-gradient(90deg, #f0f9ff, #ffffff);
+  transform: translateX(2px);
+}
+
+.projects-table td {
+  padding: 16px 12px;
+  vertical-align: middle;
+  font-size: 13px;
+  color: #334155;
+}
+
+/* === Project Name Card === */
+.project-name-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.project-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e40af;
+  flex-shrink: 0;
+}
+
+.project-name {
+  font-weight: 700;
+  color: #1e293b;
   font-size: 14px;
-}
-.btn-icon:hover { 
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  color:#ffffff; 
-  transform: translateY(-4px) rotate(5deg);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
-}
-.btn-icon:active {
-  transform: translateY(-2px) rotate(2deg);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* white-space: nowrap; */
 }
 
-/* empty state */
-.empty-emoji { font-size:48px; opacity: 0.6; }
-.projects-table tr td.py-6 { 
-  padding-top:6rem; 
-  padding-bottom:6rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #e8f0fe 100%);
+.project-meta {
+  display: inline-block;
+  padding: 2px 10px;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  color: #0284c7;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
 }
-.fw-semibold { font-weight: 700; color: #1e293b; font-size: 1.1rem; }
+
+/* === Description Column === */
+.desc-col {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 500;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* === Date Badges === */
+.date-cell {
+  text-align: center;
+}
+
+.date-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f8fafc;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.date-badge.date-target {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+}
+
+.date-badge.date-completed {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  color: #065f46;
+}
+
+.date-badge.date-empty {
+  background: transparent;
+  color: #cbd5e1;
+}
+
+/* === Status Badges === */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 16px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.status-completed {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.status-onhold {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.status-unknown {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: white;
+}
+
+/* === Creator Badge === */
+.creator-cell {
+  text-align: center;
+}
+
+.creator-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #f8fafc;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.creator-badge span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creator-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* === Action Buttons === */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.btn-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-view {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.btn-view:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.btn-edit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+/* === Empty State === */
+.empty-state-cell {
+  padding: 0 !important;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 40px;
+}
+
+.empty-state svg {
+  margin-bottom: 24px;
+}
+
+.empty-state h3 {
+  margin: 0 0 12px 0;
+  color: #1e293b;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.empty-state p {
+  color: #64748b;
+  font-size: 16px;
+  margin: 0 0 24px 0;
+}
+
+.btn-create-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-create-empty:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+  color: white;
+}
 
 /* pagination */
-.mavion-pagination .page-link { 
-  min-width:44px; 
-  border-radius:10px; 
-  margin:0 .15rem;
-  font-weight: 600;
-  border: 2px solid #e2e8f0;
-  color: #475569;
-  transition: all 0.3s ease;
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
 }
+
+.pagination-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  background: #ffffff;
+  padding: 1.5rem 2rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 2px solid rgba(59, 130, 246, 0.1);
+}
+
+.mavion-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mavion-pagination .page-item {
+  list-style: none;
+}
+
+.mavion-pagination .page-link { 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #475569;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.mavion-pagination .page-link-nav {
+  min-width: auto;
+  padding: 0.5rem 1rem;
+}
+
+.mavion-pagination .page-link-number {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
 .mavion-pagination .page-link:hover {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   border-color: #3b82f6;
   color: #1e40af;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.25), 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+.mavion-pagination .page-link:active {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
 .mavion-pagination .page-item.active .page-link { 
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color:#fff; 
+  color: #ffffff;
   border-color: #3b82f6;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  font-weight: 700;
 }
 
-/* Date columns styling */
-.d-none.d-lg-table-cell {
-  font-weight: 600;
-  color: #334155;
+.mavion-pagination .page-item.active .page-link:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(59, 130, 246, 0.45), 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.5rem;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+}
+
+.page-info-text {
   font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
-/* responsive behavior */
-@media (max-width:767px) {
-  .mavion-container { padding: 1.5rem 1rem; }
-  .page-title { font-size: 1.5rem; }
-  .top-row { flex-direction: column; align-items: center; }
-  .title-block { text-align: center; }
-  .search-form { width: 100%; margin-left: 0; }
-  .action-col { width:100%; justify-content:center; margin-top: 1rem; }
-  .search-input { min-width:unset; width: 100%; }
-  .search-group { width: 100%; }
-  .btn-create { width:100%; justify-content:center; }
-  .desc-col { display:block; }
-  .projects-table thead { display:none; }
-  .project-row { display:block; margin-bottom:16px; border-radius:12px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.08); border:1px solid #e2e8f0; }
-  .project-row td { display:block; padding:8px 0; background: transparent !important; }
-  .project-row:nth-child(even) { background: #fff; }
-  .actions-col { text-align:center; padding-top: 12px; }
-  .project-row:hover { transform: translateY(-2px); }
+.page-info-text strong {
+  color: #1e40af;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* === Responsive === */
+@media (max-width: 992px) {
+  .mavion-container {
+    padding: 1.5rem 1rem;
+  }
+  
+  .page-header-card {
+    padding: 24px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .search-form,
+  .search-group {
+    width: 100%;
+  }
+  
+  .btn-create {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .page-title {
+    font-size: 24px;
+  }
+  
+  .projects-table {
+    font-size: 13px;
+  }
+  
+  .projects-table th,
+  .projects-table td {
+    padding: 12px 10px;
+  }
+  
+  .project-name-card {
+    gap: 8px;
+  }
+  
+  .project-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  /* Pagination responsive */
+  .pagination-container {
+    padding: 1rem;
+    width: 100%;
+  }
+  
+  .mavion-pagination {
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .mavion-pagination .page-link {
+    min-width: 40px;
+    height: 40px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+  }
+  
+  .mavion-pagination .page-link-nav {
+    padding: 0.4rem 0.7rem;
+  }
+  
+  .pagination-info {
+    padding: 0.4rem 1rem;
+    width: 100%;
+  }
+  
+  .page-info-text {
+    font-size: 0.85rem;
+  }
 }
 </style>
 {% endblock %}

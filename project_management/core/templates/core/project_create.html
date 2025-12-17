@@ -2,168 +2,415 @@
 {% block title %}{% if editing %}Edit{% else %}Create{% endif %} Project{% endblock %}
 
 {% block content %}
-<div class="mavion-container">
-  <div class="form-shell card shadow-lg">
-    <div class="form-header d-flex justify-content-between align-items-start mb-4">
-      <div>
-        <h2 class="form-title mb-0">{% if editing %}Edit Project Details{% else %}Create New Project{% endif %}</h2>
-        <p class="form-sub text-muted small mb-0 margin-bottom-2px">Provide the essential project details. Fields marked * are required.</p>
-      </div>
-      <div class="text-end">
-        <a href="{% url 'projects_list' %}" class="btn btn-sm btn-outline-gradient" title="Back to projects">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="me-1" aria-hidden="true">
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Back to Projects
-        </a>
+<style>
+/* ========== MODERN PROJECT CREATE/EDIT UI ========== */
+.project-create-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #e8f0fe 100%);
+  min-height: 100vh;
+}
+
+/* Page Header */
+.project-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 2rem 2.5rem;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 2px solid rgba(59, 130, 246, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.project-header-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+}
+
+.project-header-content .header-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.project-header-content .header-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.project-header-actions .btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.project-header-actions .btn-back:hover {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #3b82f6;
+  color: #1e40af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+}
+
+/* Form Card */
+.project-form-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 2px solid rgba(59, 130, 246, 0.08);
+  padding: 2.5rem 3rem;
+}
+
+/* Form Layout */
+.form-section {
+  margin-bottom: 1.5rem;
+}
+
+.form-grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.form-grid-three {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.form-field-full {
+  grid-column: 1 / -1;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.project-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.1px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.project-label .required::after {
+  content: ' *';
+  color: #ef4444;
+  font-weight: 800;
+}
+
+.project-input,
+.project-select,
+.project-textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #1e293b;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.project-input:focus,
+.project-select:focus,
+.project-textarea:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15), 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  transform: translateY(-2px);
+}
+
+.project-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+}
+
+.field-hint {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.field-error {
+  font-size: 0.85rem;
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Action Buttons */
+.project-form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2.5rem 0 1rem 0;
+  padding-top: 2rem;
+  border-top: 2px solid #f1f5f9;
+}
+
+.btn-project {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.2px;
+  min-width: 180px;
+  cursor: pointer;
+}
+
+.btn-project.primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-project.primary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+}
+
+.btn-project.secondary {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #475569;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.btn-project.secondary:hover {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #3b82f6;
+  color: #1e40af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+  .project-create-page {
+    padding: 1.5rem 1rem;
+  }
+
+  .project-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.5rem;
+  }
+
+  .project-header-content .header-title {
+    font-size: 1.5rem;
+  }
+
+  .project-header-actions {
+    width: 100%;
+  }
+
+  .project-header-actions .btn-back {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .project-form-card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .form-grid-two,
+  .form-grid-three {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .project-form-actions {
+    flex-direction: column;
+  }
+
+  .btn-project {
+    width: 100%;
+  }
+}
+</style>
+
+<div class="project-create-page">
+  <!-- Page Header -->
+  <div class="project-header-card">
+    <div class="project-header-content">
+      <h2 class="header-title">
+        {% if editing %}
+          <i class="fa-solid fa-pen-to-square"></i> Edit Project
+        {% else %}
+          <i class="fa-solid fa-folder-plus"></i> Create New Project
+        {% endif %}
+      </h2>
+      <p class="header-subtitle">Provide the essential project details. Fields marked with * are required.</p>
+    </div>
+    <div class="project-header-actions">
+      <a href="{% url 'projects_list' %}" class="btn-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Back to Projects
+      </a>
     </div>
   </div>
 
-    <form method="post" novalidate class="project-form" autocomplete="off">
+  <!-- Form Card -->
+  <div class="project-form-card">
+    <form method="post" novalidate autocomplete="off">
       {% csrf_token %}
 
-      <div class="mb-4">
-        <label class="form-label required margin-top-10px">{{ form.name.label }}</label>
-        {{ form.name }}
-        {% if form.name.errors %}
-          <div class="form-text text-danger mt-1">{{ form.name.errors.as_text }}</div>
-        {% else %}
-          <div class="form-text text-muted mt-1">Give a short descriptive project name (e.g., Q3 Website Redesign).</div>
-        {% endif %}
-      </div>
-
-      <div class="mb-4">
-        <label class="form-label">{{ form.description.label }}</label>
-        {{ form.description }}
-        {% if form.description.errors %}
-          <div class="form-text text-danger mt-1">{{ form.description.errors.as_text }}</div>
-        {% else %}
-          <div class="form-text text-muted mt-1">Optional — a short summary about project scope (will be shown in lists).</div>
-        {% endif %}
-      </div>
-
-      <div class="row gx-4 gy-4 align-items-end">
-        <div class="col-md-4">
-          <label class="form-label">{{ form.start_date.label }}</label>
-          {{ form.start_date }}
-          {% if form.start_date.errors %}<div class="form-text text-danger mt-1">{{ form.start_date.errors.as_text }}</div>{% endif %}
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">{{ form.tentative_end_date.label }}</label>
-          {{ form.tentative_end_date }}
-          {% if form.tentative_end_date.errors %}<div class="form-text text-danger mt-1">{{ form.tentative_end_date.errors.as_text }}</div>{% endif %}
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label required">{{ form.status.label }}</label>
-          {{ form.status }}
-          {% if form.status.errors %}<div class="form-text text-danger mt-1">{{ form.status.errors.as_text }}</div>{% endif %}
+      <!-- Project Name (Full Width) -->
+      <div class="form-section">
+        <div class="form-field">
+          <label class="project-label">
+            <span class="required">{{ form.name.label }}</span>
+          </label>
+          <input type="text" name="{{ form.name.name }}" class="project-input" 
+                 value="{{ form.name.value|default:'' }}" 
+                 placeholder="e.g., Q3 Website Redesign" required>
+          {% if form.name.errors %}
+            <span class="field-error">{{ form.name.errors.as_text }}</span>
+          {% else %}
+            <span class="field-hint">Give a short descriptive project name</span>
+          {% endif %}
         </div>
       </div>
 
-      <div class="mb-4">
-        <label class="form-label margin-top-10px">{{ form.employee_id.label }}</label>
-        {{ form.employee_id }}
-        {% if form.employee_id.errors %}
-          <div class="form-text text-danger mt-1">{{ form.employee_id.errors.as_text }}</div>
-        {% else %}
-          <div class="form-text text-muted mt-1">Optional — assign an employee to this project.</div>
-        {% endif %}
+      <!-- Description (Full Width) -->
+      <div class="form-section">
+        <div class="form-field">
+          <label class="project-label">{{ form.description.label }}</label>
+          <textarea name="{{ form.description.name }}" class="project-textarea" 
+                    placeholder="Brief summary about project scope...">{{ form.description.value|default:'' }}</textarea>
+          {% if form.description.errors %}
+            <span class="field-error">{{ form.description.errors.as_text }}</span>
+          {% else %}
+            <span class="field-hint">Optional — a short summary about project scope (will be shown in lists)</span>
+          {% endif %}
+        </div>
       </div>
 
-      <!-- CENTERED BUTTONS WITH INCREASED GAP -->
-      <div class="mt-5 d-flex justify-content-center" style="gap: 2rem;">
-        <button type="submit" class="btn btn-primary btn-lg">
-          {% if editing %}Update Project{% else %}Create{% endif %}
+      <!-- Dates and Status (Three Columns) -->
+      <div class="form-section">
+        <div class="form-grid-three">
+          <!-- Start Date -->
+          <div class="form-field">
+            <label class="project-label">{{ form.start_date.label }}</label>
+            <input type="date" name="{{ form.start_date.name }}" class="project-input" 
+                   value="{{ form.start_date.value|default:'' }}">
+            {% if form.start_date.errors %}
+              <span class="field-error">{{ form.start_date.errors.as_text }}</span>
+            {% endif %}
+          </div>
+
+          <!-- End Date -->
+          <div class="form-field">
+            <label class="project-label">{{ form.tentative_end_date.label }}</label>
+            <input type="date" name="{{ form.tentative_end_date.name }}" class="project-input" 
+                   value="{{ form.tentative_end_date.value|default:'' }}">
+            {% if form.tentative_end_date.errors %}
+              <span class="field-error">{{ form.tentative_end_date.errors.as_text }}</span>
+            {% endif %}
+          </div>
+
+          <!-- Status -->
+          <div class="form-field">
+            <label class="project-label">
+              <span class="required">{{ form.status.label }}</span>
+            </label>
+            <select name="{{ form.status.name }}" class="project-select" required>
+              {% for value, label in form.status.field.choices %}
+                <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if form.status.errors %}
+              <span class="field-error">{{ form.status.errors.as_text }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Employee Assignment (Full Width) -->
+      <div class="form-section">
+        <div class="form-field">
+          <label class="project-label">{{ form.employee_id.label }}</label>
+          <select name="{{ form.employee_id.name }}" class="project-select">
+            <option value="">-- Select Employee (Optional) --</option>
+            {% for value, label in form.employee_id.field.choices %}
+              {% if value %}
+                <option value="{{ value }}" {% if form.employee_id.value == value %}selected{% endif %}>{{ label }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+          {% if form.employee_id.errors %}
+            <span class="field-error">{{ form.employee_id.errors.as_text }}</span>
+          {% else %}
+            <span class="field-hint">Optional — assign an employee to this project</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="project-form-actions">
+        <a href="{% url 'projects_list' %}" class="btn-project secondary">Cancel</a>
+        <button type="submit" class="btn-project primary">
+          {% if editing %}
+            <i class="fa-solid fa-check"></i> Update Project
+          {% else %}
+            <i class="fa-solid fa-check"></i> Create Project
+          {% endif %}
         </button>
-        <a href="{% url 'projects_list' %}" class="btn btn-outline-secondary btn-lg">
-          Cancel
-        </a>
       </div>
     </form>
   </div>
 </div>
 
-<style>
-/* Scoped styles for the create form page - safe to paste inline */
-/* container */
-.mavion-container { max-width:920px; margin: 0 auto; padding: 2rem 1.5rem; }
-
-/* form shell (centered card) */
-.form-shell { border-radius:14px; padding: 2rem; background: #fff; border: 1px solid rgba(16,24,40,0.06); box-shadow:0 10px 30px rgba(16,24,40,0.06); } /* Enhanced shadow and border */
-
-/* header */
-.form-title { font-size:1.5rem; font-weight:700; color:#0f1724; } /* Bolder title */
-.form-sub { margin-top:0.15rem; color:#6b7280; font-size:0.95rem; }
-
-/* back link */
-.back-link { color:#4b5563; font-size:0.9rem; text-decoration:none; display:inline-flex;  margin-top: 1rem; align-items:center; gap:4px; transition: color .15s ease; }
-.back-link:hover { color: #0d6efd; }
-
-/* form controls - enforce consistent sizing & visuals */
-.project-form .form-control,
-.project-form textarea,
-.project-form select,
-.project-form input[type="date"] {
-  width:100%;
-  padding: .75rem .95rem; /* Increased padding */
-  border-radius: 10px; /* Softer corners */
-  border: 1px solid rgba(16,24,40,0.1);
-  box-sizing: border-box;
-  font-size: 1rem;
-  color: #0f1724;
-  background: #f9fafb; /* Light background for input */
-  height: 48px; /* Standardized height */
-  transition: all .15s ease;
-}
-
-.project-form .form-control:focus,
-.project-form select:focus,
-.project-form input[type="date"]:focus,
-.project-form textarea:focus {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 3px rgba(13,110,253,0.15); /* Clearer focus ring */
-  background: #fff;
-}
-
-/* textarea height */
-.project-form textarea { min-height:140px; padding-top:.75rem; padding-bottom:.75rem; height:auto; }
-
-/* label */
-.project-form .form-label { display:block; font-weight:600; margin-top:1.5rem; margin-bottom: .5rem; color:#0f1724; font-size:.95rem; }
-.project-form .form-label.required:after { content: ' *'; color: #dc3545; } /* Required indicator */
-
-/* helper text and validation */
-.form-text { font-size:.875rem; color:#6b7280; }
-.form-text.text-danger { color:#b91c1c; font-weight: 500;}
-
-/* buttons */
-.btn-lg { padding:.7rem 1.4rem; border-radius:10px; font-size:1rem; font-weight: 600; min-width: 180px; text-align: center; }
-.btn-primary { background: #0d6efd; border-color: #0d6efd; box-shadow: 0 8px 28px rgba(13,110,253,0.12); color:#fff; }
-.btn-primary:hover { background: #0a58ca; border-color: #0a58ca; }
-.btn-outline-secondary { border: 1px solid rgba(16,24,40,0.15); color:#4b5563; background:transparent; }
-
-/* button container - centered with top margin */
-.project-form .mt-5 {
-  margin-top: 3rem !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-}
-
-/* grid spacing (makes fields aligned) */
-.row.gx-4 > [class*="col-"] { padding-left: .75rem; padding-right:.75rem; }
-
-/* small screens: stack fields */
-@media (max-width: 767px) {
-  .mavion-container { padding: 1rem; }
-  .form-shell { padding: 2rem 1rem; }
-  .project-form .form-control, .project-form select, .project-form input[type="date"] { height:46px; }
-  .btn-lg { width:100%; }
-  .mt-5 { margin-top: 1.5rem !important; }
-  .mt-5 .btn + .btn { margin-top:.5rem; }
-  .form-header { flex-direction: column; gap: 1rem; align-items: flex-start !important; }
-}
-</style>
 {% endblock %}

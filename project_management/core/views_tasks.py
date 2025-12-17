@@ -229,8 +229,9 @@ def board_data_api(request):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
-    # ---- Status Filter ----
+    # ---- Status Filter + Assigned Filter ----
     status = request.GET.get("status")
+    assigned_to = request.GET.get("assigned_to")
 
     # ---- Pagination ----
     try:
@@ -247,9 +248,18 @@ def board_data_api(request):
     count_sql = "SELECT COUNT(*) FROM tasks"
     count_params = []
 
+    # build optional filters
+    count_filters = []
     if status:
-        count_sql += " WHERE status = %s"
+        count_filters.append("status = %s")
         count_params.append(status)
+    if assigned_to:
+        # Only member-assigned tasks should be considered when filtering by assigned_to
+        count_filters.append("assigned_type = 'member' AND assigned_to = %s")
+        count_params.append(assigned_to)
+
+    if count_filters:
+        count_sql += " WHERE " + " AND ".join(count_filters)
 
     cur.execute(count_sql, tuple(count_params))
     row = cur.fetchone()
@@ -292,10 +302,18 @@ def board_data_api(request):
     """
 
     # ---- Apply Status Filter ----
+    # ---- Apply optional filters to main query ----
     params = []
+    main_filters = []
     if status:
-        sql += " WHERE t.status = %s"
+        main_filters.append("t.status = %s")
         params.append(status)
+    if assigned_to:
+        main_filters.append("t.assigned_type = 'member' AND t.assigned_to = %s")
+        params.append(assigned_to)
+
+    if main_filters:
+        sql += " WHERE " + " AND ".join(main_filters)
 
     # ---- ORDER + Pagination ----
     sql += " ORDER BY t.id DESC LIMIT %s OFFSET %s"

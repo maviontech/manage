@@ -5,95 +5,155 @@
 {% block extra_head %}
 <style>
   .employees-container {
-    background: #fff;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    background: linear-gradient(to right, #3b82f6 2px, transparent 2px);
+    background-color: #fff;
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
   }
   .employees-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 32px;
+    gap: 20px;
+  }
+  .employees-header h1 {
+    margin: 0;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 32px;
+    font-weight: 700;
+  }
+  .employees-header p {
+    color: #64748b;
+    margin-top: 4px;
+    font-size: 15px;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .search-box {
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    width: 300px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+  .search-box:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
   }
   .employees-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
+    border-radius: 12px;
+    overflow: hidden;
   }
   .employees-table thead {
-    background: linear-gradient(135deg, #0b57a4, #1f86e3);
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: white;
   }
   .employees-table th {
-    padding: 12px;
+    padding: 16px;
     text-align: left;
     font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   .employees-table td {
-    padding: 12px;
-    border-bottom: 1px solid #eef2f6;
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+    color: #334155;
+  }
+  .employees-table tbody tr {
+    transition: all 0.2s ease;
   }
   .employees-table tbody tr:hover {
-    background: #f8fafc;
+    background: linear-gradient(90deg, #f0f9ff, #ffffff);
+    transform: translateX(4px);
   }
   .btn-primary {
-    background: linear-gradient(135deg, #0b57a4, #1f86e3);
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: 12px 24px;
+    border-radius: 12px;
     cursor: pointer;
     font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
   .btn-primary:hover {
-    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
   }
   .btn-secondary {
-    background: #6c757d;
+    background: linear-gradient(135deg, #64748b, #475569);
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
     cursor: pointer;
     margin-right: 6px;
+    transition: all 0.2s ease;
+    font-size: 13px;
   }
   .btn-secondary:hover {
-    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
   }
   .btn-danger {
-    background: #dc3545;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
     cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
   }
   .btn-danger:hover {
-    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
   }
   .status-badge {
     display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
     font-weight: 600;
+    letter-spacing: 0.3px;
   }
   .status-active {
-    background: #d4edda;
-    color: #155724;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
   }
   .status-inactive {
-    background: #f8d7da;
-    color: #721c24;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
   }
   .status-onleave {
-    background: #fff3cd;
-    color: #856404;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
   }
   .status-terminated {
-    background: #d1ecf1;
-    color: #0c5460;
+    background: linear-gradient(135deg, #64748b, #475569);
+    color: white;
   }
   .modal {
     display: none;
@@ -103,74 +163,148 @@
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.5);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.15));
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   .modal-content {
     background-color: #fff;
-    margin: 5% auto;
-    padding: 30px;
-    border-radius: 12px;
-    width: 80%;
-    max-width: 700px;
-    max-height: 80vh;
-    overflow-y: auto;
+    margin: 3% auto;
+    padding: 0;
+    border-radius: 20px;
+    width: 85%;
+    max-width: 750px;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
   .modal-header {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    padding: 24px 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
   }
   .modal-header h2 {
     margin: 0;
-    color: #0b57a4;
+    color: white;
+    font-size: 24px;
+    font-weight: 700;
+  }
+  .modal-body {
+    padding: 32px;
+    max-height: calc(85vh - 160px);
+    overflow-y: auto;
   }
   .close {
-    font-size: 28px;
-    font-weight: bold;
-    color: #aaa;
+    font-size: 32px;
+    font-weight: 300;
+    color: white;
     cursor: pointer;
+    transition: transform 0.2s ease;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
   }
   .close:hover {
-    color: #000;
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
   }
   .form-group {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
   }
   .form-group label {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     font-weight: 600;
-    color: #333;
+    color: #1e293b;
+    font-size: 14px;
   }
   .form-group input,
   .form-group select,
   .form-group textarea {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
     font-size: 14px;
+    transition: all 0.3s ease;
+    font-family: inherit;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
   }
   .form-group textarea {
     resize: vertical;
-    min-height: 80px;
+    min-height: 100px;
   }
   .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 20px;
   }
-  .search-box {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    width: 300px;
+  .modal-footer {
+    padding: 20px 32px;
+    background: #f8fafc;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #e2e8f0;
   }
   .no-employees {
     text-align: center;
-    padding: 40px;
-    color: #666;
+    padding: 60px;
+  }
+  .no-employees i {
+    font-size: 64px;
+    color: #cbd5e1;
+    margin-bottom: 16px;
+  }
+  .no-employees p {
+    color: #64748b;
+    font-size: 16px;
+    margin: 0;
+  }
+  
+  @media (max-width: 900px) {
+    .employees-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .header-actions {
+      width: 100%;
+      flex-direction: column;
+    }
+    .search-box {
+      width: 100%;
+    }
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+    .employees-table {
+      font-size: 13px;
+    }
+    .employees-table th,
+    .employees-table td {
+      padding: 12px 8px;
+    }
   }
 </style>
 {% endblock %}
@@ -179,13 +313,22 @@
 <div class="employees-container">
   <div class="employees-header">
     <div>
-      <h1 style="margin:0;color:#0b57a4;">Employees</h1>
-      <p style="color:#666;margin-top:4px;">Manage employee records and information</p>
+      <h1>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px; color: #3b82f6;">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        Employees
+      </h1>
+      <p>Manage employee records and information</p>
     </div>
-    <div>
-      <input type="text" id="searchInput" class="search-box" placeholder="Search employees...">
+    <div class="header-actions">
+      <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search employees...">
       <button class="btn-primary" onclick="openAddModal()">
-        <i class="fa fa-plus"></i> Add Employee
+        <i class="fa fa-plus"></i>
+        Add Employee
       </button>
     </div>
   </div>
@@ -194,21 +337,65 @@
     <table class="employees-table" id="employeesTable">
       <thead>
         <tr>
-          <th>Employee Code</th>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Phone</th>
-          <th>Department</th>
-          <th>Designation</th>
-          <th>Status</th>
+          <th>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            Employee Code
+          </th>
+          <th>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Name
+          </th>
+          <th>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            Email
+          </th>
+          <th>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            Phone
+          </th>
+          <th>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            Department
+          </th>
+          <th>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            Designation
+          </th>
+          <th>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 6v6l4 2"></path>
+            </svg>
+            Status
+          </th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody id="employeesBody">
         <tr>
-          <td colspan="8" style="text-align:center;padding:40px;">
-            <i class="fa fa-spinner fa-spin" style="font-size:24px;color:#0b57a4;"></i>
-            <p style="margin-top:12px;color:#666;">Loading employees...</p>
+          <td colspan="8" style="text-align:center;padding:60px;">
+            <i class="fa fa-spinner fa-spin" style="font-size:32px;color:#3b82f6;"></i>
+            <p style="margin-top:16px;color:#64748b;font-size:15px;">Loading employees...</p>
           </td>
         </tr>
       </tbody>
@@ -220,117 +407,129 @@
 <div id="employeeModal" class="modal">
   <div class="modal-content">
     <div class="modal-header">
-      <h2 id="modalTitle">Add Employee</h2>
+      <h2 id="modalTitle">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        Add Employee
+      </h2>
       <span class="close" onclick="closeModal()">&times;</span>
     </div>
     <form id="employeeForm">
-      <input type="hidden" id="employeeId">
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label for="employeeCode">Employee Code <span style="color:red;">*</span></label>
-          <input type="text" id="employeeCode" required>
+      <div class="modal-body">
+        <input type="hidden" id="employeeId">
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="employeeCode">Employee Code <span style="color:#ef4444;">*</span></label>
+            <input type="text" id="employeeCode" required>
+          </div>
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="On Leave">On Leave</option>
+            </select>
+          </div>
         </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="firstName">First Name <span style="color:#ef4444;">*</span></label>
+            <input type="text" id="firstName" required>
+          </div>
+          <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <input type="text" id="lastName">
+          </div>
+        </div>
+
         <div class="form-group">
-          <label for="status">Status</label>
-          <select id="status">
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="On Leave">On Leave</option>
-          </select>
+          <label for="email">Email <span style="color:#ef4444;">*</span></label>
+          <input type="email" id="email" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone">
+          </div>
+          <div class="form-group">
+            <label for="dateOfJoining">Date of Joining</label>
+            <input type="date" id="dateOfJoining">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="department">Department</label>
+            <input type="text" id="department">
+          </div>
+          <div class="form-group">
+            <label for="designation">Designation</label>
+            <input type="text" id="designation">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="dateOfBirth">Date of Birth</label>
+            <input type="date" id="dateOfBirth">
+          </div>
+          <div class="form-group">
+            <label for="salary">Salary</label>
+            <input type="number" id="salary" step="0.01" min="0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="address">Address</label>
+          <textarea id="address" placeholder="Enter full address..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="city">City</label>
+            <input type="text" id="city">
+          </div>
+          <div class="form-group">
+            <label for="state">State</label>
+            <input type="text" id="state">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="country">Country</label>
+            <input type="text" id="country">
+          </div>
+          <div class="form-group">
+            <label for="postalCode">Postal Code</label>
+            <input type="text" id="postalCode">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="emergencyContactName">Emergency Contact Name</label>
+            <input type="text" id="emergencyContactName">
+          </div>
+          <div class="form-group">
+            <label for="emergencyContactPhone">Emergency Contact Phone</label>
+            <input type="tel" id="emergencyContactPhone">
+          </div>
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="firstName">First Name <span style="color:red;">*</span></label>
-          <input type="text" id="firstName" required>
-        </div>
-        <div class="form-group">
-          <label for="lastName">Last Name</label>
-          <input type="text" id="lastName">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="email">Email <span style="color:red;">*</span></label>
-        <input type="email" id="email" required>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="phone">Phone</label>
-          <input type="tel" id="phone">
-        </div>
-        <div class="form-group">
-          <label for="dateOfJoining">Date of Joining</label>
-          <input type="date" id="dateOfJoining">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="department">Department</label>
-          <input type="text" id="department">
-        </div>
-        <div class="form-group">
-          <label for="designation">Designation</label>
-          <input type="text" id="designation">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="dateOfBirth">Date of Birth</label>
-          <input type="date" id="dateOfBirth">
-        </div>
-        <div class="form-group">
-          <label for="salary">Salary</label>
-          <input type="number" id="salary" step="0.01" min="0">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="address">Address</label>
-        <textarea id="address"></textarea>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="city">City</label>
-          <input type="text" id="city">
-        </div>
-        <div class="form-group">
-          <label for="state">State</label>
-          <input type="text" id="state">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="country">Country</label>
-          <input type="text" id="country">
-        </div>
-        <div class="form-group">
-          <label for="postalCode">Postal Code</label>
-          <input type="text" id="postalCode">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="emergencyContactName">Emergency Contact Name</label>
-          <input type="text" id="emergencyContactName">
-        </div>
-        <div class="form-group">
-          <label for="emergencyContactPhone">Emergency Contact Phone</label>
-          <input type="tel" id="emergencyContactPhone">
-        </div>
-      </div>
-
-      <div style="margin-top:24px;text-align:right;">
-        <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn-primary">Save Employee</button>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal()">
+          <i class="fa fa-times"></i> Cancel
+        </button>
+        <button type="submit" class="btn-primary">
+          <i class="fa fa-save"></i> Save Employee
+        </button>
       </div>
     </form>
   </div>
@@ -375,7 +574,12 @@ function renderEmployees(employees) {
     tbody.innerHTML = `
       <tr>
         <td colspan="8" class="no-employees">
-          <i class="fa fa-users" style="font-size:48px;color:#ddd;"></i>
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
           <p>No employees found</p>
         </td>
       </tr>
@@ -387,18 +591,32 @@ function renderEmployees(employees) {
     const statusClass = emp.status.toLowerCase().replace(' ', '');
     return `
       <tr>
-        <td>${emp.employee_code}</td>
-        <td>${emp.full_name}</td>
-        <td>${emp.email}</td>
-        <td>${emp.phone || '-'}</td>
-        <td>${emp.department || '-'}</td>
-        <td>${emp.designation || '-'}</td>
-        <td><span class="status-badge status-${statusClass}">${emp.status}</span></td>
+        <td><strong style="color:#3b82f6;">${emp.employee_code}</strong></td>
         <td>
-          <button class="btn-secondary" onclick="editEmployee(${emp.id})" title="Edit">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:13px;">
+              ${emp.full_name.charAt(0).toUpperCase()}
+            </div>
+            <strong>${emp.full_name}</strong>
+          </div>
+        </td>
+        <td style="color:#64748b;">
+          <i class="fa fa-envelope" style="color:#3b82f6;margin-right:6px;"></i>
+          ${emp.email}
+        </td>
+        <td style="color:#64748b;">
+          ${emp.phone ? `<i class="fa fa-phone" style="color:#3b82f6;margin-right:6px;"></i>${emp.phone}` : '-'}
+        </td>
+        <td>
+          ${emp.department ? `<span style="background:#f0f9ff;color:#0284c7;border-radius:8px;font-size:13px;font-weight:600;">${emp.department}</span>` : '-'}
+        </td>
+        <td style="color:#64748b;">${emp.designation || '-'}</td>
+        <td><span class="status-badge status-${statusClass}">${emp.status}</span></td>
+        <td style="white-space:nowrap;">
+          <button class="btn-secondary" onclick="editEmployee(${emp.id})" title="Edit Employee">
             <i class="fa fa-edit"></i>
           </button>
-          <button class="btn-danger" onclick="deleteEmployee(${emp.id}, '${emp.full_name}')" title="Delete">
+          <button class="btn-danger" onclick="deleteEmployee(${emp.id}, '${emp.full_name}')" title="Delete Employee">
             <i class="fa fa-trash"></i>
           </button>
         </td>

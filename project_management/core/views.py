@@ -1857,7 +1857,10 @@ def timer_page(request):
     if not request.session.get('user'):
         return redirect('identify')
     
-    return render(request, 'core/timer.html', {'page': 'timer'})
+    return render(request, 'core/timer.html', {
+        'page': 'timer',
+        'member_id': request.session.get('member_id')
+    })
 
 
 def api_timer_start(request):

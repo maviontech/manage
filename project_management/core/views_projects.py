@@ -326,15 +326,39 @@ def subprojects_list(request, project_id):
         if not project:
             return HttpResponseBadRequest("Project not found")
 
-        cur.execute("SELECT * FROM subprojects WHERE project_id=%s ORDER BY created_at DESC", (project_id,))
+        # Search functionality
+        q = request.GET.get('q', '').strip()
+
+        if q:
+            search_pattern = f"%{q}%"
+            cur.execute("""
+                SELECT *
+                FROM subprojects
+                WHERE project_id = %s
+                AND (
+                    name LIKE %s
+                    OR description LIKE %s
+                )
+                ORDER BY created_at DESC
+            """, (project_id, search_pattern, search_pattern))
+        else:
+            cur.execute("""
+                SELECT *
+                FROM subprojects
+                WHERE project_id = %s
+                ORDER BY created_at DESC
+            """, (project_id,))
+
         subprojects = cur.fetchall()
+
     finally:
         cur.close()
         conn.close()
 
     return render(request, "core/subprojects_list.html", {
         "project": project,
-        "subprojects": subprojects
+        "subprojects": subprojects,
+        "q": q if q else ""
     })
 def subproject_create(request, project_id):
     conn, cur = get_tenant_conn_and_cursor(request)

@@ -2,245 +2,398 @@
 {% load static %}
 
 {% block content %}
-<div class="container py-5">
+<style>
+/* ========== MODERN CREATE TASK UI ========== */
+.create-task-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #e8f0fe 100%);
+  min-height: 100vh;
+}
 
-  <!-- GRID layout: left = form (flexible) + right = submenu (fixed width, centered) -->
-  <div class="one-col">
+/* Page Header */
+.page-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 2rem 2.5rem;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 2px solid rgba(59, 130, 246, 0.1);
+  position: relative;
+  overflow: hidden;
+}
 
+.page-header-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+}
 
-    <!-- LEFT: main form -->
-    <main class="page-main">
-      <div class="mx-auto">
-        <div class="card border-0 shadow-sm soft-card">
-          <div class="card-body p-5">
+.header-content .header-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-start" style="margin-bottom: 2rem;">
-              <div>
-                <h3 class="fw-bold mb-1 text-gradient"><i class="fa-solid fa-plus-circle me-2"></i> Create Task</h3>
-                <p class="text-muted small mb-0">Provide essential details below to create a new task for your project.</p>
-              </div>
-              <div class="text-end">
-                <a href="{% url 'task_board' %}" class="btn btn-sm btn-outline-gradient">
-                  <i class="fa-solid fa-arrow-left me-1"></i> Back to Board
-                </a>
-              </div>
-            </div>
+.header-content .header-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.5;
+}
 
-            <form method="post" id="createTaskForm" class="row gx-4" novalidate>
-              {% csrf_token %}
+.header-actions .btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
 
-              <div class="col-12">
-                <div class="form-grid">
-                  <div class="form-row">
-                    <label class="form-label">Task Title <span class="text-danger">*</span></label>
-                    <div class="form-control-wrap">
-                      <input name="title" type="text" class="form-control" placeholder="e.g. Implement user authentication" required>
-                      <div class="form-hint">Short, descriptive title</div>
-                    </div>
-                  </div>
+.header-actions .btn-back:hover {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #3b82f6;
+  color: #1e40af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+}
 
-                  <div class="form-row">
-                    <label class="form-label">Project</label>
-                    <div class="form-control-wrap">
-                      <select name="project_id" id="projectSelect" class="form-select">
-                        <option value="">-- Choose Project --</option>
-                        {% for p in projects %}
-                          <option value="{{ p.id }}">{{ p.name }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                  </div>
+/* Form Card */
+.form-main-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 2px solid rgba(59, 130, 246, 0.08);
+  padding: 2.5rem 3rem;
+}
 
-                  <div class="form-row">
-                    <label class="form-label">Subproject</label>
-                    <div class="form-control-wrap">
-                      <select name="subproject_id" id="subprojectSelect" class="form-select">
-                        <option value="">-- Optional Subproject --</option>
-                      </select>
-                    </div>
-                  </div>
+/* Form Layout */
+.form-section {
+  margin-bottom: 2rem;
+}
 
-                  <div class="form-row">
-                    <label class="form-label">Priority</label>
-                    <div class="form-control-wrap">
-                      <select name="priority" class="form-select">
-                        <option value="Low">Low</option>
-                        <option value="Normal" selected>Normal</option>
-                        <option value="High">High</option>
-                        <option value="Critical">Critical</option>
-                      </select>
-                    </div>
-                  </div>
+.form-grid-modern {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
 
-                  <div class="form-row">
-                    <label class="form-label">Due date</label>
-                    <div class="form-control-wrap">
-                      <input type="date" name="due_date" class="form-control">
-                    </div>
-                  </div>
+.form-field-full {
+  grid-column: 1 / -1;
+}
 
-                  <div class="form-row">
-                    <label class="form-label">Assign to</label>
-                    <div class="form-control-wrap">
-                      <select name="assigned_to" id="assignSelect" class="form-select">
-                        <option value="">Unassigned</option>
-                        <optgroup label="Members">
-                          {% for m in members %}
-                            <option value="member:{{ m.id }}">{{ m.first_name }} {{ m.last_name }} — {{ m.email }}</option>
-                          {% endfor %}
-                        </optgroup>
-                        <optgroup label="Teams">
-                          {% for t in teams %}
-                            <option value="team:{{ t.id }}">Team: {{ t.name }}</option>
-                          {% endfor %}
-                        </optgroup>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
 
-              <div class="col-12 mt-5 mb-4" style="display: flex; justify-content: center; align-items: center;">
-                <div style="display: flex; gap: 1rem;">
-                  <a href="{% url 'task_board' %}" class="btn btn-outline-gradient btn-lg" style="min-width: 160px; text-align: center;">Cancel</a>
-                  <button id="createBtn" type="submit" class="btn btn-gradient btn-lg" style="min-width: 160px; text-align: center;">
-                    <i class="fa-solid fa-check me-1"></i> Create Task
-                  </button>
-                </div>
-              </div>
+.field-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.1px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
 
-              <div class="col-12 mt-4">
-                <div class="card p-3 border-0" style="background:#fbfcfe; border-radius:12px;">
-                  <label class="form-label fw-semibold mb-2">Description (optional)</label>
-                  <textarea name="description" rows="6" class="form-control" placeholder="Add detailed notes, acceptance criteria, links, steps to reproduce..."></textarea>
-                  <div class="form-text mt-2">Optional — good place for acceptance criteria or reproduction steps.</div>
-                </div>
-              </div>
-            </form>
+.field-label .required {
+  color: #ef4444;
+  font-weight: 800;
+}
 
+.field-input,
+.field-select,
+.field-textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #1e293b;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.field-input:focus,
+.field-select:focus,
+.field-textarea:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15), 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  transform: translateY(-2px);
+}
+
+.field-hint {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Description Section */
+.description-section {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  border: 2px solid #e2e8f0;
+  margin-top: 2rem;
+}
+
+.description-section .field-label {
+  margin-bottom: 0.75rem;
+}
+
+.field-textarea {
+  resize: vertical;
+  min-height: 140px;
+  font-family: inherit;
+}
+
+/* Action Buttons */
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2.5rem 0 1.5rem 0;
+  padding-top: 2rem;
+  border-top: 2px solid #f1f5f9;
+}
+
+.btn-modern {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.2px;
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.btn-modern.primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-modern.primary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+}
+
+.btn-modern.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-modern.secondary {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #475569;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.btn-modern.secondary:hover {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #3b82f6;
+  color: #1e40af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+  .create-task-page {
+    padding: 1.5rem 1rem;
+  }
+
+  .page-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.5rem;
+  }
+
+  .header-content .header-title {
+    font-size: 1.5rem;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn-back {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .form-main-card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .form-grid-modern {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-modern {
+    width: 100%;
+  }
+
+  .description-section {
+    padding: 1.25rem;
+  }
+}
+</style>
+
+<div class="create-task-page">
+  <!-- Page Header -->
+  <div class="page-header-card">
+    <div class="header-content">
+      <h3 class="header-title"><i class="fa-solid fa-plus-circle"></i> Create Task</h3>
+      <p class="header-subtitle">Provide essential details below to create a new task for your project.</p>
+    </div>
+    <div class="header-actions">
+      <a href="{% url 'task_board' %}" class="btn-back">
+        <i class="fa-solid fa-arrow-left"></i> Back to Board
+      </a>
+    </div>
+  </div>
+
+  <!-- Form Card -->
+  <div class="form-main-card">
+    <form method="post" id="createTaskForm" novalidate>
+      {% csrf_token %}
+
+      <!-- Main Form Fields -->
+      <div class="form-section">
+        <div class="form-grid-modern">
+          <!-- Task Title (Full Width) -->
+          <div class="form-field form-field-full">
+            <label class="field-label">
+              Task Title <span class="required">*</span>
+            </label>
+            <input name="title" type="text" class="field-input" placeholder="e.g. Implement user authentication" required>
+            <span class="field-hint">Short, descriptive title for your task</span>
+          </div>
+
+          <!-- Project -->
+          <div class="form-field">
+            <label class="field-label">Project</label>
+            <select name="project_id" id="projectSelect" class="field-select">
+              <option value="">-- Choose Project --</option>
+              {% for p in projects %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Subproject -->
+          <div class="form-field">
+            <label class="field-label">Subproject (WBS)</label>
+            <select name="subproject_id" id="subprojectSelect" class="field-select">
+              <option value="">-- Optional Subproject --</option>
+            </select>
+          </div>
+
+          <!-- Priority -->
+          <div class="form-field">
+            <label class="field-label">Priority</label>
+            <select name="priority" class="field-select">
+              <option value="Low">Low</option>
+              <option value="Normal" selected>Normal</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+
+          <!-- Due Date -->
+          <div class="form-field">
+            <label class="field-label">Due Date</label>
+            <input type="date" name="due_date" class="field-input">
+          </div>
+
+          <!-- Assign To (Full Width) -->
+          <div class="form-field form-field-full">
+            <label class="field-label">Assign To</label>
+            <select name="assigned_to" id="assignSelect" class="field-select">
+              <option value="">Unassigned</option>
+              <optgroup label="Members">
+                {% for m in members %}
+                  <option value="member:{{ m.id }}">{{ m.first_name }} {{ m.last_name }} — {{ m.email }}</option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="Teams">
+                {% for t in teams %}
+                  <option value="team:{{ t.id }}">Team: {{ t.name }}</option>
+                {% endfor %}
+              </optgroup>
+            </select>
           </div>
         </div>
       </div>
-    </main>
 
+      <!-- Description Section -->
+      <div class="description-section">
+        <label class="field-label">Description (optional)</label>
+        <textarea name="description" rows="6" class="field-textarea" placeholder="Add detailed notes, acceptance criteria, links, steps to reproduce..."></textarea>
+        <span class="field-hint">Optional — good place for acceptance criteria or reproduction steps</span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="form-actions">
+        <a href="{% url 'task_board' %}" class="btn-modern secondary">Cancel</a>
+        <button id="createBtn" type="submit" class="btn-modern primary">
+          <i class="fa-solid fa-check"></i> Create Task
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
-<style>
-/* ---------- Strong grid & positioning override ---------- */
 
-/* Ensure this grid definition wins against other CSS */
-.two-col {
-  display: grid !important;
-  grid-template-columns: 1fr 320px !important; /* form | submenu */
-  gap: 28px !important;
-  align-items: center !important;
-  align-content: start !important;
-  margin-top: 6px !important;
-  min-height: calc(100vh - 120px) !important; /* adjust 120px to match your header */
-}
-
-/* Force the aside into the right column and center it */
-.two-col > .page-aside {
-  grid-column: 2 / 3 !important;
-  grid-row: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  align-self: center !important;
-  position: relative !important;
-  z-index: 10 !important;
-}
-
-/* Make sure main occupies first column */
-.two-col > .page-main {
-  grid-column: 1 / 2 !important;
-  grid-row: 1 !important;
-}
-
-/* Submenu card */
-.submenu-card {
-  width: 100% !important;
-  border-radius: 12px !important;
-  padding: 10px !important;
-  color: #fff !important;
-  background: linear-gradient(180deg, rgba(11,87,164,0.96), rgba(31,134,227,0.92)) !important;
-  box-shadow: 0 20px 40px rgba(11,87,164,0.09) !important;
-  border: 1px solid rgba(255,255,255,0.04) !important;
-  backdrop-filter: blur(6px) !important;
-  margin: 0 !important;
-}
-
-/* Compact submenu list */
-.submenu-list-compact { display:flex; flex-direction:column; gap:10px; padding:6px; }
-
-/* items */
-.submenu-item-compact {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px; border-radius:10px;
-  color:rgba(255,255,255,0.95); text-decoration:none; font-weight:600;
-  transition: box-shadow .18s ease, transform .12s ease, background-color .12s ease, color .12s;
-  border-left: 3px solid transparent; background: transparent; position:relative;
-}
-
-/* Hover: glowing white (strong) */
-.submenu-item-compact:hover {
-  transform: translateY(-2px);
-  color: #fff !important;
-  background: rgba(255,255,255,0.16) !important;
-  box-shadow:
-    0 0 18px rgba(255,255,255,0.65),
-    0 0 36px rgba(255,255,255,0.35),
-    0 0 60px rgba(255,255,255,0.18);
-  border-left-color: rgba(255,255,255,0.95) !important;
-}
-
-/* Shimmer */
-.submenu-item-compact::after {
-  content: "";
-  position: absolute;
-  left: -40%; top: -30%;
-  width: 140%; height: 80%;
-  background: linear-gradient(90deg, rgba(255,255,255,0.00), rgba(255,255,255,0.22), rgba(255,255,255,0.00));
-  transform: rotate(-20deg);
-  opacity: 0; transition: transform .45s ease, opacity .25s ease; pointer-events:none;
-}
-.submenu-item-compact:hover::after { transform: rotate(-18deg) translateX(-6%); opacity: 1; }
-
-/* active */
-.submenu-item-compact.active {
-  background: rgba(255,255,255,0.12) !important;
-  color: #ffffff !important;
-  border-left-color: #10b981 !important;
-  box-shadow: 0 0 18px rgba(16,185,129,0.18) !important;
-}
-
-/* Keep glow visible */
-.submenu-card, .submenu-item-compact { overflow: visible !important; }
-
-/* Form / buttons / inputs - keep original look */
-.soft-card { border-radius: 14px; box-shadow: 0 10px 30px rgba(13,38,71,0.06); background: #fff; }
-.form-grid { display:block; }
-.form-row { display:grid; grid-template-columns: 220px 1fr; gap: 12px 20px; align-items:start; margin-bottom:18px; }
-.form-label { font-weight:600; color:#0b57a4; font-size:0.95rem; padding-top:6px; }
-.form-control-wrap { display:flex; flex-direction:column; }
-.form-control, .form-select, textarea { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #dee2e6; transition:box-shadow .12s, border-color .12s; background:#fff; }
-.form-control:focus, .form-select:focus, textarea:focus { outline:none; border-color:#38bdf8; box-shadow:0 4px 14px rgba(56,189,248,0.08); }
-.form-hint { font-size:0.85rem; color:#6c757d; margin-top:6px; }
-.btn-gradient { background:linear-gradient(90deg,#0b57a4,#1f86e3,#38bdf8); color:#fff; border:none; border-radius:10px; padding:10px 18px; font-weight:600; }
-.btn-outline-gradient { background:#fff; color:#0b57a4; border:1px solid #38bdf8; border-radius:10px; padding:9px 16px; font-weight:600; }
-
-/* Responsive: stack on narrow screens */
-@media (max-width: 992px) {
-  .two-col { grid-template-columns: 1fr !important; align-items: stretch !important; gap: 16px !important; min-height: auto !important; }
-  .two-col > .page-aside { grid-column: 1 !important; justify-content: flex-start !important; padding-top: 6px !important; }
-  .submenu-card { width:100% !important; }
-  .form-row { grid-template-columns: 1fr !important; }
-  .form-label { padding-top:0 !important; }
-  .card-body { padding: 28px !important; }
-}
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
@@ -320,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   document.getElementById('createTaskForm')?.addEventListener('submit', function(){
     createBtn.disabled = true;
-    createBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Creating...';
+    createBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
   });
 });
 </script>
