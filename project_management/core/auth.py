@@ -4,6 +4,13 @@ import pymysql
 import logging
 import bcrypt
 from core.db_connector import get_connection_from_config
+# Try to use Django's check_password if available (helps support Django-formatted hashes)
+try:
+    from django.contrib.auth.hashers import check_password as django_check_password
+    HAS_DJANGO_HASHERS = True
+except Exception:
+    django_check_password = None
+    HAS_DJANGO_HASHERS = False
 logger = logging.getLogger(__name__)
 # MASTER DB connection config read from environment (or you can hardcode)
 MASTER_DB_CONFIG = {
@@ -128,8 +135,18 @@ def authenticate(email: str, password: str, tenant_ident: dict):
     cur.close()
     conn.close()
     if not row:
+        logger.debug("authenticate: no user found for email=%s", email)
+        print(f"auth: no user for {email}")
         return None
-    if not check_password(password, row['password_hash']):
+    stored_hash = row.get('password_hash') if isinstance(row, dict) else (row[3] if len(row) > 3 else None)
+    logger.debug("authenticate: user found email=%s stored_hash_prefix=%s", email, (stored_hash[:6] if isinstance(stored_hash, str) else 'none'))
+    print(f"auth: user found {email} hash_prefix={(stored_hash[:6] if isinstance(stored_hash, str) else 'none')}")
+    ok, needs_rehash = check_password(password, stored_hash)
+    logger.debug("authenticate: password check result ok=%s needs_rehash=%s", ok, needs_rehash)
+    print(f"auth: password check ok={ok} needs_rehash={needs_rehash}")
+    if not ok:
+        logger.info("authenticate failed for %s: invalid password", email)
+        print(f"auth: invalid password for {email}")
         return None
     return {
         'id': row['id'],

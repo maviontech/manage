@@ -81,6 +81,12 @@
       0%, 100% { box-shadow: 0 2px 8px rgba(37,99,235,0.08); transform: scale(1); }
       50% { box-shadow: 0 0 16px 2px #2563eb33; transform: scale(1.07); }
     }
+    /* Layout tweak: make only the right-side main area scrollable
+       without changing header or sidebar behavior. This keeps
+       the header and sidebar fixed while `.main` scrolls. */
+    .header { flex: 0 0 auto; }
+    .main { flex: 1 1 auto; overflow: auto; -webkit-overflow-scrolling: touch; }
+    html, body, #app { height: 100%; }
 </style>
 {% load static %}
 <!doctype html>

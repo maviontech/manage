@@ -67,7 +67,7 @@ def login_password_view(request):
         return render(request, 'core/login.html', {'email': email, 'error': 'Auth error: ' + str(e)})
 
     if not user:
-        return render(request, 'core/login.html', {'email': email, 'error': 'Invalid credentials'})
+        return render(request, 'core/login.html', {'email': email, 'error': 'Invalid password. Please try again.'})
 
     # ✅ Auth success — store user in session (keep what you already did)
     request.session['user'] = user

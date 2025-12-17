@@ -668,6 +668,72 @@
   border-color: var(--gray-300);
 }
 
+.pagination-container {
+  padding: 20px 24px;
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: var(--gray-600);
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 36px;
+  text-align: center;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--gray-50);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-btn.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.pagination-ellipsis {
+  padding: 8px 4px;
+  color: var(--gray-400);
+}
+
+.pagination-select {
+  padding: 6px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--gray-700);
+  cursor: pointer;
+}
+
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -687,6 +753,16 @@
   .projects-table {
     display: block;
     overflow-x: auto;
+  }
+  
+  .pagination-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
 </style>
@@ -1178,6 +1254,62 @@ function filterAllTeams() {
       </tbody>
     </table>
     {% endif %}
+    
+    <!-- Pagination Controls for Projects -->
+    <div class="pagination-container" id="projectsPagination" style="display: none;">
+      <div class="pagination-info">
+        Showing <span id="projectsShowingStart">1</span> to <span id="projectsShowingEnd">10</span> of <span id="projectsTotal">0</span> projects
+      </div>
+      <div class="pagination-controls">
+        <button class="pagination-btn" id="projectsFirstPage" onclick="paginateProjects('first')">
+          <i class="fa fa-angle-double-left"></i>
+        </button>
+        <button class="pagination-btn" id="projectsPrevPage" onclick="paginateProjects('prev')">
+          <i class="fa fa-angle-left"></i> Prev
+        </button>
+        <div id="projectsPageNumbers" style="display: flex; gap: 8px;"></div>
+        <button class="pagination-btn" id="projectsNextPage" onclick="paginateProjects('next')">
+          Next <i class="fa fa-angle-right"></i>
+        </button>
+        <button class="pagination-btn" id="projectsLastPage" onclick="paginateProjects('last')">
+          <i class="fa fa-angle-double-right"></i>
+        </button>
+        <select class="pagination-select" id="projectsPerPage" onchange="changeProjectsPerPage()">
+          <option value="10">10 per page</option>
+          <option value="25">25 per page</option>
+          <option value="50">50 per page</option>
+          <option value="100">100 per page</option>
+        </select>
+      </div>
+    </div>
+    
+    <!-- Pagination Controls for Tasks -->
+    <div class="pagination-container" id="tasksPagination" style="display: none;">
+      <div class="pagination-info">
+        Showing <span id="tasksShowingStart">1</span> to <span id="tasksShowingEnd">10</span> of <span id="tasksTotal">0</span> tasks
+      </div>
+      <div class="pagination-controls">
+        <button class="pagination-btn" id="tasksFirstPage" onclick="paginateTasks('first')">
+          <i class="fa fa-angle-double-left"></i>
+        </button>
+        <button class="pagination-btn" id="tasksPrevPage" onclick="paginateTasks('prev')">
+          <i class="fa fa-angle-left"></i> Prev
+        </button>
+        <div id="tasksPageNumbers" style="display: flex; gap: 8px;"></div>
+        <button class="pagination-btn" id="tasksNextPage" onclick="paginateTasks('next')">
+          Next <i class="fa fa-angle-right"></i>
+        </button>
+        <button class="pagination-btn" id="tasksLastPage" onclick="paginateTasks('last')">
+          <i class="fa fa-angle-double-right"></i>
+        </button>
+        <select class="pagination-select" id="tasksPerPage" onchange="changeTasksPerPage()">
+          <option value="10">10 per page</option>
+          <option value="25">25 per page</option>
+          <option value="50">50 per page</option>
+          <option value="100">100 per page</option>
+        </select>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -1187,9 +1319,18 @@ function filterAllTeams() {
 // Chart instances
 let statusChart, tasksChart, employeeChart;
 
+// Pagination state
+let projectsCurrentPage = 1;
+let projectsPerPage = 10;
+let projectsAllRows = [];
+let tasksCurrentPage = 1;
+let tasksPerPage = 10;
+let tasksAllRows = [];
+
 // Initialize charts on page load
 document.addEventListener('DOMContentLoaded', function() {
   initializeCharts();
+  initializePagination();
   // Team/Member Toggle Logic
   const teamToggle = document.getElementById('teamToggle');
   const memberToggle = document.getElementById('memberToggle');
@@ -1247,33 +1388,37 @@ function switchViewMode() {
   const projectsTable = document.getElementById('projectsTable');
   const tasksTable = document.getElementById('tasksTable');
   const searchInput = document.getElementById('searchInput');
+  const projectsPagination = document.getElementById('projectsPagination');
+  const tasksPagination = document.getElementById('tasksPagination');
   
   if (selector.value === 'tasks') {
     // Show tasks table, hide projects table
     if (projectsTable) projectsTable.style.display = 'none';
     if (tasksTable) tasksTable.style.display = 'table';
+    if (projectsPagination) projectsPagination.style.display = 'none';
+    if (tasksPagination) tasksPagination.style.display = 'flex';
     viewTitle.textContent = 'Task Details';
     searchInput.placeholder = 'Search tasks...';
+    
+    // Re-capture task rows and render pagination
+    tasksAllRows = Array.from(tasksTable.querySelectorAll('tbody tr'));
+    tasksCurrentPage = 1;
+    renderTasksPagination();
   } else {
     // Show projects table, hide tasks table
     if (projectsTable) projectsTable.style.display = 'table';
     if (tasksTable) tasksTable.style.display = 'none';
+    if (projectsPagination) projectsPagination.style.display = 'flex';
+    if (tasksPagination) tasksPagination.style.display = 'none';
     viewTitle.textContent = 'Project Details';
     searchInput.placeholder = 'Search projects...';
+    
+    // Re-render projects pagination
+    renderProjectsPagination();
   }
   
   // Clear search when switching views
   searchInput.value = '';
-  
-  // Reset any active filters
-  const rows = (selector.value === 'tasks' ? tasksTable : projectsTable)?.querySelectorAll('tbody tr');
-  if (rows) {
-    rows.forEach(row => {
-      if (!row.classList.contains('no-results-row')) {
-        row.style.display = '';
-      }
-    });
-  }
 }
 
 function initializeCharts() {
@@ -1785,6 +1930,194 @@ function closeTeamMembersModal() {
   if (modal) {
     modal.remove();
   }
+}
+
+// Pagination Functions
+function initializePagination() {
+  const projectsTable = document.getElementById('projectsTable');
+  const tasksTable = document.getElementById('tasksTable');
+  
+  if (projectsTable) {
+    projectsAllRows = Array.from(projectsTable.querySelectorAll('tbody tr'));
+    if (projectsAllRows.length > 0) {
+      document.getElementById('projectsPagination').style.display = 'flex';
+      renderProjectsPagination();
+    }
+  }
+  
+  if (tasksTable) {
+    tasksAllRows = Array.from(tasksTable.querySelectorAll('tbody tr'));
+    if (tasksAllRows.length > 0) {
+      renderTasksPagination();
+    }
+  }
+}
+
+function renderProjectsPagination() {
+  const totalRows = projectsAllRows.length;
+  const totalPages = Math.ceil(totalRows / projectsPerPage);
+  const startIndex = (projectsCurrentPage - 1) * projectsPerPage;
+  const endIndex = Math.min(startIndex + projectsPerPage, totalRows);
+  
+  // Hide all rows first
+  projectsAllRows.forEach(row => row.style.display = 'none');
+  
+  // Show only current page rows
+  for (let i = startIndex; i < endIndex; i++) {
+    projectsAllRows[i].style.display = '';
+  }
+  
+  // Update pagination info
+  document.getElementById('projectsShowingStart').textContent = totalRows > 0 ? startIndex + 1 : 0;
+  document.getElementById('projectsShowingEnd').textContent = endIndex;
+  document.getElementById('projectsTotal').textContent = totalRows;
+  
+  // Update page buttons
+  document.getElementById('projectsFirstPage').disabled = projectsCurrentPage === 1;
+  document.getElementById('projectsPrevPage').disabled = projectsCurrentPage === 1;
+  document.getElementById('projectsNextPage').disabled = projectsCurrentPage === totalPages;
+  document.getElementById('projectsLastPage').disabled = projectsCurrentPage === totalPages;
+  
+  // Render page numbers
+  renderPageNumbers('projects', projectsCurrentPage, totalPages);
+}
+
+function renderTasksPagination() {
+  const totalRows = tasksAllRows.length;
+  const totalPages = Math.ceil(totalRows / tasksPerPage);
+  const startIndex = (tasksCurrentPage - 1) * tasksPerPage;
+  const endIndex = Math.min(startIndex + tasksPerPage, totalRows);
+  
+  // Hide all rows first
+  tasksAllRows.forEach(row => row.style.display = 'none');
+  
+  // Show only current page rows
+  for (let i = startIndex; i < endIndex; i++) {
+    tasksAllRows[i].style.display = '';
+  }
+  
+  // Update pagination info
+  document.getElementById('tasksShowingStart').textContent = totalRows > 0 ? startIndex + 1 : 0;
+  document.getElementById('tasksShowingEnd').textContent = endIndex;
+  document.getElementById('tasksTotal').textContent = totalRows;
+  
+  // Update page buttons
+  document.getElementById('tasksFirstPage').disabled = tasksCurrentPage === 1;
+  document.getElementById('tasksPrevPage').disabled = tasksCurrentPage === 1;
+  document.getElementById('tasksNextPage').disabled = tasksCurrentPage === totalPages;
+  document.getElementById('tasksLastPage').disabled = tasksCurrentPage === totalPages;
+  
+  // Render page numbers
+  renderPageNumbers('tasks', tasksCurrentPage, totalPages);
+}
+
+function renderPageNumbers(type, currentPage, totalPages) {
+  const container = document.getElementById(type + 'PageNumbers');
+  container.innerHTML = '';
+  
+  if (totalPages <= 7) {
+    // Show all pages if 7 or fewer
+    for (let i = 1; i <= totalPages; i++) {
+      container.appendChild(createPageButton(type, i, currentPage));
+    }
+  } else {
+    // Show first, last, current and nearby pages with ellipsis
+    container.appendChild(createPageButton(type, 1, currentPage));
+    
+    if (currentPage > 3) {
+      container.appendChild(createEllipsis());
+    }
+    
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    
+    for (let i = start; i <= end; i++) {
+      container.appendChild(createPageButton(type, i, currentPage));
+    }
+    
+    if (currentPage < totalPages - 2) {
+      container.appendChild(createEllipsis());
+    }
+    
+    container.appendChild(createPageButton(type, totalPages, currentPage));
+  }
+}
+
+function createPageButton(type, pageNum, currentPage) {
+  const btn = document.createElement('button');
+  btn.className = 'pagination-btn' + (pageNum === currentPage ? ' active' : '');
+  btn.textContent = pageNum;
+  btn.onclick = () => {
+    if (type === 'projects') {
+      projectsCurrentPage = pageNum;
+      renderProjectsPagination();
+    } else {
+      tasksCurrentPage = pageNum;
+      renderTasksPagination();
+    }
+  };
+  return btn;
+}
+
+function createEllipsis() {
+  const span = document.createElement('span');
+  span.className = 'pagination-ellipsis';
+  span.textContent = '...';
+  return span;
+}
+
+function paginateProjects(action) {
+  const totalPages = Math.ceil(projectsAllRows.length / projectsPerPage);
+  
+  switch(action) {
+    case 'first':
+      projectsCurrentPage = 1;
+      break;
+    case 'prev':
+      projectsCurrentPage = Math.max(1, projectsCurrentPage - 1);
+      break;
+    case 'next':
+      projectsCurrentPage = Math.min(totalPages, projectsCurrentPage + 1);
+      break;
+    case 'last':
+      projectsCurrentPage = totalPages;
+      break;
+  }
+  
+  renderProjectsPagination();
+}
+
+function paginateTasks(action) {
+  const totalPages = Math.ceil(tasksAllRows.length / tasksPerPage);
+  
+  switch(action) {
+    case 'first':
+      tasksCurrentPage = 1;
+      break;
+    case 'prev':
+      tasksCurrentPage = Math.max(1, tasksCurrentPage - 1);
+      break;
+    case 'next':
+      tasksCurrentPage = Math.min(totalPages, tasksCurrentPage + 1);
+      break;
+    case 'last':
+      tasksCurrentPage = totalPages;
+      break;
+  }
+  
+  renderTasksPagination();
+}
+
+function changeProjectsPerPage() {
+  projectsPerPage = parseInt(document.getElementById('projectsPerPage').value);
+  projectsCurrentPage = 1;
+  renderProjectsPagination();
+}
+
+function changeTasksPerPage() {
+  tasksPerPage = parseInt(document.getElementById('tasksPerPage').value);
+  tasksCurrentPage = 1;
+  renderTasksPagination();
 }
 </script>
 {% endblock %}

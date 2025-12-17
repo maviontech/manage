@@ -9,155 +9,105 @@
 
   <style>
     :root{
-      --bg:#f4f7fb;
+      --bg:#e5e9f2;
       --card:#ffffff;
-      --primary:#0b57a4;
-      --accent:#1f86e3;
-      --muted:#6b7280;
+      --primary:#4f5b93;
+      --accent:#6b7db6;
+      --muted:#8896ab;
       --danger:#dc2626;
-      --radius:12px;
-      --shadow: 0 6px 18px rgba(13, 38, 63, 0.08);
+      --radius:20px;
+      --shadow: 0 20px 60px rgba(79,91,147,0.12);
       font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
     *{box-sizing:border-box}
     body{
       margin:0;
-      background:linear-gradient(180deg, #eef6ff 0%, var(--bg) 100%);
+      background: linear-gradient(135deg, #e0e5ec 0%, #dfe4eb 100%);
       min-height:100vh;
       display:flex;
       align-items:center;
       justify-content:center;
       padding:28px;
-      color:#0f172a;
+      color:#3d4f65;
     }
 
     .card{
       width:100%;
-      max-width:520px;
-      background:var(--card);
+      max-width:480px;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(14px);
       border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      padding:28px;
-      border:1px solid rgba(15,23,42,0.04);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.9);
+      padding:40px 36px;
+      border:1px solid rgba(255,255,255,0.6);
     }
 
     .brand{
-      display:flex;
-      gap:12px;
-      align-items:center;
-      margin-bottom:14px;
+      text-align:center;
+      margin-bottom:22px;
     }
-    .logo {
-      width:48px;
-      height:48px;
-      border-radius:10px;
-      background:linear-gradient(135deg,var(--primary),var(--accent));
+    .logo{
+      width:72px;
+      height:72px;
+      border-radius:50%;
+      margin:0 auto 12px;
       display:flex;
       align-items:center;
       justify-content:center;
-      color:white;
-      font-weight:700;
-      font-size:18px;
-      box-shadow: 0 6px 14px rgba(15,23,42,0.06);
+      background: linear-gradient(135deg,#eef1f5 0%, #e6ebf3 100%);
+      box-shadow: -8px -8px 20px rgba(255,255,255,0.8), 8px 8px 20px rgba(163,177,198,0.35), inset 2px 2px 4px rgba(255,255,255,0.5);
     }
-    h1{ margin:0; font-size:18px; }
-    .sub { margin:6px 0 0; color:var(--muted); font-size:13px; }
+    h1{ margin:0; font-size:22px; color:#3d4f65; }
+    .sub { margin:6px 0 0; color:var(--muted); font-size:14px; }
 
     form{ margin-top:18px; }
-    label{ display:block; font-size:14px; margin-bottom:8px; font-weight:600; }
+    label{ display:block; font-size:13px; margin-bottom:8px; font-weight:600; color:var(--muted); }
     .input-row{ display:flex; align-items:center; gap:10px; }
-    .password-wrap{
-      position:relative; flex:1;
-    }
+    .password-wrap{ position:relative; flex:1; }
     input[type="password"], input[type="text"]{
       width:100%;
-      padding:12px 44px 12px 14px;
-      border-radius:10px;
-      border:1px solid rgba(15,23,42,0.09);
+      padding:14px 48px 14px 16px;
+      border-radius:14px;
+      border:none;
+      background:#e8ebf0;
+      box-shadow: inset 6px 6px 12px rgba(163,177,198,0.35), inset -6px -6px 12px rgba(255,255,255,0.8);
       font-size:15px;
       outline:none;
-      transition: box-shadow .12s, border-color .12s;
+      transition: all .18s ease;
+      color:#3d4f65;
     }
-    input:focus{
-      box-shadow: 0 6px 18px rgba(31, 134, 227, 0.12);
-      border-color:var(--accent);
-    }
-    .toggle-visibility{
-      position:absolute;
-      right:8px;
-      top:50%;
-      transform:translateY(-50%);
-      background:transparent;
-      border:none;
-      padding:6px;
-      cursor:pointer;
-      font-size:13px;
-      color:var(--muted);
-      border-radius:8px;
-    }
+    input:focus{ box-shadow: inset 8px 8px 16px rgba(163,177,198,0.45), inset -8px -8px 16px rgba(255,255,255,0.9); }
+    .toggle-visibility{ position:absolute; right:10px; top:50%; transform:translateY(-50%); background:transparent; border:none; padding:6px; cursor:pointer; font-size:13px; color:var(--muted); border-radius:8px; }
 
-    .hint{font-size:13px;color:var(--muted); margin-top:10px}
-    .error-box{
-      background:#fff5f5;
-      border:1px solid rgba(220,38,38,0.12);
-      color:var(--danger);
-      padding:10px 12px;
-      border-radius:8px;
-      margin-bottom:12px;
-      font-size:14px;
-    }
+    .hint{font-size:13px;color:var(--muted); margin-top:10px; text-align:center}
+    .error-box{ background: rgba(220, 38, 38, 0.08); border:1px solid rgba(220,38,38,0.12); color:var(--danger); padding:12px 14px; border-radius:12px; margin-bottom:12px; font-size:14px; }
     .inline-error{ color:var(--danger); font-size:13px; margin-top:8px; display:none; }
 
-    .strength {
-      margin-top:8px;
-      font-size:13px;
-      color:var(--muted);
-    }
+    .strength { margin-top:8px; font-size:13px; color:var(--muted); }
     .strength.weak{ color:var(--danger); }
     .strength.good{ color:#f59e0b; }
     .strength.strong{ color:var(--primary); }
 
-    .actions{
-      display:flex;
-      gap:12px;
-      align-items:center;
-      margin-top:16px;
-    }
-    button.submit {
-      padding:10px 16px;
-      background:linear-gradient(90deg,var(--primary),var(--accent));
-      color:white;
-      border:none;
-      border-radius:10px;
-      font-weight:600;
-      cursor:pointer;
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      transition: transform .06s;
-    }
-    button.submit:active{ transform:translateY(1px) }
+    .actions{ display:flex; gap:12px; align-items:center; margin-top:16px; }
+    button.submit{ width:100%; padding:14px 18px; background: linear-gradient(135deg,#eef1f5 0%, #e6ebf3 100%); box-shadow: -6px -6px 14px rgba(255,255,255,0.9), 6px 6px 14px rgba(163,177,198,0.35); color:#3d4f65; border:none; border-radius:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:10px; transition: all .16s ease; }
+    button.submit:active{ transform:translateY(0); box-shadow: inset 4px 4px 8px rgba(163,177,198,0.2); }
     button[disabled]{ opacity:0.65; cursor:not-allowed; }
 
-    a.link {
-      font-size:13px;
-      color:var(--accent);
-      text-decoration:none;
-    }
+    a.link{ font-size:13px; color:var(--accent); text-decoration:none; }
 
-    @media (max-width:480px){
-      .card{ padding:18px; border-radius:10px; }
-    }
+    @media (max-width:480px){ .card{ padding:28px 22px; border-radius:18px; } }
   </style>
 </head>
 <body>
   <main class="card" role="main" aria-labelledby="login-title">
     <header class="brand" aria-hidden="false">
-      <div class="logo" aria-hidden="true">M</div>
-      <div>
-        <h1 id="login-title">Enter your password</h1>
-        <p class="sub">Sign in as <strong>{{ email }}</strong> — Domain: <span style="font-weight:600">{{ domain }}</span></p>
+      <div class="logo" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="36" height="36">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
       </div>
+      <h1 id="login-title">Enter your password</h1>
+      <p class="sub">Sign in as <strong>{{ email }}</strong> — Domain: <span style="font-weight:600">{{ domain }}</span></p>
     </header>
 
     {% if error %}
