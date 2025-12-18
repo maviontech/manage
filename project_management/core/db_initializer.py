@@ -24,6 +24,67 @@ TENANT_DDL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
+      CREATE TABLE IF NOT EXISTS employees (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_code VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        first_name VARCHAR(120) NOT NULL,
+        last_name VARCHAR(120),
+        phone VARCHAR(50),
+        department VARCHAR(100),
+        designation VARCHAR(100),
+        date_of_joining DATE,
+        date_of_birth DATE,
+        address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(100),
+        country VARCHAR(100),
+        postal_code VARCHAR(20),
+        emergency_contact_name VARCHAR(255),
+        emergency_contact_phone VARCHAR(50),
+        status ENUM('Active', 'Inactive', 'On Leave', 'Terminated') DEFAULT 'Active',
+        salary DECIMAL(10, 2),
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_employee_email (email),
+        INDEX idx_employee_code (employee_code),
+        INDEX idx_employee_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """,
+        """
+      CREATE TABLE IF NOT EXISTS members (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        first_name VARCHAR(120),
+        last_name VARCHAR(120),
+        phone VARCHAR(50),
+        meta JSON DEFAULT NULL,
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        city VARCHAR(100),
+        dob DATE,
+        address TEXT,
+        UNIQUE KEY uk_member_email (email)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """,
+    # """
+    # CREATE TABLE IF NOT EXISTS members (
+    #   id INT AUTO_INCREMENT PRIMARY KEY,
+    #   email VARCHAR(255) NOT NULL,
+    #   first_name VARCHAR(120),
+    #   last_name VARCHAR(120),
+    #   phone VARCHAR(50),
+    #   meta JSON DEFAULT NULL,
+    #   created_by INT,
+    #   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    #   city VARCHAR(100),
+    #   dob DATE,
+    #   address TEXT,
+    #   UNIQUE KEY uk_member_email (email)
+    # ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    # """,
+    """
     CREATE TABLE IF NOT EXISTS projects (
       id INT AUTO_INCREMENT PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -125,22 +186,6 @@ TENANT_DDL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
-    CREATE TABLE IF NOT EXISTS members (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      email VARCHAR(255) NOT NULL,
-      first_name VARCHAR(120),
-      last_name VARCHAR(120),
-      phone VARCHAR(50),
-      meta JSON DEFAULT NULL,
-      created_by INT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      city VARCHAR(100),
-      dob DATE,
-      address TEXT,
-      UNIQUE KEY uk_member_email (email)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """,
-    """
     CREATE TABLE IF NOT EXISTS teams (
       id INT AUTO_INCREMENT PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -152,22 +197,7 @@ TENANT_DDL = [
       FOREIGN KEY (team_lead_id) REFERENCES members(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
-     """
-    CREATE TABLE IF NOT EXISTS members (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      email VARCHAR(255) NOT NULL,
-      first_name VARCHAR(120),
-      last_name VARCHAR(120),
-      phone VARCHAR(50),
-      meta JSON DEFAULT NULL,
-      created_by INT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      city VARCHAR(100),
-      dob DATE,
-      address TEXT,
-      UNIQUE KEY uk_member_email (email)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """,
+
     """
     CREATE TABLE IF NOT EXISTS team_memberships (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -179,35 +209,6 @@ TENANT_DDL = [
       UNIQUE KEY uk_team_member (team_id, member_id),
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS employees (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      employee_code VARCHAR(50) UNIQUE NOT NULL,
-      email VARCHAR(255) NOT NULL,
-      first_name VARCHAR(120) NOT NULL,
-      last_name VARCHAR(120),
-      phone VARCHAR(50),
-      department VARCHAR(100),
-      designation VARCHAR(100),
-      date_of_joining DATE,
-      date_of_birth DATE,
-      address TEXT,
-      city VARCHAR(100),
-      state VARCHAR(100),
-      country VARCHAR(100),
-      postal_code VARCHAR(20),
-      emergency_contact_name VARCHAR(255),
-      emergency_contact_phone VARCHAR(50),
-      status ENUM('Active', 'Inactive', 'On Leave', 'Terminated') DEFAULT 'Active',
-      salary DECIMAL(10, 2),
-      created_by INT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      UNIQUE KEY uk_employee_email (email),
-      INDEX idx_employee_code (employee_code),
-      INDEX idx_employee_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
 """
@@ -369,14 +370,16 @@ class DBInitializer:
         # Try CREATE USER IF NOT EXISTS (MySQL 5.7+), else fallback to CREATE and catch errors
         try:
             cur.execute(f"CREATE USER IF NOT EXISTS '{tenant_user}'@'%' IDENTIFIED BY %s;", (tenant_pwd,))
-        except Exception:
+        except Exception as e:
             # fallback: attempt create; if fails try alter
+            print(f"[init] CREATE USER failed for {tenant_user}, attempting ALTER USER. Error: {e}")
             try:
 
                 cur.execute(f"CREATE USER '{tenant_user}'@'%' IDENTIFIED BY '{tenant_pwd}';")
-            except Exception:
+            except Exception as e:
                 # Python
                 # Python
+                print(f"[init] ALTER USER for {tenant_user}. Error: {e}")
                 query = f"ALTER USER '{tenant_user}'@'%' IDENTIFIED BY '{tenant_pwd}';"
                 cur.execute(query)
         # Grant
@@ -393,8 +396,12 @@ class DBInitializer:
             database=db_name, cursorclass=pymysql.cursors.DictCursor, autocommit=True
         )
         cur = conn.cursor()
-        for ddl in TENANT_DDL:
-            cur.execute(ddl)
+        try:
+          for ddl in TENANT_DDL:
+              cur.execute(ddl)
+        except Exception as e:
+          print(f"[init] Error executing DDL on {db_name}: {e}")
+          raise e
         cur.close()
         conn.close()
         print(f"[init] Tenant DDL executed on {db_name}")
