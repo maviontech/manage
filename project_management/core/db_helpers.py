@@ -42,6 +42,51 @@ _tlocal = threading.local()
 # default max age for cached connections (seconds)
 _CONN_MAX_AGE = getattr(settings, "TENANT_CONN_MAX_AGE", 300)  # 5 minutes
 
+
+def get_alex_carter_id(conn):
+    """
+    Get the member ID for Alex Carter.
+    Returns None if not found.
+    """
+    cur = conn.cursor()
+    try:
+        # Try to find Alex Carter by name or email
+        cur.execute("""
+            SELECT id FROM members 
+            WHERE (first_name = 'Alex' AND last_name = 'Carter') 
+               OR email LIKE '%alex.carter%'
+               OR email LIKE '%alexcarter%'
+            LIMIT 1
+        """)
+        row = cur.fetchone()
+        if row:
+            return row['id'] if isinstance(row, dict) else row[0]
+        return None
+    except Exception as e:
+        logger.error(f"Error getting Alex Carter ID: {e}")
+        return None
+    finally:
+        cur.close()
+
+
+def get_visible_task_user_ids(conn, current_user_id):
+    """
+    Get list of user IDs whose tasks should be visible to the current user.
+    
+    Rules:
+    - All users can see all users' tasks (full visibility for everyone)
+    
+    Returns: list of user IDs
+    """
+    # Return all user IDs - everyone can see everyone's tasks
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM members")
+        rows = cur.fetchall()
+        return [row['id'] if isinstance(row, dict) else row[0] for row in rows]
+    finally:
+        cur.close()
+
 # Session keys / fallback keys your existing code uses
 _SESSION_TENANT_KEYS = (
     "tenant_config",          # dict with full creds (preferred)

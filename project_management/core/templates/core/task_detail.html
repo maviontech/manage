@@ -385,8 +385,9 @@ hr {
 
         </div>
 
-        <div class="text-center mt-4">
+        <div class="text-center mt-4" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
             <a href="{% url 'edit_task' task.id %}" class="edit-btn">✏️ Edit Task</a>
+            <a href="{% url 'export_task_pdf' task.id %}" class="edit-btn" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);" download>📄 Export to PDF</a>
         </div>
 
         <!-- Timer History Section -->

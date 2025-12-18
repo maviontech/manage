@@ -7,7 +7,7 @@ from math import ceil
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from .tenant_context import get_current_tenant , set_current_tenant
-from .db_helpers import get_tenant_conn
+from .db_helpers import get_tenant_conn, get_visible_task_user_ids
 from math import ceil
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -268,10 +268,15 @@ def dashboard_view(request):
             return int(row[0]) if len(row) > 0 and row[0] is not None else 0
         return 0
 
+    # Get visible task user IDs based on Alex Carter visibility rules
+    visible_user_ids = get_visible_task_user_ids(conn, member_id)
+    
     assigned_count = 0
     try:
-        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to = %s", (member_id,))
-        assigned_count = scalar_from_row(cur.fetchone(), 'c')
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders})", tuple(visible_user_ids))
+            assigned_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         assigned_count = 0
 
@@ -296,65 +301,73 @@ def dashboard_view(request):
 
     tasks_completed = 0
     try:
-        cur.execute(
-            "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status = 'Closed'",
-            (member_id,))
-        tasks_completed = scalar_from_row(cur.fetchone(), 'c')
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(
+                f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND status = 'Closed'",
+                tuple(visible_user_ids))
+            tasks_completed = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         tasks_completed = 0
 
     tasks_pending = 0
     try:
-        cur.execute(
-            "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status NOT IN ('Closed', 'In Progress', 'Review', 'In-Progress')",
-            (member_id,))
-        tasks_pending = scalar_from_row(cur.fetchone(), 'c')
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(
+                f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND status NOT IN ('Closed', 'In Progress', 'Review', 'In-Progress')",
+                tuple(visible_user_ids))
+            tasks_pending = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         print("ERROR tasks_pending:", e)
         tasks_pending = 0
 
     progress_completed = progress_inprogress = progress_pending = 0
     try:
-        cur.execute("""
-            SELECT status, COUNT(*) AS c
-            FROM tasks
-            WHERE assigned_type='member' AND assigned_to=%s
-            GROUP BY status
-        """, (member_id,))
-        rows = cur.fetchall() or []
-        if rows:
-            if isinstance(rows[0], dict):
-                items = [(r.get('status'), int(r.get('c') or 0)) for r in rows]
-            else:
-                items = [(r[0], int(r[1] or 0)) for r in rows]
-            for status, cnt in items:
-                s = (status or '').lower()
-                if s == 'closed':
-                    progress_completed += cnt
-                elif s in ('in progress', 'review', 'in-progress'):
-                    progress_inprogress += cnt
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(f"""
+                SELECT status, COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+                GROUP BY status
+            """, tuple(visible_user_ids))
+            rows = cur.fetchall() or []
+            if rows:
+                if isinstance(rows[0], dict):
+                    items = [(r.get('status'), int(r.get('c') or 0)) for r in rows]
                 else:
-                    progress_pending += cnt
+                    items = [(r[0], int(r[1] or 0)) for r in rows]
+                for status, cnt in items:
+                    s = (status or '').lower()
+                    if s == 'closed':
+                        progress_completed += cnt
+                    elif s in ('in progress', 'review', 'in-progress'):
+                        progress_inprogress += cnt
+                    else:
+                        progress_pending += cnt
     except Exception:
         progress_completed = progress_inprogress = progress_pending = 0
 
     priority_buckets = {'Critical': 0, 'High': 0, 'Normal': 0, 'Low': 0}
     try:
-        cur.execute("""
-            SELECT COALESCE(priority,'Normal') AS p, COUNT(*) AS c
-            FROM tasks
-            WHERE assigned_type='member' AND assigned_to=%s
-            GROUP BY p
-        """, (member_id,))
-        rows = cur.fetchall() or []
-        if rows:
-            if isinstance(rows[0], dict):
-                items = [(r.get('p'), int(r.get('c') or 0)) for r in rows]
-            else:
-                items = [(r[0], int(r[1] or 0)) for r in rows]
-            for p, cnt in items:
-                key = (p or 'Normal').title()
-                priority_buckets[key] = cnt
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(f"""
+                SELECT COALESCE(priority,'Normal') AS p, COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+                GROUP BY p
+            """, tuple(visible_user_ids))
+            rows = cur.fetchall() or []
+            if rows:
+                if isinstance(rows[0], dict):
+                    items = [(r.get('p'), int(r.get('c') or 0)) for r in rows]
+                else:
+                    items = [(r[0], int(r[1] or 0)) for r in rows]
+                for p, cnt in items:
+                    key = (p or 'Normal').title()
+                    priority_buckets[key] = cnt
     except Exception:
         pass
 
@@ -362,32 +375,34 @@ def dashboard_view(request):
     pri_open = {k: 0 for k in pri_keys}
     pri_closed = {k: 0 for k in pri_keys}
     try:
-        cur.execute("""
-            SELECT COALESCE(priority,'Normal') AS p, status, COUNT(*) AS c
-            FROM tasks
-            WHERE assigned_type='member' AND assigned_to = %s
-            GROUP BY p, status
-        """, (member_id,))
-        rows = cur.fetchall() or []
-        if rows:
-            if isinstance(rows[0], dict):
-                for r in rows:
-                    p = (r.get('p') or 'Normal').title()
-                    st = (r.get('status') or '').lower()
-                    cnt = int(r.get('c') or 0)
-                    if st == 'closed':
-                        pri_closed[p] = pri_closed.get(p, 0) + cnt
-                    else:
-                        pri_open[p] = pri_open.get(p, 0) + cnt
-            else:
-                for r in rows:
-                    p = (r[0] or 'Normal').title()
-                    st = (r[1] or '').lower()
-                    cnt = int(r[2] or 0)
-                    if st == 'closed':
-                        pri_closed[p] = pri_closed.get(p, 0) + cnt
-                    else:
-                        pri_open[p] = pri_open.get(p, 0) + cnt
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(f"""
+                SELECT COALESCE(priority,'Normal') AS p, status, COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+                GROUP BY p, status
+            """, tuple(visible_user_ids))
+            rows = cur.fetchall() or []
+            if rows:
+                if isinstance(rows[0], dict):
+                    for r in rows:
+                        p = (r.get('p') or 'Normal').title()
+                        st = (r.get('status') or '').lower()
+                        cnt = int(r.get('c') or 0)
+                        if st == 'closed':
+                            pri_closed[p] = pri_closed.get(p, 0) + cnt
+                        else:
+                            pri_open[p] = pri_open.get(p, 0) + cnt
+                else:
+                    for r in rows:
+                        p = (r[0] or 'Normal').title()
+                        st = (r[1] or '').lower()
+                        cnt = int(r[2] or 0)
+                        if st == 'closed':
+                            pri_closed[p] = pri_closed.get(p, 0) + cnt
+                        else:
+                            pri_open[p] = pri_open.get(p, 0) + cnt
     except Exception:
         pass
 
@@ -400,20 +415,24 @@ def dashboard_view(request):
     except Exception:
         is_team_lead = False
 
-    # Board open count: tasks assigned to user and not closed (for board view)
+    # Board open count: tasks assigned to visible users and not closed (for board view)
     board_open_count = 0
     try:
-        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND NOT (status = 'Closed')", (member_id,))
-        board_open_count = scalar_from_row(cur.fetchone(), 'c')
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND NOT (status = 'Closed')", tuple(visible_user_ids))
+            board_open_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         print("ERROR: board_open_count", e)
         board_open_count = 0
 
-    # My new tasks count: tasks assigned to user and status is 'New' (or similar)
+    # My new tasks count: tasks assigned to visible users and status is 'New' (or similar)
     my_new_tasks_count = 0
     try:
-        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status IN ('New','Open')", (member_id,))
-        my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND status IN ('New','Open')", tuple(visible_user_ids))
+            my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         print("ERROR: my_new_tasks_count", e)
         my_new_tasks_count = 0
@@ -427,18 +446,21 @@ def dashboard_view(request):
         from datetime import date, timedelta
         start_date = date.today()
         end_date = start_date + timedelta(days=7)
-        cur.execute("""
-            SELECT id, title, status, due_date, created_at
-            FROM tasks
-            WHERE assigned_type='member' AND assigned_to=%s
-              AND status NOT IN ('Completed', 'Closed', 'completed', 'closed')
-              AND due_date IS NOT NULL
-              AND DATE(due_date) BETWEEN %s AND %s
-            ORDER BY due_date ASC
-                        LIMIT 10
-                """, (member_id, start_date, end_date))
-        rows = cur.fetchall() or []
-        print(f"DEBUG: planned_tasks found {len(rows)} tasks for member_id={member_id} between {start_date} and {end_date}")
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            params = list(visible_user_ids) + [start_date, end_date]
+            cur.execute(f"""
+                SELECT id, title, status, due_date, created_at
+                FROM tasks
+                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+                  AND status NOT IN ('Completed', 'Closed', 'completed', 'closed')
+                  AND due_date IS NOT NULL
+                  AND DATE(due_date) BETWEEN %s AND %s
+                ORDER BY due_date ASC
+                            LIMIT 10
+                    """, tuple(params))
+            rows = cur.fetchall() or []
+            print(f"DEBUG: planned_tasks found {len(rows)} tasks for visible users between {start_date} and {end_date}")
 
         for r in rows:
             if isinstance(r, dict):

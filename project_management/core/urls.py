@@ -53,6 +53,7 @@ urlpatterns = [
     path("tasks/<int:task_id>/", views_tasks.task_detail_view, name="task_detail"),
     path("tasks/<int:task_id>/edit/", views_tasks.edit_task_view, name="edit_task"),
     path("tasks/<int:task_id>/delete/", views_tasks.delete_task_view, name="delete_task"),
+    path("tasks/<int:task_id>/export-pdf/", views_tasks.export_task_pdf, name="export_task_pdf"),
 
     # APIs
     path("tasks/api/assign/", views_tasks.assign_task_api, name="api_assign_task"),
@@ -60,6 +61,7 @@ urlpatterns = [
     path("tasks/api/board-data/", views_tasks.board_data_api, name="board_data"),
     path('api/task/detail/', views_tasks.api_task_detail, name='api_task_detail'),
     path('api/task/update/', views_tasks.api_task_update, name='api_task_update'),
+    path('tasks/api/search/', views_tasks.api_tasks_search, name='api_tasks_search'),
 
     path('settings/change-password/', vp.change_password_page, name='change_password'),
     path('settings/password-reset/', vp.password_reset_request, name='password_reset_request'),

@@ -1,7 +1,7 @@
 # core/views_projects.py
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.contrib import messages
 from .db_helpers import get_tenant_conn_and_cursor
 from .forms import ProjectForm, SubprojectForm
@@ -62,6 +62,24 @@ def projects_search_ajax(request):
     return JsonResponse({"results": rows})
 
 def project_create(request):
+    # Only tenant administrators may create projects
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return redirect('login')
+    # Check tenant role assignment for Admin
+    conn_check, cur_check = get_tenant_conn_and_cursor(request)
+    try:
+        cur_check.execute("""
+            SELECT 1 FROM tenant_role_assignments tra
+            JOIN roles r ON r.id = tra.role_id
+            WHERE tra.member_id = %s AND r.name = 'Admin' LIMIT 1
+        """, (member_id,))
+        has_admin = cur_check.fetchone()
+    finally:
+        cur_check.close(); conn_check.close()
+    if not has_admin:
+        return HttpResponseForbidden("Only administrators may create projects.")
+
     # Fetch employees for dropdown
     conn, cur = get_tenant_conn_and_cursor(request)
     try:

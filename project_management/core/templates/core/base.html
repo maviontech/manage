@@ -935,13 +935,15 @@
         // Search all visible page content
         searchPageContent(searchTerm, allResults);
         
-        // Try to fetch from APIs if available
+        // Try to fetch from APIs if available (including tasks)
         Promise.all([
           fetchProjects(query),
+          fetchTasks(query),
           fetchPeople(query),
           fetchTeams(query)
-        ]).then(([projects, people, teams]) => {
+        ]).then(([projects, tasks, people, teams]) => {
           allResults.projects = projects;
+          allResults.tasks = tasks;
           allResults.people = people;
           allResults.teams = teams;
           
@@ -1102,6 +1104,28 @@
           html += '</div>';
         }
         
+        // Tasks section
+        if (results.tasks && results.tasks.length > 0) {
+          hasResults = true;
+          html += '<div class="search-result-section">';
+          html += '<div class="search-section-title"><i class="fa fa-tasks"></i> Tasks</div>';
+          results.tasks.forEach(task => {
+            const meta = (task.project_name ? task.project_name : task.assigned_to_display || task.status || 'Task');
+            html += `
+              <a href="/tasks/${task.id}/" class="search-result-item" style="text-decoration: none; color: inherit;">
+                <div class="search-result-icon task">
+                  <i class="fa fa-tasks"></i>
+                </div>
+                <div class="search-result-info">
+                  <div class="search-result-title">${escapeHtml(task.title)}</div>
+                  <div class="search-result-meta">${escapeHtml(meta)}</div>
+                </div>
+              </a>
+            `;
+          });
+          html += '</div>';
+        }
+
         // People section
         if (results.people && results.people.length > 0) {
           hasResults = true;

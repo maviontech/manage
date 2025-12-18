@@ -85,7 +85,7 @@
               Due Date
             </th>
             <th style="width: 170px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+              <svg width="10" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 1rem;">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
@@ -96,7 +96,7 @@
         </thead>
         <tbody>
           {% for t in tasks %}
-          <tr>
+          <tr class="task-row" data-href="{% url 'task_detail' t.id %}">
             <td>
               <span class="task-id">#{{ t.id }}</span>
             </td>
@@ -165,13 +165,7 @@
             </td>
             <td>
               <div class="action-buttons">
-                <a href="{% url 'task_detail' t.id %}" class="btn-action btn-view" title="View Details">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
-                </a>
-                <a href="{% url 'edit_task' t.id %}" class="btn-action btn-edit" title="Edit Task">
+                <a href="{% url 'edit_task' t.id %}" class="btn-action btn-edit" title="Edit Task" onclick="event.stopPropagation();">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -320,7 +314,7 @@
 }
 
 .tasks-table td {
-  padding: 20px;
+  padding: 15px;
   vertical-align: middle;
   font-size: 14px;
   color: #334155;
@@ -534,5 +528,20 @@
     padding: 12px 10px;
   }
 }
-
+</style>
+<script>
+// Make table rows clickable to open task detail (except when clicking action buttons)
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.task-row').forEach(function(row) {
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', function() {
+      var href = this.getAttribute('data-href');
+      if (href) {
+        window.location.href = href;
+      }
+    });
+  });
+  // Prevent action button clicks from triggering row navigation is handled via inline onclick on action anchors
+});
+</script>
 {% endblock %}

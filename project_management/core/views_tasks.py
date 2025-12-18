@@ -1,15 +1,24 @@
 
 import csv, io, datetime
 from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
 # helper: get connection for current tenant
-from .db_helpers import get_tenant_conn
+from .db_helpers import get_tenant_conn, get_visible_task_user_ids
 import json
+
+# PDF generation
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.pdfgen import canvas
 
 
 # ==============================
@@ -154,17 +163,25 @@ def my_tasks_view(request):
     if not user_id:
         return redirect("login")
 
-    # Only show tasks explicitly assigned to this member (exclude team assignments and tasks
-    # simply created by the user). This ensures each user sees only their own assigned tasks.
-    cur.execute(
-        """SELECT id, title, status, priority, due_date, closure_date
-           FROM tasks
-           WHERE assigned_type='member' AND assigned_to = %s
-           ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
-                    due_date IS NULL, due_date ASC""",
-        (user_id,),
-    )
-    tasks = cur.fetchall()
+    # Get visible task user IDs based on Alex Carter visibility rules
+    visible_user_ids = get_visible_task_user_ids(conn, user_id)
+    
+    # Show tasks assigned to visible users (current user's tasks + Alex Carter's tasks, 
+    # or all tasks if current user is Alex Carter)
+    if visible_user_ids:
+        placeholders = ','.join(['%s'] * len(visible_user_ids))
+        cur.execute(
+            f"""SELECT id, title, status, priority, due_date, closure_date
+               FROM tasks
+               WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+               ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
+                        due_date IS NULL, due_date ASC""",
+            tuple(visible_user_ids),
+        )
+        tasks = cur.fetchall()
+    else:
+        tasks = []
+    
     cur.close()
 
     today = datetime.date.today()
@@ -229,6 +246,14 @@ def board_data_api(request):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
+    # Get current user ID
+    user_id = request.session.get("user_id")
+    if not user_id:
+        user_id = request.session.get("member_id")
+    
+    # Get visible task user IDs based on Alex Carter visibility rules
+    visible_user_ids = get_visible_task_user_ids(conn, user_id) if user_id else []
+
     # ---- Status Filter + Assigned Filter ----
     status = request.GET.get("status")
     assigned_to = request.GET.get("assigned_to")
@@ -250,6 +275,13 @@ def board_data_api(request):
 
     # build optional filters
     count_filters = []
+    
+    # Apply visibility filter for member-assigned tasks
+    if visible_user_ids:
+        placeholders = ','.join(['%s'] * len(visible_user_ids))
+        count_filters.append(f"(assigned_type = 'member' AND assigned_to IN ({placeholders}))")
+        count_params.extend(visible_user_ids)
+    
     if status:
         count_filters.append("status = %s")
         count_params.append(status)
@@ -305,6 +337,13 @@ def board_data_api(request):
     # ---- Apply optional filters to main query ----
     params = []
     main_filters = []
+    
+    # Apply visibility filter for member-assigned tasks
+    if visible_user_ids:
+        placeholders = ','.join(['%s'] * len(visible_user_ids))
+        main_filters.append(f"(t.assigned_type = 'member' AND t.assigned_to IN ({placeholders}))")
+        params.extend(visible_user_ids)
+    
     if status:
         main_filters.append("t.status = %s")
         params.append(status)
@@ -657,6 +696,67 @@ def api_task_detail(request):
         cur.close()
 
 
+@require_GET
+def api_tasks_search(request):
+    """
+    Simple task search used by the global quick-search UI.
+    GET params: q
+    Returns: { tasks: [ { id, title, status, assigned_to_display, project_name } ] }
+    """
+    q = (request.GET.get('q') or '').strip()
+    if not q:
+        return JsonResponse({'tasks': []})
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    try:
+        like = f"%{q}%"
+        cur.execute("""
+            SELECT
+                t.id,
+                COALESCE(t.title, '') AS title,
+                COALESCE(t.status, '') AS status,
+                CASE
+                    WHEN t.assigned_type = 'member' THEN (SELECT CONCAT(m.first_name, ' ', m.last_name) FROM members m WHERE m.id = t.assigned_to)
+                    WHEN t.assigned_type = 'team' THEN (SELECT tm.name FROM teams tm WHERE tm.id = t.assigned_to)
+                    ELSE NULL
+                END AS assigned_to_display,
+                (SELECT p.name FROM projects p WHERE p.id = t.project_id) AS project_name
+            FROM tasks t
+            WHERE (t.title LIKE %s OR t.description LIKE %s)
+            ORDER BY t.id DESC
+            LIMIT 20
+        """, (like, like))
+
+        rows = cur.fetchall() or []
+        tasks = []
+        if rows:
+            if isinstance(rows[0], dict):
+                for r in rows:
+                    tasks.append({
+                        'id': r.get('id'),
+                        'title': r.get('title') or '',
+                        'status': r.get('status') or '',
+                        'assigned_to_display': r.get('assigned_to_display') or '',
+                        'project_name': r.get('project_name') or ''
+                    })
+            else:
+                cols = [d[0] for d in cur.description]
+                for r in rows:
+                    d = dict(zip(cols, r))
+                    tasks.append({
+                        'id': d.get('id'),
+                        'title': d.get('title') or '',
+                        'status': d.get('status') or '',
+                        'assigned_to_display': d.get('assigned_to_display') or '',
+                        'project_name': d.get('project_name') or ''
+                    })
+
+        return JsonResponse({'tasks': tasks})
+    finally:
+        cur.close()
+
+
 @require_POST
 def api_task_update(request):
     """
@@ -920,3 +1020,196 @@ def delete_task_view(request, task_id):
     cur.close()
 
     return redirect("my_tasks")
+
+
+def export_task_pdf(request, task_id):
+    """
+    Export task details to PDF with professional formatting
+    """
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    # Fetch task details
+    cur.execute("""
+        SELECT 
+            t.id, t.title, t.description, t.status, t.priority, 
+            t.due_date, t.created_at, t.assigned_to, t.assigned_type,
+            CASE
+                WHEN t.assigned_type = 'member' THEN (SELECT CONCAT(m.first_name, ' ', m.last_name) FROM members m WHERE m.id = t.assigned_to)
+                WHEN t.assigned_type = 'team' THEN (SELECT tm.name FROM teams tm WHERE tm.id = t.assigned_to)
+                ELSE NULL
+            END AS assigned_to_display,
+            (SELECT p.name FROM projects p WHERE p.id = t.project_id) AS project_name
+        FROM tasks t 
+        WHERE t.id=%s
+    """, (task_id,))
+    
+    task = cur.fetchone()
+    
+    if not task:
+        cur.close()
+        return HttpResponse("Task not found", status=404)
+    
+    # Convert to dict if tuple
+    if not isinstance(task, dict):
+        cols = [desc[0] for desc in cur.description]
+        task = dict(zip(cols, task))
+    
+    # Fetch timer history
+    cur.execute("""
+        SELECT ts.user_id, m.first_name, m.last_name, ts.start_time, 
+               ts.end_time, ts.duration_seconds, ts.notes
+        FROM timer_sessions ts
+        LEFT JOIN members m ON ts.user_id = m.id
+        WHERE ts.task_id = %s
+        ORDER BY ts.start_time DESC
+    """, (task_id,))
+    timer_history = cur.fetchall()
+    cur.close()
+    
+    # Create PDF response
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="task_{task_id}_{task.get("title", "details").replace(" ", "_")}.pdf"'
+    
+    # Create PDF document
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    # Container for PDF elements
+    elements = []
+    
+    # Styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#1e40af'),
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
+    
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        textColor=colors.HexColor('#3b82f6'),
+        spaceAfter=12,
+        spaceBefore=20,
+        fontName='Helvetica-Bold'
+    )
+    
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=colors.HexColor('#1e293b'),
+        spaceAfter=12
+    )
+    
+    label_style = ParagraphStyle(
+        'Label',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor('#64748b'),
+        fontName='Helvetica-Bold',
+        spaceAfter=4
+    )
+    
+    # Add title
+    elements.append(Paragraph(f"Task: {task.get('title', 'N/A')}", title_style))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Add status badge (simulated with colored text)
+    status_text = f'<para align="center" backColor="#3b82f6" textColor="white" fontSize="10" fontName="Helvetica-Bold">&nbsp;&nbsp;{task.get("status", "N/A").upper()}&nbsp;&nbsp;</para>'
+    elements.append(Paragraph(status_text, normal_style))
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Create details table
+    details_data = [
+        ['DESCRIPTION', task.get('description', 'No description provided.')],
+        ['DUE DATE', str(task.get('due_date', 'Not set'))],
+        ['CREATED AT', str(task.get('created_at', 'N/A'))],
+        ['PRIORITY', task.get('priority', 'Normal')],
+        ['ASSIGNED TO', task.get('assigned_to_display', 'Unassigned')],
+        ['PROJECT', task.get('project_name', 'N/A')]
+    ]
+    
+    details_table = Table(details_data, colWidths=[2*inch, 4.5*inch])
+    details_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f1f5f9')),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#64748b')),
+        ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#1e293b')),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    
+    elements.append(details_table)
+    elements.append(Spacer(1, 0.4*inch))
+    
+    # Add timer history section
+    if timer_history and len(timer_history) > 0:
+        elements.append(Paragraph("⏱️ TIMER HISTORY", heading_style))
+        elements.append(Spacer(1, 0.1*inch))
+        
+        # Create timer table
+        timer_data = [['User', 'Start Time', 'End Time', 'Duration', 'Notes']]
+        for session in timer_history:
+            if isinstance(session, dict):
+                user = f"{session.get('first_name', '')} {session.get('last_name', '')}".strip() or str(session.get('user_id', 'N/A'))
+                timer_data.append([
+                    user,
+                    str(session.get('start_time', 'N/A')),
+                    str(session.get('end_time', '-')),
+                    f"{session.get('duration_seconds', 0)}s",
+                    str(session.get('notes', '-'))
+                ])
+            else:
+                user = f"{session[1]} {session[2]}".strip() or str(session[0])
+                timer_data.append([
+                    user,
+                    str(session[3]),
+                    str(session[4] if session[4] else '-'),
+                    f"{session[5]}s",
+                    str(session[6] if session[6] else '-')
+                ])
+        
+        timer_table = Table(timer_data, colWidths=[1.2*inch, 1.5*inch, 1.5*inch, 0.8*inch, 1.5*inch])
+        timer_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f9fafb')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')])
+        ]))
+        
+        elements.append(timer_table)
+    else:
+        elements.append(Paragraph("⏱️ TIMER HISTORY", heading_style))
+        elements.append(Paragraph("No timer history found for this task.", normal_style))
+    
+    # Build PDF
+    doc.build(elements)
+    
+    # Get PDF from buffer
+    pdf = buffer.getvalue()
+    buffer.close()
+    response.write(pdf)
+    
+    return response
