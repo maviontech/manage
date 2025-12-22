@@ -12,6 +12,8 @@ from math import ceil
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
+
+
 # Import Excel export function
 from .views_export import export_projects_excel
 

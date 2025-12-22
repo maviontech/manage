@@ -123,6 +123,7 @@ TENANT_DDL = [
       due_date DATE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      closure_date DATE,
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
