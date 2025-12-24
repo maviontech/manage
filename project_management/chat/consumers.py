@@ -34,6 +34,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         qs = parse_qs(self.scope.get('query_string', b'').decode())
         tenant = qs.get('tenant', [None])[0]
         peer = qs.get('peer', [None])[0]
+        group = qs.get('group', [None])[0]
         if not tenant:
             await self.close()
             return
@@ -60,12 +61,25 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         else:
             self.room_name = None
 
+        # optional group room (for group/thread real-time)
+        self.group_id = None
+        self.group_room = None
+        if group:
+            try:
+                self.group_id = int(group)
+                self.group_room = f'chat_group_{tenant}_{self.group_id}'
+            except Exception:
+                self.group_id = None
+                self.group_room = None
+
         self.presence_group = f'presence_{tenant}'
         self.tenant_id = tenant
         self.peer = peer
 
         if self.room_name:
             await self.channel_layer.group_add(self.room_name, self.channel_name)
+        if getattr(self, 'group_room', None):
+            await self.channel_layer.group_add(self.group_room, self.channel_name)
         await self.channel_layer.group_add(self.presence_group, self.channel_name)
 
         await self.accept()
@@ -86,52 +100,103 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
         if getattr(self, 'room_name', None):
             await self.channel_layer.group_discard(self.room_name, self.channel_name)
+        if getattr(self, 'group_room', None):
+            await self.channel_layer.group_discard(self.group_room, self.channel_name)
         if getattr(self, 'presence_group', None):
             await self.channel_layer.group_discard(self.presence_group, self.channel_name)
 
     async def receive_json(self, content, **kwargs):
         typ = content.get('type')
-        if typ != 'message':
-            return
-        text = content.get('text', '').strip()
-        to_user = content.get('to')
-        if not text or not to_user:
-            return
+        # Support both direct messages and group messages
+        if typ == 'message':
+            text = content.get('text', '').strip()
+            to_user = content.get('to')
+            if not text or not to_user:
+                return
 
-        # persist message (runs in threadpool)
-        saved = await sync_to_async(self._persist_message)(self.tenant_id, self.me, to_user, text)
+            # persist DM message
+            saved = await sync_to_async(self._persist_message)(self.tenant_id, self.me, to_user, text)
 
-        payload = {
-            'event': 'message',
-            'message': {
-                'sender': saved.get('sender'),
-                'text': text,
-                'created_at': saved.get('created_at'),
-                'id': saved.get('id'),
+            # include optional client cid for optimistic UI matching
+            payload = {
+                'event': 'message',
+                'message': {
+                    'sender': saved.get('sender'),
+                    'text': text,
+                    'created_at': saved.get('created_at'),
+                    'id': saved.get('id'),
+                    'cid': content.get('cid') if isinstance(content, dict) else None,
+                }
             }
-        }
 
-        # broadcast to normalized conversation room
-        a, b = sorted([saved.get('sender'), saved.get('to')])
-        room = f'chat_{self.tenant_id}_{a}_{b}'
-        await self.channel_layer.group_send(room, {'type': 'chat.message', **payload})
+            # broadcast to normalized conversation room
+            a, b = sorted([saved.get('sender'), saved.get('to')])
+            room = f'chat_{self.tenant_id}_{a}_{b}'
+            await self.channel_layer.group_send(room, {'type': 'chat.message', **payload})
 
-        # notify presence group for unread badge update
-        await self.channel_layer.group_send(
-            self.presence_group,
-            {
-                'type': 'presence.update',
-                'event': 'new_message',
-                'from': saved.get('sender'),
-                'to': saved.get('to'),
-                'tenant': self.tenant_id,
-            },
-        )
+            # notify presence group for unread badge update
+            await self.channel_layer.group_send(
+                self.presence_group,
+                {
+                    'type': 'presence.update',
+                    'event': 'new_message',
+                    'from': saved.get('sender'),
+                    'to': saved.get('to'),
+                    'tenant': self.tenant_id,
+                },
+            )
+            return
+
+        # group message handling
+        if typ == 'group_message':
+            group_id = content.get('group_id') or self.group_id
+            text = content.get('text', '').strip()
+            if not group_id or not text:
+                return
+
+            # persist group message
+            saved = await sync_to_async(self._persist_group_message)(self.tenant_id, int(group_id), self.me, text)
+
+            payload = {
+                'event': 'message',
+                'message': {
+                    'sender': saved.get('sender'),
+                    'text': text,
+                    'created_at': saved.get('created_at'),
+                    'id': saved.get('id'),
+                    'group_id': int(group_id),
+                    'cid': content.get('cid') if isinstance(content, dict) else None,
+                }
+            }
+
+            # broadcast to group room
+            room = f'chat_group_{self.tenant_id}_{int(group_id)}'
+            await self.channel_layer.group_send(room, {'type': 'chat.message', **payload})
+
+            # also notify presence group for badge updates
+            await self.channel_layer.group_send(
+                self.presence_group,
+                {
+                    'type': 'presence.update',
+                    'event': 'new_group_message',
+                    'group_id': int(group_id),
+                    'from': saved.get('sender'),
+                    'tenant': self.tenant_id,
+                },
+            )
+            return
+
+        # ignore other message types
+        return
 
     async def chat_message(self, event):
         await self.send_json(event)
 
     async def presence_update(self, event):
+        await self.send_json(event)
+
+    async def chat_message_read(self, event):
+        """Forward read-receipt events to connected clients."""
         await self.send_json(event)
 
     # ---------- sync DB helpers ----------
@@ -178,6 +243,30 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         created_at = msg[0]['created_at']
         created_iso = created_at.isoformat() if hasattr(created_at, 'isoformat') else str(created_at)
         return {'id': msg[0]['id'], 'created_at': created_iso, 'sender': sender_norm, 'to': to_norm}
+
+    def _persist_group_message(self, tenant_id, group_id, sender, text):
+        """Persist a message to `chat_group_message` and return metadata."""
+        tenant_conn = None
+        try:
+            tenant_conn = get_tenant_conn(tenant_id=tenant_id)
+        except TypeError:
+            try:
+                tenant_conn = get_tenant_conn(None)
+            except Exception:
+                tenant_conn = None
+
+        sender_norm = _normalize_identity_for_tenant(tenant_conn, sender)
+
+        exec_sql(tenant_conn, """
+            INSERT INTO chat_group_message (group_id, sender, text, is_read) VALUES (%s,%s,%s,0)
+        """, [int(group_id), sender_norm, text], fetch=False)
+
+        msg = exec_sql(tenant_conn, """
+            SELECT id, created_at FROM chat_group_message WHERE group_id=%s ORDER BY created_at DESC LIMIT 1
+        """, [int(group_id)])
+        created_at = msg[0]['created_at']
+        created_iso = created_at.isoformat() if hasattr(created_at, 'isoformat') else str(created_at)
+        return {'id': msg[0]['id'], 'created_at': created_iso, 'sender': sender_norm}
 # chat/consumers.py
 import json
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
@@ -281,7 +370,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
         # broadcast to conversation room (if created)
         # ensure group exists (if peer provided)
-            a, b = sorted([saved.get("sender"), saved.get("to")])
+        a, b = sorted([saved.get("sender"), saved.get("to")])
         room = f"chat_{self.tenant_id}_{a}_{b}"
         await self.channel_layer.group_send(room, {"type": "chat.message", **payload})
 
@@ -303,6 +392,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def presence_update(self, event):
         # forward presence events
+        await self.send_json(event)
+    
+    async def chat_message_read(self, event):
+        # forward read-receipt events
         await self.send_json(event)
 
     # ---------- sync DB helpers ----------
@@ -355,4 +448,83 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """, [conv_id])
         created_at = msg[0]["created_at"]
         created_iso = created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
-            return {"id": msg[0]["id"], "created_at": created_iso, "sender": sender_norm, "to": to_norm}
+        return {"id": msg[0]["id"], "created_at": created_iso, "sender": sender_norm, "to": to_norm}
+
+
+# --- Notification and typing consumers ---
+class NotificationConsumer(AsyncJsonWebsocketConsumer):
+    """Subscribe to tenant presence/notification events.
+
+    Clients that only want tenant-wide notifications (unread counts, incoming
+    messages for any conversation, presence changes) can connect here.
+    """
+
+    async def connect(self):
+        qs = parse_qs(self.scope.get("query_string", b"").decode())
+        tenant = qs.get("tenant", [None])[0]
+        if not tenant:
+            await self.close()
+            return
+
+        self.presence_group = f"presence_{tenant}"
+        await self.channel_layer.group_add(self.presence_group, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if getattr(self, "presence_group", None):
+            await self.channel_layer.group_discard(self.presence_group, self.channel_name)
+
+    async def presence_update(self, event):
+        # forward presence and notification events to client
+        await self.send_json(event)
+
+    async def chat_message(self, event):
+        # forward chat messages that were also broadcast to presence_group
+        await self.send_json(event)
+
+
+class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
+    """Broadcast typing indicators to the tenant presence group.
+
+    Clients send {type: 'typing', to: '<peer>', status: 'typing'|'idle'} and
+    this consumer relays the event to the tenant presence_group so other
+    connected sockets can update typing UI.
+    """
+
+    async def connect(self):
+        qs = parse_qs(self.scope.get("query_string", b"").decode())
+        tenant = qs.get("tenant", [None])[0]
+        if not tenant:
+            await self.close()
+            return
+
+        self.presence_group = f"presence_{tenant}"
+        await self.channel_layer.group_add(self.presence_group, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if getattr(self, "presence_group", None):
+            await self.channel_layer.group_discard(self.presence_group, self.channel_name)
+
+    async def receive_json(self, content, **kwargs):
+        typ = content.get("type")
+        if typ != "typing":
+            return
+        to_user = content.get("to")
+        status = content.get("status")
+        if not to_user or not status:
+            return
+
+        # relay typing indicator to presence group
+        await self.channel_layer.group_send(
+            self.presence_group,
+            {
+                "type": "typing.update",
+                "from": content.get("from"),
+                "to": to_user,
+                "status": status,
+            },
+        )
+
+    async def typing_update(self, event):
+        await self.send_json(event)

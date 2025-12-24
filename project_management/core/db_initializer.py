@@ -65,6 +65,7 @@ TENANT_DDL = [
         city VARCHAR(100),
         dob DATE,
         address TEXT,
+        profile_photo VARCHAR(512),
         UNIQUE KEY uk_member_email (email)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
@@ -122,9 +123,10 @@ TENANT_DDL = [
       created_by INT,
       due_date DATE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      closure_date DATE,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      closure_date DATE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
     """,
     """
     CREATE TABLE IF NOT EXISTS time_entries (

@@ -536,6 +536,67 @@
       </div>
     </div>
   </div>
+  <script>
+    (function(){
+      const TENANT_ID = "{{ request.session.tenant_id|default:'' }}";
+      function setNotifCount(n){
+        const b = document.getElementById('notif-badge');
+        if(!b) return;
+        if(!n || n <= 0){ b.classList.add('hidden'); b.style.display='none'; }
+        else { b.classList.remove('hidden'); b.style.display='block'; b.textContent = n; }
+      }
+
+      async function fetchTotals(){
+        try{
+          let total = 0;
+          // DM unread
+          const r1 = await fetch('/chat/unread/', {credentials:'same-origin'});
+          if(r1.ok){ const d = await r1.json(); if(d && d.unread) total += d.unread.reduce((s,i)=>s+(i.count||0),0); }
+          // Groups unread
+          const r2 = await fetch('/chat/groups/', {credentials:'same-origin'});
+          if(r2.ok){ const d = await r2.json(); if(d && d.groups) total += d.groups.reduce((s,g)=>s+(g.unread||0),0); }
+          setNotifCount(total);
+        }catch(e){ console.warn('fetchTotals failed', e); }
+      }
+
+      // WebSocket to notifications presence group
+      try{
+        const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const url = `${scheme}://${window.location.host}/ws/notifications/?tenant=${encodeURIComponent(TENANT_ID)}`;
+        const nws = new WebSocket(url);
+        nws.onopen = ()=>{ fetchTotals(); };
+        nws.onmessage = (ev)=>{
+          let msg; try{ msg = JSON.parse(ev.data); }catch(e){return}
+          if(msg.event === 'new_message' || msg.event === 'new_group_message'){
+            // if user is not on /chat page, increment badge; else ignore
+            if(!window.location.pathname.startsWith('/chat')){
+              // small increment UI (best-effort) then refresh totals
+              const b = document.getElementById('notif-badge');
+              if(b){ let cur = parseInt(b.textContent||'0')||0; cur+=1; setNotifCount(cur); }
+            } else {
+              // user is on chat page — clear
+              setNotifCount(0);
+            }
+          }
+        };
+        nws.onclose = ()=>{ /* ignore */ };
+      }catch(e){ console.warn('Notification WS failed', e); }
+
+      // When clicking chat button, clear all chat notifications first
+      const chatBtn = document.getElementById('chat-open-btn');
+      if(chatBtn){
+        chatBtn.addEventListener('click', async function(ev){
+          try{
+            await fetch('/chat/mark_all_read/', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json','X-CSRFToken': (document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)')||[])[2] || '' }, body: JSON.stringify({}) });
+            setNotifCount(0);
+          }catch(e){ console.warn('mark_all_read failed', e); }
+        });
+      }
+
+      // periodically refresh totals when not on chat
+      setInterval(()=>{ if(!window.location.pathname.startsWith('/chat')) fetchTotals(); else setNotifCount(0); }, 6000);
+    })();
+  </script>
 
 
   <script src="{% static 'chat/chat_widget.js' %}"></script>

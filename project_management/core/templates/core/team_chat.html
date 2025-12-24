@@ -347,15 +347,15 @@
         .message-group:hover .msg-actions { opacity: 1; }
 
         .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: var(--radius-md);
+            width: 24px;
+            height: 24px;
+            border-radius: var(--radius-sm);
             margin-right: 14px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
+            font-size: 10px;
             font-weight: 700;
             color: #fff;
             flex-shrink: 0;
@@ -375,7 +375,7 @@
         .username {
             font-weight: 700;
             color: var(--text-primary);
-            font-size: 15px;
+            font-size: 12px;
         }
         .username:hover { text-decoration: underline; cursor: pointer; }
         .timestamp {
@@ -686,6 +686,18 @@
         .msg-enter { animation: msgIn .22s cubic-bezier(.2,.9,.2,1); }
         @keyframes msgIn { from { transform: translateY(6px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
         .date-sep { text-align:center; color:var(--text-muted); font-size:13px; margin: 18px 0; display:block }
+        .msg-read-indicator { font-size: 12px; color: var(--text-muted); margin-top:6px; display:block; }
+        /* small circular check status for sent messages */
+        .msg-status { display:inline-flex; align-items:center; justify-content:center; width: 18px; height:18px; border-radius:50%; background: rgba(255,255,255,0.98); margin-top:25px; float:right; position:relative; transition:transform .12s ease, box-shadow .12s ease; }
+        .msg-status i { font-size:10px; color:var(--text-muted); line-height:1; }
+        .message-group.sent-message .msg-status { margin-left:8px; }
+        /* delivered (server confirmed) - subtle double-check */
+        .msg-status.delivered { border-color: rgba(0,0,0,0.12); background: rgba(247,249,250,1); }
+        .msg-status.delivered i { color: var(--text-muted); }
+        /* read (recipient opened) - improved WhatsApp-like read indicator */
+        /* .msg-status.read { border-color: #0A7AFF; background: #ffffff; box-shadow: 0 0 0 4px rgba(10,122,255,0.07), 0 2px 6px rgba(10,122,255,0.06); } */
+        .msg-status.read i { color: #0A7AFF; font-weight:600; }
+        .msg-status:hover { transform: translateY(-1px); }
     </style>
 </head>
 <body>
@@ -702,15 +714,22 @@
                 <i class="fas fa-align-left"></i> Unread messages
                 <span id="unread-badge" class="badge" style="margin-left:8px; display:none;">0</span>
             </div>
-            <div class="nav-item"><i class="far fa-comments"></i> Threads</div>
+            <div class="nav-item" id="nav-groups"><i class="far fa-comments"></i> Groups <button id="create-group-btn" title="Create group" style="margin-left:8px;background:transparent;border:none;color:var(--sidebar-text);cursor:pointer;">+</button></div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="section-title"><span>Groups</span></div>
+            <div id="group-list">
+                <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading groups...</div>
+            </div>
         </div>
 
         <div class="sidebar-section">
             <div class="section-title">
-                <span>Channels</span>
+                <span>Company Name</span>
             </div>
             <ul class="channel-list">
-                <li class="channel-item active"><span class="hash">#</span> Software</li>
+                <li class="channel-item active"><span class="hash">#</span> <span id="channel-name">Software</span></li>
             </ul>
         </div>
 
@@ -739,6 +758,7 @@
                     <span class="avatar-stack"><i class="fas fa-users"></i></span>
                     <span id="total-members">0</span>
                 </div>
+                <button id="group-settings-btn" title="Group settings" style="background:transparent;border:none;color:var(--text-secondary);cursor:pointer;display:none;margin-left:8px;"><i class="fas fa-cog"></i></button>
             </div>
         </header>
 
@@ -837,6 +857,15 @@
             }
             return name;
         }
+        // Set channel name from current user's email: take domain part after '@' (before first dot)
+        (function(){
+            try {
+                const el = document.getElementById('channel-name');
+                if (!el || !CURRENT_USER) return;
+                const m = String(CURRENT_USER).match(/@([^\.\s]+)/);
+                if (m && m[1]) el.textContent = m[1];
+            } catch(e) { /* silent */ }
+        })();
         const DISPLAY_CURRENT_USER_NAME = formatDisplayName(CURRENT_USER_NAME);
 
         let selectedPeer = null;
@@ -930,6 +959,8 @@
 
         // Select peer to chat with
         function selectPeer(peerId, peerName) {
+            currentMode = 'dm';
+            selectedGroup = null;
             selectedPeer = (peerId || '').trim().toLowerCase();
             selectedPeerName = (peerName || '').split('<')[0].trim() || selectedPeer;
 
@@ -1052,6 +1083,29 @@
             } catch (err) { /* ignore date errors */ }
 
             msgEl.classList.add('msg-enter');
+            // attach message id and cid for later read-receipt updates and optimistic matching
+            if (m.id) {
+                try { msgEl.dataset.messageId = String(m.id); } catch(e){}
+            }
+            if (m.cid) {
+                try { msgEl.dataset.cid = String(m.cid); } catch(e){}
+            }
+            // add status icon for sent messages (single check = sent, double check = read)
+            if (isMe) {
+                const status = document.createElement('span');
+                status.className = 'msg-status';
+                const icon = document.createElement('i');
+                // default: single check (sent)
+                icon.className = 'fas fa-check';
+                status.appendChild(icon);
+                // if server indicates already read, switch to double-check look
+                if (m.is_read === 1 || m.is_read === true || String(m.is_read) === '1') {
+                    status.classList.add('read');
+                    icon.className = 'fas fa-check-double';
+                }
+                // attach after message-content
+                try { msgEl.querySelector('.message-content').appendChild(status); } catch(e){}
+            }
             feed.appendChild(msgEl);
             // smooth scroll into view
             try { feed.scroll({ top: feed.scrollHeight, behavior: 'smooth' }); } catch (e) { feed.scrollTop = feed.scrollHeight; }
@@ -1069,9 +1123,15 @@
                 try { ws.close(); } catch (e) {}
                 ws = null;
             }
-            if (!TENANT_ID || !selectedPeer) return;
+            if (!TENANT_ID || (!selectedPeer && !selectedGroup)) return;
 
-            const qs = `?tenant=${encodeURIComponent(TENANT_ID)}&peer=${encodeURIComponent(selectedPeer)}`;
+            // Build querystring for websocket: support peer (DM) or group
+            let qs = `?tenant=${encodeURIComponent(TENANT_ID)}`;
+            if (currentMode === 'group' && selectedGroup) {
+                qs += `&group=${encodeURIComponent(selectedGroup)}`;
+            } else if (selectedPeer) {
+                qs += `&peer=${encodeURIComponent(selectedPeer)}`;
+            }
             const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const url = `${scheme}://${window.location.host}/ws/chat/${qs}`;
             
@@ -1083,10 +1143,90 @@
                     try { msg = JSON.parse(ev.data); } catch (e) { return; }
                     
                     if (msg.event === 'message' && msg.message) {
-                        appendMessage(msg.message);
-                        const senderNorm = normId(msg.message.sender || msg.message.from);
-                        if (senderNorm !== normId(CURRENT_USER) && senderNorm === normId(selectedPeer)) {
-                            markRead(selectedPeer);
+                                    // If this message includes a client cid, try to match optimistic message
+                                    const incoming = msg.message || {};
+                                    const cid = incoming.cid;
+                                    const senderNorm = normId(incoming.sender || incoming.from || '');
+                                    if (cid) {
+                                        const existing = document.querySelector(`[data-cid="${cid}"]`);
+                                        if (existing) {
+                                            // update existing optimistic element instead of duplicating
+                                            try {
+                                                if (incoming.id) existing.dataset.messageId = String(incoming.id);
+                                                // update text and timestamp if server provides authoritative values
+                                                const txt = existing.querySelector('.text');
+                                                if (txt && incoming.text) txt.innerHTML = escapeHtml(incoming.text);
+                                                const ts = existing.querySelector('.timestamp');
+                                                if (ts && incoming.created_at) {
+                                                    const d = new Date(incoming.created_at);
+                                                    const pad = n => n < 10 ? '0' + n : n;
+                                                    ts.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                                                }
+                                                // mark as delivered (server confirmed)
+                                                let st = existing.querySelector('.msg-status');
+                                                if (!st) {
+                                                    st = document.createElement('span'); st.className = 'msg-status'; const ic=document.createElement('i'); ic.className='fas fa-check-double'; st.appendChild(ic); existing.querySelector('.message-content').appendChild(st);
+                                                }
+                                                st.classList.add('delivered');
+                                            } catch (e) { /* ignore */ }
+                                            // if the message came from someone else, don't mark read here
+                                        } else {
+                                            appendMessage(incoming);
+                                        }
+                                    } else {
+                                        appendMessage(incoming);
+                                    }
+
+                                    if (currentMode === 'dm') {
+                                        if (senderNorm !== normId(CURRENT_USER) && senderNorm === normId(selectedPeer)) {
+                                            markRead(selectedPeer);
+                                        }
+                                    } else if (currentMode === 'group') {
+                                        // group message received; if same group, we could mark read
+                                    }
+                    }
+
+                    // Read receipts: server broadcasts which message ids were marked read
+                    if (msg.event === 'message_read' && msg.message_ids && Array.isArray(msg.message_ids)) {
+                        msg.message_ids.forEach(id => {
+                            try {
+                                const el = document.querySelector(`[data-message-id="${id}"]`);
+                                if (el) {
+                                    // update or add status icon to show read
+                                    let st = el.querySelector('.msg-status');
+                                    if (!st) {
+                                        st = document.createElement('span');
+                                        st.className = 'msg-status';
+                                        const ic = document.createElement('i');
+                                        ic.className = 'fas fa-check-double';
+                                        st.appendChild(ic);
+                                        el.querySelector('.message-content').appendChild(st);
+                                    }
+                                    // mark as read style and double-check icon
+                                    st.classList.add('read');
+                                    const ic = st.querySelector('i');
+                                    if (ic) ic.className = 'fas fa-check-double';
+                                }
+                            } catch(e){ /* ignore selector issues */ }
+                        });
+                    }
+
+                    // presence / notification events (unread badges)
+                    if (msg.event === 'new_group_message') {
+                        const gid = msg.group_id || msg.message && msg.message.group_id;
+                        if (!gid) return;
+                        // if current group is open, ignore (we already appended)
+                        if (currentMode === 'group' && String(selectedGroup) === String(gid)) return;
+                        // increment badge or set from payload
+                        const badge = document.querySelector(`[data-unread-for-group="${gid}"]`);
+                        if (badge) {
+                            let cur = parseInt(badge.textContent || '0') || 0;
+                            cur += 1;
+                            badge.textContent = cur;
+                            badge.style.display = '';
+                        } else {
+                            // reload groups to get accurate counts
+                            loadGroups();
                         }
                     }
                 };
@@ -1103,11 +1243,181 @@
         function startPolling() {
             if (pollInterval) clearInterval(pollInterval);
             pollInterval = setInterval(() => {
-                if (selectedPeer) loadHistory();
-            }, 3000);
+                if (currentMode === 'dm' && selectedPeer) loadHistory();
+                if (currentMode === 'group' && selectedGroup) loadGroupHistory();
+            }, 3000); // every 30s
         }
 
-        // Send message
+        // --- Group helpers ---
+        async function loadGroups() {
+            const el = document.getElementById('group-list');
+            if (!el) return;
+            el.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading groups...</div>';
+            try {
+                const res = await fetch('/chat/groups/', { credentials: 'same-origin' });
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                el.innerHTML = '';
+                const groups = data.groups || [];
+                // store members/unread map
+                window._chat_group_meta = window._chat_group_meta || {};
+                groups.forEach(g => {
+                    window._chat_group_meta[g.id] = { members: g.members || [], unread: g.unread || 0 };
+                    const d = document.createElement('div');
+                    d.className = 'dm-item';
+                    d.dataset.groupId = g.id;
+                    d.innerHTML = `<div class="dm-user"><span class="user-pic-sm">${(g.name||'G').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</span><span class="dm-name">${g.name} <span style="font-size:11px;color:var(--sidebar-text-dim);">(${g.member_count})</span></span></div><span class="badge" data-unread-for-group="${g.id}" style="margin-left:auto;${(g.unread||0)>0 ? '' : 'display:none;'}">${g.unread||0}</span>`;
+                    d.addEventListener('click', ()=> selectGroup(g.id, g.name));
+                    el.appendChild(d);
+                });
+                if (groups.length === 0) el.innerHTML = '<div style="padding:12px;color:var(--text-muted);">No groups yet. Create one with the + button.</div>';
+            } catch (e) {
+                el.innerHTML = '<div style="padding:12px;color:#ff6b6b;">Error loading groups</div>';
+            }
+        }
+
+        function selectGroup(groupId, groupName) {
+            currentMode = 'group';
+            selectedGroup = groupId;
+            // clear DM selection
+            document.querySelectorAll('.dm-item').forEach(el=>el.classList.remove('active'));
+            const el = document.querySelector(`.dm-item[data-group-id="${groupId}"]`);
+            if (el) el.classList.add('active');
+            const headerTitle = document.getElementById('chat-header-title');
+            headerTitle.innerHTML = `<i class="fas fa-users" style="margin-right:8px;opacity:0.6;"></i> ${groupName}`;
+            document.getElementById('input-container').style.display = 'block';
+            loadGroupHistory();
+            initWebSocket();
+            startPolling();
+
+            // update header members count and show settings
+            const meta = (window._chat_group_meta || {})[groupId] || { members: [] };
+            document.getElementById('total-members').textContent = meta.members.length || 0;
+            const memberDisplay = document.getElementById('member-count-display');
+            memberDisplay.style.cursor = 'pointer';
+            memberDisplay.onclick = () => showGroupMembersModal(groupId);
+            const settingsBtn = document.getElementById('group-settings-btn');
+            if (settingsBtn) { settingsBtn.style.display = 'inline-block'; settingsBtn.onclick = () => showGroupSettingsModal(groupId, groupName); }
+            // hide unread badge for this group (we will mark read)
+            const badge = document.querySelector(`[data-unread-for-group="${groupId}"]`);
+            if (badge) badge.style.display = 'none';
+            // mark group read on server
+            try { fetch('/chat/group/mark_read/', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCookie('csrftoken') }, body: JSON.stringify({ group_id: groupId }) }); } catch(e){}
+        }
+
+        async function loadGroupHistory() {
+            if (!selectedGroup) return;
+            const feed = document.getElementById('messages-feed');
+            feed.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading messages...</div>';
+            try {
+                const res = await fetch(`/chat/group/history/?group_id=${encodeURIComponent(selectedGroup)}`, { credentials: 'same-origin' });
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                feed.innerHTML = '';
+                const msgs = (data.messages || []).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+                if (!msgs.length) {
+                    feed.innerHTML = `<div class="no-messages"><i class="far fa-comment-dots"></i><p>No messages yet in this group.</p></div>`;
+                } else {
+                    msgs.forEach(m=> appendMessage(m));
+                }
+                feed.scrollTop = feed.scrollHeight;
+            } catch (e) {
+                console.error('loadGroupHistory error', e);
+                feed.innerHTML = '<div class="no-messages"><i class="fas fa-exclamation-triangle"></i><p>Error loading messages</p></div>';
+            }
+        }
+
+        // Create group button handling
+        const createGroupBtn = document.getElementById('create-group-btn');
+        if (createGroupBtn) {
+            createGroupBtn.addEventListener('click', async ()=>{
+                const name = prompt('Group name:');
+                if (!name) return;
+                const members = prompt('Comma-separated emails or member ids to add (optional):');
+                const arr = members ? members.split(',').map(s=>s.trim()).filter(Boolean) : [];
+                try {
+                    const res = await fetch('/chat/groups/create/', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        },
+                        body: JSON.stringify({ name: name.trim(), members: arr })
+                    });
+                    if (!res.ok) throw new Error('Create failed');
+                    const data = await res.json();
+                    if (data && data.ok) {
+                        showToast('Group created');
+                        loadGroups();
+                    } else {
+                        showToast('Create failed');
+                    }
+                } catch (e) { console.error('create group', e); showToast('Create failed'); }
+            });
+        }
+
+        // --- Group members & settings modal UI ---
+        function showGroupMembersModal(groupId) {
+            const meta = (window._chat_group_meta || {})[groupId] || { members: [] };
+            let html = `<div style="padding:14px;"><h3>Members</h3><ul style="list-style:none;padding:0;margin:8px 0;">`;
+            meta.members.forEach(m=>{ html += `<li style="padding:6px 0;border-bottom:1px solid #f0f0f0;">${m}</li>`; });
+            html += `</ul><div style="text-align:right;margin-top:8px;"><button id="close-members" style="padding:8px 12px;border-radius:6px;background:#f3f4f6;border:1px solid #e6e6e6;">Close</button></div></div>`;
+            const overlay = document.createElement('div'); overlay.className='plus-menu-overlay'; overlay.style.display='flex'; overlay.innerHTML = `<div class="plus-menu" style="max-width:420px;">${html}</div>`;
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', (ev)=>{ if (ev.target === overlay) overlay.remove(); });
+            overlay.querySelector('#close-members').addEventListener('click', ()=> overlay.remove());
+        }
+
+        function showGroupSettingsModal(groupId, groupName) {
+            // modal with rename, add member, remove member
+            const html = `
+                <div style="padding:12px;">
+                    <h3>Group settings — ${groupName}</h3>
+                    <label style="display:block;margin-top:8px;font-weight:600">Rename</label>
+                    <input id="gs-rename" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e6e6e6;border-radius:6px;" value="${groupName}">
+                    <button id="gs-rename-btn" style="margin-top:8px;padding:8px 10px;background:#0A7AFF;color:#fff;border:none;border-radius:6px;">Rename</button>
+
+                    <label style="display:block;margin-top:12px;font-weight:600">Add member (email or id)</label>
+                    <input id="gs-add" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e6e6e6;border-radius:6px;">
+                    <button id="gs-add-btn" style="margin-top:8px;padding:8px 10px;background:#10B981;color:#fff;border:none;border-radius:6px;">Add</button>
+
+                    <label style="display:block;margin-top:12px;font-weight:600">Remove member (email or id)</label>
+                    <input id="gs-remove" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e6e6e6;border-radius:6px;">
+                    <button id="gs-remove-btn" style="margin-top:8px;padding:8px 10px;background:#EF4444;color:#fff;border:none;border-radius:6px;">Remove</button>
+
+                    <div style="text-align:right;margin-top:12px;"><button id="gs-close" style="padding:8px 12px;border-radius:6px;background:#f3f4f6;border:1px solid #e6e6e6;">Close</button></div>
+                </div>`;
+            const overlay = document.createElement('div'); overlay.className='plus-menu-overlay'; overlay.style.display='flex'; overlay.innerHTML = `<div class="plus-menu" style="max-width:520px;">${html}</div>`;
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', (ev)=>{ if (ev.target === overlay) overlay.remove(); });
+
+            overlay.querySelector('#gs-close').addEventListener('click', ()=> overlay.remove());
+            overlay.querySelector('#gs-rename-btn').addEventListener('click', async ()=>{
+                const val = overlay.querySelector('#gs-rename').value.trim();
+                if (!val) return showToast('Enter a name');
+                try {
+                    const res = await fetch('/chat/group/update/', { method: 'POST', credentials:'same-origin', headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify({ group_id: groupId, action: 'rename', value: val }) });
+                    if (!res.ok) throw new Error('failed');
+                    showToast('Renamed'); overlay.remove(); loadGroups();
+                } catch(e){ showToast('Rename failed'); }
+            });
+
+            overlay.querySelector('#gs-add-btn').addEventListener('click', async ()=>{
+                const val = overlay.querySelector('#gs-add').value.trim(); if (!val) return showToast('Enter member');
+                try { const res = await fetch('/chat/group/update/', { method: 'POST', credentials:'same-origin', headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify({ group_id: groupId, action: 'add_member', value: val }) }); if (!res.ok) throw new Error('failed'); showToast('Member added'); overlay.remove(); loadGroups(); } catch(e){ showToast('Add failed'); }
+            });
+
+            overlay.querySelector('#gs-remove-btn').addEventListener('click', async ()=>{
+                const val = overlay.querySelector('#gs-remove').value.trim(); if (!val) return showToast('Enter member');
+                try { const res = await fetch('/chat/group/update/', { method: 'POST', credentials:'same-origin', headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify({ group_id: groupId, action: 'remove_member', value: val }) }); if (!res.ok) throw new Error('failed'); showToast('Member removed'); overlay.remove(); loadGroups(); } catch(e){ showToast('Remove failed'); }
+            });
+        }
+
+        // Message send handler (supports DM and group modes)
+        let currentMode = 'dm'; // 'dm' or 'group'
+        let selectedGroup = null;
+
         async function sendMessage() {
             const input = document.getElementById('message-input');
             const text = input ? input.value.trim() : '';
@@ -1117,18 +1427,57 @@
                 if (typeof showToast === 'function') showToast('Enter a message before sending');
                 return;
             }
-            if (!selectedPeer) {
-                console.warn('sendMessage: no peer selected');
-                if (typeof showToast === 'function') showToast('Select a member to message first');
-                return;
-            }
 
             const sendBtn = document.getElementById('send-btn');
             if (sendBtn) sendBtn.style.opacity = '0.5';
 
             try {
+                if (currentMode === 'group') {
+                    if (!selectedGroup) {
+                        if (typeof showToast === 'function') showToast('Select a group first');
+                        return;
+                    }
+                        // generate a client id for optimistic UI
+                        const cid = 'cid-' + Date.now() + '-' + Math.random().toString(36).slice(2,9);
+                        // Prefer websocket for real-time group send
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'group_message', group_id: selectedGroup, text, cid }));
+                        } else {
+                        // fallback to HTTP
+                        const res = await fetch('/chat/group/send/', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken'),
+                            },
+                            body: JSON.stringify({ group_id: selectedGroup, text }),
+                        });
+                        if (!res.ok) {
+                            const err = await res.text().catch(()=>res.statusText||'error');
+                            console.error('group send failed', err);
+                            if (typeof showToast === 'function') showToast('Send failed');
+                            return;
+                        }
+                    }
+                        // optimistic append with cid so server echo can match
+                        appendMessage({ sender: CURRENT_USER, text, created_at: new Date().toISOString(), cid });
+                    if (input) input.value = '';
+                    return;
+                }
+
+                // DM mode (existing behavior)
+                if (!selectedPeer) {
+                    console.warn('sendMessage: no peer selected');
+                    if (typeof showToast === 'function') showToast('Select a member to message first');
+                    return;
+                }
+
+                // DM mode (existing behavior)
+                // generate cid for optimistic UI
+                const cid = 'cid-' + Date.now() + '-' + Math.random().toString(36).slice(2,9);
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'message', tenant: TENANT_ID, to: selectedPeer, text }));
+                    ws.send(JSON.stringify({ type: 'message', tenant: TENANT_ID, to: selectedPeer, text, cid }));
                 } else {
                     const res = await fetch('/chat/send/', {
                         method: 'POST',
@@ -1146,8 +1495,9 @@
                         return;
                     }
                 }
-
-                appendMessage({ sender: CURRENT_USER, text, created_at: new Date().toISOString() });
+                
+                // optimistic append with cid so server echo can match
+                appendMessage({ sender: CURRENT_USER, text, created_at: new Date().toISOString(), cid });
                 if (input) input.value = '';
             } catch (e) {
                 console.error('sendMessage error', e);
@@ -1573,6 +1923,7 @@
 
         // Init
         loadMembers();
+        loadGroups();
         refreshUnreadCounts();
         setInterval(refreshUnreadCounts, 6000);
     </script>
