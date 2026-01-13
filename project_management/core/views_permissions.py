@@ -394,7 +394,7 @@ def assign_role(request):
 def password_policy_page(request):
     member_id = request.session.get('member_id')
     if not tp.user_has_permission(request, member_id, None, 'settings.edit'):
-        return HttpResponseForbidden("Permission denied")
+        return render(request, 'core/Permission_denied.html')
 
     conn = get_tenant_conn(request)
     cur = conn.cursor()

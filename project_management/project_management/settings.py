@@ -37,10 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'core'
+    'core',
+    'channels',
+    'chat',
 ]
 
-INSTALLED_APPS += ["channels", "chat"]
 # Channels: route to ASGI application
 ASGI_APPLICATION = "project_management.asgi.application"   # adjust module path to your project package
 

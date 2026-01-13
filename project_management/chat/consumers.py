@@ -2,6 +2,7 @@ import json
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from urllib.parse import parse_qs
 from asgiref.sync import sync_to_async
+from django.utils import timezone
 
 # import your helpers - adjust path if necessary
 from core.db_helpers import exec_sql, get_tenant_conn
@@ -33,14 +34,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
         qs = parse_qs(self.scope.get('query_string', b'').decode())
         tenant = qs.get('tenant', [None])[0]
-        peer = qs.get('peer', [None])[0]
-        group = qs.get('group', [None])[0]
         if not tenant:
             await self.close()
             return
 
-        # canonical identity (prefer email, fall back to member_id / username)
-        self.me = str(self.scope.get('session', {}).get('member_id') or getattr(user, 'email', '') or getattr(user, 'username', ''))
+        # Get current user identity from session
+        session = self.scope.get('session', {})
+        self.me = str(session.get('ident_email') or session.get('member_name') or session.get('cn') or getattr(user, 'email', '') or getattr(user, 'username', ''))
+        
+        # Get member name for display
+        self.my_name = session.get('cn') or session.get('member_name') or getattr(user, 'username', 'User')
 
         # normalize using tenant DB (best-effort)
         try:
@@ -49,154 +52,120 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         except Exception:
             self.me = str(self.me).strip().lower()
 
-        # build deterministic room name if peer provided
-        if peer:
-            try:
-                tenant_conn = get_tenant_conn(tenant_id=tenant)
-                peer_norm = _normalize_identity_for_tenant(tenant_conn, peer)
-            except Exception:
-                peer_norm = str(peer).strip().lower()
-            a, b = sorted([self.me, peer_norm])
-            self.room_name = f'chat_{tenant}_{a}_{b}'
-        else:
-            self.room_name = None
-
-        # optional group room (for group/thread real-time)
-        self.group_id = None
-        self.group_room = None
-        if group:
-            try:
-                self.group_id = int(group)
-                self.group_room = f'chat_group_{tenant}_{self.group_id}'
-            except Exception:
-                self.group_id = None
-                self.group_room = None
-
+        # Tenant-wide presence group for this tenant
         self.presence_group = f'presence_{tenant}'
         self.tenant_id = tenant
-        self.peer = peer
 
-        if self.room_name:
-            await self.channel_layer.group_add(self.room_name, self.channel_name)
-        if getattr(self, 'group_room', None):
-            await self.channel_layer.group_add(self.group_room, self.channel_name)
+        # Join presence group
         await self.channel_layer.group_add(self.presence_group, self.channel_name)
-
         await self.accept()
 
+        # Announce user is online
         await self.channel_layer.group_send(
             self.presence_group,
-            {'type': 'presence.update', 'event': 'presence', 'user': self.me, 'status': 'online'},
+            {
+                'type': 'presence_update',
+                'status': 'online',
+                'user_id': session.get('member_id'),
+                'user_email': self.me,
+                'user_name': self.my_name,
+            },
         )
 
     async def disconnect(self, close_code):
+        # Announce user is offline
         try:
+            session = self.scope.get('session', {})
             await self.channel_layer.group_send(
                 self.presence_group,
-                {'type': 'presence.update', 'event': 'presence', 'user': self.me, 'status': 'offline'},
+                {
+                    'type': 'presence_update',
+                    'status': 'offline',
+                    'user_id': session.get('member_id'),
+                    'user_email': self.me,
+                    'user_name': self.my_name,
+                },
             )
         except Exception:
             pass
 
-        if getattr(self, 'room_name', None):
-            await self.channel_layer.group_discard(self.room_name, self.channel_name)
-        if getattr(self, 'group_room', None):
-            await self.channel_layer.group_discard(self.group_room, self.channel_name)
         if getattr(self, 'presence_group', None):
             await self.channel_layer.group_discard(self.presence_group, self.channel_name)
 
     async def receive_json(self, content, **kwargs):
         typ = content.get('type')
-        # Support both direct messages and group messages
+        
+        # Handle presence updates (user manually sending presence)
+        if typ == 'presence':
+            status = content.get('status', 'online')
+            session = self.scope.get('session', {})
+            await self.channel_layer.group_send(
+                self.presence_group,
+                {
+                    'type': 'presence_update',
+                    'status': status,
+                    'user_id': session.get('member_id'),
+                    'user_email': self.me,
+                    'user_name': self.my_name,
+                },
+            )
+            return
+        
+        # Handle direct messages
         if typ == 'message':
-            text = content.get('text', '').strip()
-            to_user = content.get('to')
-            if not text or not to_user:
+            chat_type = content.get('chat_type')  # 'dm' or 'group'
+            chat_id = content.get('chat_id')      # peer id or group id
+            text = content.get('message', '').strip()
+            
+            if not text or not chat_id:
                 return
-
-            # persist DM message
-            saved = await sync_to_async(self._persist_message)(self.tenant_id, self.me, to_user, text)
-
-            # include optional client cid for optimistic UI matching
-            payload = {
-                'event': 'message',
-                'message': {
-                    'sender': saved.get('sender'),
-                    'text': text,
-                    'created_at': saved.get('created_at'),
-                    'id': saved.get('id'),
-                    'cid': content.get('cid') if isinstance(content, dict) else None,
-                }
-            }
-
-            # broadcast to normalized conversation room
-            a, b = sorted([saved.get('sender'), saved.get('to')])
-            room = f'chat_{self.tenant_id}_{a}_{b}'
-            await self.channel_layer.group_send(room, {'type': 'chat.message', **payload})
-
-            # notify presence group for unread badge update
-            await self.channel_layer.group_send(
-                self.presence_group,
-                {
-                    'type': 'presence.update',
-                    'event': 'new_message',
-                    'from': saved.get('sender'),
-                    'to': saved.get('to'),
-                    'tenant': self.tenant_id,
-                },
-            )
+            
+            if chat_type == 'dm':
+                # Persist DM message
+                saved = await sync_to_async(self._persist_message)(self.tenant_id, self.me, chat_id, text)
+                
+                # Broadcast to all users in tenant
+                await self.channel_layer.group_send(
+                    self.presence_group,
+                    {
+                        'type': 'new_message',
+                        'chat_type': 'dm',
+                        'chat_id': str(chat_id),
+                        'message': text,
+                        'sender_email': self.me,
+                        'sender_name': self.my_name,
+                        'timestamp': saved.get('created_at'),
+                        'is_self': False,
+                    },
+                )
+            
+            elif chat_type == 'group':
+                # Persist group message
+                saved = await sync_to_async(self._persist_group_message)(self.tenant_id, int(chat_id), self.me, text)
+                
+                # Broadcast to all users in tenant
+                await self.channel_layer.group_send(
+                    self.presence_group,
+                    {
+                        'type': 'new_message',
+                        'chat_type': 'group',
+                        'chat_id': str(chat_id),
+                        'message': text,
+                        'sender_email': self.me,
+                        'sender_name': self.my_name,
+                        'timestamp': saved.get('created_at'),
+                        'is_self': False,
+                    },
+                )
+            
             return
 
-        # group message handling
-        if typ == 'group_message':
-            group_id = content.get('group_id') or self.group_id
-            text = content.get('text', '').strip()
-            if not group_id or not text:
-                return
-
-            # persist group message
-            saved = await sync_to_async(self._persist_group_message)(self.tenant_id, int(group_id), self.me, text)
-
-            payload = {
-                'event': 'message',
-                'message': {
-                    'sender': saved.get('sender'),
-                    'text': text,
-                    'created_at': saved.get('created_at'),
-                    'id': saved.get('id'),
-                    'group_id': int(group_id),
-                    'cid': content.get('cid') if isinstance(content, dict) else None,
-                }
-            }
-
-            # broadcast to group room
-            room = f'chat_group_{self.tenant_id}_{int(group_id)}'
-            await self.channel_layer.group_send(room, {'type': 'chat.message', **payload})
-
-            # also notify presence group for badge updates
-            await self.channel_layer.group_send(
-                self.presence_group,
-                {
-                    'type': 'presence.update',
-                    'event': 'new_group_message',
-                    'group_id': int(group_id),
-                    'from': saved.get('sender'),
-                    'tenant': self.tenant_id,
-                },
-            )
-            return
-
-        # ignore other message types
-        return
-
-    async def chat_message(self, event):
+    async def new_message(self, event):
+        """Forward new message to WebSocket client"""
         await self.send_json(event)
 
     async def presence_update(self, event):
-        await self.send_json(event)
-
-    async def chat_message_read(self, event):
-        """Forward read-receipt events to connected clients."""
+        """Forward presence update to WebSocket client"""
         await self.send_json(event)
 
     # ---------- sync DB helpers ----------

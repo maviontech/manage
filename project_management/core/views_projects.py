@@ -78,7 +78,7 @@ def project_create(request):
     finally:
         cur_check.close(); conn_check.close()
     if not has_admin:
-        return HttpResponseForbidden("Only administrators may create projects.")
+        return render(request, 'authorize.html')
 
     # Fetch employees for dropdown
     conn, cur = get_tenant_conn_and_cursor(request)

@@ -509,10 +509,10 @@
 
 
   <div id="chat-shortcut" aria-hidden="false" style="position:fixed;right:22px;bottom:18px;z-index:1400">
-    <a href="{% url 'chat:team_chat' %}" id="chat-open-btn" title="Open team chat" class="chat-fab" aria-label="Open chat" style="width: 50px;height: 50px;border-radius:999px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;background:linear-gradient(135deg,#2563eb,#38bdf8);box-shadow:0 10px 30px rgba(8,20,40,0.18);">
+    <button id="chat-open-btn" title="Open team chat" class="chat-fab" aria-label="Open chat" onclick="setChatState('windowed')" style="width: 50px;height: 50px;border-radius:999px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;background:linear-gradient(135deg,#2563eb,#38bdf8);box-shadow:0 10px 30px rgba(8,20,40,0.18);transition:all 0.3s ease;">
       <i class="fa fa-comments" aria-hidden="true" style="font-size:28px;color:#fff"></i>
       <span id="chat-unread-badge" class="hidden" style="position:absolute;right:-6px;top:-6px;background:#ff3b30;color:#fff;border-radius:999px;padding:4px 6px;font-size:14px"></span>
-    </a>
+    </button>
 
     <div id="chat-panel" class="hidden" role="dialog" aria-label="Team chat" style="width:540px;max-height:88vh;background:linear-gradient(135deg,#2563eb 80%,#38bdf8 100%);border-radius:16px;box-shadow:0 24px 80px rgba(2,6,23,0.40);overflow:hidden;margin-top:10px;">
       <div class="chat-header" style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:linear-gradient(90deg,#1e3a8a,#2563eb);color:#fff;">
@@ -1454,6 +1454,1209 @@
     div.textContent = text;
     return div.innerHTML;
   }
+  </script>
+
+  <!-- Team Chat Widget -->
+  <style>
+    /* Chat Floating Button Styles */
+    #chat-open-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 15px 40px rgba(37, 99, 235, 0.35);
+    }
+
+    #chat-open-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Chat Widget Styles */
+    #chatWrapper {
+      display: flex;
+      background: #fff;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+    }
+
+    .state-full {
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      border-radius: 0;
+      z-index: 9999;
+    }
+
+    .state-windowed {
+      width: 90vw;
+      height: 85vh;
+      max-width: 1200px;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      border: 1px solid #E5E7EB;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 9999;
+    }
+
+    .state-minimized {
+      width: 400px;
+      height: 600px;
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      z-index: 9999;
+    }
+
+    .state-hidden {
+      transform: translate(-50%, 120%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Chat Layout */
+    .sidebar {
+      width: 300px;
+      background: #1F2023;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid #3A3B3E;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .sidebar-section {
+      padding: 16px 0;
+      border-bottom: 1px solid #2d2e31;
+    }
+
+    .section-title {
+      padding: 8px 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-item {
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 14px;
+      color: #E5E7EB;
+      text-decoration: none;
+    }
+
+    .nav-item:hover {
+      background: #3A3B3E;
+    }
+
+    .nav-item.active {
+      background: #0A7AFF;
+      color: #fff;
+    }
+
+    .badge {
+      background: #ef4444;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .channel-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .channel-item {
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 14px;
+    }
+
+    .channel-item:hover {
+      background: #3A3B3E;
+    }
+
+    .channel-item.active {
+      background: #0A7AFF;
+      font-weight: 600;
+    }
+
+    .hash {
+      opacity: 0.7;
+    }
+
+    .dm-item {
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .dm-item:hover {
+      background: #3A3B3E;
+    }
+
+    .dm-item.active {
+      background: #0A7AFF;
+    }
+
+    .dm-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #6366f1;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .dm-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .dm-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #E5E7EB;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .online-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      border: 2px solid #1F2023;
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+    }
+
+    .dm-avatar-wrapper {
+      position: relative;
+    }
+
+    .loading {
+      padding: 20px;
+      text-align: center;
+      color: #9CA3AF;
+      font-size: 13px;
+    }
+
+    .back-link {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #9CA3AF;
+      text-decoration: none;
+      transition: 0.2s;
+      margin-top: auto;
+    }
+
+    .back-link:hover {
+      background: #3A3B3E;
+      color: #E5E7EB;
+    }
+
+    .chat-main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      min-width: 0;
+    }
+
+    /* Chat Header */
+    .chat-header {
+      height: 64px;
+      border-bottom: 1px solid #E5E7EB;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: #fff;
+    }
+
+    .chat-window-controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    .chat-control-btn {
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      cursor: pointer;
+      font-size: 16px;
+      transition: 0.2s;
+      padding: 4px;
+    }
+
+    .chat-control-btn:hover { color: #0A7AFF; }
+
+    /* Messages Feed */
+    .chat-messages-feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      background: #fff;
+    }
+
+    .chat-message-group {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      max-width: 80%;
+    }
+
+    .chat-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      margin-right: 12px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+
+    .chat-message-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-message-header {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .chat-username { font-weight: 700; color: #111827; }
+    .chat-timestamp { color: #9CA3AF; }
+
+    .chat-text {
+      background: #F3F4F6;
+      padding: 12px 16px;
+      border-radius: 18px 18px 18px 4px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #1F2937;
+      max-width: 100%;
+      word-wrap: break-word;
+    }
+
+    /* Sent Message Styles */
+    .chat-message-group.sent-message {
+      flex-direction: row-reverse;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+
+    .chat-message-group.sent-message .chat-avatar {
+      margin-left: 12px;
+      margin-right: 0;
+      background: linear-gradient(135deg, #0A7AFF 0%, #4F8CFF 100%);
+    }
+
+    .chat-message-group.sent-message .chat-text {
+      background: #DBEAFE;
+      border-radius: 18px 18px 4px 18px;
+      text-align: left;
+    }
+
+    .chat-message-group.sent-message .chat-message-header {
+      flex-direction: row-reverse;
+    }
+
+    /* Input Area */
+    .chat-input-area {
+      padding: 20px;
+      border-top: 1px solid #E5E7EB;
+    }
+
+    .chat-input-box {
+      display: flex;
+      align-items: center;
+      background: #f9fafb;
+      border: 2px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 8px 16px;
+      transition: 0.2s;
+    }
+
+    .chat-input-box:focus-within {
+      border-color: #0A7AFF;
+      background: #fff;
+    }
+
+    .chat-input-box input {
+      flex: 1;
+      border: none;
+      background: none;
+      outline: none;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    /* Sidebar Elements */
+    .chat-nav-item {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 14px;
+    }
+
+    .chat-nav-item:hover { background: #3A3B3E; }
+    .chat-nav-item.active { background: #0A7AFF; }
+
+    /* Floating Reopen Button */
+    #reopenChat {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      background: #0A7AFF;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 24px;
+      box-shadow: 0 10px 20px rgba(10, 122, 255, 0.3);
+      cursor: pointer;
+      display: none;
+      z-index: 9998;
+      transition: all 0.3s ease;
+    }
+
+    #reopenChat:hover {
+      transform: scale(1.1);
+      box-shadow: 0 15px 30px rgba(10, 122, 255, 0.4);
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+
+  <button id="reopenChat" onclick="setChatState('windowed')">
+    <i class="fas fa-comments"></i>
+  </button>
+
+  <div id="chatWrapper" class="state-hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <span>{{ tenant_name|default:"Team Chat" }}</span>
+            <i class="fas fa-chevron-down" style="font-size: 12px;"></i>
+        </div>
+
+        <div class="sidebar-section">
+            <a href="{% url 'dashboard' %}" class="nav-item"><i class="fas fa-home"></i> Dashboard</a>
+            <div class="nav-item" id="nav-unread">
+                <i class="fas fa-align-left"></i> Unread messages
+                <span id="unread-badge" class="badge" style="margin-left:8px; display:none;">0</span>
+            </div>
+            <div class="nav-item" id="nav-groups"><i class="far fa-comments"></i> Groups <button id="create-group-btn" title="Create group" style="margin-left:8px;background:transparent;border:none;color:var(--sidebar-text);cursor:pointer;">+</button></div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="section-title"><span>Groups</span></div>
+            <div id="group-list">
+                <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading groups...</div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="section-title">
+                <span>Company Name</span>
+            </div>
+            <ul class="channel-list">
+                <li class="channel-item active"><span class="hash">#</span> <span id="channel-name">Software</span></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="section-title">
+                <span>Direct messages</span>
+            </div>
+            <div id="dm-list">
+                <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+        </div>
+
+        <a href="{% url 'dashboard' %}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </aside>
+
+    <!-- Main Chat -->
+    <main class="chat-main-content">
+      <header class="chat-header">
+        <div class="header-left" style="display: flex; align-items: center; gap: 10px;">
+          <h3 id="chat-header-title" style="font-weight: 700; margin: 0; color: #111827;">@ General Channel</h3>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="position: relative;">
+            <i class="fas fa-bell" style="color: #9CA3AF; font-size: 18px; cursor: pointer;"></i>
+            <span id="chat-notif-badge" class="badge" style="position: absolute; top: -8px; right: -8px; display: none;">3</span>
+          </div>
+        
+        <div class="chat-window-controls">
+          <button class="chat-control-btn" onclick="setChatState('minimized')" title="Minimize to Corner"><i class="fas fa-compress-alt"></i></button>
+          <button class="chat-control-btn" onclick="toggleChatFullscreen()" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
+          <button class="chat-control-btn" onclick="setChatState('hidden')" title="Close Chat"><i class="fas fa-times"></i></button>
+        </div>
+      </header>
+
+      <div id="chatMessagesFeed" class="chat-messages-feed">
+        <!-- Welcome Message -->
+        <div style="text-align: center; margin: 40px 0; color: #999; font-size: 13px;">
+          <i class="fas fa-comments" style="font-size: 48px; color: #ddd; margin-bottom: 16px;"></i>
+          <p style="font-weight: 600; color: #666;">Welcome to Team Chat!</p>
+          <p style="margin-top: 8px;">Start a conversation with your team members.</p>
+        </div>
+      </div>
+
+      <footer class="chat-input-area">
+        <div class="chat-input-box">
+          <button class="chat-control-btn"><i class="fas fa-plus"></i></button>
+          <button class="chat-control-btn"><i class="far fa-smile"></i></button>
+          <input id="chatInput" type="text" placeholder="Type a message to #general...">
+          <button class="chat-control-btn" onclick="handleChatSend()" style="color: #0A7AFF;"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const chatWrapper = document.getElementById('chatWrapper');
+    const chatSidebar = document.querySelector('.sidebar');
+    const reopenChatBtn = document.getElementById('reopenChat');
+    const chatFeed = document.getElementById('chatMessagesFeed');
+    const chatInput = document.getElementById('chatInput');
+
+    let isChatFullscreen = false;
+    let currentChatType = null; // 'dm' or 'group'
+    let currentChatId = null; // peer id or group id
+    let onlineUsers = new Set(); // Track online user IDs/emails
+    let chatWebSocket = null; // WebSocket connection for real-time chat
+
+    // Initialize WebSocket for real-time chat
+    function initChatWebSocket() {
+      const TENANT_ID = "{{ request.session.tenant_id|default:'' }}";
+      if (!TENANT_ID) {
+        console.warn('No tenant ID, cannot connect to chat WebSocket');
+        return;
+      }
+
+      try {
+        const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const url = `${scheme}://${window.location.host}/ws/chat/?tenant=${encodeURIComponent(TENANT_ID)}`;
+        
+        chatWebSocket = new WebSocket(url);
+        
+        chatWebSocket.onopen = () => {
+          console.log('Chat WebSocket connected');
+          // Send presence immediately
+          sendPresence('online');
+        };
+        
+        chatWebSocket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('Chat WebSocket message:', data);
+            
+            if (data.type === 'new_message') {
+              // New message received
+              handleNewMessage(data);
+            } else if (data.type === 'presence_update') {
+              // User presence update
+              handlePresenceUpdate(data);
+            }
+          } catch (e) {
+            console.error('Error parsing WebSocket message:', e);
+          }
+        };
+        
+        chatWebSocket.onclose = () => {
+          console.log('Chat WebSocket closed, reconnecting in 3s...');
+          setTimeout(initChatWebSocket, 3000);
+        };
+        
+        chatWebSocket.onerror = (error) => {
+          console.error('Chat WebSocket error:', error);
+        };
+      } catch (e) {
+        console.error('Failed to initialize chat WebSocket:', e);
+      }
+    }
+
+    function sendPresence(status) {
+      if (chatWebSocket && chatWebSocket.readyState === WebSocket.OPEN) {
+        chatWebSocket.send(JSON.stringify({
+          type: 'presence',
+          status: status // 'online' or 'offline'
+        }));
+      }
+    }
+
+    function handleNewMessage(data) {
+      // Check if this message belongs to current conversation
+      const messageType = data.chat_type; // 'dm' or 'group'
+      const messageId = data.chat_id; // peer id or group id
+      
+      // If we're viewing this conversation, append the message
+      if (currentChatType === messageType && currentChatId == messageId) {
+        const chatFeed = document.getElementById('chatMessagesFeed');
+        if (!chatFeed) return;
+        
+        const currentUserEmail = '{{ request.session.ident_email|escapejs }}'.toLowerCase();
+        const currentUserName = '{{ request.session.cn|default:request.session.member_name|escapejs }}'.toLowerCase();
+        
+        const senderEmail = (data.sender_email || '').toLowerCase();
+        const senderName = (data.sender_name || '').toLowerCase();
+        const isSelf = data.is_self || senderEmail === currentUserEmail || senderName === currentUserName;
+        
+        const time = new Date(data.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const initial = getInitials(data.sender_name || 'U');
+        
+        const msgClass = isSelf ? 'sent-message' : '';
+        
+        const msgHtml = `
+          <div class="chat-message-group ${msgClass}" style="animation: slideIn 0.3s ease-out">
+            <div class="chat-avatar">${escapeHtml(initial)}</div>
+            <div class="chat-message-content">
+              <div class="chat-message-header">
+                <span class="chat-username">${escapeHtml(data.sender_name || 'Unknown')}</span>
+                <span class="chat-timestamp">${time}</span>
+              </div>
+              <div class="chat-text">${escapeHtml(data.message)}</div>
+            </div>
+          </div>
+        `;
+        
+        chatFeed.insertAdjacentHTML('beforeend', msgHtml);
+        chatFeed.scrollTop = chatFeed.scrollHeight;
+      }
+      
+      // Update unread counts
+      refreshUnreadCounts();
+    }
+
+    function handlePresenceUpdate(data) {
+      const userId = data.user_id;
+      const userEmail = (data.user_email || '').toLowerCase();
+      const userName = (data.user_name || '').toLowerCase();
+      const status = data.status; // 'online' or 'offline'
+      
+      console.log('Presence update:', userName, status);
+      
+      if (status === 'online') {
+        if (userId) onlineUsers.add(userId.toString());
+        if (userEmail) onlineUsers.add(userEmail);
+        if (userName) onlineUsers.add(userName);
+      } else {
+        if (userId) onlineUsers.delete(userId.toString());
+        if (userEmail) onlineUsers.delete(userEmail);
+        if (userName) onlineUsers.delete(userName);
+      }
+      
+      // Update all online indicators
+      document.querySelectorAll('.online-indicator').forEach(indicator => {
+        const parent = indicator.closest('.dm-item');
+        if (!parent) return;
+        
+        const memberId = parent.getAttribute('data-member-id');
+        const memberEmail = (parent.getAttribute('data-member-email') || '').toLowerCase();
+        const memberName = (parent.querySelector('.dm-name')?.textContent || '').toLowerCase().replace(/ ● online$/, '').trim();
+        
+        const isOnline = onlineUsers.has(memberId) || 
+                        onlineUsers.has(memberEmail) || 
+                        onlineUsers.has(memberName);
+        
+        indicator.style.display = isOnline ? 'block' : 'none';
+        
+        // Update "● Online" text in name
+        const nameEl = parent.querySelector('.dm-name');
+        if (nameEl) {
+          const baseName = nameEl.textContent.replace(/ ● Online$/, '').trim();
+          if (isOnline && !baseName.includes('(You)')) {
+            nameEl.innerHTML = escapeHtml(baseName) + ' <span style="color: #10b981; font-size: 11px;">● Online</span>';
+          } else {
+            nameEl.textContent = baseName;
+          }
+        }
+      });
+    }
+
+    function setChatState(state) {
+      // Reset classes
+      chatWrapper.classList.remove('state-full', 'state-windowed', 'state-minimized', 'state-hidden');
+      reopenChatBtn.style.display = 'none';
+      if (chatSidebar) chatSidebar.style.display = 'flex';
+
+      if (state === 'windowed') {
+        chatWrapper.classList.add('state-windowed');
+        isChatFullscreen = false;
+      } else if (state === 'minimized') {
+        chatWrapper.classList.add('state-minimized');
+        if (chatSidebar) chatSidebar.style.display = 'none';
+        isChatFullscreen = false;
+      } else if (state === 'hidden') {
+        chatWrapper.classList.add('state-hidden');
+        reopenChatBtn.style.display = 'block';
+      } else if (state === 'full') {
+        chatWrapper.classList.add('state-full');
+        isChatFullscreen = true;
+      }
+      
+      // Auto-scroll
+      setTimeout(() => { 
+        if (chatFeed) chatFeed.scrollTop = chatFeed.scrollHeight; 
+      }, 300);
+    }
+
+    function toggleChatFullscreen() {
+      if (isChatFullscreen) setChatState('windowed');
+      else setChatState('full');
+    }
+
+    async function handleChatSend() {
+      if (!chatInput) return;
+      const val = chatInput.value.trim();
+      if (!val) return;
+
+      // Check if a chat is selected
+      if (!currentChatType || !currentChatId) {
+        alert('Please select a conversation first');
+        return;
+      }
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const currentUser = '{% if request.session.cn %}{{ request.session.cn }}{% elif request.session.member_name %}{{ request.session.member_name }}{% elif request.user.is_authenticated %}{{ request.user.username }}{% else %}User{% endif %}';
+      const userInitial = getInitials(currentUser);
+      
+      // Display message immediately (optimistic UI)
+      const msgHtml = `
+        <div class="chat-message-group sent-message" style="animation: slideIn 0.3s ease-out">
+          <div class="chat-avatar">${userInitial}</div>
+          <div class="chat-message-content">
+            <div class="chat-message-header">
+              <span class="chat-username">${escapeHtml(currentUser)}</span>
+              <span class="chat-timestamp">${time}</span>
+            </div>
+            <div class="chat-text">${escapeHtml(val)}</div>
+          </div>
+        </div>
+      `;
+      
+      if (chatFeed) {
+        chatFeed.insertAdjacentHTML('beforeend', msgHtml);
+        chatInput.value = '';
+        chatFeed.scrollTop = chatFeed.scrollHeight;
+      }
+
+      // Send message via WebSocket for real-time delivery
+      if (chatWebSocket && chatWebSocket.readyState === WebSocket.OPEN) {
+        chatWebSocket.send(JSON.stringify({
+          type: 'message',
+          chat_type: currentChatType,
+          chat_id: currentChatId,
+          message: val
+        }));
+      } else {
+        // Fallback to HTTP if WebSocket not available
+        try {
+          let url, body;
+          
+          if (currentChatType === 'dm') {
+            url = '/chat/send/';
+            body = JSON.stringify({ 
+              to: currentChatId, 
+              text: val 
+            });
+          } else if (currentChatType === 'group') {
+            url = '/chat/group/send/';
+            body = JSON.stringify({ 
+              group_id: currentChatId, 
+              text: val 
+            });
+          }
+
+          const response = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: body
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Send failed:', response.status, errorText);
+            alert('Failed to send message. Please try again.');
+            loadChatMessages(currentChatType, currentChatId);
+          }
+        } catch (e) {
+          console.error('Send error:', e);
+          alert('Error sending message. Please check your connection.');
+          loadChatMessages(currentChatType, currentChatId);
+        }
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    if (chatInput) {
+      chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleChatSend();
+      });
+    }
+
+    // Helper functions
+    function getCookie(name) {
+      let value = '; ' + document.cookie;
+      let parts = value.split('; ' + name + '=');
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return '';
+    }
+
+    function getInitials(name) {
+      if (!name) return '?';
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    }
+
+    // Load groups and direct messages from backend APIs
+    async function loadChatSidebar() {
+      await loadGroups();
+      await loadDirectMessages();
+      await refreshUnreadCounts();
+    }
+
+    async function loadGroups() {
+      const groupList = document.getElementById('group-list');
+      if (!groupList) return;
+
+      try {
+        const res = await fetch('/chat/groups/', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Failed to load groups');
+        
+        const data = await res.json();
+        const groups = data.groups || [];
+        
+        groupList.innerHTML = '';
+        
+        if (groups.length === 0) {
+          groupList.innerHTML = '<div style="padding: 12px 20px; color: #6b7280; font-size: 13px;">No groups yet</div>';
+        } else {
+          groups.forEach(group => {
+            const initials = (group.name || 'G').split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
+            const div = document.createElement('div');
+            div.className = 'dm-item';
+            div.dataset.groupId = group.id;
+            div.innerHTML = `
+              <div class="dm-avatar-wrapper">
+                <div class="dm-avatar" style="background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)">${initials}</div>
+              </div>
+              <div class="dm-info">
+                <div class="dm-name">${escapeHtml(group.name)}</div>
+              </div>
+              ${group.unread > 0 ? `<span class="badge" style="margin-left: auto;">${group.unread}</span>` : ''}
+            `;
+            div.addEventListener('click', () => selectGroup(group.id, group.name));
+            groupList.appendChild(div);
+          });
+        }
+      } catch (e) {
+        console.error('loadGroups error:', e);
+        groupList.innerHTML = '<div style="padding: 12px 20px; color: #ef4444; font-size: 13px;">Error loading groups</div>';
+      }
+    }
+
+    async function loadDirectMessages() {
+      const dmList = document.getElementById('dm-list');
+      if (!dmList) return;
+
+      try {
+        const res = await fetch('/chat/members/', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Failed to load members');
+        
+        const data = await res.json();
+        const members = data.members || [];
+        
+        dmList.innerHTML = '';
+        
+        if (members.length === 0) {
+          dmList.innerHTML = '<div style="padding: 12px 20px; color: #6b7280; font-size: 13px;">No members found</div>';
+        } else {
+          members.forEach(member => {
+            const memberId = (member.id !== undefined && member.id !== null) ? member.id.toString() : member.email;
+            const memberEmail = (member.email || '').toLowerCase();
+            const memberName = (member.name || member.email || 'Unknown').replace(/<[^>]+>/g, '').trim();
+            const isSelf = !!member.is_self;
+            const initials = getInitials(memberName);
+            
+            // Get current user info for matching
+            const currentUserEmail = '{% if request.session.ident_email %}{{ request.session.ident_email }}{% elif request.user.email %}{{ request.user.email }}{% endif %}'.toLowerCase();
+            const currentUserName = '{% if request.session.cn %}{{ request.session.cn }}{% elif request.session.member_name %}{{ request.session.member_name }}{% elif request.user.username %}{{ request.user.username }}{% endif %}'.toLowerCase();
+            
+            // Check if user is online - match by ID, email, or name
+            const isOnline = onlineUsers.has(memberId) || 
+                            onlineUsers.has(memberEmail) || 
+                            onlineUsers.has(memberName.toLowerCase()) ||
+                            (currentUserEmail && memberEmail === currentUserEmail) ||
+                            (currentUserName && memberName.toLowerCase() === currentUserName);
+            
+            const div = document.createElement('div');
+            div.className = 'dm-item';
+            div.dataset.memberId = memberId;
+            div.dataset.memberEmail = memberEmail;
+            div.dataset.name = memberName;
+            div.dataset.self = isSelf ? 'true' : 'false';
+            
+            const gradientColors = [
+              'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+              'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+              'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+            ];
+            const gradient = gradientColors[Math.abs(memberId.charCodeAt(0) || 0) % gradientColors.length];
+            
+            div.innerHTML = `
+              <div class="dm-avatar-wrapper">
+                <div class="dm-avatar" style="background: ${gradient}">${initials}</div>
+                <div class="online-indicator" data-user-id="${memberId}" style="display: ${(isOnline && !isSelf) ? 'block' : 'none'};"></div>
+              </div>
+              <div class="dm-info">
+                <div class="dm-name">${escapeHtml(memberName)}${isSelf ? ' (You)' : ''}${(isOnline && !isSelf) ? ' <span style="color: #10b981; font-size: 11px;">● Online</span>' : ''}</div>
+              </div>
+            `;
+            
+            if (!isSelf) {
+              div.addEventListener('click', () => selectDM(memberId, memberName));
+            } else {
+              div.style.opacity = '0.6';
+              div.style.cursor = 'default';
+            }
+            
+            dmList.appendChild(div);
+          });
+        }
+      } catch (e) {
+        console.error('loadDirectMessages error:', e);
+        dmList.innerHTML = '<div style="padding: 12px 20px; color: #ef4444; font-size: 13px;">Error loading members</div>';
+      }
+    }
+
+    function selectDM(memberId, memberName) {
+      currentChatType = 'dm';
+      currentChatId = memberId;
+      
+      // Update chat header
+      const headerTitle = document.getElementById('chat-header-title');
+      if (headerTitle) {
+        headerTitle.textContent = `@ ${memberName}`;
+      }
+
+      // Update active state
+      document.querySelectorAll('.dm-item').forEach(item => item.classList.remove('active'));
+      const selectedItem = document.querySelector(`.dm-item[data-member-id="${memberId}"]`);
+      if (selectedItem) {
+        selectedItem.classList.add('active');
+      }
+
+      // Load chat messages for this member
+      loadChatMessages('dm', memberId);
+    }
+
+    function selectGroup(groupId, groupName) {
+      currentChatType = 'group';
+      currentChatId = groupId;
+      
+      // Update chat header
+      const headerTitle = document.getElementById('chat-header-title');
+      if (headerTitle) {
+        headerTitle.innerHTML = `<i class="fas fa-users" style="margin-right:8px;opacity:0.6;"></i> ${escapeHtml(groupName)}`;
+      }
+
+      // Update active state
+      document.querySelectorAll('.dm-item').forEach(item => item.classList.remove('active'));
+      const selectedItem = document.querySelector(`.dm-item[data-group-id="${groupId}"]`);
+      if (selectedItem) {
+        selectedItem.classList.add('active');
+      }
+
+      // Load chat messages for this group
+      loadChatMessages('group', groupId);
+    }
+
+    async function loadChatMessages(type, id) {
+      const chatFeed = document.getElementById('chatMessagesFeed');
+      if (!chatFeed) return;
+
+      chatFeed.innerHTML = '<div style="text-align: center; padding: 40px; color: #9CA3AF;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i><p style="margin-top: 12px;">Loading messages...</p></div>';
+
+      try {
+        let url;
+        if (type === 'dm') {
+          url = `/chat/history/?peer=${encodeURIComponent(id)}`;
+        } else if (type === 'group') {
+          url = `/chat/group/history/?group_id=${encodeURIComponent(id)}`;
+        }
+
+        const res = await fetch(url, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Failed to load messages');
+
+        const data = await res.json();
+        const messages = data.messages || [];
+        const currentUserEmail = '{% if request.session.ident_email %}{{ request.session.ident_email }}{% elif request.user.email %}{{ request.user.email }}{% endif %}';
+        const currentUserName = '{% if request.session.cn %}{{ request.session.cn }}{% elif request.session.member_name %}{{ request.session.member_name }}{% elif request.user.username %}{{ request.user.username }}{% endif %}';
+
+        console.log('Current user email:', currentUserEmail);
+        console.log('Current user name:', currentUserName);
+
+        chatFeed.innerHTML = '';
+
+        if (messages.length === 0) {
+          chatFeed.innerHTML = '<div style="text-align: center; padding: 40px; color: #9CA3AF;"><i class="fas fa-comments" style="font-size: 48px; color: #ddd; margin-bottom: 16px;"></i><p style="font-weight: 600; color: #666;">No messages yet</p><p style="margin-top: 8px;">Start a conversation!</p></div>';
+        } else {
+          messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          
+          messages.forEach(msg => {
+            // Check if message is from current user using multiple criteria
+            const msgSender = (msg.sender || '').toLowerCase().trim();
+            const msgSenderEmail = (msg.sender_email || msgSender).toLowerCase().trim();
+            const currentEmail = currentUserEmail.toLowerCase().trim();
+            const currentName = currentUserName.toLowerCase().trim();
+            
+            const isSent = msg.is_self || 
+                          msgSenderEmail === currentEmail || 
+                          msgSender === currentEmail ||
+                          msgSender === currentName;
+            
+            const senderName = msg.sender_name || msg.sender || 'Unknown';
+            const senderInitial = getInitials(senderName);
+            const timestamp = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            console.log('Message:', msg.text, 'Sender:', msgSender, 'Is sent:', isSent);
+            
+            const msgHtml = `
+              <div class="chat-message-group ${isSent ? 'sent-message' : ''}" style="animation: slideIn 0.3s ease-out">
+                <div class="chat-avatar">${senderInitial}</div>
+                <div class="chat-message-content">
+                  <div class="chat-message-header">
+                    <span class="chat-username">${escapeHtml(senderName)}</span>
+                    <span class="chat-timestamp">${timestamp}</span>
+                  </div>
+                  <div class="chat-text">${escapeHtml(msg.text)}</div>
+                </div>
+              </div>
+            `;
+            chatFeed.insertAdjacentHTML('beforeend', msgHtml);
+          });
+
+          chatFeed.scrollTop = chatFeed.scrollHeight;
+        }
+      } catch (e) {
+        console.error('loadChatMessages error:', e);
+        chatFeed.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><i class="fas fa-exclamation-triangle" style="font-size: 24px;"></i><p style="margin-top: 12px;">Error loading messages</p></div>';
+      }
+    }
+
+    async function refreshUnreadCounts() {
+      try {
+        const res = await fetch('/chat/unread/', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        
+        const data = await res.json();
+        let total = 0;
+        
+        if (data && data.unread) {
+          data.unread.forEach(item => {
+            total += item.count || 0;
+          });
+        }
+
+        const badge = document.getElementById('unread-badge');
+        if (badge) {
+          if (total > 0) {
+            badge.textContent = total;
+            badge.style.display = '';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      } catch (e) {
+        console.error('refreshUnreadCounts error:', e);
+      }
+    }
+
+    async function fetchOnlineUsers() {
+      try {
+        // First, always mark current user as online
+        const currentUserEmail = '{% if request.session.ident_email %}{{ request.session.ident_email }}{% elif request.user.email %}{{ request.user.email }}{% endif %}'.toLowerCase();
+        const currentUserName = '{% if request.session.cn %}{{ request.session.cn }}{% elif request.session.member_name %}{{ request.session.member_name }}{% elif request.user.username %}{{ request.user.username }}{% endif %}'.toLowerCase();
+        
+        if (currentUserEmail) {
+          onlineUsers.add(currentUserEmail);
+        }
+        if (currentUserName) {
+          onlineUsers.add(currentUserName);
+        }
+
+        // Try to fetch online users from backend
+        try {
+          const res = await fetch('/chat/online/', { credentials: 'same-origin' });
+          if (res.ok) {
+            const data = await res.json();
+            
+            if (data && data.online_users) {
+              data.online_users.forEach(user => {
+                // Store both ID and email for matching
+                if (user.id) onlineUsers.add(user.id.toString());
+                if (user.email) onlineUsers.add(user.email.toLowerCase());
+                if (user.name) onlineUsers.add(user.name.toLowerCase());
+              });
+            }
+          }
+        } catch (fetchError) {
+          console.log('Backend online status not available, using client-side only');
+        }
+
+        // Update UI - show/hide online indicators
+        document.querySelectorAll('.online-indicator').forEach(indicator => {
+          const userId = indicator.dataset.userId;
+          const dmItem = indicator.closest('.dm-item');
+          const userEmail = dmItem ? dmItem.dataset.memberEmail : null;
+          const userName = dmItem ? dmItem.dataset.name : null;
+          
+          const isOnline = onlineUsers.has(userId) || 
+                          (userEmail && onlineUsers.has(userEmail.toLowerCase())) ||
+                          (userName && onlineUsers.has(userName.toLowerCase()));
+          
+          indicator.style.display = isOnline ? 'block' : 'none';
+          
+          // Update online text in name
+          if (dmItem) {
+            const nameEl = dmItem.querySelector('.dm-name');
+            if (nameEl) {
+              const baseName = nameEl.textContent.replace(/ ● Online$/, '');
+              if (isOnline && !baseName.includes('(You)')) {
+                nameEl.innerHTML = escapeHtml(baseName) + ' <span style="color: #10b981; font-size: 11px;">● Online</span>';
+              } else {
+                nameEl.textContent = baseName;
+              }
+            }
+          }
+        });
+
+        console.log('Online users updated:', onlineUsers.size, 'users online');
+      } catch (e) {
+        console.error('fetchOnlineUsers error:', e);
+      }
+    }
+
+    function updateCurrentUserOnlineStatus() {
+      // Tell backend that current user is online (if endpoint exists)
+      try {
+        fetch('/chat/heartbeat/', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          }
+        }).catch(e => {
+          // Backend endpoint might not exist yet, that's okay
+          console.log('Heartbeat endpoint not available');
+        });
+      } catch (e) {
+        console.log('Heartbeat not sent:', e.message);
+      }
+    }
+
+    // Initialize sidebar when chat opens or page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      loadChatSidebar();
+      
+      // Initialize WebSocket for real-time chat
+      initChatWebSocket();
+      
+      // Fetch online users immediately
+      fetchOnlineUsers();
+      
+      // Refresh unread counts every 30 seconds
+      setInterval(refreshUnreadCounts, 30000);
+      
+      // Refresh online status every 15 seconds (backup for WebSocket)
+      setInterval(fetchOnlineUsers, 15000);
+    });
+
+    // Send presence when closing page
+    window.addEventListener('beforeunload', function() {
+      sendPresence('offline');
+    });
+
+    // Start with chat hidden
+    if (chatFeed) chatFeed.scrollTop = chatFeed.scrollHeight;
   </script>
 </body>
 </html>

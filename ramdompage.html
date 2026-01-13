@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Chat | Professional Workspace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --sidebar-bg: #2C2D30;
+            --sidebar-hover: #3A3B3E;
+            --sidebar-active: #0A7AFF;
+            --accent-blue: #0A7AFF;
+            --main-bg: #F9FAFB;
+            --chat-bg: #FFFFFF;
+            --border-light: #E5E7EB;
+            --text-primary: #111827;
+            --text-secondary: #6B7280;
+            --text-muted: #9CA3AF;
+            --radius-xl: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- Chat States --- */
+        #chatWrapper {
+            display: flex;
+            background: #fff;
+            overflow: hidden;
+            transition: var(--transition);
+            z-index: 100;
+        }
+
+        .state-full {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            border-radius: 0;
+        }
+
+        .state-windowed {
+            width: 90vw;
+            height: 85vh;
+            max-width: 1200px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-light);
+        }
+
+        .state-minimized {
+            width: 400px;
+            height: 600px;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .state-hidden {
+            transform: translateY(120%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* --- Layout --- */
+        .sidebar {
+            width: 280px;
+            background: #1F2023;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            min-width: 0;
+        }
+
+        /* --- Header --- */
+        .chat-header {
+            height: 64px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            background: #fff;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.2s;
+            padding: 4px;
+        }
+
+        .control-btn:hover { color: var(--accent-blue); }
+
+        /* --- Messages --- */
+        .messages-feed {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: #fff;
+        }
+
+        .message-group {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            max-width: 80%;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #6366f1;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .message-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        .username { font-weight: 700; color: var(--text-primary); }
+        .timestamp { color: var(--text-muted); }
+
+        .text {
+            background: #f3f4f6;
+            padding: 10px 16px;
+            border-radius: 2px 14px 14px 14px;
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+
+        /* Sent Message Styles */
+        .message-group.sent-message {
+            flex-direction: row-reverse;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .message-group.sent-message .avatar {
+            margin-left: 12px;
+            margin-right: 0;
+            background: linear-gradient(135deg, #0A7AFF 0%, #4F8CFF 100%);
+        }
+
+        .message-group.sent-message .text {
+            background: #d0eaff;
+            border-radius: 14px 14px 2px 14px;
+            text-align: right;
+        }
+
+        .message-group.sent-message .message-header {
+            flex-direction: row-reverse;
+        }
+
+        /* --- Input Area --- */
+        .input-area {
+            padding: 20px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .input-box {
+            display: flex;
+            align-items: center;
+            background: #f9fafb;
+            border: 2px solid var(--border-light);
+            border-radius: 12px;
+            padding: 8px 16px;
+            transition: 0.2s;
+        }
+
+        .input-box:focus-within {
+            border-color: var(--accent-blue);
+            background: #fff;
+        }
+
+        .input-box input {
+            flex: 1;
+            border: none;
+            background: none;
+            outline: none;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        /* Sidebar Elements */
+        .nav-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 14px;
+        }
+
+        .nav-item:hover { background: var(--sidebar-hover); }
+        .nav-item.active { background: var(--sidebar-active); }
+
+        /* Floating Reopen Button */
+        #reopenChat {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: var(--accent-blue);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            box-shadow: 0 10px 20px rgba(10, 122, 255, 0.3);
+            cursor: pointer;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="reopenChat" onclick="setChatState('windowed')">
+        <i class="fas fa-comments"></i>
+    </button>
+
+    <div id="chatWrapper" class="state-windowed">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="font-weight: 700; font-size: 18px;">Team Workspace</h2>
+            </div>
+            <nav style="flex: 1; padding-top: 10px;">
+                <div class="nav-item active"><i class="fas fa-hashtag"></i> # General</div>
+                <div class="nav-item"><i class="fas fa-project-diagram"></i> Project Delta</div>
+                <div class="nav-item"><i class="fas fa-bullhorn"></i> Marketing</div>
+                
+                <div style="margin-top: 20px; padding: 0 20px; font-size: 11px; text-transform: uppercase; color: #666; font-weight: 700;">Direct Messages</div>
+                <div class="nav-item"><i class="fas fa-circle" style="color: #2BAC76; font-size: 8px;"></i> Sarah Jenkins</div>
+                <div class="nav-item"><i class="fas fa-circle" style="color: #999; font-size: 8px;"></i> Mike Ross</div>
+            </nav>
+            <div style="padding: 15px; background: #151618; display: flex; align-items: center; gap: 10px;">
+                <div class="avatar" style="width: 30px; height: 30px; background: #0A7AFF;">JD</div>
+                <div style="font-size: 13px;">
+                    <p style="font-weight: 600;">John Doe</p>
+                    <p style="font-size: 11px; color: #666;">Admin</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat -->
+        <main class="main-content">
+            <header class="chat-header">
+                <div class="header-left" style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-hashtag" style="color: #999;"></i>
+                    <h3 style="font-weight: 700;">General Channel</h3>
+                </div>
+                
+                <div class="window-controls">
+                    <button class="control-btn" onclick="setChatState('minimized')" title="Minimize to Corner"><i class="fas fa-compress-alt"></i></button>
+                    <button class="control-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
+                    <button class="control-btn" onclick="setChatState('hidden')" title="Close Chat"><i class="fas fa-times"></i></button>
+                </div>
+            </header>
+
+            <div id="messagesFeed" class="messages-feed">
+                <!-- Received -->
+                <div class="message-group">
+                    <div class="avatar">SJ</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="username">Sarah Jenkins</span>
+                            <span class="timestamp">10:45 AM</span>
+                        </div>
+                        <div class="text">Has everyone seen the updated project roadmap for Q3? I've uploaded the PDF to the shared folder.</div>
+                    </div>
+                </div>
+
+                <!-- Sent -->
+                <div class="message-group sent-message">
+                    <div class="avatar">JD</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="username">John Doe</span>
+                            <span class="timestamp">10:48 AM</span>
+                        </div>
+                        <div class="text">I'm reviewing it now, Sarah. Looks very comprehensive!</div>
+                    </div>
+                </div>
+
+                <!-- System -->
+                <div style="text-align: center; margin: 20px 0; color: #999; font-size: 12px; font-style: italic;">
+                    Only administrators are authorized to create new channels.
+                </div>
+            </div>
+
+            <footer class="input-area">
+                <div class="input-box">
+                    <button class="control-btn"><i class="fas fa-plus"></i></button>
+                    <button class="control-btn"><i class="far fa-smile"></i></button>
+                    <input id="chatInput" type="text" placeholder="Type a message to #general...">
+                    <button class="control-btn" onclick="handleSend()" style="color: var(--accent-blue);"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        const chat = document.getElementById('chatWrapper');
+        const sidebar = document.getElementById('sidebar');
+        const reopenBtn = document.getElementById('reopenChat');
+        const feed = document.getElementById('messagesFeed');
+        const input = document.getElementById('chatInput');
+
+        let isFullscreen = false;
+
+        function setChatState(state) {
+            // Reset classes
+            chat.classList.remove('state-full', 'state-windowed', 'state-minimized', 'state-hidden');
+            reopenBtn.style.display = 'none';
+            sidebar.style.display = 'flex';
+
+            if (state === 'windowed') {
+                chat.classList.add('state-windowed');
+                isFullscreen = false;
+            } else if (state === 'minimized') {
+                chat.classList.add('state-minimized');
+                sidebar.style.display = 'none'; // Hide sidebar when tiny
+                isFullscreen = false;
+            } else if (state === 'hidden') {
+                chat.classList.add('state-hidden');
+                reopenBtn.style.display = 'block';
+            } else if (state === 'full') {
+                chat.classList.add('state-full');
+                isFullscreen = true;
+            }
+            
+            // Auto-scroll
+            setTimeout(() => { feed.scrollTop = feed.scrollHeight; }, 300);
+        }
+
+        function toggleFullscreen() {
+            if (isFullscreen) setChatState('windowed');
+            else setChatState('full');
+        }
+
+        function handleSend() {
+            const val = input.value.trim();
+            if (!val) return;
+
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const msgHtml = `
+                <div class="message-group sent-message" style="animation: slideIn 0.3s ease-out">
+                    <div class="avatar">JD</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="username">John Doe</span>
+                            <span class="timestamp">${time}</span>
+                        </div>
+                        <div class="text">${val}</div>
+                    </div>
+                </div>
+            `;
+            
+            feed.insertAdjacentHTML('beforeend', msgHtml);
+            input.value = '';
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSend();
+        });
+
+        // Start scroll at bottom
+        feed.scrollTop = feed.scrollHeight;
+    </script>
+
+    <style>
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</body>
+</html>

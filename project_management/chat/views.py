@@ -5,7 +5,7 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequ
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 import json
 from asgiref.sync import sync_to_async
 
@@ -20,6 +20,16 @@ def team_chat_page(request, peer_id=None):
     """
     Render the full-page Slack-style team chat UI.
     """
+    # Check authentication - redirect to login if not authenticated
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('login_password')
+    
+    # Check tenant configuration
+    tenant_config = request.session.get('tenant_config')
+    if not tenant_config:
+        return redirect('identify')
+    
     tenant_id = request.session.get('tenant_id', '') 
     tenant_name = request.session.get('tenant_name', 'Team Chat')
     # Prefer email/ident_email as canonical identity for chat; fall back to member_id if no email
@@ -65,6 +75,10 @@ def _normalize_identity(tenant_conn, val):
 
 @require_GET
 def tenant_members(request):
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
+    
     tenant_conn = get_tenant_conn(request)
     if not tenant_conn:
         return HttpResponseForbidden("No tenant connection")
@@ -118,6 +132,9 @@ def conversation_history(request):
     Return conversation messages between current user and peer.
     GET params: ?peer=<emp_code>
     """
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
        
     logger = logging.getLogger(__name__)
     peer = request.GET.get("peer")
@@ -155,6 +172,10 @@ def conversation_history(request):
 @require_POST
 def send_message(request):
     """HTTP fallback endpoint to send a message. Expects JSON body { to, text }."""
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
+    
     try:
         payload = json.loads(request.body.decode())
     except Exception:
@@ -218,6 +239,10 @@ def unread_counts(request):
     Response:
       { "unread": [{ "from": "<email>", "count": 3 }, ...] }
     """
+    # Check authentication
+    if not request.session.get('member_id'):
+        return JsonResponse({"unread": []})
+    
     tenant_conn = get_tenant_conn(request)
     if not tenant_conn:
         return JsonResponse({"unread": []})
@@ -252,6 +277,10 @@ def mark_read(request):
     Accepts JSON body: { "peer": "<email>" }
     Also accepts form-encoded POST (peer param) for robustness.
     """
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
+    
     import logging
     logger = logging.getLogger(__name__)
     tenant_conn = get_tenant_conn(request)
@@ -425,6 +454,10 @@ def groups_list(request):
 
     Response: { groups: [{ id, name, created_by, member_count }, ...] }
     """
+    # Check authentication
+    if not request.session.get('member_id'):
+        return JsonResponse({"groups": []})
+    
     tenant_conn = get_tenant_conn(request)
     if not tenant_conn:
         return JsonResponse({"groups": []})
@@ -485,6 +518,10 @@ def create_group(request):
 
     Returns: { ok: True, group: { id, name } }
     """
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
+    
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -546,6 +583,10 @@ def group_history(request):
     """Return messages for a group. GET param: ?group_id=<id>
     Response: { messages: [{ id, sender, text, created_at }, ...] }
     """
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
+    
     group_id = request.GET.get('group_id')
     if not group_id:
         return HttpResponseBadRequest('Missing group_id')
@@ -573,6 +614,10 @@ def group_send(request):
 
     Returns: { ok: True }
     """
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
+    
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -627,6 +672,10 @@ def group_send(request):
 @require_POST
 def mark_group_read(request):
     """Mark group as read for current user. JSON body: { group_id: <id> }"""
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
+    
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -660,6 +709,10 @@ def group_update(request):
     """Perform group settings actions: rename, add_member, remove_member.
     JSON body: { group_id: id, action: 'rename'|'add_member'|'remove_member', value: ... }
     """
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
+    
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -710,6 +763,10 @@ def group_update(request):
 @require_POST
 def mark_all_read(request):
     """Mark all chat notifications (DMs and groups) as read for current user."""
+    # Check authentication
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden("Not authenticated")
+    
     tenant_conn = get_tenant_conn(request)
     if not tenant_conn:
         return HttpResponseForbidden('No tenant')
