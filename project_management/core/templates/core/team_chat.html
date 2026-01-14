@@ -78,6 +78,143 @@
             --transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
         }
 
+        /* ============ POPUP NOTIFICATION ============ */
+        .popup-notification-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .popup-notification {
+            background: linear-gradient(135deg, #5B6CD6 0%, #7B83EB 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            width: 360px;
+            max-width: calc(100vw - 48px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 12px;
+            pointer-events: auto;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: slideInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .popup-notification:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .popup-notification.hiding {
+            animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 1, 1);
+            opacity: 0;
+            transform: translateX(400px);
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(400px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+        }
+
+        .popup-notification-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .popup-notification-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+            color: #5B6CD6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .popup-notification-sender {
+            flex: 1;
+            font-weight: 600;
+            font-size: 15px;
+            line-height: 1.3;
+        }
+
+        .popup-notification-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .popup-notification-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .popup-notification-message {
+            padding-left: 52px;
+            font-size: 14px;
+            line-height: 1.5;
+            opacity: 0.95;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .popup-notification-footer {
+            padding-left: 52px;
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .popup-notification-footer i {
+            font-size: 10px;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; }
         body {
@@ -845,6 +982,9 @@
             </div>
         </div>
 
+        <!-- Popup Notification Container -->
+        <div class="popup-notification-container" id="popup-notification-container"></div>
+
     </main>
 
     <script>
@@ -890,6 +1030,8 @@
         let selectedPeerEmail = null;
         let selectedPeerName = '';
         let users = [];
+        let members = [];
+        let groups = [];
         let ws = null;
         let pollInterval = null;
         let lastMessageDate = 0;
@@ -906,6 +1048,160 @@
         function getInitials(name) {
             return (name || '').split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase() || '??';
         }
+
+        // Popup notification system
+        const popupNotificationContainer = document.getElementById('popup-notification-container');
+        let notificationQueue = [];
+        let notificationSound = null;
+
+        // Initialize notification sound
+        function initNotificationSound() {
+            try {
+                // Try to load the audio file first
+                notificationSound = new Audio('{% static "core/sounds/notification.mp3" %}');
+                notificationSound.volume = 0.5;
+                notificationSound.addEventListener('error', () => {
+                    console.log('Audio file not found, will use Web Audio API');
+                    notificationSound = null;
+                });
+            } catch (e) {
+                console.log('Notification sound not available, will use Web Audio API');
+            }
+        }
+
+        // Play notification sound
+        function playNotificationSound() {
+            if (notificationSound) {
+                notificationSound.play().catch(e => {
+                    console.log('Sound play failed:', e);
+                    playBeepSound();
+                });
+            } else {
+                playBeepSound();
+            }
+        }
+
+        // Fallback: Generate a pleasant notification beep using Web Audio API
+        function playBeepSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create a gentle two-tone notification sound
+                const playTone = (frequency, startTime, duration) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = frequency;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0, startTime);
+                    gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.01);
+                    gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                };
+                
+                const now = audioContext.currentTime;
+                playTone(800, now, 0.1);      // First tone
+                playTone(1000, now + 0.12, 0.15); // Second tone (slightly higher)
+            } catch (e) {
+                console.log('Web Audio API not available:', e);
+            }
+        }
+
+        // Show popup notification
+        function showPopupNotification(senderName, senderEmail, message, groupName = null, groupId = null) {
+            // For Direct Messages: Don't show if user is currently viewing this DM conversation
+            const normalizedSenderEmail = normId(senderEmail);
+            const normalizedCurrentPeer = normId(selectedPeerEmail || selectedPeer);
+            
+            if (!groupName && currentMode === 'dm' && normalizedSenderEmail === normalizedCurrentPeer) {
+                console.log('🔕 Suppressing DM notification - user is viewing this conversation');
+                return;
+            }
+            
+            // For Group Messages: ALWAYS show to ALL group members (except sender)
+            // Everyone in the group should see the notification, even if viewing the group
+            if (groupName && groupId) {
+                console.log('🔔 Showing group notification to all members:', { senderName, groupName, message });
+            }
+
+            console.log('🔔 Showing popup notification:', { senderName, senderEmail, message, groupName });
+
+            // Get initials for avatar
+            const initials = getInitials(senderName);
+            
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'popup-notification';
+            
+            const messagePreview = message.length > 100 ? message.substring(0, 100) + '...' : message;
+            const displayName = groupName ? `${senderName} (${groupName})` : senderName;
+            
+            notification.innerHTML = `
+                <div class="popup-notification-header">
+                    <div class="popup-notification-avatar">${initials}</div>
+                    <div class="popup-notification-sender">${escapeHtml(displayName)}</div>
+                    <button class="popup-notification-close" onclick="event.stopPropagation(); this.closest('.popup-notification').remove();">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="popup-notification-message">${escapeHtml(messagePreview)}</div>
+                <div class="popup-notification-footer">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>Click to reply</span>
+                </div>
+            `;
+            
+            // Click handler to open conversation
+            notification.addEventListener('click', (e) => {
+                if (e.target.closest('.popup-notification-close')) return;
+                
+                // Find and select the peer
+                const member = members.find(m => normId(m.email) === normId(senderEmail));
+                if (member) {
+                    const memberId = member.id || senderEmail;
+                    selectPeer(memberId, senderName, senderEmail);
+                }
+                
+                // Remove notification
+                notification.classList.add('hiding');
+                setTimeout(() => notification.remove(), 300);
+            });
+            
+            // Add to container
+            popupNotificationContainer.appendChild(notification);
+            
+            // Play sound
+            playNotificationSound();
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.classList.add('hiding');
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 5000);
+            
+            // Limit to 3 notifications at a time
+            const notifications = popupNotificationContainer.querySelectorAll('.popup-notification');
+            if (notifications.length > 3) {
+                const oldest = notifications[0];
+                oldest.classList.add('hiding');
+                setTimeout(() => oldest.remove(), 300);
+            }
+        }
+
+        // Initialize sound on user interaction
+        document.addEventListener('click', () => {
+            if (!notificationSound) {
+                initNotificationSound();
+            }
+        }, { once: true });
 
         // Get CSRF token
         function getCookie(name) {
@@ -1064,6 +1360,16 @@
         }
 
         function appendMessage(m) {
+            // Check for duplicates before appending
+            if (m.id && existingMessageIds.has(String(m.id))) {
+                console.log('⏭️ Skipping duplicate message with id:', m.id);
+                return;
+            }
+            if (m.cid && existingMessageIds.has(String(m.cid))) {
+                console.log('⏭️ Skipping duplicate message with cid:', m.cid);
+                return;
+            }
+            
             const feed = document.getElementById('messages-feed');
             const sender = normId(m.sender || m.from);
             // console.log('appendMessage:', {CURRENT_USER, sender, m});
@@ -1207,6 +1513,20 @@
                         
                         console.log('💬 New message:', { senderEmail, toEmail, messageText, currentMode, selectedPeer });
                         
+                        // Check if this message is from someone else (not current user)
+                        const myEmail = normId(CURRENT_USER);
+                        const myMemberId = normId(CURRENT_MEMBER_ID);
+                        const normalizedSender = normId(senderEmail);
+                        const isFromOther = (normalizedSender !== myEmail && normalizedSender !== myMemberId);
+                        
+                        // Show popup notification for incoming DM messages from others
+                        if (isFromOther && messageText) {
+                            const senderMember = members.find(m => normId(m.email) === normalizedSender);
+                            const senderName = senderMember ? formatDisplayName((senderMember.name || '').replace(/<[^>]+>/g, '').trim() || senderEmail) : senderEmail;
+                            // DM notification - only show if not viewing this conversation
+                            showPopupNotification(senderName, senderEmail, messageText, null, null);
+                        }
+                        
                         // For DM: only show if this message is relevant to current conversation
                         if (currentMode === 'dm' && selectedPeer) {
                             const myEmail = normId(CURRENT_USER);
@@ -1278,6 +1598,41 @@
                                     // Handle group messages
                                     if (incomingGroupId) {
                                         console.log('💬 Group message received:', incoming);
+                                        
+                                        // Show popup notification for group messages from others
+                                        const myEmail = normId(CURRENT_USER);
+                                        const myMemberId = normId(CURRENT_MEMBER_ID);
+                                        const normalizedSender = normId(incoming.sender || incoming.from || '');
+                                        const isFromOther = (normalizedSender !== myEmail && normalizedSender !== myMemberId);
+                                        
+                                        console.log('🔍 Group notification check:', {
+                                            myEmail,
+                                            myMemberId,
+                                            normalizedSender,
+                                            isFromOther,
+                                            hasText: !!incoming.text,
+                                            groupsLoaded: groups.length,
+                                            membersLoaded: members.length
+                                        });
+                                        
+                                        if (isFromOther && incoming.text) {
+                                            const senderMember = members.find(m => normId(m.email) === normalizedSender);
+                                            const senderName = senderMember ? formatDisplayName((senderMember.name || '').replace(/<[^>]+>/g, '').trim() || normalizedSender) : normalizedSender;
+                                            const group = groups.find(g => String(g.id) === String(incomingGroupId));
+                                            const groupName = group ? group.name : 'Group';
+                                            
+                                            console.log('🔔 Triggering group notification:', {
+                                                senderName,
+                                                groupName,
+                                                groupId: incomingGroupId,
+                                                message: incoming.text.substring(0, 50)
+                                            });
+                                            
+                                            // Group messages: ALWAYS show popup to all group members (except sender)
+                                            // Everyone in the group should see the notification
+                                            showPopupNotification(senderName, normalizedSender, incoming.text, groupName, incomingGroupId);
+                                        }
+                                        
                                         // Only show if we're viewing this group
                                         if (currentMode === 'group' && String(selectedGroup) === String(incomingGroupId)) {
                                             if (cid) {
@@ -1485,7 +1840,7 @@
                 if (!res.ok) throw new Error('Failed');
                 const data = await res.json();
                 el.innerHTML = '';
-                const groups = data.groups || [];
+                groups = data.groups || [];  // Assign to global variable, not local const
                 // store members/unread map
                 window._chat_group_meta = window._chat_group_meta || {};
                 groups.forEach(g => {
@@ -1693,6 +2048,13 @@
                         // optimistic append with cid so server echo can match
                         appendMessage({ sender: CURRENT_USER, text, created_at: new Date().toISOString(), cid });
                     if (input) input.value = '';
+                    
+                    // Silently refresh chat content without visible page reload
+                    setTimeout(() => {
+                        if (currentMode === 'group' && selectedGroup) {
+                            loadGroupHistory();
+                        }
+                    }, 300);
                     return;
                 }
 
@@ -1729,6 +2091,13 @@
                 // optimistic append with cid so server echo can match
                 appendMessage({ sender: CURRENT_USER, text, created_at: new Date().toISOString(), cid });
                 if (input) input.value = '';
+                
+                // Silently refresh chat content without visible page reload
+                setTimeout(() => {
+                    if (currentMode === 'dm' && selectedPeer) {
+                        loadHistory();
+                    }
+                }, 300);
             } catch (e) {
                 console.error('sendMessage error', e);
                 if (typeof showToast === 'function') showToast('Error sending message');

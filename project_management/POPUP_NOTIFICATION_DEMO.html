@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popup Notification Demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .demo-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .demo-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .demo-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .demo-btn:active {
+            transform: translateY(0);
+        }
+
+        .demo-btn i {
+            margin-right: 8px;
+        }
+
+        .info-box {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .info-box p {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #4a5568;
+        }
+
+        .info-box li {
+            margin-bottom: 8px;
+        }
+
+        /* Popup Notification Styles */
+        .popup-notification-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .popup-notification {
+            background: linear-gradient(135deg, #5B6CD6 0%, #7B83EB 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            width: 360px;
+            max-width: calc(100vw - 48px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 12px;
+            pointer-events: auto;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: slideInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .popup-notification:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .popup-notification.hiding {
+            animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 1, 1);
+            opacity: 0;
+            transform: translateX(400px);
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(400px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+        }
+
+        .popup-notification-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .popup-notification-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+            color: #5B6CD6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .popup-notification-sender {
+            flex: 1;
+            font-weight: 600;
+            font-size: 15px;
+            line-height: 1.3;
+        }
+
+        .popup-notification-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .popup-notification-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .popup-notification-message {
+            padding-left: 52px;
+            font-size: 14px;
+            line-height: 1.5;
+            opacity: 0.95;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .popup-notification-footer {
+            padding-left: 52px;
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .popup-notification-footer i {
+            font-size: 10px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .feature-card i {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .feature-card h4 {
+            font-size: 14px;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .feature-card p {
+            font-size: 12px;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🔔 Popup Notification System</h1>
+        <p class="subtitle">Microsoft Teams-style message notifications for your chat application</p>
+
+        <div class="info-box">
+            <h3>✨ How It Works</h3>
+            <p>Click the buttons below to see different notification examples:</p>
+            <ul>
+                <li><strong>Direct Message:</strong> Shows when someone sends you a DM while you're on another chat</li>
+                <li><strong>Group Message:</strong> Shows when someone posts in a group you're not currently viewing</li>
+                <li><strong>Multiple Messages:</strong> See how multiple notifications stack (max 3 at once)</li>
+            </ul>
+        </div>
+
+        <div class="demo-buttons">
+            <button class="demo-btn" onclick="showDemoNotification('DM')">
+                <i class="fas fa-user"></i> Show DM Notification
+            </button>
+            <button class="demo-btn" onclick="showDemoNotification('Group')">
+                <i class="fas fa-users"></i> Show Group Notification
+            </button>
+            <button class="demo-btn" onclick="showMultipleNotifications()">
+                <i class="fas fa-layer-group"></i> Show Multiple (3)
+            </button>
+            <button class="demo-btn" onclick="clearAllNotifications()">
+                <i class="fas fa-trash"></i> Clear All
+            </button>
+        </div>
+
+        <div class="info-box">
+            <h3>🎯 Key Features</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <i class="fas fa-bell"></i>
+                    <h4>Real-time</h4>
+                    <p>Instant WebSocket updates</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-mouse-pointer"></i>
+                    <h4>Clickable</h4>
+                    <p>Click to open chat</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-volume-up"></i>
+                    <h4>Sound</h4>
+                    <p>Pleasant notification tone</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-clock"></i>
+                    <h4>Auto-dismiss</h4>
+                    <p>Closes after 5 seconds</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-eye-slash"></i>
+                    <h4>Smart</h4>
+                    <p>No spam if viewing chat</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-mobile-alt"></i>
+                    <h4>Responsive</h4>
+                    <p>Works on all devices</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>📋 Usage in Your App</h3>
+            <p>The notification system automatically triggers when:</p>
+            <ul>
+                <li>You receive a message from another user</li>
+                <li>You're logged in but NOT viewing that specific conversation</li>
+                <li>A WebSocket message event is received</li>
+            </ul>
+            <p style="margin-top: 10px;"><strong>No action needed!</strong> It works automatically with your existing chat system.</p>
+        </div>
+    </div>
+
+    <!-- Popup Notification Container -->
+    <div class="popup-notification-container" id="popup-notification-container"></div>
+
+    <script>
+        const popupNotificationContainer = document.getElementById('popup-notification-container');
+        let notificationCount = 0;
+
+        const sampleMessages = {
+            DM: [
+                "Hi! How are you doing today?",
+                "Can we schedule a meeting for tomorrow?",
+                "I have some important updates to share",
+                "Thanks for your help with the project!",
+                "Let me know when you're available"
+            ],
+            Group: [
+                "Team meeting in 10 minutes!",
+                "Great work on the presentation everyone!",
+                "Who's available for a quick sync?",
+                "I've updated the project documents",
+                "Reminder: deadline is Friday"
+            ]
+        };
+
+        const sampleUsers = [
+            { name: 'Shreya Kosabe', initials: 'SK' },
+            { name: 'John Smith', initials: 'JS' },
+            { name: 'Alice Johnson', initials: 'AJ' },
+            { name: 'Bob Wilson', initials: 'BW' },
+            { name: 'Carol Davis', initials: 'CD' }
+        ];
+
+        function getRandomUser() {
+            return sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
+        }
+
+        function getRandomMessage(type) {
+            const messages = sampleMessages[type];
+            return messages[Math.floor(Math.random() * messages.length)];
+        }
+
+        function playNotificationSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                const playTone = (frequency, startTime, duration) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = frequency;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0, startTime);
+                    gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.01);
+                    gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                };
+                
+                const now = audioContext.currentTime;
+                playTone(800, now, 0.1);
+                playTone(1000, now + 0.12, 0.15);
+            } catch (e) {
+                console.log('Web Audio API not available:', e);
+            }
+        }
+
+        function showDemoNotification(type) {
+            const user = getRandomUser();
+            const message = getRandomMessage(type);
+            const groupName = type === 'Group' ? 'Project Team' : null;
+
+            const notification = document.createElement('div');
+            notification.className = 'popup-notification';
+            notificationCount++;
+
+            const displayName = groupName ? `${user.name} (${groupName})` : user.name;
+
+            notification.innerHTML = `
+                <div class="popup-notification-header">
+                    <div class="popup-notification-avatar">${user.initials}</div>
+                    <div class="popup-notification-sender">${displayName}</div>
+                    <button class="popup-notification-close" onclick="closeNotification(this)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="popup-notification-message">${message}</div>
+                <div class="popup-notification-footer">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>Click to reply</span>
+                </div>
+            `;
+
+            notification.addEventListener('click', (e) => {
+                if (e.target.closest('.popup-notification-close')) return;
+                alert(`Opening chat with ${user.name}...`);
+                notification.classList.add('hiding');
+                setTimeout(() => notification.remove(), 300);
+            });
+
+            popupNotificationContainer.appendChild(notification);
+            playNotificationSound();
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.classList.add('hiding');
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 5000);
+
+            // Limit to 3 notifications
+            const notifications = popupNotificationContainer.querySelectorAll('.popup-notification');
+            if (notifications.length > 3) {
+                const oldest = notifications[0];
+                oldest.classList.add('hiding');
+                setTimeout(() => oldest.remove(), 300);
+            }
+        }
+
+        function showMultipleNotifications() {
+            showDemoNotification('DM');
+            setTimeout(() => showDemoNotification('Group'), 300);
+            setTimeout(() => showDemoNotification('DM'), 600);
+        }
+
+        function closeNotification(button) {
+            event.stopPropagation();
+            const notification = button.closest('.popup-notification');
+            notification.classList.add('hiding');
+            setTimeout(() => notification.remove(), 300);
+        }
+
+        function clearAllNotifications() {
+            const notifications = popupNotificationContainer.querySelectorAll('.popup-notification');
+            notifications.forEach((notification, index) => {
+                setTimeout(() => {
+                    notification.classList.add('hiding');
+                    setTimeout(() => notification.remove(), 300);
+                }, index * 100);
+            });
+        }
+
+        // Show a demo notification on page load
+        setTimeout(() => {
+            showDemoNotification('DM');
+        }, 1000);
+    </script>
+</body>
+</html>
