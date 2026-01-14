@@ -72,6 +72,19 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         await self.accept()
 
         print(f"✅ WS connected: {self.me} (tenant: {self.tenant_id})")
+        
+        # Broadcast online presence to all users in tenant
+        try:
+            await self.channel_layer.group_send(
+                self.presence_group,
+                {
+                    "type": "presence_update",
+                    "status": "online",
+                    "user_email": str(self.me).strip().lower(),
+                },
+            )
+        except Exception as e:
+            print(f"Error broadcasting online presence: {e}")
 
     async def disconnect(self, close_code):
         print(f"🔌 WS disconnect: {getattr(self, 'me', 'unknown')} (code: {close_code})")
@@ -82,7 +95,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     {
                         "type": "presence_update",
                         "status": "offline",
-                        "user": getattr(self, "me", "unknown"),
+                        "user_email": str(getattr(self, "me", "unknown")).strip().lower(),
                     },
                 )
             except Exception as e:

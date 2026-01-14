@@ -197,7 +197,7 @@
         .dm-item.active .dm-name { color: #fff; font-weight: 600; }
         .dm-item.active .presence-indicator { border-color: var(--sidebar-active); }
 
-        .dm-user { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+        .dm-user { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; position: relative; }
         .dm-name { 
             font-size: 15px; 
             white-space: nowrap; 
@@ -221,6 +221,7 @@
             flex-shrink: 0;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             transition: var(--transition);
+            position: relative;
         }
         .dm-item:hover .user-pic-sm { transform: scale(1.05); }
 
@@ -236,15 +237,23 @@
         }
 
         .presence-indicator {
-            width: 10px;
-            height: 10px;
+            width: 11px;
+            height: 11px;
             border-radius: 50%;
             background: var(--sidebar-text-dim);
-            border: 2px solid var(--sidebar-bg);
-            position: relative;
+            border: 2.5px solid var(--sidebar-bg);
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
             flex-shrink: 0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
-        .presence-indicator.online { background: #2BAC76; }
+        .presence-indicator.online { 
+            background: #10B981;
+            opacity: 1;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
 
         .back-link {
             padding: 14px 20px;
@@ -936,8 +945,10 @@
 
                     div.innerHTML = `
                         <div class="dm-user" data-user-email="${memberEmail}">
-                            <span class="presence-indicator ${isSelf ? 'online' : ''}"></span>
-                            <span class="user-pic-sm" data-user-email="${memberEmail}">${initials}</span>
+                            <span class="user-pic-sm" data-user-email="${memberEmail}">
+                                ${initials}
+                                <span class="presence-indicator ${isSelf ? 'online' : ''}"></span>
+                            </span>
                             <span class="dm-name">${memberName.split('<')[0].trim() || memberId}</span>
                         </div>
                         <span class="badge" style="display:none;" data-unread-for="${memberId}">0</span>
@@ -1339,18 +1350,20 @@
                         const userEmail = (msg.user_email || '').toLowerCase();
                         const status = msg.status || 'offline';
                         console.log('👤 Presence update:', userEmail, status);
-                        // Update presence indicators if needed
-                        const dmItem = document.querySelector(`.dm-item[data-user-email="${userEmail}"]`);
-                        if (dmItem) {
-                            const indicator = dmItem.querySelector('.presence-indicator');
+                        // Find all user-pic-sm elements for this user and update their presence indicators
+                        const userPics = document.querySelectorAll(`.user-pic-sm[data-user-email="${userEmail}"]`);
+                        userPics.forEach(userPic => {
+                            const indicator = userPic.querySelector('.presence-indicator');
                             if (indicator) {
                                 if (status === 'online') {
                                     indicator.classList.add('online');
+                                    console.log('✅ Set online indicator for:', userEmail);
                                 } else {
                                     indicator.classList.remove('online');
+                                    console.log('❌ Removed online indicator for:', userEmail);
                                 }
                             }
-                        }
+                        });
                     }
                     
                     // presence / notification events (unread badges)
@@ -2106,6 +2119,114 @@
             clearTimeout(t._hide);
             t._hide = setTimeout(()=>{ t.style.opacity='0'; }, timeout);
         }
+
+        // Show unread messages view (WhatsApp-style)
+        async function showUnreadMessages() {
+            console.log('📬 Loading unread messages...');
+            currentMode = 'unread';
+            selectedPeer = null;
+            selectedGroup = null;
+            
+            // Clear active selection from sidebar
+            document.querySelectorAll('.dm-item').forEach(el => el.classList.remove('active'));
+            
+            const headerTitle = document.getElementById('chat-header-title');
+            headerTitle.innerHTML = '<i class="fas fa-envelope-open-text" style="margin-right:8px;opacity:0.6;"></i> Unread Messages';
+            
+            const feed = document.getElementById('messages-feed');
+            feed.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading unread conversations...</div>';
+            
+            // Hide input container
+            document.getElementById('input-container').style.display = 'none';
+            
+            try {
+                const resp = await fetch('/chat/unread/');
+                if (!resp.ok) throw new Error('Failed to fetch unread');
+                const data = await resp.json();
+                
+                if (!data.unread || data.unread.length === 0) {
+                    feed.innerHTML = `
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);padding:40px;">
+                            <i class="fas fa-inbox" style="font-size:64px;margin-bottom:20px;opacity:0.3;"></i>
+                            <h3 style="margin:0 0 8px 0;font-size:20px;font-weight:600;">No unread messages</h3>
+                            <p style="margin:0;font-size:14px;">All caught up! 🎉</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Build unread conversations list (WhatsApp-style)
+                let html = '<div style="padding:20px;">';
+                html += '<div style="margin-bottom:20px;"><h2 style="margin:0 0 8px 0;font-size:18px;font-weight:600;">Unread Conversations</h2><p style="margin:0;color:var(--text-muted);font-size:14px;">Click on a conversation to view messages</p></div>';
+                
+                for (const item of data.unread) {
+                    const senderEmail = (item.from || '').toLowerCase();
+                    const count = item.count || 0;
+                    
+                    // Find member info
+                    const member = members.find(m => (m.email || '').toLowerCase() === senderEmail);
+                    const memberName = member ? formatDisplayName((member.name || '').replace(/<[^>]+>/g, '').trim() || senderEmail) : senderEmail;
+                    const memberId = member ? member.id : senderEmail;
+                    const initials = getInitials(memberName.split('<')[0].trim());
+                    
+                    // Check if user is online
+                    const isOnline = member ? false : false; // Will be updated by presence
+                    
+                    html += `
+                        <div class="unread-conversation-item" data-peer-id="${memberId}" data-peer-name="${memberName}" data-peer-email="${senderEmail}" style="display:flex;align-items:center;padding:16px;margin-bottom:8px;background:var(--chat-bg);border:1px solid var(--border-light);border-radius:12px;cursor:pointer;transition:all 0.2s ease;">
+                            <div style="position:relative;margin-right:16px;">
+                                <span class="user-pic-sm" data-user-email="${senderEmail}" style="width:48px;height:48px;font-size:16px;">
+                                    ${initials}
+                                    <span class="presence-indicator ${isOnline ? 'online' : ''}"></span>
+                                </span>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                                    <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text-primary);">${memberName.split('<')[0].trim()}</h3>
+                                    <span style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--accent-pink);color:#fff;font-size:12px;font-weight:700;border-radius:12px;">${count}</span>
+                                </div>
+                                <p style="margin:0;font-size:14px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${count} unread message${count > 1 ? 's' : ''}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += '</div>';
+                feed.innerHTML = html;
+                
+                // Add click handlers to conversation items
+                document.querySelectorAll('.unread-conversation-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const peerId = item.dataset.peerId;
+                        const peerName = item.dataset.peerName;
+                        const peerEmail = item.dataset.peerEmail;
+                        console.log('🔔 Opening conversation with:', peerName, peerId);
+                        selectPeer(peerId, peerName, peerEmail);
+                    });
+                    
+                    // Hover effect
+                    item.addEventListener('mouseenter', () => {
+                        item.style.background = 'var(--hover-bg)';
+                        item.style.transform = 'translateX(4px)';
+                        item.style.boxShadow = 'var(--shadow-md)';
+                    });
+                    item.addEventListener('mouseleave', () => {
+                        item.style.background = 'var(--chat-bg)';
+                        item.style.transform = 'translateX(0)';
+                        item.style.boxShadow = 'none';
+                    });
+                });
+                
+            } catch (e) {
+                console.error('❌ Error loading unread messages:', e);
+                feed.innerHTML = '<div style="padding:40px;text-align:center;color:#ff6b6b;">Error loading unread messages. Please try again.</div>';
+            }
+        }
+
+        // Add click handler for unread messages nav item
+        document.getElementById('nav-unread').addEventListener('click', () => {
+            showUnreadMessages();
+        });
 
         // Init
         loadMembers();
