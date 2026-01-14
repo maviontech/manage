@@ -41,10 +41,19 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
         # Get peer from query string for DM conversations
         self.peer = qs.get("peer", [None])[0]
+        
+        # Get group from query string for group conversations
+        self.group_id = qs.get("group", [None])[0]
 
         self.presence_group = f"presence_{self.tenant_id}"
 
         await self.channel_layer.group_add(self.presence_group, self.channel_name)
+        
+        # Join group-specific channel if group_id provided
+        if self.group_id:
+            self.group_channel = f"chat_group_{self.tenant_id}_{self.group_id}"
+            await self.channel_layer.group_add(self.group_channel, self.channel_name)
+            print(f"📨 Joined group channel: {self.group_channel}")
         
         # Join conversation-specific room for read receipts if peer is specified
         if self.peer and self.me:
@@ -117,12 +126,67 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 print(f"📤 Left conversation room: {self.conversation_room}")
             except Exception as e:
                 print(f"Error leaving conversation room: {e}")
+        
+        # Leave group channel if joined
+        if hasattr(self, "group_channel") and self.group_channel:
+            try:
+                await self.channel_layer.group_discard(
+                    self.group_channel, self.channel_name
+                )
+                print(f"📤 Left group channel: {self.group_channel}")
+            except Exception as e:
+                print(f"Error leaving group channel: {e}")
 
     async def receive_json(self, content):
         print(f"📨 Received: {content}")
         
         msg_type = content.get("type")
         
+        # Handle group messages
+        if msg_type == "group_message":
+            group_id = content.get("group_id")
+            text = content.get("text")
+            cid = content.get("cid")
+            
+            if not text or not group_id:
+                print(f"⚠️ Missing text or group_id: text={bool(text)}, group_id={bool(group_id)}")
+                return
+            
+            print(f"💬 Saving group message from {self.me} to group {group_id}: {text[:50]}...")
+            
+            try:
+                saved = await sync_to_async(self.save_group_message)(
+                    self.tenant_id, group_id, self.me, text
+                )
+                
+                print(f"✅ Group message saved, broadcasting...")
+                
+                # Broadcast to group channel
+                group_channel = f"chat_group_{self.tenant_id}_{group_id}"
+                await self.channel_layer.group_send(
+                    group_channel,
+                    {
+                        "type": "chat_message",
+                        "event": "message",
+                        "message": {
+                            "sender": self.me,
+                            "text": text,
+                            "created_at": saved["created_at"],
+                            "id": saved.get("id"),
+                            "group_id": int(group_id),
+                            "cid": cid,
+                        }
+                    },
+                )
+                
+                print(f"✅ Group message broadcasted successfully")
+            except Exception as e:
+                print(f"❌ Error processing group message: {e}")
+                import traceback
+                traceback.print_exc()
+            return
+        
+        # Handle direct messages
         if msg_type != "message":
             print(f"⚠️ Ignoring non-message type: {msg_type}")
             return
@@ -181,6 +245,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             'message_ids': event.get('message_ids', []),
             'conversation_id': event.get('conversation_id')
         })
+    
+    async def chat_message(self, event):
+        """Handle group chat messages"""
+        await self.send_json(event)
 
     def save_message(self, tenant, sender, receiver, text):
         # Get tenant credentials from clients_master
@@ -257,6 +325,89 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 message_id = conn.insert_id()
                 cur.execute("""
                     SELECT created_at FROM chat_message 
+                    WHERE id=%s
+                """, [message_id])
+                timestamp_row = cur.fetchone()
+                
+            return {
+                "id": message_id,
+                "created_at": timestamp_row['created_at'].isoformat() if timestamp_row else None
+            }
+        finally:
+            conn.close()
+    
+    def save_group_message(self, tenant, group_id, sender, text):
+        """Save a group message to the database"""
+        # Get tenant credentials from clients_master
+        with default_connection.cursor() as cur:
+            cur.execute("""
+                SELECT db_name, db_host, db_user, db_password, IFNULL(db_port, 3306) as db_port
+                FROM clients_master
+                WHERE id = %s OR client_name = %s OR domain_postfix = %s
+                LIMIT 1
+            """, [tenant, tenant, tenant])
+            row = cur.fetchone()
+            
+        if not row:
+            raise Exception(f"Tenant {tenant} not found in clients_master")
+        
+        # Connect to tenant MySQL database
+        conn = pymysql.connect(
+            host=row[1],
+            port=int(row[4]),
+            user=row[2],
+            password=row[3],
+            database=row[0],
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True
+        )
+        
+        try:
+            with conn.cursor() as cur:
+                # Normalize sender - convert member ID to email if needed
+                sender_norm = str(sender).strip().lower()
+                
+                if sender_norm.isdigit():
+                    cur.execute("SELECT email FROM members WHERE id=%s", [int(sender_norm)])
+                    member_row = cur.fetchone()
+                    if member_row and member_row.get('email'):
+                        sender_norm = str(member_row['email']).strip().lower()
+                
+                # Ensure group tables exist
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS chat_group (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        tenant_id VARCHAR(128),
+                        name VARCHAR(255),
+                        created_by VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_tenant (tenant_id)
+                    )
+                """)
+                
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS chat_group_message (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        group_id INT,
+                        sender VARCHAR(255),
+                        text TEXT,
+                        is_read TINYINT DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_group (group_id),
+                        INDEX idx_created (created_at)
+                    )
+                """)
+                
+                # Insert message
+                cur.execute("""
+                    INSERT INTO chat_group_message (group_id, sender, text, is_read)
+                    VALUES (%s, %s, %s, 0)
+                """, [int(group_id), sender_norm, text])
+                
+                # Get the message ID and created_at timestamp
+                message_id = conn.insert_id()
+                cur.execute("""
+                    SELECT created_at FROM chat_group_message
                     WHERE id=%s
                 """, [message_id])
                 timestamp_row = cur.fetchone()

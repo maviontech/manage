@@ -1273,6 +1273,39 @@
                                     const incoming = msg.message || {};
                                     const cid = incoming.cid;
                                     const senderNorm = normId(incoming.sender || incoming.from || '');
+                                    const incomingGroupId = incoming.group_id;
+                                    
+                                    // Handle group messages
+                                    if (incomingGroupId) {
+                                        console.log('💬 Group message received:', incoming);
+                                        // Only show if we're viewing this group
+                                        if (currentMode === 'group' && String(selectedGroup) === String(incomingGroupId)) {
+                                            if (cid) {
+                                                const existing = document.querySelector(`[data-cid="${cid}"]`);
+                                                if (existing) {
+                                                    console.log('✅ Matched optimistic group message with CID:', cid);
+                                                    // Update the optimistic message
+                                                    try {
+                                                        if (incoming.id) existing.dataset.messageId = String(incoming.id);
+                                                        const txt = existing.querySelector('.text');
+                                                        if (txt && incoming.text) txt.innerHTML = escapeHtml(incoming.text);
+                                                        const ts = existing.querySelector('.timestamp');
+                                                        if (ts && incoming.created_at) {
+                                                            const d = new Date(incoming.created_at);
+                                                            const pad = n => n < 10 ? '0' + n : n;
+                                                            ts.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                                                        }
+                                                    } catch (e) { /* ignore */ }
+                                                    return; // Don't append duplicate
+                                                }
+                                            }
+                                            // Append the group message if not optimistic or not found
+                                            appendMessage(incoming);
+                                        }
+                                        return; // Handled group message
+                                    }
+                                    
+                                    // Handle DM messages
                                     if (cid) {
                                         const existing = document.querySelector(`[data-cid="${cid}"]`);
                                         if (existing) {
@@ -1310,8 +1343,6 @@
                                             console.log('🔵 Auto-marking legacy message as read (recipient is viewing chat)');
                                             markRead(selectedPeer);
                                         }
-                                    } else if (currentMode === 'group') {
-                                        // group message received; if same group, we could mark read
                                     }
                     }
 
@@ -1640,7 +1671,7 @@
                         const cid = 'cid-' + Date.now() + '-' + Math.random().toString(36).slice(2,9);
                         // Prefer websocket for real-time group send
                         if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'group_message', group_id: selectedGroup, text, cid }));
+                            ws.send(JSON.stringify({ type: 'group_message', group_id: selectedGroup, text: text, cid }));
                         } else {
                         // fallback to HTTP
                         const res = await fetch('/chat/group/send/', {
