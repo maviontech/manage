@@ -28,13 +28,17 @@ def _normalize_identity_for_tenant(tenant_conn, val):
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         user = self.scope.get('user')
+        print(f"[ChatConsumer.connect] user={user}, is_authenticated={getattr(user, 'is_authenticated', False)}")
         if not user or not getattr(user, 'is_authenticated', False):
+            print("[ChatConsumer.connect] REJECT: User not authenticated")
             await self.close()
             return
 
         qs = parse_qs(self.scope.get('query_string', b'').decode())
         tenant = qs.get('tenant', [None])[0]
+        print(f"[ChatConsumer.connect] tenant={tenant}, query_string={self.scope.get('query_string', b'').decode()}")
         if not tenant:
+            print("[ChatConsumer.connect] REJECT: No tenant parameter")
             await self.close()
             return
 
@@ -422,34 +426,73 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
 # --- Notification and typing consumers ---
 class NotificationConsumer(AsyncJsonWebsocketConsumer):
-    """Subscribe to tenant presence/notification events.
+    """Subscribe to tenant presence/notification events and user-specific notifications.
 
     Clients that only want tenant-wide notifications (unread counts, incoming
     messages for any conversation, presence changes) can connect here.
+    Also handles user-specific system notifications (task assignments, mentions, etc.)
     """
 
     async def connect(self):
+        user = self.scope.get('user')
+        if not user or not getattr(user, 'is_authenticated', False):
+            await self.close()
+            return
+
         qs = parse_qs(self.scope.get("query_string", b"").decode())
         tenant = qs.get("tenant", [None])[0]
         if not tenant:
             await self.close()
             return
 
+        # Get member_id from session
+        session = self.scope.get('session', {})
+        self.member_id = session.get('member_id')
+        self.tenant_id = tenant
+
+        # Join tenant-wide presence group (for chat/presence updates)
         self.presence_group = f"presence_{tenant}"
         await self.channel_layer.group_add(self.presence_group, self.channel_name)
+
+        # Join user-specific notification group (for system notifications)
+        if self.member_id:
+            self.user_notification_group = f"user_notifications_{tenant}_{self.member_id}"
+            await self.channel_layer.group_add(self.user_notification_group, self.channel_name)
+
         await self.accept()
 
     async def disconnect(self, close_code):
+        # Leave presence group
         if getattr(self, "presence_group", None):
             await self.channel_layer.group_discard(self.presence_group, self.channel_name)
+        
+        # Leave user notification group
+        if getattr(self, "user_notification_group", None):
+            await self.channel_layer.group_discard(self.user_notification_group, self.channel_name)
 
     async def presence_update(self, event):
         # forward presence and notification events to client
         await self.send_json(event)
 
+    async def new_message(self, event):
+        # forward new chat messages to client
+        await self.send_json(event)
+
     async def chat_message(self, event):
         # forward chat messages that were also broadcast to presence_group
         await self.send_json(event)
+
+    async def system_notification(self, event):
+        """Handle system notifications (task assignments, mentions, etc.)"""
+        await self.send_json({
+            'event': 'system_notification',
+            'notification_id': event.get('notification_id'),
+            'type': event.get('notification_type', 'info'),
+            'title': event.get('title'),
+            'message': event.get('message'),
+            'link': event.get('link'),
+            'created_at': event.get('created_at'),
+        })
 
 
 class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):

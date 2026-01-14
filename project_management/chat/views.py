@@ -30,7 +30,13 @@ def team_chat_page(request, peer_id=None):
     if not tenant_config:
         return redirect('identify')
     
-    tenant_id = request.session.get('tenant_id', '') 
+    tenant_id = request.session.get('tenant_id', '')
+    
+    # Validate tenant_id - if missing, redirect to identify page
+    if not tenant_id or tenant_id == 'None':
+        logging.warning(f"Missing or invalid tenant_id in session for member {member_id}")
+        return redirect('identify')
+    
     tenant_name = request.session.get('tenant_name', 'Team Chat')
     # Prefer email/ident_email as canonical identity for chat; fall back to member_id if no email
     def _chat_identity(req):

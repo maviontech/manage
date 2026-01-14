@@ -1,0 +1,276 @@
+/* Notification System Styles */
+
+/* Bell Icon Animation */
+@keyframes notification-bell-shake {
+    0%, 100% { transform: rotate(0deg); }
+    10%, 30%, 50%, 70%, 90% { transform: rotate(-15deg); }
+    20%, 40%, 60%, 80% { transform: rotate(15deg); }
+}
+
+@keyframes notification-glow {
+    0%, 100% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+    50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+}
+
+.notification-bell-shake {
+    animation: notification-bell-shake 0.8s ease-in-out;
+}
+
+/* Toast Notification Styles */
+.notification-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 320px;
+    max-width: 420px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: start;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10000;
+}
+
+.notification-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification-toast-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.notification-toast-icon.notif-type-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.notification-toast-icon.notif-type-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.notification-toast-icon.notif-type-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.notification-toast-icon.notif-type-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.notification-toast-icon.notif-type-task {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.notification-toast-icon.notif-type-project {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.notification-toast-icon.notif-type-team {
+    background: #fce7f3;
+    color: #9f1239;
+}
+
+.notification-toast-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-toast-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.notification-toast-message {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.notification-toast-close {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 16px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.notification-toast-close:hover {
+    color: #ef4444;
+}
+
+/* Online Status Indicator */
+.online-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid white;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    transition: background-color 0.3s;
+}
+
+.online-status.online {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.online-status.offline {
+    background-color: #9ca3af;
+}
+
+/* Avatar with online status */
+.avatar-with-status {
+    position: relative;
+    display: inline-block;
+}
+
+/* Notification Badge Pulse Animation */
+#notif-badge {
+    animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Dropdown Notification Item Hover */
+.notification-item-hover:hover {
+    background-color: #f9fafb !important;
+    transition: background-color 0.2s;
+}
+
+/* Unread Notification Indicator */
+.notification-unread-indicator {
+    width: 8px;
+    height: 8px;
+    background: #3b82f6;
+    border-radius: 50%;
+    margin-left: 8px;
+    animation: indicator-pulse 1.5s infinite;
+}
+
+@keyframes indicator-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .notification-toast {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        min-width: auto;
+        max-width: none;
+    }
+}
+
+/* Loading spinner for notifications */
+.notifications-loading {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+}
+
+.notifications-loading i {
+    font-size: 24px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.notifications-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+}
+
+.notifications-empty i {
+    font-size: 32px;
+    color: #d1d5db;
+    margin-bottom: 12px;
+}
+
+/* Notification type colors in list */
+.notif-type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.notif-type-badge.info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.notif-type-badge.success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.notif-type-badge.warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.notif-type-badge.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.notif-type-badge.task {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.notif-type-badge.project {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.notif-type-badge.team {
+    background: #fce7f3;
+    color: #9f1239;
+}

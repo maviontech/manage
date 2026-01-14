@@ -12,3 +12,7 @@ media/
 .idea/
 *.log
 coverage
+migrations/
+staticfiles/
+venv/
+env/

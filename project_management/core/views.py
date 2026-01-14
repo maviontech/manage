@@ -31,6 +31,8 @@ def identify_view(request):
         return render(request, 'core/identify.html', {'error': 'No tenant found for this email domain.'})
     # store tenant row (dict) in session
     request.session['tenant_config'] = {
+        'tenant_id': tenant.get('id'),  # Include tenant_id from clients_master.id
+        'client_name': tenant.get('client_name'),  # Include client name for display
         'db_engine': tenant.get('db_engine', 'mysql'),
         'db_name': tenant.get('db_name'),
         'db_host': tenant.get('db_host') or '127.0.0.1',
@@ -155,10 +157,13 @@ def login_password_view(request):
     # save canonical id and display name to session
     request.session['member_id'] = member_id
     request.session['member_name'] = member_name
+    request.session['tenant_id'] = tenant_conf.get('tenant_id')  # or other tenant identifier
+    request.session['tenant_name'] = tenant_conf.get('client_name', 'Team Chat')  # Set tenant name for display
     request.session['user_id'] = member_id  # Ensure user_id is set for task views
     request.session['profile_photo'] = profile_photo if 'profile_photo' in locals() else None
     print("Login successful for user:", member_id)
     print("Login successful for user:", member_name)
+    print("Tenant ID set to:", tenant_conf.get('tenant_id'))
 
     # Add explicit tenant DB credentials to session for your db_helpers
     request.session['tenant_db_name'] = tenant_conf.get('db_name')

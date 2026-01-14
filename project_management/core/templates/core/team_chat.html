@@ -840,6 +840,14 @@
 
     <script>
         const TENANT_ID = "{{ tenant_id|escapejs }}";
+        console.log('Tenant ID:', TENANT_ID);
+        
+        // Validate tenant ID - must be a valid value, not "None" or empty
+        if (!TENANT_ID || TENANT_ID === 'None' || TENANT_ID === 'null' || TENANT_ID === 'undefined') {
+            console.error('Invalid or missing tenant_id. WebSocket connections will not work.');
+            showToast('Configuration error: Missing tenant information. Please refresh the page or contact support.');
+        }
+        
         const CURRENT_USER = "{{ current_user|escapejs }}";
         const CURRENT_USER_NAME = "{{ current_user_name|escapejs }}";
         const INITIAL_PEER = "{{ initial_peer|default:''|escapejs }}";
@@ -917,15 +925,17 @@
                     div.className = 'dm-item' + (isSelf ? '' : '');
                     // use numeric member id for data-id and URL
                     div.dataset.id = memberId;
+                    // expose member email for presence indicator toggling
+                    div.dataset.userEmail = memberEmail;
                     div.dataset.name = memberName;
                     div.dataset.self = isSelf ? 'true' : 'false';
 
                     const initials = getInitials(memberName.split('<')[0].trim());
 
                     div.innerHTML = `
-                        <div class="dm-user">
+                        <div class="dm-user" data-user-email="${memberEmail}">
                             <span class="presence-indicator ${isSelf ? 'online' : ''}"></span>
-                            <span class="user-pic-sm">${initials}</span>
+                            <span class="user-pic-sm" data-user-email="${memberEmail}">${initials}</span>
                             <span class="dm-name">${memberName.split('<')[0].trim() || memberId}</span>
                         </div>
                         <span class="badge" style="display:none;" data-unread-for="${memberId}">0</span>
@@ -1041,7 +1051,7 @@
         function appendMessage(m) {
             const feed = document.getElementById('messages-feed');
             const sender = normId(m.sender || m.from);
-            console.log('appendMessage:', {CURRENT_USER, sender, m});
+            // console.log('appendMessage:', {CURRENT_USER, sender, m});
             const isMe = sender === normId(CURRENT_USER);
             const senderName = isMe ? DISPLAY_CURRENT_USER_NAME : getMemberNameById(sender);
             const initials = getInitials(senderName);
@@ -1087,6 +1097,11 @@
             } catch (err) { /* ignore date errors */ }
 
             msgEl.classList.add('msg-enter');
+            // annotate avatar with sender email so presence indicator can be toggled
+            try{
+                const avatarEl = msgEl.querySelector('.avatar');
+                if(avatarEl) avatarEl.dataset.userEmail = sender;
+            }catch(e){}
             // attach message id and cid for later read-receipt updates and optimistic matching
             if (m.id) {
                 try { msgEl.dataset.messageId = String(m.id); } catch(e){}
@@ -1132,8 +1147,18 @@
                 try { ws.close(); } catch (e) {}
                 ws = null;
             }
-            if (!TENANT_ID || (!selectedPeer && !selectedGroup)) return;
-
+            console.log('initWebSocket called', {TENANT_ID, selectedPeer, selectedGroup, currentMode});
+            
+            // Validate tenant ID before attempting connection
+            if (!TENANT_ID || TENANT_ID === 'None' || TENANT_ID === 'null' || TENANT_ID === 'undefined') {
+                console.error('Cannot initialize WebSocket: Invalid tenant ID');
+                showToast('Unable to connect to chat. Missing tenant information.');
+                startPolling(); // Fall back to polling
+                return;
+            }
+            
+            if (!selectedPeer && !selectedGroup) return;
+            
             // Build querystring for websocket: support peer (DM) or group
             let qs = `?tenant=${encodeURIComponent(TENANT_ID)}`;
             if (currentMode === 'group' && selectedGroup) {
@@ -1146,11 +1171,69 @@
             
             try {
                 ws = new WebSocket(url);
+                console.log('Initializing WebSocket...', ws);
                 ws.onopen = () => console.log('WebSocket connected');
                 ws.onmessage = (ev) => {
                     let msg;
+                    console.log('WebSocket raw message:', ev.data);
                     try { msg = JSON.parse(ev.data); } catch (e) { return; }
                     
+                    console.log('📨 WebSocket message received:', msg);
+                    
+                    // Handle new_message events from ChatConsumer
+                    if (msg.type === 'new_message') {
+                        const chatType = msg.chat_type;
+                        const chatId = msg.chat_id;
+                        const senderEmail = (msg.sender_email || '').toLowerCase();
+                        const senderName = msg.sender_name || senderEmail;
+                        const messageText = msg.message || '';
+                        const timestamp = msg.timestamp;
+                        
+                        console.log('💬 New message:', { chatType, chatId, senderEmail, currentMode, selectedPeer, selectedGroup });
+                        
+                        // For DM: only show if we're in the right conversation
+                        if (chatType === 'dm' && currentMode === 'dm') {
+                            const myEmail = normId(CURRENT_USER);
+                            const peerEmail = normId(selectedPeer);
+                            const normalizedSender = normId(senderEmail);
+                            const normalizedChatId = normId(chatId);
+                            
+                            // Show message if: (sender is peer AND chatId is me) OR (sender is me AND chatId is peer)
+                            const isRelevant = (normalizedSender === peerEmail && normalizedChatId === myEmail) ||
+                                             (normalizedSender === myEmail && normalizedChatId === peerEmail) ||
+                                             (normalizedSender === peerEmail || normalizedChatId === peerEmail);
+                            
+                            if (isRelevant) {
+                                const incoming = {
+                                    sender: senderEmail,
+                                    sender_name: senderName,
+                                    text: messageText,
+                                    created_at: timestamp,
+                                    from: senderEmail
+                                };
+                                appendMessage(incoming);
+                                
+                                // Mark as read if sender is the peer (not ourselves)
+                                if (normalizedSender === peerEmail) {
+                                    markRead(selectedPeer);
+                                }
+                            }
+                        }
+                        
+                        // For Group: only show if we're in the right group
+                        if (chatType === 'group' && currentMode === 'group' && String(selectedGroup) === String(chatId)) {
+                            const incoming = {
+                                sender: senderEmail,
+                                sender_name: senderName,
+                                text: messageText,
+                                created_at: timestamp,
+                                from: senderEmail
+                            };
+                            appendMessage(incoming);
+                        }
+                    }
+                    
+                    // Legacy format support (msg.event === 'message')
                     if (msg.event === 'message' && msg.message) {
                                     // If this message includes a client cid, try to match optimistic message
                                     const incoming = msg.message || {};
@@ -1220,6 +1303,25 @@
                         });
                     }
 
+                    // Handle presence updates
+                    if (msg.type === 'presence_update') {
+                        const userEmail = (msg.user_email || '').toLowerCase();
+                        const status = msg.status || 'offline';
+                        console.log('👤 Presence update:', userEmail, status);
+                        // Update presence indicators if needed
+                        const dmItem = document.querySelector(`.dm-item[data-user-email="${userEmail}"]`);
+                        if (dmItem) {
+                            const indicator = dmItem.querySelector('.presence-indicator');
+                            if (indicator) {
+                                if (status === 'online') {
+                                    indicator.classList.add('online');
+                                } else {
+                                    indicator.classList.remove('online');
+                                }
+                            }
+                        }
+                    }
+                    
                     // presence / notification events (unread badges)
                     if (msg.event === 'new_group_message') {
                         const gid = msg.group_id || msg.message && msg.message.group_id;
@@ -1287,12 +1389,15 @@
         }
 
         function startPolling() {
-            if (pollInterval) clearInterval(pollInterval);
+            // if already polling, do nothing
+            if (pollInterval) return;
+            // only start polling when there is an active target (peer or group)
+            if (!selectedPeer && !selectedGroup) return;
             // poll for new messages every 5s when websocket is not available
             pollInterval = setInterval(() => {
                 if (currentMode === 'dm' && selectedPeer) pollForNewMessages();
                 if (currentMode === 'group' && selectedGroup) pollForNewGroupMessages();
-            }, 100);
+            }, 5000);
         }
 
         // --- Group helpers ---
@@ -1324,6 +1429,7 @@
         }
 
         function selectGroup(groupId, groupName) {
+            console.log('Selecting group', groupId, groupName);
             currentMode = 'group';
             selectedGroup = groupId;
             // clear DM selection

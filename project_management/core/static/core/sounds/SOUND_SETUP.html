@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notification Sound - Setup Instructions</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .card {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        h2 {
+            color: #764ba2;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .step {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+        .step-number {
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        code {
+            background: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+        .link-box {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .link-box a {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .link-box a:hover {
+            text-decoration: underline;
+        }
+        .success {
+            background: #d4edda;
+            border-left-color: #28a745;
+            padding: 15px;
+            border-left: 4px solid;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .test-button:hover {
+            background: #764ba2;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔔 Notification Sound Setup</h1>
+        <p>Follow these steps to add a notification sound to your project management system.</p>
+
+        <h2>📁 Current Status</h2>
+        <div class="warning">
+            <strong>⚠️ Sound file missing!</strong><br>
+            Location: <code>core/static/core/sounds/notification.mp3</code><br>
+            The directory exists, but you need to add the actual sound file.
+        </div>
+
+        <h2>🎵 Step-by-Step Instructions</h2>
+
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Download a Notification Sound</strong>
+            <div class="link-box">
+                <p><strong>Free Sound Libraries:</strong></p>
+                <ul>
+                    <li><a href="https://notificationsounds.com/" target="_blank">NotificationSounds.com</a> - Large collection of notification sounds</li>
+                    <li><a href="https://mixkit.co/free-sound-effects/notification/" target="_blank">Mixkit</a> - Free notification sound effects</li>
+                    <li><a href="https://freesound.org/search/?q=notification&f=&s=score+desc" target="_blank">FreeSound.org</a> - Community sound library</li>
+                    <li><a href="https://pixabay.com/sound-effects/search/notification/" target="_blank">Pixabay</a> - Royalty-free sounds</li>
+                </ul>
+                <p><strong>Recommended:</strong> Look for "notification ping", "message alert", or "ding" sounds (0.5-1 second duration)</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Save the File</strong>
+            <p>Save your downloaded sound as:</p>
+            <code>c:\Users\hrtea\OneDrive\Desktop\Vishal\manage\project_management\core\static\core\sounds\notification.mp3</code>
+            <p><strong>Important:</strong> Must be named exactly <code>notification.mp3</code></p>
+        </div>
+
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>Verify File Format</strong>
+            <ul>
+                <li>Format: MP3</li>
+                <li>Duration: 0.5 - 2 seconds (short is better)</li>
+                <li>File size: < 100KB</li>
+                <li>Bit rate: 128kbps or higher</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <span class="step-number">4</span>
+            <strong>Test the Sound</strong>
+            <p>Open your browser console and run:</p>
+            <code>new Audio('/static/core/sounds/notification.mp3').play();</code>
+            <p>Or click this button after refreshing your app:</p>
+            <button class="test-button" onclick="testSound()">🔊 Test Sound</button>
+        </div>
+
+        <div class="success">
+            <strong>✅ Success!</strong><br>
+            If you hear a sound, the notification system is fully operational!
+        </div>
+
+        <h2>🔧 Alternative: Use an Online Sound</h2>
+        <div class="step">
+            <strong>Quick Fix (Not Recommended for Production)</strong>
+            <p>If you want to test immediately without downloading, edit <code>notifications.js</code> line ~77:</p>
+            <code>notificationSound = new Audio('https://notificationsounds.com/soundfiles/notification.mp3');</code>
+            <p class="warning"><strong>Note:</strong> This requires internet connection and may be slower. Use local file for production.</p>
+        </div>
+
+        <h2>🎨 Custom Sound Examples</h2>
+        <div class="step">
+            <strong>Sound Type Recommendations:</strong>
+            <ul>
+                <li><strong>Pleasant Ding</strong> - For general notifications</li>
+                <li><strong>Soft Chime</strong> - For task assignments</li>
+                <li><strong>Pop Sound</strong> - For chat messages</li>
+                <li><strong>Bell Ring</strong> - For important alerts</li>
+                <li><strong>Subtle Beep</strong> - For background updates</li>
+            </ul>
+        </div>
+
+        <h2>⚙️ Sound Configuration</h2>
+        <div class="step">
+            <p>You can configure sound settings in <code>notifications.js</code>:</p>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto;">
+// Volume (0.0 to 1.0)
+notificationSound.volume = 0.5;  // 50% volume
+
+// Disable sound
+CONFIG.SOUND_ENABLED = false;
+            </pre>
+        </div>
+
+        <h2>🐛 Troubleshooting</h2>
+        <div class="step">
+            <strong>Sound Not Playing?</strong>
+            <ul>
+                <li>✓ Check file exists at correct path</li>
+                <li>✓ Check filename is exactly <code>notification.mp3</code></li>
+                <li>✓ User must interact with page first (click/keypress)</li>
+                <li>✓ Check browser sound is not muted</li>
+                <li>✓ Check browser console for errors</li>
+                <li>✓ Try different sound file format/encoding</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <strong>🎉 That's it!</strong><br>
+            Once you've added the sound file, your notification system will play an audio alert whenever new notifications arrive!
+        </div>
+
+        <h2>📝 Summary</h2>
+        <ol>
+            <li>Download a short notification sound (MP3, 0.5-1 second)</li>
+            <li>Save as <code>notification.mp3</code> in sounds directory</li>
+            <li>Refresh your application</li>
+            <li>Test by sending a notification</li>
+        </ol>
+
+        <p style="text-align: center; margin-top: 30px; color: #6c757d;">
+            <strong>Need help?</strong> Check the browser console for errors or refer to <code>NOTIFICATION_SETUP.md</code>
+        </p>
+    </div>
+
+    <script>
+        function testSound() {
+            const audio = new Audio('/static/core/sounds/notification.mp3');
+            audio.volume = 0.5;
+            audio.play()
+                .then(() => alert('✅ Sound is working!'))
+                .catch(error => alert('❌ Error: ' + error.message + '\n\nMake sure the sound file exists and you\'ve interacted with the page.'));
+        }
+    </script>
+</body>
+</html>
