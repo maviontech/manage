@@ -688,15 +688,15 @@
         .date-sep { text-align:center; color:var(--text-muted); font-size:13px; margin: 18px 0; display:block }
         .msg-read-indicator { font-size: 12px; color: var(--text-muted); margin-top:6px; display:block; }
         /* small circular check status for sent messages */
-        .msg-status { display:inline-flex; align-items:center; justify-content:center; width: 18px; height:18px; border-radius:50%; background: rgba(255,255,255,0.98); margin-top:25px; float:right; position:relative; transition:transform .12s ease, box-shadow .12s ease; }
-        .msg-status i { font-size:10px; color:var(--text-muted); line-height:1; }
+        .msg-status { display:inline-flex; align-items:center; justify-content:center; width: 18px; height:18px; border-radius:50%; background: rgba(255,255,255,0.98); margin-top:25px; float:right; position:relative; transition:transform .12s ease, box-shadow .12s ease, color .12s ease; }
+        .msg-status i { font-size:10px; color:var(--text-muted); line-height:1; transition: color .2s ease; }
         .message-group.sent-message .msg-status { margin-left:8px; }
         /* delivered (server confirmed) - subtle double-check */
         .msg-status.delivered { border-color: rgba(0,0,0,0.12); background: rgba(247,249,250,1); }
         .msg-status.delivered i { color: var(--text-muted); }
-        /* read (recipient opened) - improved WhatsApp-like read indicator */
-        /* .msg-status.read { border-color: #0A7AFF; background: #ffffff; box-shadow: 0 0 0 4px rgba(10,122,255,0.07), 0 2px 6px rgba(10,122,255,0.06); } */
-        .msg-status.read i { color: #0A7AFF; font-weight:600; }
+        /* read (recipient opened) - WhatsApp-style blue double check mark */
+        .msg-status.read { border-color: #0A7AFF; background: #ffffff; }
+        .msg-status.read i { color: #0A7AFF !important; font-weight:600; }
         .msg-status:hover { transform: translateY(-1px); }
     </style>
 </head>
@@ -850,6 +850,7 @@
         
         const CURRENT_USER = "{{ current_user|escapejs }}";
         const CURRENT_USER_NAME = "{{ current_user_name|escapejs }}";
+        const CURRENT_MEMBER_ID = "{{ current_member_id|escapejs }}";
         const INITIAL_PEER = "{{ initial_peer|default:''|escapejs }}";
         // Format display name: ensure first-name then surname for two-part names
         function formatDisplayName(name) {
@@ -877,6 +878,7 @@
         const DISPLAY_CURRENT_USER_NAME = formatDisplayName(CURRENT_USER_NAME);
 
         let selectedPeer = null;
+        let selectedPeerEmail = null;
         let selectedPeerName = '';
         let users = [];
         let ws = null;
@@ -942,7 +944,7 @@
                     `;
 
                     if (!isSelf) {
-                        div.addEventListener('click', () => selectPeer(memberId, memberName));
+                        div.addEventListener('click', () => selectPeer(memberId, memberName, memberEmail));
                     } else {
                         div.style.opacity = '0.6';
                         div.style.cursor = 'default';
@@ -957,7 +959,8 @@
                             const el = document.querySelector(`.dm-item[data-id="${INITIAL_PEER}"]`);
                             if (el) {
                                 const name = el.dataset.name || el.querySelector('.dm-name') && el.querySelector('.dm-name').textContent;
-                                selectPeer(INITIAL_PEER, name);
+                                const email = el.dataset.userEmail || '';
+                                selectPeer(INITIAL_PEER, name, email);
                             }
                         }
                     } catch (e) { console.warn('auto-select initial peer failed', e); }
@@ -970,10 +973,11 @@
         }
 
         // Select peer to chat with
-        function selectPeer(peerId, peerName) {
+        function selectPeer(peerId, peerName, peerEmail) {
             currentMode = 'dm';
             selectedGroup = null;
             selectedPeer = (peerId || '').trim().toLowerCase();
+            selectedPeerEmail = (peerEmail || '').trim().toLowerCase();
             selectedPeerName = (peerName || '').split('<')[0].trim() || selectedPeer;
 
             // Update sidebar active state
@@ -1183,54 +1187,69 @@
                     
                     // Handle new_message events from ChatConsumer
                     if (msg.type === 'new_message') {
-                        const chatType = msg.chat_type;
-                        const chatId = msg.chat_id;
-                        const senderEmail = (msg.sender_email || '').toLowerCase();
-                        const senderName = msg.sender_name || senderEmail;
+                        // Consumer sends: {type: 'new_message', message: text, from: sender, to: receiver, created_at: timestamp}
+                        const senderEmail = (msg.from || '').toLowerCase();
+                        const toEmail = (msg.to || '').toLowerCase();
                         const messageText = msg.message || '';
-                        const timestamp = msg.timestamp;
+                        const timestamp = msg.created_at;
                         
-                        console.log('💬 New message:', { chatType, chatId, senderEmail, currentMode, selectedPeer, selectedGroup });
+                        console.log('💬 New message:', { senderEmail, toEmail, messageText, currentMode, selectedPeer });
                         
-                        // For DM: only show if we're in the right conversation
-                        if (chatType === 'dm' && currentMode === 'dm') {
+                        // For DM: only show if this message is relevant to current conversation
+                        if (currentMode === 'dm' && selectedPeer) {
                             const myEmail = normId(CURRENT_USER);
-                            const peerEmail = normId(selectedPeer);
+                            const myMemberId = normId(CURRENT_MEMBER_ID);
+                            const peerEmailNorm = normId(selectedPeerEmail || selectedPeer);
+                            const peerIdNorm = normId(selectedPeer);
                             const normalizedSender = normId(senderEmail);
-                            const normalizedChatId = normId(chatId);
+                            const normalizedTo = normId(toEmail);
                             
-                            // Show message if: (sender is peer AND chatId is me) OR (sender is me AND chatId is peer)
-                            const isRelevant = (normalizedSender === peerEmail && normalizedChatId === myEmail) ||
-                                             (normalizedSender === myEmail && normalizedChatId === peerEmail) ||
-                                             (normalizedSender === peerEmail || normalizedChatId === peerEmail);
+                            // Show message if: (from peer to me) OR (from me to peer)
+                            // Compare both email and ID since WebSocket might send either
+                            const fromPeer = (normalizedSender === peerEmailNorm || normalizedSender === peerIdNorm);
+                            const toMe = (normalizedTo === myEmail || normalizedTo === myMemberId);
+                            const fromMe = (normalizedSender === myEmail || normalizedSender === myMemberId);
+                            const toPeer = (normalizedTo === peerEmailNorm || normalizedTo === peerIdNorm);
+                            
+                            const isRelevant = (fromPeer && toMe) || (fromMe && toPeer);
+                            
+                            console.log('🔍 DM relevance check:', { normalizedSender, normalizedTo, myEmail, myMemberId, peerEmailNorm, peerIdNorm, fromPeer, toMe, fromMe, toPeer, isRelevant });
                             
                             if (isRelevant) {
+                                // Check if this message was already added optimistically
+                                const cid = msg.cid;
+                                if (cid) {
+                                    const existing = document.querySelector(`[data-cid="${cid}"]`);
+                                    if (existing) {
+                                        console.log('✅ Matched optimistic message with CID:', cid);
+                                        // Update the optimistic message with server confirmation
+                                        try {
+                                            const statusIcon = existing.querySelector('.msg-status i');
+                                            if (statusIcon) {
+                                                statusIcon.className = 'fas fa-check-double';
+                                                existing.querySelector('.msg-status').classList.add('delivered');
+                                            }
+                                        } catch (e) { /* ignore */ }
+                                        return; // Don't append duplicate
+                                    }
+                                }
+                                
                                 const incoming = {
                                     sender: senderEmail,
-                                    sender_name: senderName,
+                                    sender_name: senderEmail.split('@')[0],
                                     text: messageText,
                                     created_at: timestamp,
-                                    from: senderEmail
+                                    from: senderEmail,
+                                    id: msg.id,  // Store message ID for read receipts
+                                    cid: cid
                                 };
                                 appendMessage(incoming);
                                 
                                 // Mark as read if sender is the peer (not ourselves)
-                                if (normalizedSender === peerEmail) {
+                                if (normalizedSender === peerEmailNorm) {
                                     markRead(selectedPeer);
                                 }
                             }
-                        }
-                        
-                        // For Group: only show if we're in the right group
-                        if (chatType === 'group' && currentMode === 'group' && String(selectedGroup) === String(chatId)) {
-                            const incoming = {
-                                sender: senderEmail,
-                                sender_name: senderName,
-                                text: messageText,
-                                created_at: timestamp,
-                                from: senderEmail
-                            };
-                            appendMessage(incoming);
                         }
                     }
                     
@@ -1281,10 +1300,12 @@
 
                     // Read receipts: server broadcasts which message ids were marked read
                     if (msg.event === 'message_read' && msg.message_ids && Array.isArray(msg.message_ids)) {
+                        console.log('📖 Received read receipts for message IDs:', msg.message_ids);
                         msg.message_ids.forEach(id => {
                             try {
                                 const el = document.querySelector(`[data-message-id="${id}"]`);
                                 if (el) {
+                                    console.log('✅ Updating read status for message:', id);
                                     // update or add status icon to show read
                                     let st = el.querySelector('.msg-status');
                                     if (!st) {
@@ -1295,12 +1316,15 @@
                                         st.appendChild(ic);
                                         el.querySelector('.message-content').appendChild(st);
                                     }
-                                    // mark as read style and double-check icon
+                                    // mark as read style and double-check icon with blue color
                                     st.classList.add('read');
                                     const ic = st.querySelector('i');
-                                    if (ic) ic.className = 'fas fa-check-double';
+                                    if (ic) {
+                                        ic.className = 'fas fa-check-double';
+                                        ic.style.color = '#0A7AFF';
+                                    }
                                 }
-                            } catch(e){ /* ignore selector issues */ }
+                            } catch(e){ console.error('Error updating read receipt:', e); }
                         });
                     }
 
@@ -1633,7 +1657,7 @@
                 // generate cid for optimistic UI
                 const cid = 'cid-' + Date.now() + '-' + Math.random().toString(36).slice(2,9);
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'message', tenant: TENANT_ID, to: selectedPeer, text, cid }));
+                    ws.send(JSON.stringify({ type: 'message', tenant: TENANT_ID, to: selectedPeer, message: text, cid }));
                 } else {
                     const res = await fetch('/chat/send/', {
                         method: 'POST',
@@ -1692,7 +1716,7 @@
         // Mark read
         async function markRead(peer) {
             try {
-                console.log('Calling markRead for peer:', peer);
+                console.log('📖 Marking messages as read for peer:', peer);
                 const resp = await fetch('/chat/mark_read/', {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -1703,9 +1727,26 @@
                     body: JSON.stringify({ peer: normId(peer) })
                 });
                 const data = await resp.json();
-                console.log('markRead response:', data);
+                console.log('✅ markRead response:', data);
+                
+                // After marking as read, update UI for all messages from peer immediately
+                const feed = document.getElementById('messages-feed');
+                const messageElements = feed.querySelectorAll('.message-group:not(.sent-message)');
+                messageElements.forEach(msgEl => {
+                    try {
+                        const statusIcon = msgEl.querySelector('.msg-status');
+                        if (statusIcon) {
+                            statusIcon.classList.add('read');
+                            const icon = statusIcon.querySelector('i');
+                            if (icon) {
+                                icon.className = 'fas fa-check-double';
+                                icon.style.color = '#0A7AFF';
+                            }
+                        }
+                    } catch (e) { /* ignore */ }
+                });
             } catch (e) {
-                console.error('markRead error', e);
+                console.error('❌ markRead error', e);
             }
         }
 

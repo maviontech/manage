@@ -48,12 +48,14 @@ def team_chat_page(request, peer_id=None):
 
     current_user = _chat_identity(request)
     current_user_name = str(request.session.get('member_name') or request.session.get('cn') or getattr(request.user, 'get_full_name', lambda: '')() or current_user).strip()
+    current_member_id = str(request.session.get('member_id') or '').strip()
     
     return render(request, 'core/team_chat.html', {
         'tenant_id': tenant_id,
         'tenant_name': tenant_name,
         'current_user': current_user,
         'current_user_name': current_user_name,
+        'current_member_id': current_member_id,
         'initial_peer': str(peer_id or '').strip(),
 
     })
@@ -392,17 +394,26 @@ def mark_read(request):
                 try:
                     from asgiref.sync import async_to_sync
                     from channels.layers import get_channel_layer
+                    import re
                     layer = get_channel_layer()
+                    
+                    # Sanitize identities for channel group names (same as ChatConsumer)
+                    # Replace invalid characters with underscores
+                    a_clean = re.sub(r'[^a-z0-9\-_.]', '_', a)
+                    b_clean = re.sub(r'[^a-z0-9\-_.]', '_', b)
+                    
                     payload = {
                         'type': 'chat.message_read',
                         'event': 'message_read',
                         'conversation_id': conv_id,
                         'message_ids': ids,
                     }
-                    room = f'chat_{tenant_id}_{a}_{b}'
+                    room = f'chat_{tenant_id}_{a_clean}_{b_clean}'
+                    logger.info(f"📨 Sending read receipt to room: {room} with {len(ids)} message IDs")
                     async_to_sync(layer.group_send)(room, payload)
+                    logger.info(f"✅ Read receipt broadcast completed for room: {room}")
                 except Exception as e:
-                    logger.debug(f"mark_read notification failed: {e}")
+                    logger.exception(f"mark_read notification failed: {e}")
         except Exception as e:
             logger.exception(f"mark_read background worker failed: {e}")
 

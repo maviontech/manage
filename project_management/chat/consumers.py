@@ -2,6 +2,8 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from urllib.parse import parse_qs
 from asgiref.sync import sync_to_async
 from core.db_helpers import exec_sql, get_tenant_conn
+import pymysql
+from django.db import connection as default_connection
 
 
 def normalize(val):
@@ -37,51 +39,117 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             or session.get("user")
         )
 
+        # Get peer from query string for DM conversations
+        self.peer = qs.get("peer", [None])[0]
+
         self.presence_group = f"presence_{self.tenant_id}"
 
         await self.channel_layer.group_add(self.presence_group, self.channel_name)
+        
+        # Join conversation-specific room for read receipts if peer is specified
+        if self.peer and self.me:
+            # Normalize both identities and sanitize for channel group names
+            # Replace invalid characters (@, spaces, etc.) with underscores
+            import re
+            me_norm = str(self.me).strip().lower()
+            peer_norm = str(self.peer).strip().lower()
+            # Sanitize: only allow alphanumerics, hyphens, underscores, periods
+            me_clean = re.sub(r'[^a-z0-9\-_.]', '_', me_norm)
+            peer_clean = re.sub(r'[^a-z0-9\-_.]', '_', peer_norm)
+            # Sort to match the server logic in views.py
+            a, b = sorted([me_clean, peer_clean])
+            self.conversation_room = f"chat_{self.tenant_id}_{a}_{b}"
+            # Ensure total length is under 100 characters
+            if len(self.conversation_room) < 100:
+                await self.channel_layer.group_add(self.conversation_room, self.channel_name)
+                print(f"📨 Joined conversation room: {self.conversation_room}")
+            else:
+                print(f"⚠️ Conversation room name too long, skipping: {len(self.conversation_room)} chars")
+                self.conversation_room = None
+        else:
+            self.conversation_room = None
+        
         await self.accept()
 
         print(f"✅ WS connected: {self.me} (tenant: {self.tenant_id})")
 
     async def disconnect(self, close_code):
+        print(f"🔌 WS disconnect: {getattr(self, 'me', 'unknown')} (code: {close_code})")
         if hasattr(self, "presence_group"):
-            await self.channel_layer.group_send(
-                self.presence_group,
-                {
-                    "type": "presence_update",
-                    "status": "offline",
-                    "user": self.me,
-                },
-            )
-            await self.channel_layer.group_discard(
-                self.presence_group, self.channel_name
-            )
+            try:
+                await self.channel_layer.group_send(
+                    self.presence_group,
+                    {
+                        "type": "presence_update",
+                        "status": "offline",
+                        "user": getattr(self, "me", "unknown"),
+                    },
+                )
+            except Exception as e:
+                print(f"Error sending presence update: {e}")
+            
+            try:
+                await self.channel_layer.group_discard(
+                    self.presence_group, self.channel_name
+                )
+            except Exception as e:
+                print(f"Error leaving group: {e}")
+        
+        # Leave conversation room if joined
+        if hasattr(self, "conversation_room") and self.conversation_room:
+            try:
+                await self.channel_layer.group_discard(
+                    self.conversation_room, self.channel_name
+                )
+                print(f"📤 Left conversation room: {self.conversation_room}")
+            except Exception as e:
+                print(f"Error leaving conversation room: {e}")
 
     async def receive_json(self, content):
-        if content.get("type") != "message":
+        print(f"📨 Received: {content}")
+        
+        msg_type = content.get("type")
+        
+        if msg_type != "message":
+            print(f"⚠️ Ignoring non-message type: {msg_type}")
             return
 
         text = content.get("message")
         to_user = content.get("to")
+        cid = content.get("cid")  # Get client ID for optimistic UI matching
 
         if not text or not to_user:
+            print(f"⚠️ Missing text or to_user: text={bool(text)}, to_user={bool(to_user)}")
             return
 
-        saved = await sync_to_async(self.save_message)(
-            self.tenant_id, self.me, to_user, text
-        )
+        print(f"💬 Saving message from {self.me} to {to_user}: {text[:50]}...")
+        
+        try:
+            saved = await sync_to_async(self.save_message)(
+                self.tenant_id, self.me, to_user, text
+            )
 
-        await self.channel_layer.group_send(
-            self.presence_group,
-            {
-                "type": "new_message",
-                "message": text,
-                "from": self.me,
-                "to": to_user,
-                "created_at": saved["created_at"],
-            },
-        )
+            print(f"✅ Message saved, broadcasting...")
+            
+            # Broadcast with CID so clients can match optimistic messages
+            await self.channel_layer.group_send(
+                self.presence_group,
+                {
+                    "type": "new_message",
+                    "message": text,
+                    "from": self.me,
+                    "to": to_user,
+                    "created_at": saved["created_at"],
+                    "id": saved.get("id"),  # Include message ID for read receipts
+                    "cid": cid,  # Include client ID in broadcast
+                },
+            )
+            
+            print(f"✅ Message broadcasted successfully")
+        except Exception as e:
+            print(f"❌ Error processing message: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def new_message(self, event):
         await self.send_json(event)
@@ -89,22 +157,96 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def presence_update(self, event):
         await self.send_json(event)
 
+    async def chat_message_read(self, event):
+        """Handle read receipt notifications and broadcast to clients"""
+        print(f"📖 Read receipt received: {len(event.get('message_ids', []))} messages marked as read")
+        await self.send_json(event)
+
     def save_message(self, tenant, sender, receiver, text):
-        conn = get_tenant_conn(tenant_id=tenant)
-        exec_sql(
-            conn,
-            """
-            INSERT INTO chat_message (sender, receiver, text, is_read)
-            VALUES (%s,%s,%s,0)
-            """,
-            [sender, receiver, text],
-            fetch=False,
+        # Get tenant credentials from clients_master
+        with default_connection.cursor() as cur:
+            cur.execute("""
+                SELECT db_name, db_host, db_user, db_password, IFNULL(db_port, 3306) as db_port
+                FROM clients_master
+                WHERE id = %s OR client_name = %s OR domain_postfix = %s
+                LIMIT 1
+            """, [tenant, tenant, tenant])
+            row = cur.fetchone()
+            
+        if not row:
+            raise Exception(f"Tenant {tenant} not found in clients_master")
+        
+        # Connect to tenant MySQL database
+        conn = pymysql.connect(
+            host=row[1],
+            port=int(row[4]),
+            user=row[2],
+            password=row[3],
+            database=row[0],
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True
         )
-        row = exec_sql(
-            conn,
-            "SELECT created_at FROM chat_message ORDER BY id DESC LIMIT 1"
-        )
-        return {"created_at": row[0]["created_at"].isoformat()}
+        
+        try:
+            with conn.cursor() as cur:
+                # Normalize sender and receiver - convert member IDs to emails
+                sender_norm = str(sender).strip().lower()
+                receiver_norm = str(receiver).strip().lower()
+                
+                # If receiver is numeric (member ID), look up email
+                if receiver_norm.isdigit():
+                    cur.execute("SELECT email FROM members WHERE id=%s", [int(receiver_norm)])
+                    member_row = cur.fetchone()
+                    if member_row and member_row.get('email'):
+                        receiver_norm = str(member_row['email']).strip().lower()
+                
+                # If sender is numeric (member ID), look up email
+                if sender_norm.isdigit():
+                    cur.execute("SELECT email FROM members WHERE id=%s", [int(sender_norm)])
+                    member_row = cur.fetchone()
+                    if member_row and member_row.get('email'):
+                        sender_norm = str(member_row['email']).strip().lower()
+                
+                # Sort users for consistent conversation matching
+                users = sorted([sender_norm, receiver_norm])
+                
+                # Find existing conversation
+                cur.execute("""
+                    SELECT id FROM chat_conversation
+                    WHERE tenant_id=%s AND user_a=%s AND user_b=%s
+                """, [tenant, users[0], users[1]])
+                row = cur.fetchone()
+                
+                if row:
+                    conv_id = row['id']
+                else:
+                    # Create new conversation
+                    cur.execute("""
+                        INSERT INTO chat_conversation (tenant_id, user_a, user_b)
+                        VALUES (%s,%s,%s)
+                    """, [tenant, users[0], users[1]])
+                    conv_id = conn.insert_id()
+                
+                # Insert message
+                cur.execute("""
+                    INSERT INTO chat_message (conversation_id, sender, text, is_read)
+                    VALUES (%s,%s,%s,0)
+                """, [conv_id, sender_norm, text])
+                
+                # Get the message ID and created_at timestamp
+                message_id = conn.insert_id()
+                cur.execute("""
+                    SELECT created_at FROM chat_message 
+                    WHERE id=%s
+                """, [message_id])
+                timestamp_row = cur.fetchone()
+                
+            return {
+                "id": message_id,
+                "created_at": timestamp_row['created_at'].isoformat() if timestamp_row else None
+            }
+        finally:
+            conn.close()
 
 
 
