@@ -1,11 +1,10 @@
 # chat/routing.py
 from django.urls import re_path
-from . import consumers
+from .consumers import ChatConsumer, NotificationConsumer, TypingIndicatorConsumer
 
 websocket_urlpatterns = [
-    re_path(r"^ws/chat/$", consumers.ChatConsumer.as_asgi()),
-    # Presence endpoint (frontend expects /ws/presence/) — reuse NotificationConsumer
-    re_path(r'ws/presence/$', consumers.NotificationConsumer.as_asgi()),
-    re_path(r'ws/notifications/$', consumers.NotificationConsumer.as_asgi()),
-    re_path(r'ws/is_typing/$', consumers.TypingIndicatorConsumer.as_asgi()),
+    re_path(r"^ws/chat/$", ChatConsumer.as_asgi()),
+    re_path(r"^ws/presence/$", NotificationConsumer.as_asgi()),
+    re_path(r"^ws/notifications/$", NotificationConsumer.as_asgi()),
+    re_path(r"^ws/is_typing/$", TypingIndicatorConsumer.as_asgi()),
 ]

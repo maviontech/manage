@@ -333,73 +333,84 @@ def mark_read(request):
 
     conv_id = conv[0]["id"]
 
-    # Perform updates in small batches to reduce lock contention and avoid
-    # InnoDB lock wait timeouts when many rows must be updated at once.
-    batch_size = 500
-    max_retries = 3
-    total_updated = 0
-    ids = []
-
-    while True:
+    # Move ALL heavy work to background thread to avoid blocking ASGI shutdown
+    import threading
+    def _do_mark_read_work():
+        """Background worker to mark messages as read and send notifications."""
         try:
-            logger.info(f"mark_read updating messages for conv_id={conv_id}, me={me}")
-            # collect ids that will be marked so we can notify senders
-            ids_rows = exec_sql(tenant_conn, """
-                SELECT id FROM chat_message
-                WHERE conversation_id=%s AND sender <> %s AND is_read = 0
-            """, [conv_id, me])
-            if ids_rows:
-                ids = [r.get('id') for r in ids_rows if r.get('id')]
+            # Perform updates in small batches to reduce lock contention
+            max_retries = 3
+            total_updated = 0
+            ids = []
 
-            exec_sql(tenant_conn, """
-                UPDATE chat_message
-                SET is_read = 1
-                WHERE conversation_id=%s AND sender <> %s AND is_read = 0
-                """, [conv_id, me], fetch=False)
-            rows_affected = tenant_conn.cursor().rowcount
+            while True:
+                try:
+                    logger.info(f"mark_read updating messages for conv_id={conv_id}, me={me}")
+                    # collect ids that will be marked so we can notify senders
+                    ids_rows = exec_sql(tenant_conn, """
+                        SELECT id FROM chat_message
+                        WHERE conversation_id=%s AND sender <> %s AND is_read = 0
+                    """, [conv_id, me])
+                    if ids_rows:
+                        ids = [r.get('id') for r in ids_rows if r.get('id')]
 
-            try:
-                updated = int(rows_affected or 0)
-            except Exception:
-                updated = 0
+                    exec_sql(tenant_conn, """
+                        UPDATE chat_message
+                        SET is_read = 1
+                        WHERE conversation_id=%s AND sender <> %s AND is_read = 0
+                        """, [conv_id, me], fetch=False)
+                    rows_affected = tenant_conn.cursor().rowcount
 
-            total_updated += updated
-            logger.info(f"mark_read updated {updated} messages, total_updated={total_updated}")
-            if updated == 0:
-                break
+                    try:
+                        updated = int(rows_affected or 0)
+                    except Exception:
+                        updated = 0
 
-            # pause briefly to yield locks if there's contention
-            time.sleep(0.05)
-        except pymysql.err.OperationalError as oe:
-            logger.warning(f'mark_read OperationalError, retrying: {oe}')
-            max_retries -= 1
-            if max_retries <= 0:
-                logger.exception('mark_read failed after retries')
-                return JsonResponse({"ok": False, "error": "db_lock_timeout"}, status=500)
-            time.sleep(0.2)
-            continue
+                    total_updated += updated
+                    logger.info(f"mark_read updated {updated} messages, total_updated={total_updated}")
+                    if updated == 0:
+                        break
+
+                    # pause briefly to yield locks if there's contention
+                    time.sleep(0.05)
+                except pymysql.err.OperationalError as oe:
+                    logger.warning(f'mark_read OperationalError, retrying: {oe}')
+                    max_retries -= 1
+                    if max_retries <= 0:
+                        logger.exception('mark_read failed after retries')
+                        return
+                    time.sleep(0.2)
+                    continue
+                except Exception as e:
+                    logger.exception(f'mark_read unexpected error: {e}')
+                    return
+
+            logger.info(f"mark_read finished, total_updated={total_updated}")
+            
+            # Send notifications via channel layer
+            if total_updated > 0 and ids:
+                try:
+                    from asgiref.sync import async_to_sync
+                    from channels.layers import get_channel_layer
+                    layer = get_channel_layer()
+                    payload = {
+                        'type': 'chat.message_read',
+                        'event': 'message_read',
+                        'conversation_id': conv_id,
+                        'message_ids': ids,
+                    }
+                    room = f'chat_{tenant_id}_{a}_{b}'
+                    async_to_sync(layer.group_send)(room, payload)
+                except Exception as e:
+                    logger.debug(f"mark_read notification failed: {e}")
         except Exception as e:
-            logger.exception(f'mark_read unexpected error: {e}')
-            return JsonResponse({"ok": False, "error": "internal_error"}, status=500)
+            logger.exception(f"mark_read background worker failed: {e}")
 
-    logger.info(f"mark_read finished, total_updated={total_updated}")
-    # Notify via channel layer so other participants (senders) can see receipts in real-time
-    try:
-        if total_updated > 0 and ids:
-            from asgiref.sync import async_to_sync
-            from channels.layers import get_channel_layer
-            layer = get_channel_layer()
-            payload = {
-                'type': 'chat.message_read',
-                'event': 'message_read',
-                'conversation_id': conv_id,
-                'message_ids': ids,
-            }
-            room = f'chat_{tenant_id}_{a}_{b}'
-            async_to_sync(layer.group_send)(room, payload)
-    except Exception:
-        # best-effort: if channels aren't configured, ignore
-        pass
+    # Start background thread (daemon=True so it won't block shutdown)
+    thread = threading.Thread(target=_do_mark_read_work, daemon=True)
+    thread.start()
+    
+    # Return immediately without waiting for the work to complete
     return JsonResponse({"ok": True})
 
 
