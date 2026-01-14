@@ -159,8 +159,15 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def chat_message_read(self, event):
         """Handle read receipt notifications and broadcast to clients"""
-        print(f"📖 Read receipt received: {len(event.get('message_ids', []))} messages marked as read")
-        await self.send_json(event)
+        print(f"📖 Read receipt handler called: {event}")
+        print(f"📖 Sending {len(event.get('message_ids', []))} message IDs as read")
+        # Forward the entire event to the client
+        await self.send_json({
+            'type': event.get('type', 'message_read'),
+            'event': 'message_read',
+            'message_ids': event.get('message_ids', []),
+            'conversation_id': event.get('conversation_id')
+        })
 
     def save_message(self, tenant, sender, receiver, text):
         # Get tenant credentials from clients_master

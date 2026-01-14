@@ -337,8 +337,11 @@ def mark_read(request):
 
     # Move ALL heavy work to background thread to avoid blocking ASGI shutdown
     import threading
+    logger.info(f"🔧 mark_read starting background thread for conv_id={conv_id}, me={me}, peer={peer}")
+    
     def _do_mark_read_work():
         """Background worker to mark messages as read and send notifications."""
+        logger.info(f"🚀 Background thread STARTED for conv_id={conv_id}")
         try:
             # Perform updates in small batches to reduce lock contention
             max_retries = 3
@@ -348,29 +351,44 @@ def mark_read(request):
             while True:
                 try:
                     logger.info(f"mark_read updating messages for conv_id={conv_id}, me={me}")
-                    # collect ids that will be marked so we can notify senders
-                    ids_rows = exec_sql(tenant_conn, """
+                    # FIRST: collect ALL message ids from sender (for read receipt broadcast)
+                    # This includes already-read messages so we can show blue checkmarks
+                    all_ids_rows = exec_sql(tenant_conn, """
+                        SELECT id FROM chat_message
+                        WHERE conversation_id=%s AND sender <> %s
+                        ORDER BY id DESC
+                        LIMIT 100
+                    """, [conv_id, me])
+                    if all_ids_rows:
+                        ids = [r.get('id') for r in all_ids_rows if r.get('id')]
+                    
+                    # THEN: collect only unread ids to mark
+                    unread_ids_rows = exec_sql(tenant_conn, """
                         SELECT id FROM chat_message
                         WHERE conversation_id=%s AND sender <> %s AND is_read = 0
                     """, [conv_id, me])
-                    if ids_rows:
-                        ids = [r.get('id') for r in ids_rows if r.get('id')]
+                    unread_count = len(unread_ids_rows) if unread_ids_rows else 0
 
-                    exec_sql(tenant_conn, """
-                        UPDATE chat_message
-                        SET is_read = 1
-                        WHERE conversation_id=%s AND sender <> %s AND is_read = 0
-                        """, [conv_id, me], fetch=False)
-                    rows_affected = tenant_conn.cursor().rowcount
+                    # Update unread messages
+                    if unread_count > 0:
+                        exec_sql(tenant_conn, """
+                            UPDATE chat_message
+                            SET is_read = 1
+                            WHERE conversation_id=%s AND sender <> %s AND is_read = 0
+                            """, [conv_id, me], fetch=False)
+                        rows_affected = tenant_conn.cursor().rowcount
 
-                    try:
-                        updated = int(rows_affected or 0)
-                    except Exception:
-                        updated = 0
+                        try:
+                            updated = int(rows_affected or 0)
+                        except Exception:
+                            updated = 0
 
-                    total_updated += updated
-                    logger.info(f"mark_read updated {updated} messages, total_updated={total_updated}")
-                    if updated == 0:
+                        total_updated += updated
+                        logger.info(f"mark_read updated {updated} messages, total_updated={total_updated}")
+                        
+                    # Break if no unread messages found
+                    if unread_count == 0:
+                        logger.info(f"mark_read no unread messages, but will still broadcast {len(ids)} message IDs")
                         break
 
                     # pause briefly to yield locks if there's contention
@@ -387,10 +405,10 @@ def mark_read(request):
                     logger.exception(f'mark_read unexpected error: {e}')
                     return
 
-            logger.info(f"mark_read finished, total_updated={total_updated}")
+            logger.info(f"mark_read finished, total_updated={total_updated}, broadcasting {len(ids)} message IDs")
             
-            # Send notifications via channel layer
-            if total_updated > 0 and ids:
+            # Send notifications via channel layer - ALWAYS send if we have message IDs
+            if ids and len(ids) > 0:
                 try:
                     from asgiref.sync import async_to_sync
                     from channels.layers import get_channel_layer
@@ -414,12 +432,18 @@ def mark_read(request):
                     logger.info(f"✅ Read receipt broadcast completed for room: {room}")
                 except Exception as e:
                     logger.exception(f"mark_read notification failed: {e}")
+            else:
+                logger.info(f"⚠️ No message IDs to broadcast")
         except Exception as e:
-            logger.exception(f"mark_read background worker failed: {e}")
+            logger.exception(f"❌ mark_read background worker EXCEPTION: {e}")
 
     # Start background thread (daemon=True so it won't block shutdown)
-    thread = threading.Thread(target=_do_mark_read_work, daemon=True)
-    thread.start()
+    try:
+        thread = threading.Thread(target=_do_mark_read_work, daemon=True)
+        thread.start()
+        logger.info(f"✅ Background thread started successfully")
+    except Exception as thread_error:
+        logger.exception(f"❌ Failed to start background thread: {thread_error}")
     
     # Return immediately without waiting for the work to complete
     return JsonResponse({"ok": True})

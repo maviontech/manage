@@ -1002,7 +1002,7 @@
             loadHistory();
             initWebSocket();
 
-            // Mark as read
+            // Mark existing messages as read when opening conversation
             markRead(selectedPeer);
             const badge = document.querySelector(`[data-unread-for="${selectedPeer}"]`);
             if (badge) badge.style.display = 'none';
@@ -1179,10 +1179,11 @@
                 ws.onopen = () => console.log('WebSocket connected');
                 ws.onmessage = (ev) => {
                     let msg;
-                    console.log('WebSocket raw message:', ev.data);
+                    console.log('📨 WebSocket raw message:', ev.data);
                     try { msg = JSON.parse(ev.data); } catch (e) { return; }
                     
-                    console.log('📨 WebSocket message received:', msg);
+                    console.log('📨 WebSocket parsed message:', msg);
+                    console.log('📨 Message type/event:', msg.type, msg.event);
 
                     
                     // Handle new_message events from ChatConsumer
@@ -1245,8 +1246,10 @@
                                 };
                                 appendMessage(incoming);
                                 
-                                // Mark as read if sender is the peer (not ourselves)
-                                if (normalizedSender === peerEmailNorm) {
+                                // Immediately mark as read if sender is the peer (recipient is viewing the chat)
+                                // This will turn the sender's check marks blue instantly
+                                if (normalizedSender === peerEmailNorm || normalizedSender === peerIdNorm) {
+                                    console.log('🔵 Auto-marking message as read (recipient is viewing chat)');
                                     markRead(selectedPeer);
                                 }
                             }
@@ -1290,7 +1293,10 @@
                                     }
 
                                     if (currentMode === 'dm') {
+                                        // Immediately mark as read if message is from the current peer
+                                        // This ensures sender sees blue checkmarks instantly
                                         if (senderNorm !== normId(CURRENT_USER) && senderNorm === normId(selectedPeer)) {
+                                            console.log('🔵 Auto-marking legacy message as read (recipient is viewing chat)');
                                             markRead(selectedPeer);
                                         }
                                     } else if (currentMode === 'group') {
@@ -1727,24 +1733,7 @@
                     body: JSON.stringify({ peer: normId(peer) })
                 });
                 const data = await resp.json();
-                console.log('✅ markRead response:', data);
-                
-                // After marking as read, update UI for all messages from peer immediately
-                const feed = document.getElementById('messages-feed');
-                const messageElements = feed.querySelectorAll('.message-group:not(.sent-message)');
-                messageElements.forEach(msgEl => {
-                    try {
-                        const statusIcon = msgEl.querySelector('.msg-status');
-                        if (statusIcon) {
-                            statusIcon.classList.add('read');
-                            const icon = statusIcon.querySelector('i');
-                            if (icon) {
-                                icon.className = 'fas fa-check-double';
-                                icon.style.color = '#0A7AFF';
-                            }
-                        }
-                    } catch (e) { /* ignore */ }
-                });
+                console.log('✅ markRead response:', data, '- This will trigger blue checkmarks on sender side');
             } catch (e) {
                 console.error('❌ markRead error', e);
             }
