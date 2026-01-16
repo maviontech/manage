@@ -20,6 +20,7 @@ urlpatterns = [
     path("password-reset/confirm/", views_passwordreset.password_reset_confirm_view, name="password_reset_confirm"),
     path('projects/', projects.projects_list, name='projects_list'),
     path('projects/create/', projects.project_create, name='project_create'),
+    path('projects/<int:project_id>/configure/', projects.project_configure, name='project_configure'),
     path('projects/<int:project_id>/edit/', projects.project_edit, name='project_edit'),
     path('report/', views.projects_report_view, name='projects_report'),
     path('report/export-excel/', views.export_projects_excel, name='export_projects_excel'),

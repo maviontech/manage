@@ -349,6 +349,18 @@
             </select>
           </div>
 
+          <!-- Work Type (NEW) -->
+          <div class="form-field">
+            <label class="field-label">
+              <i class="fa-solid fa-layer-group"></i> Work Type
+            </label>
+            <select name="work_type" class="field-select">
+              {% for wtype in work_types %}
+                <option value="{{ wtype }}" {% if wtype == 'Task' %}selected{% endif %}>{{ wtype }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
           <!-- Due Date -->
           <div class="form-field">
             <label class="field-label">Due Date</label>

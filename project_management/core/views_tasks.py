@@ -42,6 +42,7 @@ def create_task_view(request):
         closure_date = data.get("closure_date") or None
         priority = data.get("priority") or "Normal"
         status = data.get("status") or "Open"
+        work_type = data.get("work_type") or "Task"  # NEW: Get work type from form
         created_by = request.session.get("user_id")
 
         # --- NEW FIX ---
@@ -57,8 +58,8 @@ def create_task_view(request):
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, assigned_type, created_by, due_date, closure_date, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
@@ -71,6 +72,7 @@ def create_task_view(request):
                 created_by,
                 due_date,
                 closure_date,
+                work_type,
             ),
         )
         task_id = cur.lastrowid
@@ -132,12 +134,22 @@ def create_task_view(request):
     members = cur.fetchall()
     cur.execute("SELECT id, name FROM teams ORDER BY name")
     teams = cur.fetchall()
+    
+    # Get default work types (can be extended per project later)
+    default_work_types = ['Task', 'Bug', 'Story', 'Defect', 'Sub Task', 'Report', 'Change Request']
+    
     cur.close()
 
     return render(
         request,
         "core/create_task.html",
-        {"projects": projects, "members": members, "teams": teams, "page": "task_create"},
+        {
+            "projects": projects, 
+            "members": members, 
+            "teams": teams, 
+            "page": "task_create",
+            "work_types": default_work_types
+        },
     )
 
 

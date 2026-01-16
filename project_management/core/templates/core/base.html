@@ -105,6 +105,9 @@
 
   <!-- load our new css -->
   <link rel="stylesheet" href="{% static 'core/css/base.css' %}">
+  
+  {# Global Notification System - Toast styles #}
+  <link rel="stylesheet" href="{% static 'core/css/notifications.css' %}">
 
   {# Small local overrides to ensure submenus collapse without leaving vertical gaps #}
   <style>
@@ -174,7 +177,7 @@
 
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body data-tenant-id="{{ request.session.tenant_id|default:'' }}">
   <div id="app" class="app" data-theme="light">
 
     <!-- SIDEBAR -->
@@ -545,6 +548,9 @@
 
   <script src="{% static 'chat/chat_widget.js' %}"></script>
   {# ----------------- end chat widget ----------------- #}
+
+  {# Global Notification System - Works on all pages #}
+  <script src="{% static 'core/js/notifications.js' %}"></script>
 
   <script>
     const SIDEBAR_KEY = 'trackline.sidebar.state';

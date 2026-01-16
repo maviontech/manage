@@ -152,10 +152,10 @@ def project_create(request):
                             ))
                 
                 conn.commit()
+                # Redirect to configuration page after project creation
+                return redirect(reverse('project_configure', args=[new_id]))
             finally:
                 cur.close(); conn.close()
-            messages.success(request, "Project created.")
-            return redirect(reverse('projects_list'))
     else:
         form = ProjectForm()
         form.fields['employee_id'].choices = employee_choices
@@ -475,4 +475,97 @@ def subproject_edit(request, project_id, sub_id):
         "project": project, 
         "subproject": subproject,
         "project_id": project_id
+    })
+
+# ==============================
+#  PROJECT CONFIGURATION (Jira-like)
+# ==============================
+def project_configure(request, project_id):
+    """
+    Configure work types and statuses for a project (similar to Jira setup).
+    Step 2 after project creation.
+    """
+    # Check if user has permission
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return redirect('login')
+    
+    # Check if project exists
+    conn, cur = get_tenant_conn_and_cursor(request)
+    try:
+        cur.execute("SELECT * FROM projects WHERE id=%s", (project_id,))
+        project = cur.fetchone()
+        if not project:
+            return HttpResponseBadRequest("Project not found")
+    finally:
+        cur.close(); conn.close()
+    
+    # Available work types (similar to Jira)
+    available_work_types = [
+        {'id': 'task', 'name': 'Task', 'description': 'A small piece of work', 'icon': 'fa-check-square'},
+        {'id': 'bug', 'name': 'Bug', 'description': 'A problem that needs fixing', 'icon': 'fa-bug'},
+        {'id': 'story', 'name': 'Story', 'description': 'A requirement expressed from the user\'s perspective', 'icon': 'fa-book'},
+        {'id': 'defect', 'name': 'Defect', 'description': 'An issue reported in production', 'icon': 'fa-exclamation-triangle'},
+        {'id': 'subtask', 'name': 'Sub Task', 'description': 'A smaller task within a main task', 'icon': 'fa-tasks'},
+        {'id': 'report', 'name': 'Report', 'description': 'Generate reports and analytics', 'icon': 'fa-chart-line'},
+        {'id': 'change_request', 'name': 'Change Request', 'description': 'Request for system changes', 'icon': 'fa-exchange-alt'},
+    ]
+    
+    # Default statuses
+    default_statuses = ['To Do', 'In Progress', 'In Review', 'Done']
+    
+    if request.method == "POST":
+        # Get selected work types
+        selected_work_types = request.POST.getlist('work_types')
+        
+        # Get custom statuses (comma or newline separated)
+        custom_statuses_raw = request.POST.get('custom_statuses', '').strip()
+        if custom_statuses_raw:
+            # Split by newline or comma
+            custom_statuses = [s.strip() for s in custom_statuses_raw.replace(',', '\n').split('\n') if s.strip()]
+        else:
+            custom_statuses = default_statuses
+        
+        # Save configuration
+        conn, cur = get_tenant_conn_and_cursor(request)
+        try:
+            # Save work types
+            for work_type in selected_work_types:
+                cur.execute("""
+                    INSERT INTO project_work_types (project_id, work_type, is_enabled)
+                    VALUES (%s, %s, 1)
+                """, (project_id, work_type))
+            
+            # Save statuses
+            for idx, status in enumerate(custom_statuses):
+                cur.execute("""
+                    INSERT INTO project_statuses (project_id, status_name, status_order)
+                    VALUES (%s, %s, %s)
+                """, (project_id, status, idx))
+            
+            conn.commit()
+            messages.success(request, f"Project '{project['name']}' configured successfully!")
+        finally:
+            cur.close(); conn.close()
+        
+        return redirect(reverse('projects_list'))
+    
+    # For GET request, check if already configured
+    conn, cur = get_tenant_conn_and_cursor(request)
+    try:
+        cur.execute("SELECT work_type FROM project_work_types WHERE project_id=%s", (project_id,))
+        existing_work_types = [row['work_type'] for row in cur.fetchall()]
+        
+        cur.execute("SELECT status_name FROM project_statuses WHERE project_id=%s ORDER BY status_order", (project_id,))
+        existing_statuses = [row['status_name'] for row in cur.fetchall()]
+    finally:
+        cur.close(); conn.close()
+    
+    return render(request, "core/project_configure.html", {
+        "project": project,
+        "available_work_types": available_work_types,
+        "existing_work_types": existing_work_types,
+        "default_statuses": default_statuses,
+        "existing_statuses": existing_statuses,
+        "existing_statuses_text": '\n'.join(existing_statuses) if existing_statuses else ''
     })
