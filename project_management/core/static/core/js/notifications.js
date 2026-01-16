@@ -7,6 +7,13 @@
 (function() {
     'use strict';
 
+    // Prevent multiple initializations
+    if (window.NotificationSystemInitialized) {
+        console.warn('⚠️ Notification system already initialized, skipping duplicate initialization');
+        return;
+    }
+    window.NotificationSystemInitialized = true;
+
     // Configuration
     const CONFIG = {
         WS_RECONNECT_DELAY: 3000,
@@ -58,14 +65,23 @@
             return;
         }
         
+        console.log('Current notification permission:', Notification.permission);
+        
         if (Notification.permission === "default") {
             Notification.requestPermission().then(permission => {
                 if (permission === "granted") {
-                    console.log("Desktop notification permission granted");
+                    console.log("✅ Desktop notification permission granted - you'll get notifications even on other tabs/websites!");
+                    // Show a test notification
+                    new Notification('Notifications Enabled! 🎉', {
+                        body: 'You will now receive message notifications everywhere',
+                        icon: '/static/core/images/icon.png'
+                    });
                 } else {
-                    console.log("Desktop notification permission denied");
+                    console.log("❌ Desktop notification permission denied");
                 }
             });
+        } else if (Notification.permission === "granted") {
+            console.log("✅ Desktop notifications already enabled");
         }
     }
 
@@ -155,7 +171,7 @@
         // Play notification sound
         playNotificationSound();
         
-        // Show desktop notification
+        // Always show desktop notification (works on all tabs/websites)
         showDesktopNotification(data.title, data.message, data.link);
         
         // Animate bell icon
@@ -164,13 +180,26 @@
         // Update badge count
         updateNotificationCount();
         
-        // Show toast notification
+        // Show in-page popup notification
         showToastNotification(data);
     }
 
     function handleChatMessage(data) {
-        // Only increment badge if not on chat page
+        const senderName = data.from || 'Someone';
+        const message = data.message || data.text || 'New message';
+        
+        // Always show desktop notification (works even on other tabs/websites)
+        showDesktopNotification(
+            `💬 ${senderName}`,
+            message,
+            '/chat/team/'
+        );
+        
+        // Show in-page popup notification if not on chat page
         if (!window.location.pathname.startsWith('/chat')) {
+            showChatPopupNotification(data);
+            
+            // Update badge count
             const badge = document.getElementById('notif-badge');
             if (badge) {
                 let count = parseInt(badge.textContent || '0') || 0;
@@ -178,7 +207,7 @@
                 setBadgeCount(count);
             }
             
-            // Play sound for chat messages too
+            // Play sound for chat messages
             playNotificationSound();
         }
     }
@@ -199,19 +228,23 @@
     }
 
     function showDesktopNotification(title, message, link) {
-        if (!CONFIG.DESKTOP_NOTIFICATIONS_ENABLED || !document.hidden) {
-            return; // Only show if tab is not active
-        }
-        
-        if (Notification.permission !== "granted") {
+        if (!CONFIG.DESKTOP_NOTIFICATIONS_ENABLED) {
             return;
         }
         
+        if (Notification.permission !== "granted") {
+            console.log('Desktop notifications not granted, requesting permission...');
+            Notification.requestPermission();
+            return;
+        }
+        
+        // Show desktop notification
         const notification = new Notification(title || 'New Notification', {
             body: message || 'You have a new update',
             icon: '/static/core/images/icon.png',
             badge: '/static/core/images/badge.png',
             tag: 'notification-' + Date.now(),
+            requireInteraction: false,
         });
         
         notification.onclick = function() {
@@ -244,42 +277,136 @@
     }
 
     function showToastNotification(data) {
-        // Create toast element
-        const toast = document.createElement('div');
-        toast.className = 'notification-toast';
-        toast.innerHTML = `
-            <div class="notification-toast-icon ${getNotifTypeClass(data.notification_type)}">
-                <i class="${getNotifIconClass(data.notification_type)}"></i>
+        // Get popup notification container
+        const container = document.getElementById('popup-notification-container');
+        if (!container) {
+            console.warn('Popup notification container not found');
+            return;
+        }
+        
+        // Get initials for avatar
+        const getInitials = (name) => {
+            if (!name) return '??';
+            return name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
+        };
+        
+        const initials = getInitials(data.title || 'Notification');
+        
+        // Create popup notification element
+        const notification = document.createElement('div');
+        notification.className = 'popup-notification';
+        
+        const messagePreview = (data.message || '').length > 100 
+            ? (data.message || '').substring(0, 100) + '...' 
+            : (data.message || '');
+        
+        notification.innerHTML = `
+            <div class="popup-notification-header">
+                <div class="popup-notification-avatar">${initials}</div>
+                <div class="popup-notification-sender">${escapeHtml(data.title || 'Notification')}</div>
+                <button class="popup-notification-close" onclick="event.stopPropagation(); this.closest('.popup-notification').remove();">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="notification-toast-content">
-                <div class="notification-toast-title">${escapeHtml(data.title || 'Notification')}</div>
-                <div class="notification-toast-message">${escapeHtml(data.message || '')}</div>
+            <div class="popup-notification-message">${escapeHtml(messagePreview)}</div>
+            <div class="popup-notification-footer">
+                <i class="fas fa-bell"></i>
+                <span>Just now</span>
             </div>
-            <button class="notification-toast-close" onclick="this.parentElement.remove()">
-                <i class="fa fa-times"></i>
-            </button>
         `;
         
-        // Add to page
-        document.body.appendChild(toast);
+        // Click handler to open link
+        if (data.link && data.link !== 'null' && data.link !== '') {
+            notification.style.cursor = 'pointer';
+            notification.addEventListener('click', function(e) {
+                if (e.target.closest('.popup-notification-close')) return;
+                window.location.href = data.link;
+            });
+        }
         
-        // Animate in
-        setTimeout(() => toast.classList.add('show'), 10);
+        // Add to container
+        container.appendChild(notification);
         
         // Auto-remove after duration
         setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
+            if (notification.parentElement) {
+                notification.classList.add('hiding');
+                setTimeout(() => notification.remove(), 300);
+            }
         }, CONFIG.NOTIFICATION_DURATION);
         
-        // Click to open link
-        if (data.link) {
-            toast.style.cursor = 'pointer';
-            toast.addEventListener('click', function(e) {
-                if (!e.target.classList.contains('notification-toast-close')) {
-                    window.location.href = data.link;
-                }
-            });
+        // Limit to 3 notifications at a time
+        const notifications = container.querySelectorAll('.popup-notification');
+        if (notifications.length > 3) {
+            const oldest = notifications[0];
+            oldest.classList.add('hiding');
+            setTimeout(() => oldest.remove(), 300);
+        }
+    }
+
+    function showChatPopupNotification(data) {
+        // Get popup notification container
+        const container = document.getElementById('popup-notification-container');
+        if (!container) {
+            console.warn('Popup notification container not found');
+            return;
+        }
+        
+        // Get initials for avatar
+        const getInitials = (name) => {
+            if (!name) return '??';
+            return name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
+        };
+        
+        const senderName = data.from || 'Someone';
+        const initials = getInitials(senderName);
+        const message = data.message || data.text || '';
+        const messagePreview = message.length > 100 ? message.substring(0, 100) + '...' : message;
+        
+        // Create popup notification element
+        const notification = document.createElement('div');
+        notification.className = 'popup-notification';
+        
+        notification.innerHTML = `
+            <div class="popup-notification-header">
+                <div class="popup-notification-avatar">${initials}</div>
+                <div class="popup-notification-sender">${escapeHtml(senderName)}</div>
+                <button class="popup-notification-close" onclick="event.stopPropagation(); this.closest('.popup-notification').remove();">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="popup-notification-message">${escapeHtml(messagePreview)}</div>
+            <div class="popup-notification-footer">
+                <i class="fas fa-comment-dots"></i>
+                <span>New message</span>
+            </div>
+        `;
+        
+        // Click handler to open chat
+        notification.style.cursor = 'pointer';
+        notification.addEventListener('click', function(e) {
+            if (e.target.closest('.popup-notification-close')) return;
+            // Redirect to chat page
+            window.location.href = '/chat/team/';
+        });
+        
+        // Add to container
+        container.appendChild(notification);
+        
+        // Auto-remove after 5 seconds (shorter for chat messages)
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.classList.add('hiding');
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, 5000);
+        
+        // Limit to 3 notifications at a time
+        const notifications = container.querySelectorAll('.popup-notification');
+        if (notifications.length > 3) {
+            const oldest = notifications[0];
+            oldest.classList.add('hiding');
+            setTimeout(() => oldest.remove(), 300);
         }
     }
 

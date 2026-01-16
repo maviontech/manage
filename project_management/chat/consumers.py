@@ -431,19 +431,26 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     """
 
     async def connect(self):
-        user = self.scope.get('user')
-        if not user or not getattr(user, 'is_authenticated', False):
-            await self.close()
+        # Get session data (this app uses session-based auth, not Django User auth)
+        session = self.scope.get("session", {})
+        
+        # Check for session-based authentication
+        member_id = session.get("member_id")
+        user_id = session.get("user_id")
+        
+        if not member_id and not user_id:
+            print("Notification WS rejected: no authenticated session")
+            await self.close(code=4001)
             return
 
         qs = parse_qs(self.scope.get("query_string", b"").decode())
         tenant = qs.get("tenant", [None])[0]
         if not tenant:
-            await self.close()
+            print("Notification WS rejected: tenant missing")
+            await self.close(code=4002)
             return
 
         # Get member_id from session
-        session = self.scope.get('session', {})
         self.member_id = session.get('member_id')
         self.tenant_id = tenant
 
@@ -501,15 +508,36 @@ class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
     """
 
     async def connect(self):
+        # Get session data (use session-based auth like other consumers)
+        session = self.scope.get("session", {})
+        
+        # Check for session-based authentication
+        member_id = session.get("member_id")
+        user_id = session.get("user_id")
+        
+        if not member_id and not user_id:
+            print("Typing WS rejected: no authenticated session")
+            await self.close(code=4001)
+            return
+
         qs = parse_qs(self.scope.get("query_string", b"").decode())
         tenant = qs.get("tenant", [None])[0]
         if not tenant:
-            await self.close()
+            print("Typing WS rejected: tenant missing")
+            await self.close(code=4002)
             return
+
+        # Get user identity from session
+        self.me = (
+            session.get("ident_email")
+            or session.get("member_name")
+            or session.get("user")
+        )
 
         self.presence_group = f"presence_{tenant}"
         await self.channel_layer.group_add(self.presence_group, self.channel_name)
         await self.accept()
+        print(f"✅ Typing WS connected: {self.me} (tenant: {tenant})")
 
     async def disconnect(self, close_code):
         if getattr(self, "presence_group", None):
@@ -524,16 +552,23 @@ class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
         if not to_user or not status:
             return
 
+        # Use session identity as sender if not provided
+        from_user = content.get("from") or self.me
+        
+        print(f"📝 Typing indicator: {from_user} -> {to_user} ({status})")
+
         # relay typing indicator to presence group
         await self.channel_layer.group_send(
             self.presence_group,
             {
                 "type": "typing.update",
-                "from": content.get("from"),
+                "event": "typing",
+                "from": from_user,
                 "to": to_user,
                 "status": status,
             },
         )
 
     async def typing_update(self, event):
+        # Forward typing event to client
         await self.send_json(event)
