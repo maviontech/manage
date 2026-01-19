@@ -63,7 +63,7 @@
         function initNotificationSound() {
             try {
                 // Try to load the audio file first
-                notificationSound = new Audio('{% static "core/sounds/notification.mp3" %}');
+                notificationSound = new Audio('/static/core/sounds/notification.mp3');
                 notificationSound.volume = 0.5;
                 notificationSound.addEventListener('error', () => {
                     console.log('Audio file not found, will use Web Audio API');

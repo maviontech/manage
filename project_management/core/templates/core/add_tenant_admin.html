@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Administrator - {{ tenant.client_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg: #0a0e1a;
+            --card: #12172a;
+            --muted: #8b95a8;
+            --text: #e8ecf4;
+            --accent1: #2563eb;
+            --accent2: #3b82f6;
+            --accent-light: #60a5fa;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --purple: #a855f7;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(ellipse at top, #1e293b 0%, #0f172a 50%, #020617 100%);
+            color: var(--text);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        /* Header */
+        header {
+            background: rgba(18, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent1), var(--accent2), var(--purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+        }
+
+        .logo-text h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-text p {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-light);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+            animation: slideIn 0.6s ease-out;
+        }
+
+        .page-header h2 {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            font-size: 16px;
+            color: var(--muted);
+        }
+
+        .tenant-info {
+            background: rgba(18, 23, 42, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 32px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tenant-info h3 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: var(--accent-light);
+        }
+
+        .tenant-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .tenant-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tenant-info-label {
+            font-size: 12px;
+            color: var(--muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .tenant-info-value {
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .form-card {
+            background: rgba(18, 23, 42, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            border-radius: 16px;
+            padding: 32px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .form-group label .required {
+            color: var(--danger);
+            margin-left: 4px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            background: rgba(10, 14, 26, 0.5);
+            color: var(--text);
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent2);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            background: rgba(10, 14, 26, 0.7);
+        }
+
+        .form-control::placeholder {
+            color: var(--muted);
+        }
+
+        .form-help {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent1), var(--accent2));
+            color: white;
+            border: none;
+            flex: 1;
+            padding: 14px 24px;
+            font-size: 15px;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 6px 24px rgba(37, 99, 235, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+
+        .btn-outline:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: var(--accent2);
+            transform: translateY(-2px);
+        }
+
+        .messages {
+            margin-bottom: 24px;
+        }
+
+        .alert {
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        .password-toggle {
+            position: relative;
+        }
+
+        .password-toggle-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 8px;
+            transition: color 0.3s ease;
+        }
+
+        .password-toggle-btn:hover {
+            color: var(--accent-light);
+        }
+
+        /* Toggle Switch */
+        .toggle-container {
+            background: rgba(18, 23, 42, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+            backdrop-filter: blur(10px);
+        }
+
+        .toggle-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .toggle-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 280px;
+            height: 50px;
+            background: rgba(10, 14, 26, 0.5);
+            border-radius: 25px;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            display: flex;
+            align-items: center;
+            padding: 4px;
+            cursor: pointer;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            width: 136px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent1), var(--accent2));
+            border-radius: 21px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+        }
+
+        .toggle-slider.company-user {
+            transform: translateX(136px);
+        }
+
+        .toggle-option {
+            flex: 1;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 1;
+            transition: color 0.3s ease;
+            padding: 8px;
+        }
+
+        .toggle-option.active {
+            color: white;
+        }
+
+        .toggle-option.inactive {
+            color: var(--muted);
+        }
+
+        .toggle-description {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 12px;
+            line-height: 1.6;
+        }
+
+        .field-conditional {
+            display: none;
+        }
+
+        .field-conditional.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Trackline</h1>
+                    <p>Multi-Tenant Console</p>
+                </div>
+            </div>
+            <div class="user-info">
+                <span style="color: var(--muted); font-size: 14px;">
+                    <i class="fas fa-user"></i> {{ admin_username }}
+                </span>
+                <a href="{% url 'tenant_dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <a href="{% url 'multi_tenant_login' %}" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Page Header -->
+            <div class="page-header">
+                <h2>Add Administrator</h2>
+                <p>Create a new administrator account for this tenant</p>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Toggle Switch -->
+            <div class="toggle-container">
+                <div class="toggle-header">
+                    <h3><i class="fas fa-user-cog"></i> Admin Type</h3>
+                </div>
+                <div class="toggle-switch" onclick="toggleAdminType()">
+                    <div class="toggle-slider" id="toggleSlider"></div>
+                    <div class="toggle-option active" id="tenantAdminLabel">
+                        <i class="fas fa-user-shield"></i> Tenant Admin
+                    </div>
+                    <div class="toggle-option inactive" id="companyUserLabel">
+                        <i class="fas fa-building-user"></i> Company User
+                    </div>
+                </div>
+                <div class="toggle-description" id="toggleDescription">
+                    <strong>Tenant Admin:</strong> Multi-tenant administrator with access to tenant management console (stored in master_db.tenants_admin)
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div class="form-card">
+                <form method="POST" id="addAdminForm">
+                    {% csrf_token %}
+                    
+                    <!-- Hidden field to track admin type -->
+                    <input type="hidden" id="admin_type" name="admin_type" value="tenant_admin">
+                    
+                    <!-- Tenant Selector (only for Company User) -->
+                    <div class="form-group field-conditional" id="tenantSelectorGroup">
+                        <label for="tenant_id">
+                            Select Tenant<span class="required">*</span>
+                        </label>
+                        <select 
+                            class="form-control" 
+                            id="tenant_id" 
+                            name="tenant_id" 
+                            required
+                            onchange="updateTenantInfo()"
+                        >
+                            <option value="">-- Choose a tenant --</option>
+                            {% for t in tenants %}
+                            <option value="{{ t.id }}" 
+                                data-name="{{ t.client_name }}" 
+                                data-domain="{{ t.domain_postfix }}" 
+                                data-db="{{ t.db_name }}"
+                                {% if tenant and tenant.id == t.id %}selected{% endif %}>
+                                {{ t.client_name }} ({{ t.domain_postfix }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-help">Select the organization to add an administrator to</div>
+                    </div>
+
+                    <!-- Tenant Info (Dynamic) -->
+                    <div id="tenantInfoBox" class="tenant-info" style="display: {% if tenant %}block{% else %}none{% endif %}; margin-bottom: 24px; padding: 16px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 10px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; font-size: 13px;">
+                            <div>
+                                <div style="color: var(--muted); margin-bottom: 4px;">Organization</div>
+                                <div id="infoName" style="font-weight: 600;">{{ tenant.client_name|default:"" }}</div>
+                            </div>
+                            <div>
+                                <div style="color: var(--muted); margin-bottom: 4px;">Domain</div>
+                                <div id="infoDomain" style="font-weight: 600;">{{ tenant.domain_postfix|default:"" }}</div>
+                            </div>
+                            <div>
+                                <div style="color: var(--muted); margin-bottom: 4px;">Database</div>
+                                <div id="infoDb" style="font-weight: 600;">{{ tenant.db_name|default:"" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Username (only for Tenant Admin) -->
+                    <div class="form-group field-conditional active" id="usernameGroup">
+                        <label for="admin_username">
+                            Admin Username<span class="required">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="admin_username" 
+                            name="admin_username" 
+                            placeholder="admin.user"
+                        >
+                        <div class="form-help">Unique username for tenant admin login</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">
+                            Email Address<span class="required">*</span>
+                        </label>
+                        <input 
+                            type="email" 
+                            class="form-control" 
+                            id="email" 
+                            name="email" 
+                            placeholder="admin@example.com"
+                            required
+                        >
+                        <div class="form-help" id="emailHelp">Admin contact email address</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label for="first_name">First Name<span class="required field-conditional active" id="firstNameRequired">*</span></label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="first_name" 
+                                name="first_name" 
+                                placeholder="John"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="last_name">Last Name<span class="required field-conditional active" id="lastNameRequired">*</span></label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="last_name" 
+                                name="last_name" 
+                                placeholder="Doe"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Phone (only for Tenant Admin) -->
+                    <div class="form-group field-conditional active" id="phoneGroup">
+                        <label for="phone">Phone Number</label>
+                        <input 
+                            type="tel" 
+                            class="form-control" 
+                            id="phone" 
+                            name="phone" 
+                            placeholder="+1 (555) 123-4567"
+                        >
+                        <div class="form-help">Contact phone number for the admin</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="full_name">
+                            Full Name<span class="field-conditional" id="fullNameRequired">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="full_name" 
+                            name="full_name" 
+                            placeholder="John Doe"
+                        >
+                        <div class="form-help field-conditional" id="fullNameHelp">Full name for the company user account</div>
+                    </div>
+
+                    <!-- User Role (only for Company User) -->
+                    <div class="form-group field-conditional" id="userRoleGroup">
+                        <label for="user_role">
+                            User Role<span class="required">*</span>
+                        </label>
+                        <select 
+                            class="form-control" 
+                            id="user_role" 
+                            name="user_role"
+                            style="cursor: pointer;"
+                        >
+                            <option value="Admin">Admin - Full access to manage projects and users</option>
+                            <option value="User">User - Standard user with limited permissions</option>
+                            <option value="Manager">Manager - Can manage projects and team members</option>
+                            <option value="Viewer">Viewer - Read-only access</option>
+                        </select>
+                        <div class="form-help">Select the role for this user in the company</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">
+                            Password<span class="required">*</span>
+                        </label>
+                        <div class="password-toggle">
+                            <input 
+                                type="password" 
+                                class="form-control" 
+                                id="password" 
+                                name="password" 
+                                placeholder="Enter a secure password"
+                                required
+                                minlength="8"
+                            >
+                            <button type="button" class="password-toggle-btn" onclick="togglePassword()">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                        <div class="form-help">Minimum 8 characters</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i> Create Administrator
+                        </button>
+                        <a href="{% url 'tenant_dashboard' %}" class="btn btn-outline">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentAdminType = 'tenant_admin'; // Default to tenant admin
+
+        function toggleAdminType() {
+            const slider = document.getElementById('toggleSlider');
+            const tenantAdminLabel = document.getElementById('tenantAdminLabel');
+            const companyUserLabel = document.getElementById('companyUserLabel');
+            const description = document.getElementById('toggleDescription');
+            const adminTypeInput = document.getElementById('admin_type');
+
+            if (currentAdminType === 'tenant_admin') {
+                // Switch to Company User
+                currentAdminType = 'company_user';
+                slider.classList.add('company-user');
+                tenantAdminLabel.classList.remove('active');
+                tenantAdminLabel.classList.add('inactive');
+                companyUserLabel.classList.remove('inactive');
+                companyUserLabel.classList.add('active');
+                description.innerHTML = '<strong>Company User:</strong> User within a specific tenant organization with admin role (stored in tenant database)';
+                adminTypeInput.value = 'company_user';
+
+                // Show/hide appropriate fields
+                document.getElementById('tenantSelectorGroup').classList.add('active');
+                document.getElementById('usernameGroup').classList.remove('active');
+                document.getElementById('phoneGroup').classList.remove('active');
+                document.getElementById('userRoleGroup').classList.add('active');
+                document.getElementById('firstNameRequired').classList.remove('active');
+                document.getElementById('lastNameRequired').classList.remove('active');
+                document.getElementById('fullNameRequired').classList.add('active');
+                document.getElementById('fullNameHelp').classList.add('active');
+                document.getElementById('full_name').setAttribute('required', 'required');
+                document.getElementById('tenant_id').setAttribute('required', 'required');
+                document.getElementById('user_role').setAttribute('required', 'required');
+                document.getElementById('admin_username').removeAttribute('required');
+                document.getElementById('first_name').removeAttribute('required');
+                document.getElementById('last_name').removeAttribute('required');
+                document.getElementById('emailHelp').textContent = 'This will be used to login to the tenant portal';
+            } else {
+                // Switch to Tenant Admin
+                currentAdminType = 'tenant_admin';
+                slider.classList.remove('company-user');
+                tenantAdminLabel.classList.remove('inactive');
+                tenantAdminLabel.classList.add('active');
+                companyUserLabel.classList.remove('active');
+                companyUserLabel.classList.add('inactive');
+                description.innerHTML = '<strong>Tenant Admin:</strong> Multi-tenant administrator with access to tenant management console (stored in master_db.tenants_admin)';
+                adminTypeInput.value = 'tenant_admin';
+
+                // Show/hide appropriate fields
+                document.getElementById('tenantSelectorGroup').classList.remove('active');
+                document.getElementById('usernameGroup').classList.add('active');
+                document.getElementById('phoneGroup').classList.add('active');
+                document.getElementById('userRoleGroup').classList.remove('active');
+                document.getElementById('firstNameRequired').classList.add('active');
+                document.getElementById('lastNameRequired').classList.add('active');
+                document.getElementById('fullNameRequired').classList.remove('active');
+                document.getElementById('fullNameHelp').classList.remove('active');
+                document.getElementById('full_name').removeAttribute('required');
+                document.getElementById('tenant_id').removeAttribute('required');
+                document.getElementById('user_role').removeAttribute('required');
+                document.getElementById('admin_username').setAttribute('required', 'required');
+                document.getElementById('first_name').setAttribute('required', 'required');
+                document.getElementById('last_name').setAttribute('required', 'required');
+                document.getElementById('emailHelp').textContent = 'Admin contact email address';
+            }
+        }
+
+        function updateTenantInfo() {
+            const select = document.getElementById('tenant_id');
+            const selectedOption = select.options[select.selectedIndex];
+            const infoBox = document.getElementById('tenantInfoBox');
+            
+            if (select.value) {
+                const name = selectedOption.getAttribute('data-name');
+                const domain = selectedOption.getAttribute('data-domain');
+                const db = selectedOption.getAttribute('data-db');
+                
+                document.getElementById('infoName').textContent = name;
+                document.getElementById('infoDomain').textContent = domain;
+                document.getElementById('infoDb').textContent = db;
+                
+                infoBox.style.display = 'block';
+            } else {
+                infoBox.style.display = 'none';
+            }
+        }
+
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Form validation
+        document.getElementById('addAdminForm').addEventListener('submit', function(e) {
+            const adminType = document.getElementById('admin_type').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (adminType === 'tenant_admin') {
+                const username = document.getElementById('admin_username').value;
+                const firstName = document.getElementById('first_name').value;
+                const lastName = document.getElementById('last_name').value;
+
+                if (!username || !firstName || !lastName || !email || !password) {
+                    e.preventDefault();
+                    alert('Please fill in all required fields for Tenant Admin');
+                    return;
+                }
+            } else {
+                const tenantId = document.getElementById('tenant_id').value;
+                const fullName = document.getElementById('full_name').value;
+                const userRole = document.getElementById('user_role').value;
+
+                if (!tenantId) {
+                    e.preventDefault();
+                    alert('Please select a tenant');
+                    return;
+                }
+
+                if (!email || !fullName || !password || !userRole) {
+                    e.preventDefault();
+                    alert('Please fill in all required fields for Company User');
+                    return;
+                }
+            }
+
+            if (password.length < 8) {
+                e.preventDefault();
+                alert('Password must be at least 8 characters long');
+                return;
+            }
+
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                e.preventDefault();
+                alert('Please enter a valid email address');
+                return;
+            }
+        });
+    </script>
+</body>
+</html>

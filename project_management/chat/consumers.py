@@ -229,10 +229,18 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             traceback.print_exc()
 
     async def new_message(self, event):
-        await self.send_json(event)
+        try:
+            await self.send_json(event)
+        except Exception as e:
+            print(f"❌ Error in ChatConsumer.new_message: {e}")
 
     async def presence_update(self, event):
-        await self.send_json(event)
+        try:
+            await self.send_json(event)
+        except Exception as e:
+            print(f"❌ Error in ChatConsumer.presence_update: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def chat_message_read(self, event):
         """Handle read receipt notifications and broadcast to clients"""
@@ -434,19 +442,24 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         # Get session data (this app uses session-based auth, not Django User auth)
         session = self.scope.get("session", {})
         
+        # Debug: Log session contents
+        print(f"🔍 NotificationConsumer session keys: {list(session.keys()) if session else 'None'}")
+        print(f"🔍 Session data: member_id={session.get('member_id')}, user_id={session.get('user_id')}")
+        
         # Check for session-based authentication
         member_id = session.get("member_id")
         user_id = session.get("user_id")
         
         if not member_id and not user_id:
-            print("Notification WS rejected: no authenticated session")
+            print("❌ Notification WS rejected: no authenticated session")
+            print(f"   Available session keys: {list(session.keys())}")
             await self.close(code=4001)
             return
 
         qs = parse_qs(self.scope.get("query_string", b"").decode())
         tenant = qs.get("tenant", [None])[0]
         if not tenant:
-            print("Notification WS rejected: tenant missing")
+            print("❌ Notification WS rejected: tenant missing")
             await self.close(code=4002)
             return
 
@@ -454,18 +467,32 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         self.member_id = session.get('member_id')
         self.tenant_id = tenant
 
-        # Join tenant-wide presence group (for chat/presence updates)
-        self.presence_group = f"presence_{tenant}"
-        await self.channel_layer.group_add(self.presence_group, self.channel_name)
+        try:
+            # Join tenant-wide presence group (for chat/presence updates)
+            self.presence_group = f"presence_{tenant}"
+            await self.channel_layer.group_add(self.presence_group, self.channel_name)
+            print(f"✅ Joined presence group: {self.presence_group}")
 
-        # Join user-specific notification group (for system notifications)
-        if self.member_id:
-            self.user_notification_group = f"user_notifications_{tenant}_{self.member_id}"
-            await self.channel_layer.group_add(self.user_notification_group, self.channel_name)
+            # Join user-specific notification group (for system notifications)
+            if self.member_id:
+                self.user_notification_group = f"user_notifications_{tenant}_{self.member_id}"
+                await self.channel_layer.group_add(self.user_notification_group, self.channel_name)
+                print(f"✅ Joined user notification group: {self.user_notification_group}")
+                print(f"✅ NotificationConsumer connected: member_id={self.member_id}, tenant={tenant}")
+            else:
+                print(f"✅ NotificationConsumer connected: user_id={user_id}, tenant={tenant}")
+        except Exception as e:
+            print(f"❌ Error joining channel groups: {e}")
+            import traceback
+            traceback.print_exc()
+            await self.close(code=4003)
+            return
 
         await self.accept()
+        print(f"✅ NotificationConsumer WebSocket accepted and ready")
 
     async def disconnect(self, close_code):
+        print(f"🔌 NotificationConsumer disconnect: code={close_code}, member_id={getattr(self, 'member_id', 'unknown')}")
         # Leave presence group
         if getattr(self, "presence_group", None):
             await self.channel_layer.group_discard(self.presence_group, self.channel_name)
@@ -474,29 +501,65 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         if getattr(self, "user_notification_group", None):
             await self.channel_layer.group_discard(self.user_notification_group, self.channel_name)
 
+    async def receive_json(self, content):
+        """Handle any incoming messages from client (currently read-only, but prevents crashes)"""
+        print(f"📥 NotificationConsumer received message: {content}")
+        # NotificationConsumer is primarily for receiving server-pushed notifications
+        # If client needs to send data, handle it here
+        pass
+
     async def presence_update(self, event):
         # forward presence and notification events to client
-        await self.send_json(event)
+        try:
+            # Remove 'type' field and add 'event' field for client
+            client_event = {k: v for k, v in event.items() if k != 'type'}
+            client_event['event'] = 'presence_update'
+            await self.send_json(client_event)
+        except Exception as e:
+            print(f"❌ Error sending presence_update: {e}")
 
     async def new_message(self, event):
         # forward new chat messages to client
-        await self.send_json(event)
+        try:
+            print(f"📨 NotificationConsumer forwarding new_message: {event.get('from')} -> {event.get('to')}")
+            # Remove 'type' field before sending to client to avoid confusion
+            # The 'type' field is for Django Channels routing, not for the client
+            client_event = {k: v for k, v in event.items() if k != 'type'}
+            client_event['event'] = 'new_message'  # Add event field for client
+            await self.send_json(client_event)
+            print(f"✅ Successfully sent new_message to client")
+        except Exception as e:
+            print(f"❌ Error sending new_message: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def chat_message(self, event):
         # forward chat messages that were also broadcast to presence_group
-        await self.send_json(event)
+        try:
+            print(f"📨 NotificationConsumer forwarding chat_message: {event}")
+            # Remove 'type' field and add 'event' field for client
+            client_event = {k: v for k, v in event.items() if k != 'type'}
+            if 'event' not in client_event:
+                client_event['event'] = 'chat_message'
+            await self.send_json(client_event)
+            print(f"✅ Successfully sent chat_message to client")
+        except Exception as e:
+            print(f"❌ Error sending chat_message: {e}")
 
     async def system_notification(self, event):
         """Handle system notifications (task assignments, mentions, etc.)"""
-        await self.send_json({
-            'event': 'system_notification',
-            'notification_id': event.get('notification_id'),
-            'type': event.get('notification_type', 'info'),
-            'title': event.get('title'),
-            'message': event.get('message'),
-            'link': event.get('link'),
-            'created_at': event.get('created_at'),
-        })
+        try:
+            await self.send_json({
+                'event': 'system_notification',
+                'notification_id': event.get('notification_id'),
+                'type': event.get('notification_type', 'info'),
+                'title': event.get('title'),
+                'message': event.get('message'),
+                'link': event.get('link'),
+                'created_at': event.get('created_at'),
+            })
+        except Exception as e:
+            print(f"❌ Error sending system_notification: {e}")
 
 
 class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):

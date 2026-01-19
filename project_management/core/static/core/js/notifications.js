@@ -190,59 +190,67 @@
     function handleSystemNotification(data) {
         console.log('🔔 System notification received:', data);
         
-        // 1. Always show desktop notification (works even on desktop/other apps)
-        const notifTitle = data.title || '🔔 New Notification';
-        const notifMessage = data.message || 'You have a new update';
-        const notifLink = data.link || '/notifications/';
-        
-        // Desktop notification - this will show even if you're on desktop or other apps!
-        showDesktopNotification(notifTitle, notifMessage, notifLink);
-        
-        // 2. Play notification sound (only if user has interacted)
-        playNotificationSound();
-        
-        // 3. Animate bell icon
-        animateBellIcon();
-        
-        // 4. Update badge count
-        updateNotificationCount();
-        
-        // 5. Show in-page popup notification (only if user is on the website)
-        showToastNotification(data);
-        
-        console.log('✅ All notification handlers triggered');
+        try {
+            // 1. Always show desktop notification (works even on desktop/other apps)
+            const notifTitle = data.title || '🔔 New Notification';
+            const notifMessage = data.message || 'You have a new update';
+            const notifLink = data.link || '/notifications/';
+            
+            // Desktop notification - this will show even if you're on desktop or other apps!
+            showDesktopNotification(notifTitle, notifMessage, notifLink);
+            
+            // 2. Play notification sound (only if user has interacted)
+            playNotificationSound();
+            
+            // 3. Animate bell icon
+            animateBellIcon();
+            
+            // 4. Update badge count
+            updateNotificationCount();
+            
+            // 5. Show in-page popup notification (only if user is on the website)
+            showToastNotification(data);
+            
+            console.log('✅ All notification handlers triggered');
+        } catch (error) {
+            console.error('❌ Error in handleSystemNotification:', error);
+        }
     }
 
     function handleChatMessage(data) {
-        const senderName = data.from || 'Someone';
-        const message = data.message || data.text || 'New message';
-        
-        console.log('💬 Chat message received:', senderName, '-', message);
-        
-        // 1. Always show desktop notification (works even when on desktop/other apps)
-        showDesktopNotification(
-            `💬 ${senderName}`,
-            message,
-            '/chat/team/'
-        );
-        
-        // 2. Show in-page popup notification (only if not on chat page)
-        if (!window.location.pathname.startsWith('/chat')) {
-            showChatPopupNotification(data);
+        try {
+            const senderName = data.from || 'Someone';
+            const message = data.message || data.text || 'New message';
+            
+            console.log('💬 Chat message received:', senderName, '-', message);
+            
+            // 1. Always show desktop notification (works even when on desktop/other apps)
+            showDesktopNotification(
+                `💬 ${senderName}`,
+                message,
+                '/chat/team/'
+            );
+            
+            // 2. Show in-page popup notification (only if not on chat page)
+            if (!window.location.pathname.startsWith('/chat')) {
+                showChatPopupNotification(data);
+            }
+            
+            // 3. Update badge count
+            const badge = document.getElementById('notif-badge');
+            if (badge) {
+                let count = parseInt(badge.textContent || '0') || 0;
+                count += 1;
+                setBadgeCount(count);
+            }
+            
+            // 4. Play sound for chat messages
+            playNotificationSound();
+            
+            console.log('✅ Chat notification handlers triggered');
+        } catch (error) {
+            console.error('❌ Error in handleChatMessage:', error);
         }
-        
-        // 3. Update badge count
-        const badge = document.getElementById('notif-badge');
-        if (badge) {
-            let count = parseInt(badge.textContent || '0') || 0;
-            count += 1;
-            setBadgeCount(count);
-        }
-        
-        // 4. Play sound for chat messages
-        playNotificationSound();
-        
-        console.log('✅ Chat notification handlers triggered');
     }
 
     function handlePresenceUpdate(data) {
@@ -297,11 +305,9 @@
         try {
             console.log("🔔 Creating desktop notification:", title);
             
-            // Create the notification with full URL for icon
+            // Create the notification (icon and badge removed to avoid 404 errors)
             const notification = new Notification(title || '🔔 New Notification', {
                 body: message || 'You have a new update',
-                icon: window.location.origin + '/static/core/images/icon.png',
-                badge: window.location.origin + '/static/core/images/badge.png',
                 tag: 'notification-' + Date.now(),
                 requireInteraction: false, // Auto-dismiss after a while
                 // These make it more prominent

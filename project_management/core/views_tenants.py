@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 import pymysql
 from .db_initializer import DBInitializer  # uses the file you already have. :contentReference[oaicite:1]{index=1}
-from .auth import hash_password  # same helper used in db_initializer
+from .auth import hash_password, check_password  # same helper used in db_initializer
 
 MASTER_DB = os.environ.get('MASTER_DB_NAME', 'master_db')
 # Ensure ADMIN_CONF exists (same as elsewhere in your project)
@@ -216,8 +216,7 @@ def new_tenant_view(request):
 def multi_tenant_login_view(request):
     """
     Multi-tenant admin login page.
-    Handles authentication and redirects to new_tenant page on success.
-    Default credentials: username=admin, password=admin
+    Handles authentication against master_db.tenants_admin table.
     """
     if request.method == 'GET':
         # Clear any existing errors from session
@@ -228,15 +227,51 @@ def multi_tenant_login_view(request):
     username = request.POST.get('username', '').strip()
     password = request.POST.get('password', '').strip()
     
-    # Simple admin authentication (you can enhance this later)
-    if username == 'admin' and password == 'admin':
-        # Set admin session
+    if not username or not password:
+        request.session['multi_tenant_error'] = 'Username and password are required.'
+        return redirect('multi_tenant_login')
+    
+    try:
+        # Connect to master database and check tenants_admin table
+        admin_conn = pymysql.connect(**ADMIN_CONF)
+        cur = admin_conn.cursor()
+        
+        # Query tenants_admin table
+        cur.execute("""
+            SELECT id, first_name, last_name, email, admin_username, admin_password
+            FROM master_db.tenants_admin
+            WHERE admin_username = %s
+            LIMIT 1
+        """, (username,))
+        
+        admin_user = cur.fetchone()
+        cur.close()
+        admin_conn.close()
+        
+        if not admin_user:
+            request.session['multi_tenant_error'] = 'Invalid credentials. Please try again.'
+            return redirect('multi_tenant_login')
+        
+        # Verify password using check_password from auth.py
+        stored_hash = admin_user['admin_password']
+        ok, needs_rehash = check_password(password, stored_hash)
+        
+        if not ok:
+            request.session['multi_tenant_error'] = 'Invalid credentials. Please try again.'
+            return redirect('multi_tenant_login')
+        
+        # Authentication successful
         request.session['multi_tenant_admin'] = True
-        request.session['admin_username'] = username
-        messages.success(request, f'Welcome, {username}! You are now logged in as Multi-Tenant Admin.')
-        return redirect('tenant_dashboard')  # Redirect to a tenant dashboard or management page
-    else:
-        request.session['multi_tenant_error'] = 'Invalid credentials. Please try again.'
+        request.session['admin_username'] = admin_user['admin_username']
+        request.session['admin_id'] = admin_user['id']
+        request.session['admin_email'] = admin_user['email']
+        request.session['admin_full_name'] = f"{admin_user['first_name']} {admin_user['last_name']}"
+        
+        messages.success(request, f'Welcome, {admin_user["first_name"]} {admin_user["last_name"]}! You are now logged in as Tenant Administrator.')
+        return redirect('tenant_dashboard')
+        
+    except Exception as e:
+        request.session['multi_tenant_error'] = f'Authentication error: {str(e)}'
         return redirect('multi_tenant_login')
 
 
@@ -273,3 +308,203 @@ def tenant_dashboard_view(request):
     }
     
     return render(request, 'core/tenant_dashboard_v2.html', context)
+
+
+def add_tenant_admin_view(request, tenant_id=None):
+    """
+    Add a new administrator to a specific tenant.
+    Requires multi-tenant admin authentication.
+    """
+    # Check if user is authenticated as multi-tenant admin
+    if not request.session.get('multi_tenant_admin'):
+        messages.warning(request, 'Please login to access this page.')
+        return redirect('multi_tenant_login')
+    
+    # Get all tenants for the dropdown
+    tenants = []
+    try:
+        admin_conn = pymysql.connect(**ADMIN_CONF)
+        cur = admin_conn.cursor()
+        cur.execute("""
+            SELECT id, client_name, domain_postfix, db_name, db_host, 
+                   db_user, db_password
+            FROM master_db.clients_master
+            ORDER BY client_name ASC
+        """)
+        tenants = cur.fetchall()
+        cur.close()
+        admin_conn.close()
+    except Exception as e:
+        messages.error(request, f"Error fetching tenants: {e}")
+        return redirect('tenant_dashboard')
+    
+    # Get specific tenant if tenant_id is provided
+    tenant = None
+    if tenant_id:
+        tenant = next((t for t in tenants if t['id'] == tenant_id), None)
+        if not tenant:
+            messages.error(request, 'Tenant not found.')
+            return redirect('tenant_dashboard')
+    
+    if request.method == 'GET':
+        context = {
+            'tenants': tenants,
+            'tenant': tenant,
+            'admin_username': request.session.get('admin_username', 'admin'),
+        }
+        return render(request, 'core/add_tenant_admin.html', context)
+    
+    # POST - Create new admin user
+    admin_type = request.POST.get('admin_type', 'tenant_admin').strip()
+    tenant_id_from_form = request.POST.get('tenant_id', '').strip()
+    email = request.POST.get('email', '').strip()
+    password = request.POST.get('password', '').strip()
+    
+    # Validate email format
+    import re
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+        messages.error(request, 'Invalid email format.')
+        return redirect('add_tenant_admin')
+    
+    if admin_type == 'tenant_admin':
+        # Create admin in master_db.tenants_admin table
+        admin_username = request.POST.get('admin_username', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        
+        if not admin_username or not first_name or not last_name or not email or not password:
+            messages.error(request, 'All required fields must be filled for Tenant Admin.')
+            return redirect('add_tenant_admin')
+        
+        try:
+            # Hash the password
+            hashed = hash_password(password)
+            
+            # Connect to master database
+            admin_conn = pymysql.connect(**ADMIN_CONF)
+            cur = admin_conn.cursor()
+            
+            # Check if username or email already exists
+            cur.execute("""
+                SELECT id FROM master_db.tenants_admin 
+                WHERE admin_username=%s OR email=%s LIMIT 1
+            """, (admin_username, email))
+            existing = cur.fetchone()
+            
+            if existing:
+                messages.error(request, f'Tenant admin with username "{admin_username}" or email "{email}" already exists.')
+                cur.close()
+                admin_conn.close()
+                return redirect('add_tenant_admin')
+            
+            # Insert into tenants_admin table
+            cur.execute("""
+                INSERT INTO master_db.tenants_admin 
+                (first_name, last_name, email, phone, admin_username, admin_password, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+            """, (first_name, last_name, email, phone, admin_username, hashed))
+            
+            cur.close()
+            admin_conn.close()
+            
+            messages.success(request, 
+                f'Tenant Administrator {first_name} {last_name} (username: {admin_username}) has been created successfully. '
+                f'They can now login to the tenant management console.')
+            return redirect('tenant_dashboard')
+            
+        except Exception as e:
+            messages.error(request, f"Error creating tenant admin: {e}")
+            return redirect('add_tenant_admin')
+    
+    else:  # company_user
+        # Create user in tenant's database
+        full_name = request.POST.get('full_name', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        user_role = request.POST.get('user_role', 'User').strip()  # Get selected role, default to 'User'
+        
+        if not tenant_id_from_form:
+            messages.error(request, 'Please select a tenant.')
+            return redirect('add_tenant_admin')
+        
+        if not email or not full_name or not password:
+            messages.error(request, 'Email, full name, and password are required.')
+            return redirect('add_tenant_admin')
+        
+        # Validate role
+        valid_roles = ['Admin', 'User', 'Manager', 'Viewer']
+        if user_role not in valid_roles:
+            user_role = 'User'  # Default to User if invalid role
+        
+        # Get the selected tenant
+        tenant = next((t for t in tenants if str(t['id']) == tenant_id_from_form), None)
+        if not tenant:
+            messages.error(request, 'Selected tenant not found.')
+            return redirect('add_tenant_admin')
+        
+        try:
+            # Connect to tenant database
+            tenant_conn = pymysql.connect(
+                host=tenant['db_host'],
+                port=ADMIN_CONF['port'],
+                user=tenant['db_user'],
+                password=tenant['db_password'],
+                database=tenant['db_name'],
+                cursorclass=pymysql.cursors.DictCursor,
+                autocommit=True
+            )
+            tcur = tenant_conn.cursor()
+            
+            # Check if user already exists
+            tcur.execute("SELECT id FROM users WHERE email=%s LIMIT 1", (email,))
+            existing_user = tcur.fetchone()
+            
+            if existing_user:
+                messages.error(request, f'User with email {email} already exists in {tenant["client_name"]}.')
+                tcur.close()
+                tenant_conn.close()
+                return redirect('add_tenant_admin')
+            
+            # Hash the password
+            hashed = hash_password(password)
+            
+            # Insert new user with email as username and selected role
+            tcur.execute("""
+                INSERT INTO users (email, full_name, password_hash, role, is_active, created_at)
+                VALUES (%s, %s, %s, %s, 1, NOW())
+            """, (email, full_name, hashed, user_role))
+            
+            # Get the inserted user ID
+            user_id = tcur.lastrowid
+            
+            # Insert into members table
+            tcur.execute("""
+                INSERT INTO members (email, first_name, last_name, phone, meta, created_by, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+            """, (email, first_name or full_name.split()[0], last_name or '', None, None, user_id))
+            
+            # Get member_id
+            member_id = tcur.lastrowid
+            
+            # Get role_id for the selected role
+            tcur.execute("SELECT id FROM roles WHERE name=%s LIMIT 1", (user_role,))
+            role_row = tcur.fetchone()
+            role_id = role_row['id'] if role_row else None
+            
+            # Assign the selected role to the new user
+            if member_id and role_id:
+                tcur.execute("""
+                    INSERT INTO tenant_role_assignments (member_id, role_id, assigned_by, assigned_at)
+                    VALUES (%s, %s, %s, NOW())
+                """, (member_id, role_id, member_id))
+            
+            tcur.close()
+            tenant_conn.close()
+            
+            messages.success(request, f'{user_role} user {full_name} ({email}) has been added to {tenant["client_name"]}. They can now login at the tenant login page using their email and password.')
+            return redirect('tenant_dashboard')
+            
+        except Exception as e:
+            messages.error(request, f"Error creating company user: {e}")
+            return redirect('add_tenant_admin')
