@@ -196,7 +196,7 @@ def new_tenant_view(request):
 
     # Update master with user/pass
     try:
-        admin_conn = pymysql.connect(**ADMIN_CONF, cursorclass=pymysql.cursors.DictCursor, autocommit=True)
+        admin_conn = pymysql.connect(**ADMIN_CONF)
         cur = admin_conn.cursor()
         cur.execute("""
             UPDATE master_db.clients_master SET db_user=%s, db_password=%s WHERE id=%s
@@ -213,4 +213,63 @@ def new_tenant_view(request):
     return redirect('new_tenant')
 
 
+def multi_tenant_login_view(request):
+    """
+    Multi-tenant admin login page.
+    Handles authentication and redirects to new_tenant page on success.
+    Default credentials: username=admin, password=admin
+    """
+    if request.method == 'GET':
+        # Clear any existing errors from session
+        error = request.session.pop('multi_tenant_error', None)
+        return render(request, 'core/Multi_tenant_login.html', {'error': error})
+    
+    # Handle POST - authentication
+    username = request.POST.get('username', '').strip()
+    password = request.POST.get('password', '').strip()
+    
+    # Simple admin authentication (you can enhance this later)
+    if username == 'admin' and password == 'admin':
+        # Set admin session
+        request.session['multi_tenant_admin'] = True
+        request.session['admin_username'] = username
+        messages.success(request, f'Welcome, {username}! You are now logged in as Multi-Tenant Admin.')
+        return redirect('tenant_dashboard')  # Redirect to a tenant dashboard or management page
+    else:
+        request.session['multi_tenant_error'] = 'Invalid credentials. Please try again.'
+        return redirect('multi_tenant_login')
 
+
+def tenant_dashboard_view(request):
+    """
+    Tenant dashboard - shows all tenants and management options.
+    Requires multi-tenant admin authentication.
+    """
+    # Check if user is authenticated as multi-tenant admin
+    if not request.session.get('multi_tenant_admin'):
+        messages.warning(request, 'Please login to access the tenant dashboard.')
+        return redirect('multi_tenant_login')
+    
+    # Get all tenants from master database
+    tenants = []
+    try:
+        admin_conn = pymysql.connect(**ADMIN_CONF)
+        cur = admin_conn.cursor()
+        cur.execute("""
+            SELECT id, client_name, domain_postfix, db_name, db_host, 
+                   db_user, created_at, updated_at
+            FROM master_db.clients_master
+            ORDER BY created_at DESC
+        """)
+        tenants = cur.fetchall()
+        cur.close()
+        admin_conn.close()
+    except Exception as e:
+        messages.error(request, f"Error fetching tenants: {e}")
+    
+    context = {
+        'tenants': tenants,
+        'admin_username': request.session.get('admin_username', 'admin'),
+    }
+    
+    return render(request, 'core/tenant_dashboard_v2.html', context)

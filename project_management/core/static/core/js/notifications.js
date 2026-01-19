@@ -35,9 +35,9 @@
     });
 
     function initNotificationSystem() {
-        console.log('Initializing notification system...');
+        console.log('🚀 Initializing notification system...');
         
-        // Request desktop notification permission
+        // Request desktop notification permission FIRST (most important)
         requestDesktopNotificationPermission();
         
         // Track user interaction for sound playback
@@ -57,31 +57,53 @@
         
         // Auto-refresh count every 30 seconds (backup)
         setInterval(updateNotificationCount, 30000);
+        
+        console.log('✅ Notification system initialized');
     }
 
     function requestDesktopNotificationPermission() {
         if (!("Notification" in window)) {
-            console.warn("This browser does not support desktop notifications");
+            console.warn("⚠️ This browser does not support desktop notifications");
             return;
         }
         
-        console.log('Current notification permission:', Notification.permission);
+        console.log('📋 Current notification permission:', Notification.permission);
         
         if (Notification.permission === "default") {
+            console.log("🔔 Requesting desktop notification permission...");
             Notification.requestPermission().then(permission => {
                 if (permission === "granted") {
-                    console.log("✅ Desktop notification permission granted - you'll get notifications even on other tabs/websites!");
-                    // Show a test notification
-                    new Notification('Notifications Enabled! 🎉', {
-                        body: 'You will now receive message notifications everywhere',
-                        icon: '/static/core/images/icon.png'
-                    });
+                    console.log("✅ Desktop notification permission GRANTED! You'll get notifications everywhere!");
+                    // Show a welcome notification to confirm it works
+                    try {
+                        const testNotification = new Notification('🎉 Notifications Enabled!', {
+                            body: 'You will now receive notifications even when working on other apps or websites!',
+                            icon: window.location.origin + '/static/core/images/icon.png',
+                            badge: window.location.origin + '/static/core/images/badge.png',
+                            tag: 'welcome-notification',
+                            requireInteraction: false,
+                        });
+                        
+                        testNotification.onclick = function() {
+                            window.focus();
+                            this.close();
+                        };
+                        
+                        setTimeout(() => testNotification.close(), 8000);
+                    } catch (e) {
+                        console.log("Test notification error:", e);
+                    }
                 } else {
-                    console.log("❌ Desktop notification permission denied");
+                    console.log("❌ Desktop notification permission DENIED");
+                    alert("⚠️ Desktop notifications are blocked. Please enable them in your browser settings to receive notifications when working on other apps.");
                 }
+            }).catch(err => {
+                console.error("Error requesting notification permission:", err);
             });
         } else if (Notification.permission === "granted") {
-            console.log("✅ Desktop notifications already enabled");
+            console.log("✅ Desktop notifications already enabled - you're all set!");
+        } else if (Notification.permission === "denied") {
+            console.warn("❌ Desktop notifications are BLOCKED. Please enable them in your browser settings.");
         }
     }
 
@@ -166,50 +188,61 @@
     }
 
     function handleSystemNotification(data) {
-        console.log('🔔 System notification:', data);
+        console.log('🔔 System notification received:', data);
         
-        // Play notification sound
+        // 1. Always show desktop notification (works even on desktop/other apps)
+        const notifTitle = data.title || '🔔 New Notification';
+        const notifMessage = data.message || 'You have a new update';
+        const notifLink = data.link || '/notifications/';
+        
+        // Desktop notification - this will show even if you're on desktop or other apps!
+        showDesktopNotification(notifTitle, notifMessage, notifLink);
+        
+        // 2. Play notification sound (only if user has interacted)
         playNotificationSound();
         
-        // Always show desktop notification (works on all tabs/websites)
-        showDesktopNotification(data.title, data.message, data.link);
-        
-        // Animate bell icon
+        // 3. Animate bell icon
         animateBellIcon();
         
-        // Update badge count
+        // 4. Update badge count
         updateNotificationCount();
         
-        // Show in-page popup notification
+        // 5. Show in-page popup notification (only if user is on the website)
         showToastNotification(data);
+        
+        console.log('✅ All notification handlers triggered');
     }
 
     function handleChatMessage(data) {
         const senderName = data.from || 'Someone';
         const message = data.message || data.text || 'New message';
         
-        // Always show desktop notification (works even on other tabs/websites)
+        console.log('💬 Chat message received:', senderName, '-', message);
+        
+        // 1. Always show desktop notification (works even when on desktop/other apps)
         showDesktopNotification(
             `💬 ${senderName}`,
             message,
             '/chat/team/'
         );
         
-        // Show in-page popup notification if not on chat page
+        // 2. Show in-page popup notification (only if not on chat page)
         if (!window.location.pathname.startsWith('/chat')) {
             showChatPopupNotification(data);
-            
-            // Update badge count
-            const badge = document.getElementById('notif-badge');
-            if (badge) {
-                let count = parseInt(badge.textContent || '0') || 0;
-                count += 1;
-                setBadgeCount(count);
-            }
-            
-            // Play sound for chat messages
-            playNotificationSound();
         }
+        
+        // 3. Update badge count
+        const badge = document.getElementById('notif-badge');
+        if (badge) {
+            let count = parseInt(badge.textContent || '0') || 0;
+            count += 1;
+            setBadgeCount(count);
+        }
+        
+        // 4. Play sound for chat messages
+        playNotificationSound();
+        
+        console.log('✅ Chat notification handlers triggered');
     }
 
     function handlePresenceUpdate(data) {
@@ -229,34 +262,84 @@
 
     function showDesktopNotification(title, message, link) {
         if (!CONFIG.DESKTOP_NOTIFICATIONS_ENABLED) {
+            console.log("Desktop notifications disabled in config");
+            return;
+        }
+        
+        // Check if browser supports notifications
+        if (!("Notification" in window)) {
+            console.warn("This browser doesn't support desktop notifications");
+            return;
+        }
+        
+        // Check permission status
+        if (Notification.permission === "denied") {
+            console.warn("❌ Desktop notifications are BLOCKED. Please enable in browser settings.");
             return;
         }
         
         if (Notification.permission !== "granted") {
-            console.log('Desktop notifications not granted, requesting permission...');
-            Notification.requestPermission();
+            console.log("🔔 Requesting notification permission...");
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    console.log("✅ Permission granted! Showing notification now...");
+                    createDesktopNotification(title, message, link);
+                }
+            });
             return;
         }
         
-        // Show desktop notification
-        const notification = new Notification(title || 'New Notification', {
-            body: message || 'You have a new update',
-            icon: '/static/core/images/icon.png',
-            badge: '/static/core/images/badge.png',
-            tag: 'notification-' + Date.now(),
-            requireInteraction: false,
-        });
-        
-        notification.onclick = function() {
-            window.focus();
-            if (link && link !== 'null' && link !== '') {
-                window.location.href = link;
-            }
-            notification.close();
-        };
-        
-        // Auto-close after duration
-        setTimeout(() => notification.close(), CONFIG.NOTIFICATION_DURATION);
+        // Permission is granted, show notification
+        createDesktopNotification(title, message, link);
+    }
+    
+    function createDesktopNotification(title, message, link) {
+        try {
+            console.log("🔔 Creating desktop notification:", title);
+            
+            // Create the notification with full URL for icon
+            const notification = new Notification(title || '🔔 New Notification', {
+                body: message || 'You have a new update',
+                icon: window.location.origin + '/static/core/images/icon.png',
+                badge: window.location.origin + '/static/core/images/badge.png',
+                tag: 'notification-' + Date.now(),
+                requireInteraction: false, // Auto-dismiss after a while
+                // These make it more prominent
+                silent: false, // Use system sound
+                timestamp: Date.now(),
+            });
+            
+            // Handle notification click - focus window and navigate
+            notification.onclick = function(event) {
+                event.preventDefault(); // Prevent default browser behavior
+                window.focus(); // Focus the browser window
+                
+                if (link && link !== 'null' && link !== '' && link !== 'undefined') {
+                    window.location.href = link;
+                }
+                
+                notification.close();
+            };
+            
+            // Handle notification errors
+            notification.onerror = function(error) {
+                console.error("Notification error:", error);
+            };
+            
+            // Auto-close after 10 seconds
+            setTimeout(() => {
+                try {
+                    notification.close();
+                } catch (e) {
+                    // Notification might already be closed by user
+                }
+            }, CONFIG.NOTIFICATION_DURATION);
+            
+            console.log("✅ Desktop notification created successfully!");
+            
+        } catch (error) {
+            console.error("❌ Failed to create desktop notification:", error);
+        }
     }
 
     function animateBellIcon() {

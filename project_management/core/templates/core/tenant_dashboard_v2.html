@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Dashboard - Multi-Tenant Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg: #0a0e1a;
+            --card: #12172a;
+            --muted: #8b95a8;
+            --text: #e8ecf4;
+            --accent1: #2563eb;
+            --accent2: #3b82f6;
+            --accent-light: #60a5fa;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --purple: #a855f7;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(ellipse at top, #1e293b 0%, #0f172a 50%, #020617 100%);
+            color: var(--text);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        /* Header */
+        header {
+            background: rgba(18, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent1), var(--accent2), var(--purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+        }
+
+        .logo-text h1 {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--text), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text p {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-badge {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(168, 85, 247, 0.08));
+            padding: 8px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-light);
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent1), var(--accent2));
+            color: white;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-light);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 32px;
+        }
+
+        .page-header {
+            margin-bottom: 40px;
+            animation: slideIn 0.6s ease-out;
+        }
+
+        .page-header h2 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--text), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-header p {
+            color: var(--muted);
+            font-size: 16px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+            animation: fadeIn 0.8s ease-out 0.2s both;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(18, 23, 42, 0.95), rgba(15, 23, 42, 0.92));
+            backdrop-filter: blur(30px);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent2);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(37, 99, 235, 0.2);
+        }
+
+        .stat-card .icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 24px;
+        }
+
+        .stat-card.blue .icon { background: rgba(37, 99, 235, 0.15); color: var(--accent-light); }
+        .stat-card.green .icon { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+        .stat-card.purple .icon { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
+
+        .stat-card .label {
+            font-size: 13px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--text);
+            margin-top: 8px;
+        }
+
+        /* Tenant Table */
+        .table-container {
+            background: linear-gradient(135deg, rgba(18, 23, 42, 0.95), rgba(15, 23, 42, 0.92));
+            backdrop-filter: blur(30px);
+            border-radius: 20px;
+            padding: 32px;
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 1s ease-out 0.4s both;
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .table-header h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            text-align: left;
+            padding: 16px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        tbody td {
+            padding: 20px 16px;
+            color: var(--text);
+        }
+
+        .tenant-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text);
+        }
+
+        .tenant-domain {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        /* View Toggle Buttons */
+        .view-toggle {
+            display: flex;
+            gap: 8px;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.15);
+        }
+
+        .view-toggle-btn {
+            padding: 8px 14px;
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+
+        .view-toggle-btn:hover {
+            color: var(--accent-light);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .view-toggle-btn.active {
+            background: linear-gradient(135deg, var(--accent1), var(--accent2));
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
+        /* Card View Styles */
+        .tenants-grid {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .tenants-grid.active {
+            display: grid;
+        }
+
+        .tenant-card {
+            background: linear-gradient(135deg, rgba(18, 23, 42, 0.95), rgba(15, 23, 42, 0.92));
+            backdrop-filter: blur(30px);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .tenant-card:hover {
+            border-color: var(--accent2);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(37, 99, 235, 0.2);
+        }
+
+        .tenant-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        .tenant-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent1), var(--accent2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .tenant-card-title {
+            flex: 1;
+            margin-left: 16px;
+        }
+
+        .tenant-card-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .tenant-card-domain {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .tenant-card-body {
+            margin-top: 20px;
+        }
+
+        .tenant-card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tenant-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+        }
+
+        .tenant-card-row:last-child {
+            border-bottom: none;
+        }
+
+        .tenant-card-label {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tenant-card-value {
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .tenant-card-value code {
+            background: rgba(59, 130, 246, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--accent-light);
+        }
+
+        .tenant-card-footer {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(59, 130, 246, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* List View Styles */
+        .table-wrapper {
+            display: none;
+        }
+
+        .table-wrapper.active {
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        /* Messages */
+        .messages {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 32px;
+        }
+
+        .alert {
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1));
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1));
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1));
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .page-header h2 {
+                font-size: 24px;
+            }
+
+            .table-container {
+                padding: 20px;
+                overflow-x: auto;
+            }
+
+            table {
+                min-width: 800px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Trackline</h1>
+                    <p>Multi-Tenant Console</p>
+                </div>
+            </div>
+            <div class="user-info">
+                <span class="user-badge">
+                    <i class="fas fa-user-shield"></i> {{ admin_username }}
+                </span>
+                <a href="{% url 'multi_tenant_login' %}" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </header>
+
+        <!-- Messages -->
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert {% if 'error' in message.tags %}alert-error{% elif 'warning' in message.tags %}alert-warning{% else %}alert-success{% endif %}">
+                    <i class="fas fa-{% if 'error' in message.tags %}exclamation-circle{% elif 'warning' in message.tags %}exclamation-triangle{% else %}check-circle{% endif %}"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main>
+            <!-- Page Header -->
+            <div class="page-header">
+                <h2>Tenant Dashboard</h2>
+                <p>Manage and monitor all your tenant organizations</p>
+                <div class="actions">
+                    <a href="{% url 'new_tenant' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create New Tenant
+                    </a>
+                    <button class="btn btn-secondary" onclick="location.reload()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card blue">
+                    <div class="icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="label">Total Tenants</div>
+                    <div class="value">{{ tenants|length }}</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="label">Active</div>
+                    <div class="value">{{ tenants|length }}</div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="label">Databases</div>
+                    <div class="value">{{ tenants|length }}</div>
+                </div>
+            </div>
+
+            <!-- Tenant Table -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3><i class="fas fa-list"></i> Tenant Organizations</h3>
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <span class="badge badge-success">{{ tenants|length }} Active</span>
+                        <!-- View Toggle -->
+                        <div class="view-toggle">
+                            <button class="view-toggle-btn" id="listViewBtn" onclick="switchView('list')" title="List View">
+                                <i class="fas fa-list"></i>
+                            </button>
+                            <button class="view-toggle-btn active" id="gridViewBtn" onclick="switchView('grid')" title="Grid View">
+                                <i class="fas fa-th"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {% if tenants %}
+                <!-- List View -->
+                <div class="table-wrapper" id="listView">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Organization</th>
+                            <th>Database</th>
+                            <th>Host</th>
+                            <th>DB User</th>
+                            <th>Created</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tenant in tenants %}
+                        <tr>
+                            <td>#{{ tenant.id }}</td>
+                            <td>
+                                <div class="tenant-name">{{ tenant.client_name }}</div>
+                                <div class="tenant-domain">{{ tenant.domain_postfix }}</div>
+                            </td>
+                            <td>
+                                <code style="background: rgba(59, 130, 246, 0.1); padding: 4px 8px; border-radius: 6px; font-size: 12px; color: var(--accent-light);">{{ tenant.db_name }}</code>
+                            </td>
+                            <td>{{ tenant.db_host }}</td>
+                            <td>{{ tenant.db_user|default:"Not set" }}</td>
+                            <td>{{ tenant.created_at|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge badge-success">
+                                    <i class="fas fa-circle" style="font-size: 8px;"></i> Active
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+
+                <!-- Grid/Card View -->
+                <div class="tenants-grid active" id="gridView">
+                    {% for tenant in tenants %}
+                    <div class="tenant-card">
+                        <div class="tenant-card-header">
+                            <div class="tenant-card-icon">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div class="tenant-card-title">
+                                <div class="tenant-card-name">{{ tenant.client_name }}</div>
+                                <div class="tenant-card-domain">{{ tenant.domain_postfix }}</div>
+                            </div>
+                        </div>
+                        <div class="tenant-card-body">
+                            <div class="tenant-card-info">
+                                <div class="tenant-card-row">
+                                    <span class="tenant-card-label">ID</span>
+                                    <span class="tenant-card-value">#{{ tenant.id }}</span>
+                                </div>
+                                <div class="tenant-card-row">
+                                    <span class="tenant-card-label">Database</span>
+                                    <span class="tenant-card-value"><code>{{ tenant.db_name }}</code></span>
+                                </div>
+                                <div class="tenant-card-row">
+                                    <span class="tenant-card-label">Host</span>
+                                    <span class="tenant-card-value">{{ tenant.db_host }}</span>
+                                </div>
+                                <div class="tenant-card-row">
+                                    <span class="tenant-card-label">DB User</span>
+                                    <span class="tenant-card-value">{{ tenant.db_user|default:"Not set" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tenant-card-footer">
+                            <span style="font-size: 12px; color: var(--muted);">
+                                <i class="far fa-calendar"></i> {{ tenant.created_at|date:"M d, Y" }}
+                            </span>
+                            <span class="badge badge-success">
+                                <i class="fas fa-circle" style="font-size: 8px;"></i> Active
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No tenants found</p>
+                    <p style="font-size: 14px;">Create your first tenant to get started</p>
+                    <a href="{% url 'new_tenant' %}" class="btn btn-primary" style="margin-top: 20px;">
+                        <i class="fas fa-plus"></i> Create Tenant
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // View switcher functionality
+        function switchView(view) {
+            const listView = document.getElementById('listView');
+            const gridView = document.getElementById('gridView');
+            const listBtn = document.getElementById('listViewBtn');
+            const gridBtn = document.getElementById('gridViewBtn');
+
+            if (view === 'list') {
+                listView.classList.add('active');
+                gridView.classList.remove('active');
+                listBtn.classList.add('active');
+                gridBtn.classList.remove('active');
+                localStorage.setItem('tenantViewPreference', 'list');
+            } else {
+                gridView.classList.add('active');
+                listView.classList.remove('active');
+                gridBtn.classList.add('active');
+                listBtn.classList.remove('active');
+                localStorage.setItem('tenantViewPreference', 'grid');
+            }
+        }
+
+        // Restore saved view preference on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedView = localStorage.getItem('tenantViewPreference') || 'grid';
+            switchView(savedView);
+        });
+
+        // Initialize icons
+        console.log('Tenant Dashboard loaded');
+        
+        // Auto-refresh every 30 seconds (optional)
+        // setTimeout(() => location.reload(), 30000);
+    </script>
+</body>
+</html>

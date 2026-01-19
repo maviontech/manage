@@ -1,0 +1,264 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Test Desktop Notifications{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 50px auto; padding: 20px;">
+    <div style="background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h1 style="color: #1f2937; margin-bottom: 10px;">
+            <i class="fa fa-bell" style="color: #3b82f6;"></i> 
+            Desktop Notification Test
+        </h1>
+        <p style="color: #6b7280; margin-bottom: 30px;">
+            Use this page to test if desktop notifications are working properly.
+        </p>
+
+        <!-- Permission Status -->
+        <div id="permission-status" style="padding: 16px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #3b82f6; background: #eff6ff;">
+            <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">
+                <i class="fa fa-info-circle"></i> Notification Permission Status
+            </div>
+            <div id="status-text" style="color: #1e40af;">
+                Checking...
+            </div>
+        </div>
+
+        <!-- Test Buttons -->
+        <div style="display: grid; gap: 16px;">
+            <button onclick="testSimpleNotification()" style="background: #3b82f6; color: white; padding: 16px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+                <i class="fa fa-bell"></i>
+                <span>Send Test Notification</span>
+            </button>
+
+            <button onclick="testTaskNotification()" style="background: #8b5cf6; color: white; padding: 16px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#7c3aed'" onmouseout="this.style.background='#8b5cf6'">
+                <i class="fa fa-tasks"></i>
+                <span>Test Task Assignment Notification</span>
+            </button>
+
+            <button onclick="testChatNotification()" style="background: #10b981; color: white; padding: 16px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                <i class="fa fa-comment-dots"></i>
+                <span>Test Chat Message Notification</span>
+            </button>
+
+            <button onclick="requestPermission()" style="background: #f59e0b; color: white; padding: 16px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">
+                <i class="fa fa-shield-alt"></i>
+                <span>Request Permission Again</span>
+            </button>
+        </div>
+
+        <!-- Instructions -->
+        <div style="margin-top: 40px; padding: 20px; background: #f9fafb; border-radius: 8px;">
+            <h3 style="color: #1f2937; margin-bottom: 12px; font-size: 18px;">
+                <i class="fa fa-info-circle" style="color: #3b82f6;"></i> How to Test
+            </h3>
+            <ol style="color: #4b5563; line-height: 1.8; margin-left: 20px;">
+                <li><strong>Allow Notifications:</strong> Click "Request Permission" and allow notifications in the browser prompt</li>
+                <li><strong>Test While on Page:</strong> Click any test button - you should see a desktop notification</li>
+                <li><strong>Test From Desktop:</strong> 
+                    <ul style="margin-top: 8px; margin-left: 20px;">
+                        <li>Click a test button</li>
+                        <li>Immediately switch to another app (email, Word, etc.)</li>
+                        <li>You should see the notification appear on your desktop!</li>
+                    </ul>
+                </li>
+                <li><strong>Test From Another Window:</strong> Open another program and the notification should still appear</li>
+            </ol>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div style="margin-top: 20px; padding: 20px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+            <h3 style="color: #92400e; margin-bottom: 12px; font-size: 18px;">
+                <i class="fa fa-exclamation-triangle"></i> Troubleshooting
+            </h3>
+            <ul style="color: #92400e; line-height: 1.8; margin-left: 20px;">
+                <li><strong>Chrome:</strong> Click the lock icon in address bar → Site settings → Notifications → Allow</li>
+                <li><strong>Firefox:</strong> Click the lock icon → Permissions → Notifications → Allow</li>
+                <li><strong>Edge:</strong> Click the lock icon → Permissions for this site → Notifications → Allow</li>
+                <li><strong>Windows:</strong> Check Settings → System → Notifications → Make sure browser notifications are enabled</li>
+                <li><strong>Focus Assist:</strong> Turn off Windows Focus Assist (it blocks all notifications)</li>
+            </ul>
+        </div>
+
+        <!-- Log Output -->
+        <div style="margin-top: 30px;">
+            <h3 style="color: #1f2937; margin-bottom: 12px;">
+                <i class="fa fa-terminal"></i> Console Log
+            </h3>
+            <div id="log-output" style="background: #1f2937; color: #10b981; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 13px; max-height: 300px; overflow-y: auto; line-height: 1.6;">
+                Waiting for actions...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let logMessages = [];
+
+    function log(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const color = {
+            'info': '#10b981',
+            'success': '#22c55e',
+            'error': '#ef4444',
+            'warning': '#f59e0b'
+        }[type] || '#10b981';
+        
+        logMessages.push(`<div style="color: ${color}">[${timestamp}] ${message}</div>`);
+        if (logMessages.length > 20) logMessages.shift();
+        
+        document.getElementById('log-output').innerHTML = logMessages.join('');
+        document.getElementById('log-output').scrollTop = document.getElementById('log-output').scrollHeight;
+    }
+
+    function updatePermissionStatus() {
+        const statusDiv = document.getElementById('permission-status');
+        const statusText = document.getElementById('status-text');
+        
+        if (!("Notification" in window)) {
+            statusText.innerHTML = '❌ <strong>Not Supported:</strong> This browser does not support desktop notifications';
+            statusDiv.style.borderLeftColor = '#ef4444';
+            statusDiv.style.background = '#fee2e2';
+            log('Browser does not support notifications', 'error');
+        } else {
+            const permission = Notification.permission;
+            
+            if (permission === 'granted') {
+                statusText.innerHTML = '✅ <strong>Granted:</strong> Desktop notifications are enabled! Notifications will appear even when you\'re on desktop.';
+                statusDiv.style.borderLeftColor = '#10b981';
+                statusDiv.style.background = '#d1fae5';
+                log('✅ Notification permission: GRANTED', 'success');
+            } else if (permission === 'denied') {
+                statusText.innerHTML = '❌ <strong>Blocked:</strong> Please enable notifications in your browser settings (see troubleshooting below)';
+                statusDiv.style.borderLeftColor = '#ef4444';
+                statusDiv.style.background = '#fee2e2';
+                log('❌ Notification permission: DENIED', 'error');
+            } else {
+                statusText.innerHTML = '⚠️ <strong>Not Requested:</strong> Click "Request Permission" to enable desktop notifications';
+                statusDiv.style.borderLeftColor = '#f59e0b';
+                statusDiv.style.background = '#fef3c7';
+                log('⚠️ Notification permission: DEFAULT (not asked yet)', 'warning');
+            }
+        }
+    }
+
+    function requestPermission() {
+        log('🔔 Requesting notification permission...', 'info');
+        
+        if (!("Notification" in window)) {
+            log('❌ Browser does not support notifications', 'error');
+            alert('Your browser does not support desktop notifications');
+            return;
+        }
+
+        Notification.requestPermission().then(permission => {
+            log(`Permission result: ${permission}`, permission === 'granted' ? 'success' : 'error');
+            updatePermissionStatus();
+            
+            if (permission === 'granted') {
+                log('✅ Permission granted! Testing notification...', 'success');
+                testSimpleNotification();
+            }
+        });
+    }
+
+    function testSimpleNotification() {
+        log('📤 Sending test notification...', 'info');
+        
+        if (Notification.permission !== 'granted') {
+            log('⚠️ Permission not granted, requesting...', 'warning');
+            requestPermission();
+            return;
+        }
+
+        try {
+            const notification = new Notification('🎉 Test Successful!', {
+                body: 'Desktop notifications are working! You should see this even on your desktop.',
+                icon: window.location.origin + '/static/core/images/icon.png',
+                badge: window.location.origin + '/static/core/images/badge.png',
+                tag: 'test-notification',
+                requireInteraction: false,
+            });
+
+            notification.onclick = function() {
+                log('👆 Notification clicked!', 'info');
+                window.focus();
+                this.close();
+            };
+
+            notification.onerror = function(error) {
+                log('❌ Notification error: ' + error, 'error');
+            };
+
+            setTimeout(() => notification.close(), 8000);
+            
+            log('✅ Notification sent successfully!', 'success');
+            log('💡 Try minimizing this window - notification should still appear!', 'info');
+        } catch (error) {
+            log('❌ Error: ' + error.message, 'error');
+            console.error(error);
+        }
+    }
+
+    function testTaskNotification() {
+        log('📤 Sending task notification...', 'info');
+        
+        if (Notification.permission !== 'granted') {
+            requestPermission();
+            return;
+        }
+
+        try {
+            const notification = new Notification('📋 New Task Assigned', {
+                body: 'John Doe assigned you "Complete project documentation" - Due: Tomorrow',
+                icon: window.location.origin + '/static/core/images/icon.png',
+                tag: 'task-notification',
+            });
+
+            notification.onclick = function() {
+                window.focus();
+                this.close();
+            };
+
+            setTimeout(() => notification.close(), 10000);
+            log('✅ Task notification sent!', 'success');
+        } catch (error) {
+            log('❌ Error: ' + error.message, 'error');
+        }
+    }
+
+    function testChatNotification() {
+        log('📤 Sending chat notification...', 'info');
+        
+        if (Notification.permission !== 'granted') {
+            requestPermission();
+            return;
+        }
+
+        try {
+            const notification = new Notification('💬 Sarah Johnson', {
+                body: 'Hey! Can you review the latest changes to the project? Thanks!',
+                icon: window.location.origin + '/static/core/images/icon.png',
+                tag: 'chat-notification',
+            });
+
+            notification.onclick = function() {
+                window.focus();
+                this.close();
+            };
+
+            setTimeout(() => notification.close(), 10000);
+            log('✅ Chat notification sent!', 'success');
+        } catch (error) {
+            log('❌ Error: ' + error.message, 'error');
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePermissionStatus();
+        log('🚀 Notification test page loaded', 'info');
+        log('📋 Ready to test desktop notifications', 'info');
+    });
+</script>
+{% endblock %}

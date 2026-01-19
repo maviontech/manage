@@ -12,6 +12,8 @@ urlpatterns = [
     # file: `project_management/core/urls.py`
     path('', views.identify_view, name='identify'),             # root/default page -> identify view
     path('identify/', views.identify_view, name='identify_page'),  # optional alias with a different name
+    path('multi-tenant-login/', views_tenants.multi_tenant_login_view, name='multi_tenant_login'),
+    path('tenant-dashboard/', views_tenants.tenant_dashboard_view, name='tenant_dashboard'),
     path('login_password/', views.login_password_view, name='login_password'),
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
@@ -87,6 +89,7 @@ urlpatterns = [
     
     # Notifications
     path('notifications/', views.notifications_page, name='notifications_page'),
+    path('notifications/test/', views.test_notifications_page, name='test_notifications_page'),
     path('api/notifications/list', views.api_notifications_list, name='api_notifications_list'),
     path('api/notifications/mark-read', views.api_notifications_mark_read, name='api_notifications_mark_read'),
     path('api/notifications/delete', views.api_notifications_delete, name='api_notifications_delete'),
@@ -110,6 +113,7 @@ urlpatterns = [
     path('api/time-entries/delete', views.api_time_entries_delete, name='api_time_entries_delete'),
     path('api/time-entries/approve', views.api_time_entries_approve, name='api_time_entries_approve'),
     path('api/time-entries/reject', views.api_time_entries_reject, name='api_time_entries_reject'),
+
     
 ]
 

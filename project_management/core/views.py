@@ -1674,6 +1674,15 @@ def notifications_page(request):
     return render(request, 'core/notifications.html', {'page': 'notifications'})
 
 
+def test_notifications_page(request):
+    """Test page for desktop notifications."""
+    user = request.session.get('user')
+    if not user:
+        return redirect('identify')
+    
+    return render(request, 'core/test_notifications.html', {'page': 'test_notifications'})
+
+
 def api_notifications_list(request):
     """Get user notifications."""
     user = request.session.get('user')

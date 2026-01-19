@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-tenant Login Portal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loader {
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden-step {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-indigo-100 selection:text-indigo-700">
+
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <!-- Logo/Icon -->
+        <div class="flex justify-center">
+            <div class="h-14 w-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-200 transform rotate-3 transition-transform hover:rotate-0 cursor-pointer">
+                <i data-lucide="shield-check" class="h-8 w-8 text-white"></i>
+            </div>
+        </div>
+        
+        <h2 id="portal-title" class="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
+            Multi-Tenant Admin Login
+        </h2>
+        <p id="portal-subtitle" class="mt-2 text-center text-sm text-slate-600">
+            Sign in to manage tenant organizations
+        </p>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow-2xl shadow-slate-200/50 sm:rounded-3xl sm:px-10 border border-slate-100 relative overflow-hidden">
+            
+            <!-- Background Decoration -->
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-indigo-50 rounded-full blur-3xl opacity-50"></div>
+            <div class="absolute bottom-0 left-0 -mb-4 -ml-4 h-24 w-24 bg-blue-50 rounded-full blur-3xl opacity-50"></div>
+
+            <!-- Error Message -->
+            {% if error %}
+            <div id="error-container" class="mb-6 animate-fade-in flex items-center gap-3 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100">
+                <i data-lucide="alert-circle" class="h-5 w-5 flex-shrink-0"></i>
+                <p id="error-message">{{ error }}</p>
+            </div>
+            {% else %}
+            <div id="error-container" class="mb-6 hidden animate-fade-in items-center gap-3 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100">
+                <i data-lucide="alert-circle" class="h-5 w-5 flex-shrink-0"></i>
+                <p id="error-message"></p>
+            </div>
+            {% endif %}
+
+            <!-- Admin Login Form -->
+            <form method="POST" action="{% url 'multi_tenant_login' %}" class="space-y-6 relative z-10 animate-fade-in">
+                {% csrf_token %}
+                <div>
+                    <label for="username" class="block text-sm font-semibold text-slate-700 mb-2">
+                        Admin Username
+                    </label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i data-lucide="user" class="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+                        </div>
+                        <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            required
+                            placeholder="admin"
+                            value="admin"
+                            class="block w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-slate-50/50 focus:bg-white"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-slate-700 mb-2">
+                        Password
+                    </label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i data-lucide="lock" class="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+                        </div>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            required
+                            placeholder="••••••••"
+                            value="admin"
+                            class="block w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-slate-50/50 focus:bg-white"
+                        >
+                    </div>
+                    <p class="mt-2 text-xs text-slate-500 flex items-center gap-1">
+                        <i data-lucide="info" class="h-3 w-3"></i>
+                        Default credentials: admin / admin
+                    </p>
+                </div>
+
+                <button
+                    type="submit"
+                    class="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all active:scale-[0.98]"
+                >
+                    <span class="flex items-center">
+                        Sign In as Admin <i data-lucide="arrow-right" class="ml-2 h-4 w-4"></i>
+                    </span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Footer Links -->
+        <div class="mt-8 text-center flex flex-col items-center gap-4">
+            <p class="text-sm text-slate-500">
+                Regular user? <a href="{% url 'identify' %}" class="font-bold text-indigo-600 hover:text-indigo-500">Standard Login</a>
+            </p>
+            <p class="text-sm text-slate-500">
+                Don't have an account? <a href="#" class="font-bold text-indigo-600 hover:text-indigo-500">Contact Sales</a>
+            </p>
+            <div class="flex items-center gap-6 text-xs text-slate-400 font-medium">
+                <a href="#" class="hover:text-slate-600">Privacy Policy</a>
+                <a href="#" class="hover:text-slate-600">Terms of Service</a>
+                <a href="#" class="hover:text-slate-600">Help Center</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
