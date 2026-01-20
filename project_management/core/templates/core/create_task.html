@@ -354,7 +354,7 @@
             <label class="field-label">
               <i class="fa-solid fa-layer-group"></i> Work Type
             </label>
-            <select name="work_type" class="field-select">
+            <select name="work_type" id="workTypeSelect" class="field-select">
               {% for wtype in work_types %}
                 <option value="{{ wtype }}" {% if wtype == 'Task' %}selected{% endif %}>{{ wtype }}</option>
               {% endfor %}
@@ -413,9 +413,67 @@ document.addEventListener('DOMContentLoaded', function(){
   const projectSelect = document.getElementById('projectSelect');
   const subprojectSelect = document.getElementById('subprojectSelect');
   const createBtn = document.getElementById('createBtn');
+  const workTypeSelect = document.getElementById('workTypeSelect');
   
   console.log('projectSelect found:', !!projectSelect);
   console.log('subprojectSelect found:', !!subprojectSelect);
+
+  // Load work types based on selected project
+  async function loadProjectWorkTypes(projectId) {
+    if (!workTypeSelect || !projectId) return;
+    
+    try {
+      const response = await fetch(`/tasks/api/project-work-types/?project_id=${projectId}`);
+      const data = await response.json();
+      
+      if (data.work_types && data.work_types.length > 0) {
+        const currentValue = workTypeSelect.value;
+        workTypeSelect.innerHTML = '';
+        
+        data.work_types.forEach(wtype => {
+          const option = document.createElement('option');
+          option.value = wtype;
+          option.textContent = wtype;
+          if (wtype === currentValue || wtype === 'Task') {
+            option.selected = true;
+          }
+          workTypeSelect.appendChild(option);
+        });
+        console.log('Loaded work types for project:', data.work_types);
+      }
+    } catch (error) {
+      console.error('Error loading work types:', error);
+    }
+  }
+
+  // Handle work type selection - redirect to specific form
+  if(workTypeSelect) {
+    workTypeSelect.addEventListener('change', function(e) {
+      const selectedType = e.target.value;
+      console.log('Work type changed to:', selectedType);
+      
+      // Define URL mappings for each work type
+      const workTypeUrls = {
+        'Bug': '{% url "create_bug" %}',
+        'Story': '{% url "create_story" %}',
+        'Defect': '{% url "create_defect" %}',
+        'Sub Task': '{% url "create_subtask" %}',
+        'Report': '{% url "create_report" %}',
+        'Change Request': '{% url "create_change_request" %}',
+        'Task': '{% url "create_task" %}'
+      };
+      
+      // If a specific work type with its own page is selected, redirect
+      if (workTypeUrls[selectedType] && selectedType !== 'Task') {
+        console.log('Redirecting to:', workTypeUrls[selectedType]);
+        // Store selected project in sessionStorage before redirect
+        if (projectSelect && projectSelect.value) {
+          sessionStorage.setItem('selectedProjectId', projectSelect.value);
+        }
+        window.location.href = workTypeUrls[selectedType];
+      }
+    });
+  }
 
   async function loadSubprojects(pid){
     console.log('loadSubprojects called with project ID:', pid);
@@ -473,6 +531,8 @@ document.addEventListener('DOMContentLoaded', function(){
       if(pid) {
         console.log('Loading subprojects for project:', pid);
         loadSubprojects(pid);
+        // Load work types for selected project
+        loadProjectWorkTypes(pid);
       } else {
         console.log('No project selected, resetting subproject dropdown');
         subprojectSelect.innerHTML = '<option value="">-- Optional Subproject --</option>';

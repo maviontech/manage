@@ -325,6 +325,7 @@ def board_data_api(request):
             COALESCE(t.status, 'Open') AS status,
             COALESCE(t.priority, 'Normal') AS priority,
             t.due_date,
+            COALESCE(t.work_type, 'Task') AS work_type,
 
             CONCAT_WS(':', t.assigned_type, t.assigned_to) AS assigned_to,
 
@@ -1225,3 +1226,752 @@ def export_task_pdf(request, task_id):
     response.write(pdf)
     
     return response
+
+
+# ==============================
+#  API: GET PROJECT WORK TYPES
+# ==============================
+@require_GET
+def api_get_project_work_types(request):
+    """
+    API endpoint to get configured work types for a project
+    """
+    project_id = request.GET.get('project_id')
+    if not project_id:
+        return JsonResponse({'work_types': []})
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Get configured work types for the project
+        cur.execute("""
+            SELECT work_type FROM project_work_types 
+            WHERE project_id = %s AND is_enabled = 1
+        """, (project_id,))
+        rows = cur.fetchall()
+        
+        if rows:
+            # Map database values to display names
+            type_mapping = {
+                'task': 'Task',
+                'bug': 'Bug',
+                'story': 'Story',
+                'defect': 'Defect',
+                'subtask': 'Sub Task',
+                'report': 'Report',
+                'change_request': 'Change Request'
+            }
+            work_types = [type_mapping.get(row['work_type'], row['work_type']) for row in rows]
+        else:
+            # If no configuration exists, return all types
+            work_types = ['Task', 'Bug', 'Story', 'Defect', 'Sub Task', 'Report', 'Change Request']
+        
+        return JsonResponse({'work_types': work_types})
+    except Exception as e:
+        return JsonResponse({'work_types': [], 'error': str(e)})
+    finally:
+        cur.close()
+
+
+# ==============================
+#  CREATE BUG
+# ==============================
+def create_bug_view(request):
+    """
+    Creates a new bug with bug-specific fields
+    """
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        data = request.POST
+        project_id = data.get("project_id") or None
+        subproject_id = data.get("subproject_id") or None
+        title = data.get("title")
+        description = data.get("description")
+        steps_to_reproduce = data.get("steps_to_reproduce")
+        expected_behavior = data.get("expected_behavior")
+        actual_behavior = data.get("actual_behavior")
+        severity = data.get("severity") or "Medium"
+        due_date = data.get("due_date") or None
+        closure_date = data.get("closure_date") or None
+        priority = data.get("priority") or "Normal"
+        status = data.get("status") or "Open"
+        work_type = "Bug"
+        created_by = request.session.get("user_id")
+
+        # Combine bug-specific fields into description
+        full_description = f"{description}\n\n"
+        if steps_to_reproduce:
+            full_description += f"**Steps to Reproduce:**\n{steps_to_reproduce}\n\n"
+        if expected_behavior:
+            full_description += f"**Expected Behavior:**\n{expected_behavior}\n\n"
+        if actual_behavior:
+            full_description += f"**Actual Behavior:**\n{actual_behavior}\n\n"
+        
+        # Handle assignment
+        assigned_raw = data.get("assigned_to") or None
+        assigned_to, assigned_type = None, None
+        if assigned_raw:
+            if ":" in assigned_raw:
+                assigned_type, assigned_to = assigned_raw.split(":", 1)
+            else:
+                assigned_type, assigned_to = "member", assigned_raw
+
+        # INSERT
+        cur.execute(
+            """INSERT INTO tasks
+               (project_id, subproject_id, title, description, status, priority,
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+            (
+                project_id,
+                subproject_id,
+                title,
+                full_description,
+                status,
+                severity,  # Use severity as priority for bugs
+                assigned_to,
+                assigned_type,
+                created_by,
+                due_date,
+                closure_date,
+                work_type,
+            ),
+        )
+        task_id = cur.lastrowid
+
+        # Log activity
+        cur.execute(
+            "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+            ("task", task_id, "created", created_by),
+        )
+
+        # Create notification if task is assigned to a member
+        if assigned_type == "member" and assigned_to:
+            cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (created_by,))
+            creator = cur.fetchone()
+            creator_name = creator['name'] if creator else 'Someone'
+            
+            cur.execute("""
+                INSERT INTO notifications (user_id, title, message, type, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                assigned_to,
+                "New Bug Assigned",
+                f"{creator_name} assigned you a bug: '{title}'",
+                "task",
+                f"/tasks/detail/{task_id}"
+            ))
+
+        conn.commit()
+        cur.close()
+        return redirect("task_board")
+
+    # GET
+    cur.execute("SELECT id, name FROM projects ORDER BY name")
+    projects = cur.fetchall()
+    cur.execute("SELECT id, email, first_name, last_name FROM members ORDER BY first_name")
+    members = cur.fetchall()
+    cur.execute("SELECT id, name FROM teams ORDER BY name")
+    teams = cur.fetchall()
+    
+    cur.close()
+
+    return render(
+        request,
+        "core/create_bug.html",
+        {
+            "projects": projects, 
+            "members": members, 
+            "teams": teams, 
+            "page": "task_create"
+        },
+    )
+
+
+# ==============================
+#  CREATE STORY
+# ==============================
+def create_story_view(request):
+    """
+    Creates a new user story with story-specific fields
+    """
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        data = request.POST
+        project_id = data.get("project_id") or None
+        subproject_id = data.get("subproject_id") or None
+        title = data.get("title")
+        user_story = data.get("user_story")
+        acceptance_criteria = data.get("acceptance_criteria")
+        story_points = data.get("story_points") or None
+        due_date = data.get("due_date") or None
+        closure_date = data.get("closure_date") or None
+        priority = data.get("priority") or "Normal"
+        status = data.get("status") or "Open"
+        work_type = "Story"
+        created_by = request.session.get("user_id")
+
+        # Combine story-specific fields into description
+        full_description = ""
+        if user_story:
+            full_description += f"**User Story:**\n{user_story}\n\n"
+        if acceptance_criteria:
+            full_description += f"**Acceptance Criteria:**\n{acceptance_criteria}\n\n"
+        if story_points:
+            full_description += f"**Story Points:** {story_points}\n\n"
+        
+        # Handle assignment
+        assigned_raw = data.get("assigned_to") or None
+        assigned_to, assigned_type = None, None
+        if assigned_raw:
+            if ":" in assigned_raw:
+                assigned_type, assigned_to = assigned_raw.split(":", 1)
+            else:
+                assigned_type, assigned_to = "member", assigned_raw
+
+        # INSERT
+        cur.execute(
+            """INSERT INTO tasks
+               (project_id, subproject_id, title, description, status, priority,
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+            (
+                project_id,
+                subproject_id,
+                title,
+                full_description,
+                status,
+                priority,
+                assigned_to,
+                assigned_type,
+                created_by,
+                due_date,
+                closure_date,
+                work_type,
+            ),
+        )
+        task_id = cur.lastrowid
+
+        # Log activity
+        cur.execute(
+            "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+            ("task", task_id, "created", created_by),
+        )
+
+        # Create notification if task is assigned to a member
+        if assigned_type == "member" and assigned_to:
+            cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (created_by,))
+            creator = cur.fetchone()
+            creator_name = creator['name'] if creator else 'Someone'
+            
+            cur.execute("""
+                INSERT INTO notifications (user_id, title, message, type, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                assigned_to,
+                "New Story Assigned",
+                f"{creator_name} assigned you a story: '{title}'",
+                "task",
+                f"/tasks/detail/{task_id}"
+            ))
+
+        conn.commit()
+        cur.close()
+        return redirect("task_board")
+
+    # GET
+    cur.execute("SELECT id, name FROM projects ORDER BY name")
+    projects = cur.fetchall()
+    cur.execute("SELECT id, email, first_name, last_name FROM members ORDER BY first_name")
+    members = cur.fetchall()
+    cur.execute("SELECT id, name FROM teams ORDER BY name")
+    teams = cur.fetchall()
+    
+    cur.close()
+
+    return render(
+        request,
+        "core/create_story.html",
+        {
+            "projects": projects, 
+            "members": members, 
+            "teams": teams, 
+            "page": "task_create"
+        },
+    )
+
+
+# ==============================
+#  CREATE DEFECT
+# ==============================
+def create_defect_view(request):
+    """
+    Creates a new defect with defect-specific fields
+    """
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        data = request.POST
+        project_id = data.get("project_id") or None
+        subproject_id = data.get("subproject_id") or None
+        title = data.get("title")
+        description = data.get("description")
+        environment = data.get("environment")
+        impact = data.get("impact") or "Medium"
+        due_date = data.get("due_date") or None
+        closure_date = data.get("closure_date") or None
+        priority = data.get("priority") or "Normal"
+        status = data.get("status") or "Open"
+        work_type = "Defect"
+        created_by = request.session.get("user_id")
+
+        # Combine defect-specific fields into description
+        full_description = f"{description}\n\n"
+        if environment:
+            full_description += f"**Environment:**\n{environment}\n\n"
+        full_description += f"**Impact:** {impact}\n\n"
+        
+        # Handle assignment
+        assigned_raw = data.get("assigned_to") or None
+        assigned_to, assigned_type = None, None
+        if assigned_raw:
+            if ":" in assigned_raw:
+                assigned_type, assigned_to = assigned_raw.split(":", 1)
+            else:
+                assigned_type, assigned_to = "member", assigned_raw
+
+        # INSERT
+        cur.execute(
+            """INSERT INTO tasks
+               (project_id, subproject_id, title, description, status, priority,
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+            (
+                project_id,
+                subproject_id,
+                title,
+                full_description,
+                status,
+                priority,
+                assigned_to,
+                assigned_type,
+                created_by,
+                due_date,
+                closure_date,
+                work_type,
+            ),
+        )
+        task_id = cur.lastrowid
+
+        # Log activity
+        cur.execute(
+            "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+            ("task", task_id, "created", created_by),
+        )
+
+        # Create notification if task is assigned to a member
+        if assigned_type == "member" and assigned_to:
+            cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (created_by,))
+            creator = cur.fetchone()
+            creator_name = creator['name'] if creator else 'Someone'
+            
+            cur.execute("""
+                INSERT INTO notifications (user_id, title, message, type, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                assigned_to,
+                "New Defect Assigned",
+                f"{creator_name} assigned you a defect: '{title}'",
+                "task",
+                f"/tasks/detail/{task_id}"
+            ))
+
+        conn.commit()
+        cur.close()
+        return redirect("task_board")
+
+    # GET
+    cur.execute("SELECT id, name FROM projects ORDER BY name")
+    projects = cur.fetchall()
+    cur.execute("SELECT id, email, first_name, last_name FROM members ORDER BY first_name")
+    members = cur.fetchall()
+    cur.execute("SELECT id, name FROM teams ORDER BY name")
+    teams = cur.fetchall()
+    
+    cur.close()
+
+    return render(
+        request,
+        "core/create_defect.html",
+        {
+            "projects": projects, 
+            "members": members, 
+            "teams": teams, 
+            "page": "task_create"
+        },
+    )
+
+
+# ==============================
+#  CREATE SUB TASK
+# ==============================
+def create_subtask_view(request):
+    """
+    Creates a new sub task with parent task selection
+    """
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        data = request.POST
+        parent_task_id = data.get("parent_task_id") or None
+        project_id = data.get("project_id") or None
+        subproject_id = data.get("subproject_id") or None
+        title = data.get("title")
+        description = data.get("description")
+        estimated_hours = data.get("estimated_hours") or None
+        due_date = data.get("due_date") or None
+        closure_date = data.get("closure_date") or None
+        priority = data.get("priority") or "Normal"
+        status = data.get("status") or "Open"
+        work_type = "Sub Task"
+        created_by = request.session.get("user_id")
+
+        # Add parent task info to description
+        full_description = f"{description}\n\n"
+        if parent_task_id:
+            cur.execute("SELECT title FROM tasks WHERE id=%s", (parent_task_id,))
+            parent = cur.fetchone()
+            if parent:
+                full_description += f"**Parent Task:** {parent['title']} (ID: {parent_task_id})\n\n"
+        if estimated_hours:
+            full_description += f"**Estimated Hours:** {estimated_hours}\n\n"
+        
+        # Handle assignment
+        assigned_raw = data.get("assigned_to") or None
+        assigned_to, assigned_type = None, None
+        if assigned_raw:
+            if ":" in assigned_raw:
+                assigned_type, assigned_to = assigned_raw.split(":", 1)
+            else:
+                assigned_type, assigned_to = "member", assigned_raw
+
+        # INSERT
+        cur.execute(
+            """INSERT INTO tasks
+               (project_id, subproject_id, title, description, status, priority,
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+            (
+                project_id,
+                subproject_id,
+                title,
+                full_description,
+                status,
+                priority,
+                assigned_to,
+                assigned_type,
+                created_by,
+                due_date,
+                closure_date,
+                work_type,
+            ),
+        )
+        task_id = cur.lastrowid
+
+        # Log activity
+        cur.execute(
+            "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+            ("task", task_id, "created", created_by),
+        )
+
+        # Create notification if task is assigned to a member
+        if assigned_type == "member" and assigned_to:
+            cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (created_by,))
+            creator = cur.fetchone()
+            creator_name = creator['name'] if creator else 'Someone'
+            
+            cur.execute("""
+                INSERT INTO notifications (user_id, title, message, type, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                assigned_to,
+                "New Sub Task Assigned",
+                f"{creator_name} assigned you a sub task: '{title}'",
+                "task",
+                f"/tasks/detail/{task_id}"
+            ))
+
+        conn.commit()
+        cur.close()
+        return redirect("task_board")
+
+    # GET
+    cur.execute("SELECT id, name FROM projects ORDER BY name")
+    projects = cur.fetchall()
+    cur.execute("SELECT id, email, first_name, last_name FROM members ORDER BY first_name")
+    members = cur.fetchall()
+    cur.execute("SELECT id, name FROM teams ORDER BY name")
+    teams = cur.fetchall()
+    cur.execute("SELECT id, title FROM tasks WHERE work_type != 'Sub Task' ORDER BY created_at DESC")
+    parent_tasks = cur.fetchall()
+    
+    cur.close()
+
+    return render(
+        request,
+        "core/create_subtask.html",
+        {
+            "projects": projects, 
+            "members": members, 
+            "teams": teams, 
+            "parent_tasks": parent_tasks,
+            "page": "task_create"
+        },
+    )
+
+
+# ==============================
+#  CREATE REPORT
+# ==============================
+def create_report_view(request):
+    """
+    Creates a new report task
+    """
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        data = request.POST
+        project_id = data.get("project_id") or None
+        subproject_id = data.get("subproject_id") or None
+        title = data.get("title")
+        report_type = data.get("report_type") or "Status Report"
+        frequency = data.get("frequency") or "One-time"
+        data_sources = data.get("data_sources")
+        recipients = data.get("recipients")
+        description = data.get("description")
+        due_date = data.get("due_date") or None
+        closure_date = data.get("closure_date") or None
+        priority = data.get("priority") or "Normal"
+        status = data.get("status") or "Open"
+        work_type = "Report"
+        created_by = request.session.get("user_id")
+
+        # Build report description
+        full_description = f"**Report Type:** {report_type}\n\n"
+        full_description += f"**Frequency:** {frequency}\n\n"
+        if data_sources:
+            full_description += f"**Data Sources:**\n{data_sources}\n\n"
+        if recipients:
+            full_description += f"**Recipients:**\n{recipients}\n\n"
+        if description:
+            full_description += f"**Additional Details:**\n{description}\n\n"
+        
+        # Handle assignment
+        assigned_raw = data.get("assigned_to") or None
+        assigned_to, assigned_type = None, None
+        if assigned_raw:
+            if ":" in assigned_raw:
+                assigned_type, assigned_to = assigned_raw.split(":", 1)
+            else:
+                assigned_type, assigned_to = "member", assigned_raw
+
+        # INSERT
+        cur.execute(
+            """INSERT INTO tasks
+               (project_id, subproject_id, title, description, status, priority,
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+            (
+                project_id,
+                subproject_id,
+                title,
+                full_description,
+                status,
+                priority,
+                assigned_to,
+                assigned_type,
+                created_by,
+                due_date,
+                closure_date,
+                work_type,
+            ),
+        )
+        task_id = cur.lastrowid
+
+        # Log activity
+        cur.execute(
+            "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+            ("task", task_id, "created", created_by),
+        )
+
+        # Create notification if task is assigned to a member
+        if assigned_type == "member" and assigned_to:
+            cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (created_by,))
+            creator = cur.fetchone()
+            creator_name = creator['name'] if creator else 'Someone'
+            
+            cur.execute("""
+                INSERT INTO notifications (user_id, title, message, type, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                assigned_to,
+                "New Report Task Assigned",
+                f"{creator_name} assigned you a report: '{title}'",
+                "task",
+                f"/tasks/detail/{task_id}"
+            ))
+
+        conn.commit()
+        cur.close()
+        return redirect("task_board")
+
+    # GET
+    cur.execute("SELECT id, name FROM projects ORDER BY name")
+    projects = cur.fetchall()
+    cur.execute("SELECT id, email, first_name, last_name FROM members ORDER BY first_name")
+    members = cur.fetchall()
+    cur.execute("SELECT id, name FROM teams ORDER BY name")
+    teams = cur.fetchall()
+    
+    cur.close()
+
+    return render(
+        request,
+        "core/create_report.html",
+        {
+            "projects": projects, 
+            "members": members, 
+            "teams": teams, 
+            "page": "task_create"
+        },
+    )
+
+
+# ==============================
+#  CREATE CHANGE REQUEST
+# ==============================
+def create_change_request_view(request):
+    """
+    Creates a new change request
+    """
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        data = request.POST
+        project_id = data.get("project_id") or None
+        subproject_id = data.get("subproject_id") or None
+        title = data.get("title")
+        change_type = data.get("change_type") or "Feature"
+        reason = data.get("reason")
+        current_state = data.get("current_state")
+        proposed_change = data.get("proposed_change")
+        impact_analysis = data.get("impact_analysis")
+        rollback_plan = data.get("rollback_plan")
+        due_date = data.get("due_date") or None
+        closure_date = data.get("closure_date") or None
+        priority = data.get("priority") or "Normal"
+        status = data.get("status") or "Pending Approval"
+        work_type = "Change Request"
+        created_by = request.session.get("user_id")
+
+        # Build change request description
+        full_description = f"**Change Type:** {change_type}\n\n"
+        if reason:
+            full_description += f"**Reason for Change:**\n{reason}\n\n"
+        if current_state:
+            full_description += f"**Current State:**\n{current_state}\n\n"
+        if proposed_change:
+            full_description += f"**Proposed Change:**\n{proposed_change}\n\n"
+        if impact_analysis:
+            full_description += f"**Impact Analysis:**\n{impact_analysis}\n\n"
+        if rollback_plan:
+            full_description += f"**Rollback Plan:**\n{rollback_plan}\n\n"
+        
+        # Handle assignment
+        assigned_raw = data.get("assigned_to") or None
+        assigned_to, assigned_type = None, None
+        if assigned_raw:
+            if ":" in assigned_raw:
+                assigned_type, assigned_to = assigned_raw.split(":", 1)
+            else:
+                assigned_type, assigned_to = "member", assigned_raw
+
+        # INSERT
+        cur.execute(
+            """INSERT INTO tasks
+               (project_id, subproject_id, title, description, status, priority,
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+            (
+                project_id,
+                subproject_id,
+                title,
+                full_description,
+                status,
+                priority,
+                assigned_to,
+                assigned_type,
+                created_by,
+                due_date,
+                closure_date,
+                work_type,
+            ),
+        )
+        task_id = cur.lastrowid
+
+        # Log activity
+        cur.execute(
+            "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+            ("task", task_id, "created", created_by),
+        )
+
+        # Create notification if task is assigned to a member
+        if assigned_type == "member" and assigned_to:
+            cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (created_by,))
+            creator = cur.fetchone()
+            creator_name = creator['name'] if creator else 'Someone'
+            
+            cur.execute("""
+                INSERT INTO notifications (user_id, title, message, type, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                assigned_to,
+                "New Change Request Assigned",
+                f"{creator_name} assigned you a change request: '{title}'",
+                "task",
+                f"/tasks/detail/{task_id}"
+            ))
+
+        conn.commit()
+        cur.close()
+        return redirect("task_board")
+
+    # GET
+    cur.execute("SELECT id, name FROM projects ORDER BY name")
+    projects = cur.fetchall()
+    cur.execute("SELECT id, email, first_name, last_name FROM members ORDER BY first_name")
+    members = cur.fetchall()
+    cur.execute("SELECT id, name FROM teams ORDER BY name")
+    teams = cur.fetchall()
+    
+    cur.close()
+
+    return render(
+        request,
+        "core/create_change_request.html",
+        {
+            "projects": projects, 
+            "members": members, 
+            "teams": teams, 
+            "page": "task_create"
+        },
+    )

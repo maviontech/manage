@@ -440,6 +440,7 @@
   margin-bottom: 0.875rem;
   cursor: grab;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .task-card:active {
@@ -452,6 +453,61 @@
   box-shadow: 0 12px 32px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
   border-color: #3b82f6;
   outline: none;
+}
+
+/* Work Type Badge */
+.work-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.work-type-badge i {
+  font-size: 0.85rem;
+}
+
+/* Work Type Colors */
+.work-type-task {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: #ffffff;
+}
+
+.work-type-bug {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+}
+
+.work-type-story {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+}
+
+.work-type-defect {
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  color: #ffffff;
+}
+
+.work-type-subtask {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #ffffff;
+}
+
+.work-type-report {
+  background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+  color: #ffffff;
+}
+
+.work-type-change-request {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #ffffff;
 }
 
 .task-title {
@@ -720,8 +776,16 @@ function renderCard(t){
   else if (t.assigned_to && typeof t.assigned_to === 'string' && t.assigned_to.startsWith("team:"))
     displayAssignee = "Team " + t.assigned_to.split(":")[1];
 
+  // Get work type info
+  const workType = t.work_type || 'Task';
+  const workTypeInfo = getWorkTypeInfo(workType);
+
   card.innerHTML = `
     <div>
+      <div class="work-type-badge work-type-${workTypeInfo.class}">
+        <i class="${workTypeInfo.icon}"></i>
+        ${escapeHtml(workType)}
+      </div>
       <div class="task-title">${escapeHtml(t.title || 'Untitled')}</div>
       <div class="task-meta">
         ${escapeHtml(t.priority || 'Normal')}${t.due_date ? ' • Due ' + escapeHtml(t.due_date) : ''}
@@ -739,6 +803,21 @@ function renderCard(t){
   });
 
   col.appendChild(card);
+}
+
+/* Get work type display info */
+function getWorkTypeInfo(workType) {
+  const typeMap = {
+    'Task': { icon: 'fa-solid fa-check-circle', class: 'task' },
+    'Bug': { icon: 'fa-solid fa-bug', class: 'bug' },
+    'Story': { icon: 'fa-solid fa-book', class: 'story' },
+    'Defect': { icon: 'fa-solid fa-exclamation-triangle', class: 'defect' },
+    'Sub Task': { icon: 'fa-solid fa-list-check', class: 'subtask' },
+    'Report': { icon: 'fa-solid fa-chart-bar', class: 'report' },
+    'Change Request': { icon: 'fa-solid fa-code-branch', class: 'change-request' }
+  };
+  
+  return typeMap[workType] || { icon: 'fa-solid fa-check-circle', class: 'task' };
 }
 
 /* Drag & drop */

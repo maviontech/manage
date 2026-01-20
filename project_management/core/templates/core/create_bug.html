@@ -1,0 +1,507 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+/* ========== MODERN CREATE BUG UI ========== */
+.create-task-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  min-height: 100vh;
+}
+
+/* Page Header */
+.page-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 2rem 2.5rem;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 2px solid rgba(239, 68, 68, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+}
+
+.header-content .header-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-content .header-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.header-actions .btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.header-actions .btn-back:hover {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #ef4444;
+  color: #b91c1c;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+/* Form Card */
+.form-main-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 2px solid rgba(239, 68, 68, 0.08);
+  padding: 2.5rem 3rem;
+}
+
+/* Form Layout */
+.form-section {
+  margin-bottom: 2rem;
+}
+
+.form-section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.form-grid-modern {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Form Fields */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-field-full {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  font-weight: 700;
+  color: #334155;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.2px;
+}
+
+.field-label i {
+  color: #ef4444;
+  font-size: 0.85rem;
+}
+
+.field-input,
+.field-select {
+  padding: 0.85rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  color: #1e293b;
+}
+
+.field-input:focus,
+.field-select:focus {
+  outline: none;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+  background: #ffffff;
+}
+
+.field-textarea {
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  color: #1e293b;
+  min-height: 120px;
+}
+
+.field-textarea:focus {
+  outline: none;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
+
+.field-hint {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+/* Description Section */
+.description-section {
+  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Action Buttons */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #f1f5f9;
+}
+
+.btn-modern {
+  padding: 0.85rem 2rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.2px;
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.btn-modern.primary {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-modern.primary:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(239, 68, 68, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+}
+
+.btn-modern.secondary {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #475569;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.btn-modern.secondary:hover {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #ef4444;
+  color: #b91c1c;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+  .create-task-page {
+    padding: 1.5rem 1rem;
+  }
+
+  .page-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.5rem;
+  }
+
+  .header-content .header-title {
+    font-size: 1.5rem;
+  }
+
+  .form-main-card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .form-grid-modern {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-modern {
+    width: 100%;
+  }
+}
+</style>
+
+<div class="create-task-page">
+  <!-- Page Header -->
+  <div class="page-header-card">
+    <div class="header-content">
+      <h3 class="header-title"><i class="fa-solid fa-bug"></i> New Bug</h3>
+      <p class="header-subtitle">Report a new bug with detailed reproduction steps and expected behavior.</p>
+    </div>
+    <div class="header-actions">
+      <a href="{% url 'task_board' %}" class="btn-back">
+        <i class="fa-solid fa-arrow-left"></i> Back to Board
+      </a>
+    </div>
+  </div>
+
+  <!-- Form Card -->
+  <form method="post" class="form-main-card">
+    {% csrf_token %}
+    
+    <!-- Basic Information -->
+    <div class="form-section">
+      <h4 class="form-section-title">
+        <i class="fa-solid fa-circle-info"></i> Bug Information
+      </h4>
+      
+      <div class="form-grid-modern">
+        <!-- Bug Title -->
+        <div class="form-field form-field-full">
+          <label class="field-label">
+            <i class="fa-solid fa-heading"></i> Bug Title *
+          </label>
+          <input 
+            type="text" 
+            name="title" 
+            class="field-input" 
+            placeholder="e.g., Login button not responding on mobile"
+            required
+          >
+          <span class="field-hint">Short, descriptive title for the bug</span>
+        </div>
+
+        <!-- Project -->
+        <div class="form-field">
+          <label class="field-label">Project</label>
+          <select name="project_id" id="projectSelect" class="field-select">
+            <option value="">-- Choose Project --</option>
+            {% for p in projects %}
+              <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Subproject -->
+        <div class="form-field">
+          <label class="field-label">Subproject (WBS)</label>
+          <select name="subproject_id" id="subprojectSelect" class="field-select">
+            <option value="">-- Optional Subproject --</option>
+          </select>
+        </div>
+
+        <!-- Severity -->
+        <div class="form-field">
+          <label class="field-label">Severity</label>
+          <select name="severity" class="field-select">
+            <option value="Low">Low</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+        </div>
+
+        <!-- Priority -->
+        <div class="form-field">
+          <label class="field-label">Priority</label>
+          <select name="priority" class="field-select">
+            <option value="Low">Low</option>
+            <option value="Normal" selected>Normal</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+        </div>
+
+        <!-- Status -->
+        <div class="form-field">
+          <label class="field-label">Status</label>
+          <select name="status" class="field-select">
+            <option value="Open" selected>Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Review">Review</option>
+            <option value="Resolved">Resolved</option>
+            <option value="Closed">Closed</option>
+          </select>
+        </div>
+
+        <!-- Due Date -->
+        <div class="form-field">
+          <label class="field-label">Due Date</label>
+          <input type="date" name="due_date" class="field-input">
+        </div>
+
+        <!-- Assign To -->
+        <div class="form-field form-field-full">
+          <label class="field-label">Assign To</label>
+          <select name="assigned_to" id="assignSelect" class="field-select">
+            <option value="">Unassigned</option>
+            <optgroup label="Members">
+              {% for m in members %}
+                <option value="member:{{ m.id }}">{{ m.first_name }} {{ m.last_name }} — {{ m.email }}</option>
+              {% endfor %}
+            </optgroup>
+            <optgroup label="Teams">
+              {% for t in teams %}
+                <option value="team:{{ t.id }}">Team: {{ t.name }}</option>
+              {% endfor %}
+            </optgroup>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bug-Specific Details -->
+    <div class="form-section">
+      <h4 class="form-section-title">
+        <i class="fa-solid fa-clipboard-list"></i> Bug Details
+      </h4>
+
+      <!-- Description -->
+      <div class="description-section">
+        <label class="field-label">Description</label>
+        <textarea 
+          name="description" 
+          rows="4" 
+          class="field-textarea" 
+          placeholder="Provide a clear and concise description of the bug..."
+        ></textarea>
+        <span class="field-hint">Brief overview of what the bug is</span>
+      </div>
+
+      <!-- Steps to Reproduce -->
+      <div class="description-section">
+        <label class="field-label">Steps to Reproduce</label>
+        <textarea 
+          name="steps_to_reproduce" 
+          rows="6" 
+          class="field-textarea" 
+          placeholder="1. Go to login page&#10;2. Enter valid credentials&#10;3. Click login button&#10;4. Notice button doesn't respond..."
+        ></textarea>
+        <span class="field-hint">Detailed steps to reproduce the bug</span>
+      </div>
+
+      <!-- Expected Behavior -->
+      <div class="description-section">
+        <label class="field-label">Expected Behavior</label>
+        <textarea 
+          name="expected_behavior" 
+          rows="3" 
+          class="field-textarea" 
+          placeholder="User should be logged in and redirected to dashboard..."
+        ></textarea>
+        <span class="field-hint">What should happen instead</span>
+      </div>
+
+      <!-- Actual Behavior -->
+      <div class="description-section">
+        <label class="field-label">Actual Behavior</label>
+        <textarea 
+          name="actual_behavior" 
+          rows="3" 
+          class="field-textarea" 
+          placeholder="Button remains unresponsive, no feedback, user stays on login page..."
+        ></textarea>
+        <span class="field-hint">What actually happens</span>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="form-actions">
+      <a href="{% url 'task_board' %}" class="btn-modern secondary">Cancel</a>
+      <button id="createBtn" type="submit" class="btn-modern primary">
+        <i class="fa-solid fa-bug"></i> Create Bug
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+// Auto-select project if coming from create_task page
+window.addEventListener('DOMContentLoaded', function() {
+  const projectSelect = document.getElementById("projectSelect");
+  const savedProjectId = sessionStorage.getItem('selectedProjectId');
+  
+  if (savedProjectId && projectSelect) {
+    projectSelect.value = savedProjectId;
+    projectSelect.dispatchEvent(new Event('change'));
+    sessionStorage.removeItem('selectedProjectId');
+  }
+});
+
+// Load subprojects when project is selected
+document.getElementById("projectSelect").addEventListener("change", function() {
+  const projectId = this.value;
+  const subprojectSelect = document.getElementById("subprojectSelect");
+  
+  subprojectSelect.innerHTML = '<option value="">-- Optional Subproject --</option>';
+  
+  if (!projectId) return;
+  
+  fetch(`/projects/${projectId}/subprojects/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.subprojects && data.subprojects.length > 0) {
+        data.subprojects.forEach(sub => {
+          const option = document.createElement("option");
+          option.value = sub.id;
+          option.textContent = sub.name;
+          subprojectSelect.appendChild(option);
+        });
+      }
+    })
+    .catch(error => console.error("Error loading subprojects:", error));
+});
+</script>
+
+{% endblock %}
