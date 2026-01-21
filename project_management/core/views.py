@@ -11,6 +11,7 @@ from .db_helpers import get_tenant_conn, get_visible_task_user_ids
 from math import ceil
 from django.shortcuts import render, redirect
 from django.utils import timezone
+from datetime import date, datetime
 
 
 
@@ -18,6 +19,51 @@ from django.utils import timezone
 from .views_export import export_projects_excel
 
 # Adjust these imports to match your project utilities (names used earlier in this project)
+
+
+def calculate_date_based_progress(start_date, end_date, current_date=None):
+    """
+    Calculate project progress percentage based on time elapsed between start and end dates.
+    
+    Args:
+        start_date: Project start date
+        end_date: Project tentative/due date
+        current_date: Current date (defaults to today)
+    
+    Returns:
+        Float percentage (0-100) of project timeline completion
+    """
+    if not start_date or not end_date:
+        return 0.0
+    
+    # Convert to date objects if needed
+    if isinstance(start_date, str):
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    if isinstance(end_date, str):
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    if current_date is None:
+        current_date = date.today()
+    elif isinstance(current_date, str):
+        current_date = datetime.strptime(current_date, '%Y-%m-%d').date()
+    
+    # If project hasn't started yet
+    if current_date < start_date:
+        return 0.0
+    
+    # If project is past due date
+    if current_date >= end_date:
+        return 100.0
+    
+    # Calculate progress based on days elapsed
+    total_days = (end_date - start_date).days
+    if total_days <= 0:
+        return 100.0  # If start and end are same day or invalid
+    
+    days_elapsed = (current_date - start_date).days
+    progress = (days_elapsed / total_days) * 100
+    
+    return round(progress, 1)
 
 
 def identify_view(request):
@@ -1199,10 +1245,19 @@ def projects_report_view(request):
         rows = cur.fetchall()
         
         for r in rows:
-            # Calculate progress percentage
+            # Calculate progress percentage based on dates (time elapsed)
             total = r['total_tasks'] or 0
             completed = r['completed_tasks'] or 0
-            progress = round((completed / total * 100) if total > 0 else 0, 1)
+            task_progress = round((completed / total * 100) if total > 0 else 0, 1)
+            
+            # Calculate date-based progress
+            date_progress = calculate_date_based_progress(
+                r['start_date'], 
+                r['tentative_end_date']
+            )
+            
+            # Use date-based progress if dates are available, otherwise use task-based progress
+            progress = date_progress if r['start_date'] and r['tentative_end_date'] else task_progress
             
             # Calculate timeline status
             timeline_status = 'On Track'
