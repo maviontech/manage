@@ -18,10 +18,16 @@
         <p class="page-subtitle">View, track and manage your assigned work items</p>
       </div>
       <div class="header-actions">
-        <a href="" onclick="window.location.reload(); return false;" class="btn-modern btn-outline" title="Refresh">
-          <i class="fa-solid fa-rotate-right"></i>
-          Refresh
-        </a>
+        <select id="workTypeFilter" class="filter-select">
+          <option value="">All work types</option>
+          <option value="Task">Task</option>
+          <option value="Bug">Bug</option>
+          <option value="Story">Story</option>
+          <option value="Defect">Defect</option>
+          <option value="Sub Task">Sub Task</option>
+          <option value="Report">Report</option>
+          <option value="Change Request">Change Request</option>
+        </select>
         <a href="{% url 'create_task' %}" class="btn-modern btn-primary">
           <i class="fa-solid fa-plus"></i>
           New Task
@@ -69,7 +75,7 @@
               </svg>
               Priority
             </th>
-            <th style="width: 150px;">
+            <th style="width: 100px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
               </svg>
@@ -96,7 +102,7 @@
         </thead>
         <tbody>
           {% for t in tasks %}
-          <tr class="task-row" data-href="{% url 'task_detail' t.id %}">
+          <tr class="task-row" data-href="{% url 'task_detail' t.id %}" data-work-type="{{ t.work_type|default:'Task' }}">
             <td>
               <span class="task-id">#{{ t.id }}</span>
             </td>
@@ -109,6 +115,9 @@
                   <line x1="16" y1="17" x2="8" y2="17"></line>
                   <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
+                <span class="work-type-mini-badge work-type-{{ t.work_type|default:'Task'|lower|cut:' ' }}">
+                  {{ t.work_type|default:'Task' }}
+                </span>
                 {{ t.title }}
               </div>
             </td>
@@ -237,6 +246,25 @@
   align-items: center;
 }
 
+.filter-select {
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 180px;
+}
+
+.filter-select:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+}
+
 .btn-modern {
   padding: 12px 24px;
   border-radius: 12px;
@@ -294,7 +322,7 @@
 }
 
 .tasks-table th {
-  padding: 18px 20px;
+  padding:  15px;
   text-align: left;
   color: white;
   font-weight: 600;
@@ -339,6 +367,54 @@
   font-weight: 600;
   color: #1e293b;
   font-size: 15px;
+}
+
+/* Work Type Mini Badges */
+.work-type-mini-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.work-type-task {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: #ffffff;
+}
+
+.work-type-bug {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+}
+
+.work-type-story {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+}
+
+.work-type-defect {
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  color: #ffffff;
+}
+
+.work-type-subtask {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #ffffff;
+}
+
+.work-type-report {
+  background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+  color: #ffffff;
+}
+
+.work-type-changerequest {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #ffffff;
 }
 
 /* === Priority Badges === */
@@ -541,7 +617,29 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
-  // Prevent action button clicks from triggering row navigation is handled via inline onclick on action anchors
+  
+  // Work type filter functionality
+  const workTypeFilter = document.getElementById('workTypeFilter');
+  if (workTypeFilter) {
+    workTypeFilter.addEventListener('change', function() {
+      const selectedType = this.value;
+      const rows = document.querySelectorAll('.task-row');
+      
+      rows.forEach(function(row) {
+        const taskId = row.getAttribute('data-href');
+        if (!taskId) return;
+        
+        // Get work type from data attribute or row
+        const workType = row.dataset.workType || '';
+        
+        if (selectedType === '' || workType === selectedType) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  }
 });
 </script>
 {% endblock %}

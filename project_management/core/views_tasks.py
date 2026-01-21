@@ -183,7 +183,7 @@ def my_tasks_view(request):
     if visible_user_ids:
         placeholders = ','.join(['%s'] * len(visible_user_ids))
         cur.execute(
-            f"""SELECT id, title, status, priority, due_date, closure_date
+            f"""SELECT id, title, status, priority, due_date, closure_date, COALESCE(work_type, 'Task') AS work_type
                FROM tasks
                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
                ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),

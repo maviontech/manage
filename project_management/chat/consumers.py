@@ -3,7 +3,17 @@ from urllib.parse import parse_qs
 from asgiref.sync import sync_to_async
 from core.db_helpers import exec_sql, get_tenant_conn
 import pymysql
-from django.db import connection as default_connection
+import os
+
+
+# Master DB connection config
+MASTER_DB_CONFIG = {
+    'db_host': os.environ.get('MYSQL_ADMIN_HOST', '127.0.0.1'),
+    'db_port': int(os.environ.get('MYSQL_ADMIN_PORT') or 3306),
+    'db_user': os.environ.get('MYSQL_ADMIN_USER', 'root'),
+    'db_password': os.environ.get('MYSQL_ADMIN_PWD', 'root'),
+    'db_name': os.environ.get('MASTER_DB_NAME', 'master_db')
+}
 
 
 def normalize(val):
@@ -242,6 +252,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             import traceback
             traceback.print_exc()
 
+    async def typing_update(self, event):
+        """Handle typing indicator updates"""
+        try:
+            await self.send_json(event)
+        except Exception as e:
+            print(f"❌ Error in ChatConsumer.typing_update: {e}")
+
     async def chat_message_read(self, event):
         """Handle read receipt notifications and broadcast to clients"""
         print(f"📖 Read receipt handler called: {event}")
@@ -259,26 +276,39 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json(event)
 
     def save_message(self, tenant, sender, receiver, text):
-        # Get tenant credentials from clients_master
-        with default_connection.cursor() as cur:
-            cur.execute("""
-                SELECT db_name, db_host, db_user, db_password, IFNULL(db_port, 3306) as db_port
-                FROM clients_master
-                WHERE id = %s OR client_name = %s OR domain_postfix = %s
-                LIMIT 1
-            """, [tenant, tenant, tenant])
-            row = cur.fetchone()
+        # Get tenant credentials from clients_master using direct pymysql connection
+        master_conn = pymysql.connect(
+            host=MASTER_DB_CONFIG['db_host'],
+            port=MASTER_DB_CONFIG['db_port'],
+            user=MASTER_DB_CONFIG['db_user'],
+            password=MASTER_DB_CONFIG['db_password'],
+            database=MASTER_DB_CONFIG['db_name'],
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True
+        )
+        
+        try:
+            with master_conn.cursor() as cur:
+                cur.execute("""
+                    SELECT db_name, db_host, db_user, db_password
+                    FROM clients_master
+                    WHERE id = %s OR client_name = %s OR domain_postfix = %s
+                    LIMIT 1
+                """, [tenant, tenant, tenant])
+                row = cur.fetchone()
+        finally:
+            master_conn.close()
             
         if not row:
             raise Exception(f"Tenant {tenant} not found in clients_master")
         
         # Connect to tenant MySQL database
         conn = pymysql.connect(
-            host=row[1],
-            port=int(row[4]),
-            user=row[2],
-            password=row[3],
-            database=row[0],
+            host=row['db_host'],
+            port=3306,  # Default MySQL port
+            user=row['db_user'],
+            password=row['db_password'],
+            database=row['db_name'],
             cursorclass=pymysql.cursors.DictCursor,
             autocommit=True
         )
@@ -346,26 +376,39 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     
     def save_group_message(self, tenant, group_id, sender, text):
         """Save a group message to the database"""
-        # Get tenant credentials from clients_master
-        with default_connection.cursor() as cur:
-            cur.execute("""
-                SELECT db_name, db_host, db_user, db_password, IFNULL(db_port, 3306) as db_port
-                FROM clients_master
-                WHERE id = %s OR client_name = %s OR domain_postfix = %s
-                LIMIT 1
-            """, [tenant, tenant, tenant])
-            row = cur.fetchone()
+        # Get tenant credentials from clients_master using direct pymysql connection
+        master_conn = pymysql.connect(
+            host=MASTER_DB_CONFIG['db_host'],
+            port=MASTER_DB_CONFIG['db_port'],
+            user=MASTER_DB_CONFIG['db_user'],
+            password=MASTER_DB_CONFIG['db_password'],
+            database=MASTER_DB_CONFIG['db_name'],
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True
+        )
+        
+        try:
+            with master_conn.cursor() as cur:
+                cur.execute("""
+                    SELECT db_name, db_host, db_user, db_password
+                    FROM clients_master
+                    WHERE id = %s OR client_name = %s OR domain_postfix = %s
+                    LIMIT 1
+                """, [tenant, tenant, tenant])
+                row = cur.fetchone()
+        finally:
+            master_conn.close()
             
         if not row:
             raise Exception(f"Tenant {tenant} not found in clients_master")
         
         # Connect to tenant MySQL database
         conn = pymysql.connect(
-            host=row[1],
-            port=int(row[4]),
-            user=row[2],
-            password=row[3],
-            database=row[0],
+            host=row['db_host'],
+            port=3306,  # Default MySQL port
+            user=row['db_user'],
+            password=row['db_password'],
+            database=row['db_name'],
             cursorclass=pymysql.cursors.DictCursor,
             autocommit=True
         )
@@ -561,6 +604,17 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         except Exception as e:
             print(f"❌ Error sending system_notification: {e}")
 
+    async def typing_update(self, event):
+        """Handle typing indicator updates"""
+        try:
+            # Remove 'type' field and ensure 'event' field is present
+            client_event = {k: v for k, v in event.items() if k != 'type'}
+            if 'event' not in client_event:
+                client_event['event'] = 'typing'
+            await self.send_json(client_event)
+        except Exception as e:
+            print(f"❌ Error sending typing_update: {e}")
+
 
 class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
     """Broadcast typing indicators to the tenant presence group.
@@ -635,3 +689,30 @@ class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
     async def typing_update(self, event):
         # Forward typing event to client
         await self.send_json(event)
+
+    async def presence_update(self, event):
+        """Handle presence updates (online/offline status)"""
+        try:
+            # Remove 'type' field and add 'event' field for client
+            client_event = {k: v for k, v in event.items() if k != 'type'}
+            client_event['event'] = 'presence_update'
+            await self.send_json(client_event)
+        except Exception as e:
+            print(f"❌ Error in TypingIndicatorConsumer.presence_update: {e}")
+
+    async def new_message(self, event):
+        """Handle new chat messages"""
+        try:
+            # Remove 'type' field and add 'event' field for client
+            client_event = {k: v for k, v in event.items() if k != 'type'}
+            client_event['event'] = 'new_message'
+            await self.send_json(client_event)
+        except Exception as e:
+            print(f"❌ Error in TypingIndicatorConsumer.new_message: {e}")
+
+    async def chat_message(self, event):
+        """Handle group chat messages"""
+        try:
+            await self.send_json(event)
+        except Exception as e:
+            print(f"❌ Error in TypingIndicatorConsumer.chat_message: {e}")

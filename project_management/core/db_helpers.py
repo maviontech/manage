@@ -118,7 +118,7 @@ def _get_tenant_row_from_master(tenant_key):
 
     # Try several matching columns: domain_postfix, db_name, client_name
     q = """
-        SELECT id, client_name, domain_postfix, db_name, db_host, db_user, db_password, IFNULL(db_port, 3306) as db_port
+        SELECT id, client_name, domain_postfix, db_name, db_host, db_user, db_password
         FROM clients_master
         WHERE domain_postfix = %s OR db_name = %s OR client_name = %s
         LIMIT 1
@@ -129,7 +129,10 @@ def _get_tenant_row_from_master(tenant_key):
         if not row:
             return None
         cols = [c[0] for c in cur.description]
-        return dict(zip(cols, row))
+        result = dict(zip(cols, row))
+        # Add default port if not present
+        result['db_port'] = 3306
+        return result
 
 
 def resolve_tenant_key_from_request(request: HttpRequest):

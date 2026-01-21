@@ -69,6 +69,20 @@ TENANT_DDL = [
         UNIQUE KEY uk_member_email (email)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
+    """
+    CREATE TABLE IF NOT EXISTS member_social_links (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      member_id INT NOT NULL,
+      github_url VARCHAR(255),
+      twitter_url VARCHAR(255),
+      facebook_url VARCHAR(255),
+      linkedin_url VARCHAR(255),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_member_social (member_id),
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """,
     # """
     # CREATE TABLE IF NOT EXISTS members (
     #   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -101,12 +115,39 @@ TENANT_DDL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
+    CREATE TABLE IF NOT EXISTS project_statuses (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      project_id INT NOT NULL,
+      status_name VARCHAR(100) NOT NULL,
+      status_order INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      INDEX idx_project_status (project_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS project_work_types (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      project_id INT NOT NULL,
+      work_type VARCHAR(50) NOT NULL,
+      is_enabled TINYINT(1) DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      INDEX idx_project_worktype (project_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """,
+    """
     CREATE TABLE IF NOT EXISTS subprojects (
       id INT AUTO_INCREMENT PRIMARY KEY,
       project_id INT,
       name VARCHAR(255) NOT NULL,
       description TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      start_date DATE,
+      end_date DATE,
+      status VARCHAR(50) DEFAULT 'Active',
+      created_by INT,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
@@ -122,6 +163,7 @@ TENANT_DDL = [
       assigned_to INT,
       created_by INT,
       due_date DATE,
+      work_type VARCHAR(50) DEFAULT 'Task',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       closure_date DATE

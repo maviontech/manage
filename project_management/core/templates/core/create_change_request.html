@@ -504,7 +504,7 @@ document.getElementById("projectSelect").addEventListener("change", function() {
   
   if (!projectId) return;
   
-  fetch(`/projects/${projectId}/subprojects/`)
+  fetch(`/tasks/api/subprojects/?project_id=${projectId}`)
     .then(response => response.json())
     .then(data => {
       if (data.subprojects && data.subprojects.length > 0) {
