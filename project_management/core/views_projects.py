@@ -1,4 +1,5 @@
 # core/views_projects.py
+import datetime
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
@@ -210,7 +211,8 @@ def project_edit(request, project_id):
                             start_date=%s,
                             tentative_end_date=%s,
                             status=%s,
-                            employee_id=%s
+                            employee_id=%s,
+                            end_date=%s
                         WHERE id=%s
                     """, (
                         data['name'],
@@ -219,6 +221,7 @@ def project_edit(request, project_id):
                         data['tentative_end_date'] or None,
                         'Completed',
                         employee_id,
+                        datetime.date.today(),
                         project_id
                     ))
                 else:

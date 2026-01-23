@@ -989,11 +989,17 @@ def edit_task_view(request, task_id):
         priority = data.get("priority") or "Normal"
         status = data.get("status") or "Open"
 
+        #Automatic set closure date when status is 'Closed'
+        if status == "Closed":
+            closure_date=datetime.date.today()
+        else:
+            closure_date=None
+
         cur.execute(
             """UPDATE tasks
-               SET title=%s, description=%s, status=%s, priority=%s, due_date=%s, updated_at=NOW()
+               SET title=%s, description=%s, status=%s, priority=%s, due_date=%s, closure_date=%s, updated_at=NOW()
                WHERE id=%s""",
-            (title, description, status, priority, due_date, task_id),
+            (title, description, status, priority, due_date, closure_date, task_id),
         )
         conn.commit()
         # Re-fetch updated task
