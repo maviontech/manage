@@ -91,7 +91,13 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 2px solid rgba(14, 165, 233, 0.08);
   padding: 2.5rem 3rem;
+  max-width: 100%;
+  width: fit-content;
+  min-width: 100%;
+  margin: 0 auto;
+  transition: width 0.3s ease;
 }
+
 
 /* Form Layout */
 .form-section {
@@ -169,11 +175,14 @@
   border-radius: 10px;
   font-size: 0.95rem;
   font-family: inherit;
-  resize: vertical;
+  resize: both;
   transition: all 0.3s ease;
   background: #ffffff;
   color: #1e293b;
   min-height: 120px;
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
 }
 
 .field-textarea:focus {
@@ -194,7 +203,17 @@
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+    width: 100%;
+  max-width: 100%;
 }
+
+.description-section img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+}
+
 
 /* Action Buttons */
 .form-actions {

@@ -339,7 +339,21 @@
                         {% for activity in activities %}
                         <div class="activity-item">
                             <div class="activity-icon activity-{{ activity.action_type|lower }}">
-                                <i class="fas fa-circle"></i>
+                                {% if activity.action_type == 'created' %}
+                                    <i class="fas fa-plus"></i>
+                                {% elif activity.action_type == 'assigned' %}
+                                    <i class="fas fa-user"></i>
+                                {% elif activity.action_type == 'status_changed' %}
+                                    <i class="fas fa-exchange-alt"></i>
+                                {% elif activity.action_type == 'priority_changed' %}
+                                    <i class="fas fa-exclamation"></i>
+                                {% elif activity.action_type == 'commented' %}
+                                    <i class="fas fa-comment"></i>
+                                {% elif activity.action_type == 'closed' %}
+                                    <i class="fas fa-check"></i>
+                                {% else %}
+                                    <i class="fas fa-edit"></i>
+                                {% endif %}
                             </div>
                             <div class="activity-content">
                                 <div class="activity-header">

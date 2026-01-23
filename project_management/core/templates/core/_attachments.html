@@ -3,36 +3,109 @@
   .attachments-card {
     margin: 1.25rem 0 1.5rem 0;
     border-radius: 12px;
-    border: 2px dashed rgba(226,232,240,0.8);
-    padding: 1.5rem;
-    background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,250,250,0.6));
-    text-align: center;
+    border: 2px solid #e2e8f0;
+    padding: 0;
+    background: #ffffff;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   .attachments-dropzone {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 18px;
-    border-radius: 10px;
+    gap: 16px;
+    padding: 32px 24px;
+    border-radius: 0;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 2px dashed #cbd5e1;
     cursor: pointer;
-    transition: background .15s ease, border-color .15s ease, transform .08s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin: 0;
   }
-  .attachments-dropzone.dragover { background: rgba(59,130,246,0.04); border-color: rgba(59,130,246,0.25); }
-  .attachments-hint { color: #64748b; font-size: 0.9rem; }
-  .attachments-list { margin-top: 12px; text-align: left; }
-  .attachments-list li { padding: 8px 10px; border-radius:8px; background: #fff; border:1px solid #eef2f7; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
-  .attachments-list .remove { color:#ef4444; cursor:pointer; margin-left:12px; }
-  .attachments-meta { font-size:0.85rem; color:#94a3b8; margin-top:8px; }
+  .attachments-dropzone:hover {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-color: #60a5fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  }
+  .attachments-dropzone.dragover { 
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-color: #3b82f6;
+    border-style: solid;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  }
+  .attachments-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+  }
+  .attachments-hint { 
+    color: #64748b; 
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .attachments-title {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 1rem;
+    margin-bottom: 4px;
+  }
+  .attachments-list { 
+    margin: 0;
+    padding: 16px;
+    text-align: left;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+  }
+  .attachments-list li { 
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+  }
+  .attachments-list li:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .attachments-list .remove { 
+    color: #ef4444;
+    cursor: pointer;
+    margin-left: 12px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+  .attachments-list .remove:hover {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  .attachments-meta { 
+    font-size: 0.8125rem;
+    color: #94a3b8;
+    padding: 12px 16px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    margin: 0;
+  }
 </style>
 
 <div class="attachments-card">
   <label class="attachments-dropzone" for="attachmentsInput">
-    <div>
-      <i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;color:#2563eb"></i>
+    <div class="attachments-icon-wrapper">
+      <i class="fa-solid fa-cloud-arrow-up" style="font-size:28px;color:#ffffff"></i>
     </div>
     <div style="text-align:left">
-      <div style="font-weight:700;color:#0f172a">Click to upload or drag and drop</div>
+      <div class="attachments-title">Click to upload or drag and drop</div>
       <div class="attachments-hint">Screenshots, logs, or documents (Max 10MB per file, up to 5 files)</div>
     </div>
   </label>

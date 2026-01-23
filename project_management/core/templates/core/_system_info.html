@@ -3,22 +3,90 @@
   .system-info-card {
     margin: 1.25rem 0 1.5rem 0;
     border-radius: 12px;
-    padding: 1rem;
-    background: linear-gradient(180deg, #ffffff, #fafafa);
-    border: 1px solid #eef2f7;
+    padding: 0;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
-  .system-info-row { display:flex; gap:12px; align-items:center; margin:6px 0; }
-  .system-info-label { color:#475569; font-weight:700; width:160px; }
-  .system-info-value { color:#334155; }
-  .system-info-footer { font-size:0.85rem; color:#94a3b8; margin-top:8px; }
+  .system-info-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .system-info-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  .system-info-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  }
+  .system-info-body {
+    padding: 20px;
+    background: #ffffff;
+  }
+  .system-info-row { 
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 16px;
+    margin: 0 0 8px 0;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+  }
+  .system-info-row:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+  .system-info-label { 
+    color: #475569;
+    font-weight: 600;
+    width: 160px;
+    font-size: 0.875rem;
+  }
+  .system-info-value { 
+    color: #0f172a;
+    font-weight: 500;
+    flex: 1;
+    font-size: 0.875rem;
+  }
+  .system-info-footer { 
+    font-size: 0.8125rem;
+    color: #94a3b8;
+    padding: 12px 20px;
+    background: #fafafa;
+    border-top: 1px solid #e2e8f0;
+    margin: 0;
+  }
 </style>
 
 <div class="system-info-card" id="systemInfoCard">
-  <h4 style="margin:0 0 8px 0; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-desktop" style="color:#2563eb"></i> System Information</h4>
-  <div class="system-info-row"><div class="system-info-label">Browser:</div><div class="system-info-value" id="si_browser">—</div></div>
-  <div class="system-info-row"><div class="system-info-label">Screen Resolution:</div><div class="system-info-value" id="si_resolution">—</div></div>
-  <div class="system-info-row"><div class="system-info-label">Operating System:</div><div class="system-info-value" id="si_os">—</div></div>
-  <div class="system-info-row"><div class="system-info-label">Timestamp:</div><div class="system-info-value" id="si_timestamp">—</div></div>
+  <div class="system-info-header">
+    <div class="system-info-icon">
+      <i class="fa-solid fa-desktop" style="color:#ffffff; font-size:18px;"></i>
+    </div>
+    <h4>System Information</h4>
+  </div>
+  <div class="system-info-body">
+    <div class="system-info-row"><div class="system-info-label">Browser:</div><div class="system-info-value" id="si_browser">—</div></div>
+    <div class="system-info-row"><div class="system-info-label">Screen Resolution:</div><div class="system-info-value" id="si_resolution">—</div></div>
+    <div class="system-info-row"><div class="system-info-label">Operating System:</div><div class="system-info-value" id="si_os">—</div></div>
+    <div class="system-info-row"><div class="system-info-label">Timestamp:</div><div class="system-info-value" id="si_timestamp">—</div></div>
+  </div>
   <div class="system-info-footer">System information is collected automatically to help diagnose issues.</div>
 
   {# Hidden inputs to submit with the form #}
@@ -48,7 +116,8 @@
       if (ua.indexOf('Firefox') !== -1) return 'Firefox';
       if (ua.indexOf('Opera') !== -1 || ua.indexOf('OPR') !== -1) return 'Opera';
       if (ua.indexOf('Trident') !== -1) return 'Internet Explorer';
-      if (ua.indexOf('Edge') !== -1) return 'Edge';
+      // Check for Edge (both old and new Chromium-based) BEFORE Chrome
+      if (ua.indexOf('Edg/') !== -1 || ua.indexOf('Edge/') !== -1) return 'Edge';
       if (ua.indexOf('Chrome') !== -1) return 'Chrome';
       if (ua.indexOf('Safari') !== -1) return 'Safari';
       return navigator.appName || 'Unknown';
