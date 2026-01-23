@@ -533,8 +533,7 @@
                         <select 
                             class="form-control" 
                             id="tenant_id" 
-                            name="tenant_id" 
-                            required
+                            name="tenant_id"
                             onchange="updateTenantInfo()"
                         >
                             <option value="">-- Choose a tenant --</option>
@@ -580,6 +579,7 @@
                             id="admin_username" 
                             name="admin_username" 
                             placeholder="admin.user"
+                            required
                         >
                         <div class="form-help">Unique username for tenant admin login</div>
                     </div>
@@ -607,7 +607,7 @@
                                 class="form-control" 
                                 id="first_name" 
                                 name="first_name" 
-                                placeholder="John"
+                                required
                             >
                         </div>
 
@@ -618,6 +618,8 @@
                                 class="form-control" 
                                 id="last_name" 
                                 name="last_name" 
+                                placeholder="Doe"
+                                required
                                 placeholder="Doe"
                             >
                         </div>
@@ -821,6 +823,9 @@
                     alert('Please fill in all required fields for Tenant Admin');
                     return;
                 }
+                
+                // Auto-populate full_name from first_name and last_name for backend
+                document.getElementById('full_name').value = firstName + ' ' + lastName;
             } else {
                 const tenantId = document.getElementById('tenant_id').value;
                 const fullName = document.getElementById('full_name').value;
@@ -837,6 +842,11 @@
                     alert('Please fill in all required fields for Company User');
                     return;
                 }
+                
+                // Auto-populate first_name and last_name from full_name for backend
+                const nameParts = fullName.trim().split(' ');
+                document.getElementById('first_name').value = nameParts[0] || fullName;
+                document.getElementById('last_name').value = nameParts.slice(1).join(' ') || '';
             }
 
             if (password.length < 8) {

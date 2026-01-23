@@ -377,10 +377,13 @@ def add_tenant_admin_view(request, tenant_id=None):
     email = request.POST.get('email', '').strip()
     password = request.POST.get('password', '').strip()
     
+    print(f"DEBUG: Creating admin - Type: {admin_type}, Email: {email}")  # Debug logging
+    
     # Validate email format
     import re
     if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
         messages.error(request, 'Invalid email format.')
+        print(f"DEBUG: Invalid email format: {email}")  # Debug logging
         return redirect('add_tenant_admin')
     
     if admin_type == 'tenant_admin':
@@ -392,11 +395,14 @@ def add_tenant_admin_view(request, tenant_id=None):
         
         if not admin_username or not first_name or not last_name or not email or not password:
             messages.error(request, 'All required fields must be filled for Tenant Admin.')
+            print(f"DEBUG: Missing required fields - Username: {admin_username}, FirstName: {first_name}, LastName: {last_name}")  # Debug
             return redirect('add_tenant_admin')
         
         try:
             # Hash the password
             hashed = hash_password(password)
+            
+            print(f"DEBUG: Attempting to create tenant admin: {admin_username}")  # Debug logging
             
             # Connect to master database
             admin_conn = pymysql.connect(**ADMIN_CONF)
@@ -411,6 +417,7 @@ def add_tenant_admin_view(request, tenant_id=None):
             
             if existing:
                 messages.error(request, f'Tenant admin with username "{admin_username}" or email "{email}" already exists.')
+                print(f"DEBUG: Duplicate found - Username: {admin_username}, Email: {email}")  # Debug
                 cur.close()
                 admin_conn.close()
                 return redirect('add_tenant_admin')
@@ -422,8 +429,11 @@ def add_tenant_admin_view(request, tenant_id=None):
                 VALUES (%s, %s, %s, %s, %s, %s, NOW())
             """, (first_name, last_name, email, phone, admin_username, hashed))
             
+            admin_conn.commit()  # Commit the transaction
             cur.close()
             admin_conn.close()
+            
+            print(f"DEBUG: Successfully created tenant admin: {admin_username}")  # Debug logging
             
             messages.success(request, 
                 f'Tenant Administrator {first_name} {last_name} (username: {admin_username}) has been created successfully. '
@@ -432,6 +442,7 @@ def add_tenant_admin_view(request, tenant_id=None):
             
         except Exception as e:
             messages.error(request, f"Error creating tenant admin: {e}")
+            print(f"DEBUG: Exception creating tenant admin: {str(e)}")  # Debug logging
             return redirect('add_tenant_admin')
     
     else:  # company_user
