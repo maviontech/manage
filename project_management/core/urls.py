@@ -57,6 +57,7 @@ urlpatterns = [
     path("tasks/create/change-request/", views_tasks.create_change_request_view, name="create_change_request"),
     path("tasks/bulk-import/", views_tasks.bulk_import_csv_view, name="bulk_import"),
     path("tasks/board/", views_tasks.task_board_view, name="task_board"),
+    path("tasks/analytics/", views_tasks.task_analytics_view, name="task_analytics"),
     path("tasks/api/team-list/", views.api_team_list, name="api_team_list"),
     path("tasks/api/team-summary/", views.api_team_summary, name="api_team_summary"),
     path("api/team-members/", views.api_get_team_members, name="api_get_team_members"),

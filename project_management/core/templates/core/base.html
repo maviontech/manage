@@ -390,8 +390,8 @@
           </li>
 
           <!-- Tasks -->
-          <li class="menu-item has-sub {% if page == 'tasks' or page == 'my_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' %}open{% endif %}">
-            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page == 'tasks' or page == 'my_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' %}true{% else %}false{% endif %}" aria-controls="submenu-tasks">
+          <li class="menu-item has-sub {% if page == 'tasks' or page == 'my_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' or page == 'task_analytics' %}open{% endif %}">
+            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page == 'tasks' or page == 'my_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' or page == 'task_analytics' %}true{% else %}false{% endif %}" aria-controls="submenu-tasks">
               <span class="icon" aria-hidden="true"><i class="fa-solid fa-tasks"></i></span>
               <span class="label">Tasks</span>
               <span class="caret" aria-hidden="true">▸</span>
@@ -447,6 +447,9 @@
               </li>
               <li role="none" class="{% if page == 'task_board' %}active{% endif %}">
                 <a href="{% url 'task_board' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-th-large"></i><span>Task Board</span></a>
+              </li>
+              <li role="none" class="{% if page == 'task_analytics' %}active{% endif %}">
+                <a href="{% url 'task_analytics' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-chart-line"></i><span>Task Analytics</span></a>
               </li>
             </ul>
           </li>

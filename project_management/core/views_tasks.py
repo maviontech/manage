@@ -2496,3 +2496,139 @@ def assign_member_to_task(request, task_id):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==============================
+#  TASK ANALYTICS - WORK TYPE TRACKING
+# ==============================
+def task_analytics_view(request):
+    """
+    Interactive task analytics page showing tasks grouped by work type (Bug, Story, Defect, etc.)
+    with filtering capabilities and totals display.
+    """
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    # Get current user ID
+    user_id = request.session.get("user_id")
+    if not user_id:
+        user_id = request.session.get("member_id")
+    
+    # Get visible task user IDs based on visibility rules
+    visible_user_ids = get_visible_task_user_ids(conn, user_id) if user_id else []
+    
+    # Get tenant-specific work types
+    work_types = get_tenant_work_types(request)
+    
+    # Initialize data structure for each work type
+    work_type_data = {}
+    total_counts = {
+        'total_tasks': 0,
+        'open': 0,
+        'in_progress': 0,
+        'closed': 0,
+        'blocked': 0
+    }
+    
+    # Query tasks grouped by work type and status
+    if visible_user_ids:
+        placeholders = ','.join(['%s'] * len(visible_user_ids))
+        
+        # Get all tasks with work type information
+        cur.execute(f"""
+            SELECT 
+                COALESCE(t.work_type, 'Task') AS work_type,
+                t.id,
+                t.title,
+                t.status,
+                t.priority,
+                t.due_date,
+                t.closure_date,
+                t.created_at,
+                t.assigned_to,
+                CONCAT(m.first_name, ' ', m.last_name) AS assigned_name
+            FROM tasks t
+            LEFT JOIN members m ON m.id = t.assigned_to
+            WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
+            ORDER BY work_type, FIELD(t.status,'Open','In Progress','Review','Blocked','Closed'), t.created_at DESC
+        """, tuple(visible_user_ids))
+        
+        all_tasks = cur.fetchall()
+        
+        # Get count statistics by work type
+        cur.execute(f"""
+            SELECT 
+                COALESCE(work_type, 'Task') AS work_type,
+                status,
+                COUNT(*) AS count
+            FROM tasks
+            WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+            GROUP BY work_type, status
+        """, tuple(visible_user_ids))
+        
+        stats = cur.fetchall()
+        
+        # Process statistics
+        for row in stats:
+            wt = row['work_type'] if isinstance(row, dict) else row[0]
+            status = row['status'] if isinstance(row, dict) else row[1]
+            count = int(row['count'] if isinstance(row, dict) else row[2])
+            
+            if wt not in work_type_data:
+                work_type_data[wt] = {
+                    'name': wt,
+                    'total': 0,
+                    'open': 0,
+                    'in_progress': 0,
+                    'closed': 0,
+                    'blocked': 0,
+                    'tasks': []
+                }
+            
+            work_type_data[wt]['total'] += count
+            total_counts['total_tasks'] += count
+            
+            status_lower = status.lower() if status else 'open'
+            if status_lower == 'open':
+                work_type_data[wt]['open'] += count
+                total_counts['open'] += count
+            elif status_lower in ('in progress', 'in-progress', 'review'):
+                work_type_data[wt]['in_progress'] += count
+                total_counts['in_progress'] += count
+            elif status_lower == 'closed':
+                work_type_data[wt]['closed'] += count
+                total_counts['closed'] += count
+            elif status_lower == 'blocked':
+                work_type_data[wt]['blocked'] += count
+                total_counts['blocked'] += count
+        
+        # Group tasks by work type
+        for task in all_tasks:
+            wt = task['work_type'] if isinstance(task, dict) else task[0]
+            
+            if wt not in work_type_data:
+                work_type_data[wt] = {
+                    'name': wt,
+                    'total': 0,
+                    'open': 0,
+                    'in_progress': 0,
+                    'closed': 0,
+                    'blocked': 0,
+                    'tasks': []
+                }
+            
+            work_type_data[wt]['tasks'].append(task)
+    
+    cur.close()
+    
+    return render(
+        request,
+        "core/task_analytics.html",
+        {
+            "work_type_data": work_type_data,
+            "work_types": work_types,
+            "total_counts": total_counts,
+            "page": "task_analytics",
+            "today": datetime.date.today()
+        }
+    )
