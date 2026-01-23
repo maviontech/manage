@@ -62,9 +62,13 @@ urlpatterns = [
     path("api/team-members/", views.api_get_team_members, name="api_get_team_members"),
     path("tasks/api/subprojects/", views_tasks.api_get_subprojects, name="api_get_subprojects"),
     path("tasks/<int:task_id>/", views_tasks.task_detail_view, name="task_detail"),
+    path("tasks/<int:task_id>/view/", views_tasks.task_page_view, name="task_page_view"),
     path("tasks/<int:task_id>/edit/", views_tasks.edit_task_view, name="edit_task"),
     path("tasks/<int:task_id>/delete/", views_tasks.delete_task_view, name="delete_task"),
     path("tasks/<int:task_id>/export-pdf/", views_tasks.export_task_pdf, name="export_task_pdf"),
+    path("tasks/<int:task_id>/update-status/", views_tasks.update_task_status, name="update_task_status"),
+    path("tasks/<int:task_id>/update-priority/", views_tasks.update_task_priority, name="update_task_priority"),
+    path("tasks/<int:task_id>/add-comment/", views_tasks.add_task_comment, name="add_task_comment"),
 
     # APIs
     path("tasks/api/assign/", views_tasks.assign_task_api, name="api_assign_task"),

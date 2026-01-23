@@ -11,6 +11,140 @@ ADMIN_PORT = int(os.environ.get('MYSQL_ADMIN_PORT', 3306))
 ADMIN_USER = os.environ.get('MYSQL_ADMIN_USER', 'root')
 ADMIN_PWD = os.environ.get('MYSQL_ADMIN_PWD', 'root')
 
+
+def initialize_master_database():
+    """
+    Initialize master database on server startup.
+    Creates the database and all required tables if they don't exist.
+    """
+    try:
+        # Connect without database to create it
+        conn = pymysql.connect(
+            host=ADMIN_HOST,
+            port=ADMIN_PORT,
+            user=ADMIN_USER,
+            password=ADMIN_PWD,
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True
+        )
+        cur = conn.cursor()
+        
+        # Create master_db if it doesn't exist
+        cur.execute(f"CREATE DATABASE IF NOT EXISTS {MASTER_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+        print(f"✓ Successfully connected to MySQL database: {MASTER_DB}")
+        
+        # Now connect to the master_db
+        cur.execute(f"USE {MASTER_DB}")
+        
+        # Create clients_master table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS clients_master (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                client_name VARCHAR(255) NOT NULL,
+                domain_postfix VARCHAR(255) NOT NULL UNIQUE,
+                db_name VARCHAR(255) NOT NULL UNIQUE,
+                db_host VARCHAR(100) DEFAULT '127.0.0.1',
+                db_engine VARCHAR(50) DEFAULT 'mysql',
+                db_user VARCHAR(255),
+                db_password VARCHAR(255),
+                created_at DATETIME,
+                updated_at DATETIME,
+                INDEX idx_domain (domain_postfix),
+                INDEX idx_db_name (db_name)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        
+        # Create tenants table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS tenants (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                company_name VARCHAR(255) NOT NULL,
+                company_domain VARCHAR(255) NOT NULL UNIQUE,
+                company_code VARCHAR(50) NOT NULL UNIQUE,
+                admin_username VARCHAR(150) NOT NULL,
+                admin_password VARCHAR(255) NOT NULL,
+                custom_database TINYINT(1) DEFAULT 0,
+                DB_name VARCHAR(100) NOT NULL UNIQUE,
+                DB_host VARCHAR(255),
+                DB_port INT,
+                DB_user VARCHAR(100),
+                DB_password VARCHAR(255),
+                created_by INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_company_domain (company_domain),
+                INDEX idx_company_code (company_code),
+                INDEX idx_created_by (created_by)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        
+        # Create tenants_admin table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS tenants_admin (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                first_name VARCHAR(100) NOT NULL,
+                last_name VARCHAR(100) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                phone VARCHAR(50),
+                admin_username VARCHAR(150) NOT NULL UNIQUE,
+                admin_password VARCHAR(255) NOT NULL,
+                notes TEXT,
+                permissions TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_email (email),
+                INDEX idx_admin_username (admin_username)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        
+        # Create tenant_work_types table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS tenant_work_types (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                tenant_id BIGINT UNSIGNED NOT NULL,
+                work_type VARCHAR(50) NOT NULL,
+                is_enabled TINYINT(1) DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (tenant_id) REFERENCES clients_master(id) ON DELETE CASCADE,
+                UNIQUE KEY ux_tenant_work_type (tenant_id, work_type),
+                INDEX idx_tenant_id (tenant_id),
+                INDEX idx_work_type (work_type)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        
+        print(f"✓ Tenant management tables created or already exist.")
+        
+        # Create default tenant admin if not exists
+        cur.execute("SELECT COUNT(*) AS cnt FROM tenants_admin WHERE admin_username = 'tenant'")
+        result = cur.fetchone()
+        if result['cnt'] == 0:
+            # Hash the password
+            hashed_password = hash_password('tenant')
+            
+            # Insert default tenant admin
+            cur.execute("""
+                INSERT INTO tenants_admin 
+                (first_name, last_name, email, admin_username, admin_password, notes) 
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                'Tenant',
+                'Admin',
+                'tenant@admin.com',
+                'tenant',
+                hashed_password,
+                'Default tenant admin account - please change password after first login'
+            ))
+            print(f"✓ Default tenant admin created - Username: 'tenant', Password: 'tenant'")
+        
+        cur.close()
+        conn.close()
+        
+    except pymysql.Error as e:
+        print(f"✗ MySQL Error: {e}")
+    except Exception as e:
+        print(f"✗ Error initializing master database: {e}")
+
 TENANT_DDL = [
     """
     CREATE TABLE IF NOT EXISTS users (
@@ -164,6 +298,10 @@ TENANT_DDL = [
       created_by INT,
       due_date DATE,
       work_type VARCHAR(50) DEFAULT 'Task',
+      si_browser VARCHAR(255) DEFAULT NULL,
+      si_resolution VARCHAR(50) DEFAULT NULL,
+      si_os VARCHAR(100) DEFAULT NULL,
+      si_timestamp VARCHAR(50) DEFAULT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       closure_date DATE
@@ -209,6 +347,23 @@ TENANT_DDL = [
       INDEX idx_user_id (user_id),
       INDEX idx_task_id (task_id),
       INDEX idx_is_running (is_running)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS task_comments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      task_id INT NOT NULL,
+      comment_text TEXT NOT NULL,
+      commenter_id INT NOT NULL,
+      commenter_name VARCHAR(255),
+      is_internal BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (commenter_id) REFERENCES members(id) ON DELETE CASCADE,
+      INDEX idx_task (task_id),
+      INDEX idx_commenter (commenter_id),
+      INDEX idx_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
@@ -550,11 +705,13 @@ class DBInitializer:
         if cnt == 0:
             domain = domain_postfix.lstrip('@')
             admin_email = f"admin@{domain}"
-            pw = "admin123"
+            # Username and password are the same for first-time login
+            username = "tenant"
+            pw = "tenant"
             hashed = hash_password(pw)
             cur.execute("INSERT INTO users (email, full_name, password_hash, role, is_active) VALUES (%s,%s,%s,%s,%s)",
                         (admin_email, "Tenant Admin", hashed, "Admin", 1))
-            print(f"[init] Seeded admin {admin_email} with password 'admin123' in {db_name}")
+            print(f"[init] Seeded admin {admin_email} with username 'tenant' and password 'tenant' in {db_name}")
         cur.close()
         conn.close()
 

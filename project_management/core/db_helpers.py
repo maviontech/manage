@@ -449,3 +449,68 @@ def exec_sql(conn: Optional[Union[str, object]],
                 return cur.rowcount
             except Exception:
                 return None
+
+
+def get_tenant_work_types(request):
+    """
+    Get enabled work types for the current tenant.
+    Returns a list of work type names that are enabled for the tenant.
+    If no configuration exists, returns default work types.
+    
+    Args:
+        request: Django HttpRequest object with session data
+        
+    Returns:
+        list: List of enabled work type names (e.g., ['Task', 'Bug', 'Defect'])
+    """
+    default_work_types = ['Task', 'Bug', 'Story', 'Defect', 'Sub Task', 'Report', 'Change Request']
+    
+    try:
+        # Get tenant configuration from session
+        tenant_config = request.session.get("tenant_config")
+        if not tenant_config or not isinstance(tenant_config, dict):
+            return default_work_types
+        
+        tenant_id = tenant_config.get("tenant_id")
+        if not tenant_id:
+            return default_work_types
+        
+        # Connect to master_db to get work types configuration
+        from django.conf import settings
+        
+        admin_conf = {
+            'host': getattr(settings, 'MYSQL_ADMIN_HOST', '127.0.0.1'),
+            'port': int(getattr(settings, 'MYSQL_ADMIN_PORT', 3306)),
+            'user': getattr(settings, 'MYSQL_ADMIN_USER', 'root'),
+            'password': getattr(settings, 'MYSQL_ADMIN_PWD', 'root'),
+            'cursorclass': pymysql.cursors.DictCursor,
+            'autocommit': True
+        }
+        
+        admin_conn = pymysql.connect(**admin_conf)
+        cur = admin_conn.cursor()
+        
+        # Query tenant_work_types table
+        cur.execute("""
+            SELECT work_type 
+            FROM master_db.tenant_work_types 
+            WHERE tenant_id = %s AND is_enabled = TRUE
+            ORDER BY work_type
+        """, (tenant_id,))
+        
+        rows = cur.fetchall()
+        cur.close()
+        admin_conn.close()
+        
+        if rows:
+            # Return only enabled work types
+            enabled_work_types = [row['work_type'] for row in rows]
+            return enabled_work_types
+        else:
+            # No configuration found, return defaults
+            return default_work_types
+            
+    except Exception as e:
+        logger.error(f"Error getting tenant work types: {e}")
+        # On error, return default work types
+        return default_work_types

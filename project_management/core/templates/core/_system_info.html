@@ -1,0 +1,81 @@
+{# Reusable system information block: collects browser, OS, screen resolution, timestamp #}
+<style>
+  .system-info-card {
+    margin: 1.25rem 0 1.5rem 0;
+    border-radius: 12px;
+    padding: 1rem;
+    background: linear-gradient(180deg, #ffffff, #fafafa);
+    border: 1px solid #eef2f7;
+  }
+  .system-info-row { display:flex; gap:12px; align-items:center; margin:6px 0; }
+  .system-info-label { color:#475569; font-weight:700; width:160px; }
+  .system-info-value { color:#334155; }
+  .system-info-footer { font-size:0.85rem; color:#94a3b8; margin-top:8px; }
+</style>
+
+<div class="system-info-card" id="systemInfoCard">
+  <h4 style="margin:0 0 8px 0; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-desktop" style="color:#2563eb"></i> System Information</h4>
+  <div class="system-info-row"><div class="system-info-label">Browser:</div><div class="system-info-value" id="si_browser">—</div></div>
+  <div class="system-info-row"><div class="system-info-label">Screen Resolution:</div><div class="system-info-value" id="si_resolution">—</div></div>
+  <div class="system-info-row"><div class="system-info-label">Operating System:</div><div class="system-info-value" id="si_os">—</div></div>
+  <div class="system-info-row"><div class="system-info-label">Timestamp:</div><div class="system-info-value" id="si_timestamp">—</div></div>
+  <div class="system-info-footer">System information is collected automatically to help diagnose issues.</div>
+
+  {# Hidden inputs to submit with the form #}
+  <input type="hidden" name="si_browser" id="input_si_browser" />
+  <input type="hidden" name="si_resolution" id="input_si_resolution" />
+  <input type="hidden" name="si_os" id="input_si_os" />
+  <input type="hidden" name="si_timestamp" id="input_si_timestamp" />
+</div>
+
+<script>
+  (function(){
+    function detectOS(){
+      const ua = navigator.userAgent || '';
+      if (/Windows NT 10.0/.test(ua)) return 'Windows 10/11';
+      if (/Windows NT 6.3/.test(ua)) return 'Windows 8.1';
+      if (/Windows NT 6.2/.test(ua)) return 'Windows 8';
+      if (/Windows NT 6.1/.test(ua)) return 'Windows 7';
+      if (/Mac OS X/.test(ua)) return 'macOS';
+      if (/Android/.test(ua)) return 'Android';
+      if (/iPhone|iPad|iPod/.test(ua)) return 'iOS';
+      if (/Linux/.test(ua)) return 'Linux';
+      return 'Unknown';
+    }
+
+    function getBrowser(){
+      const ua = navigator.userAgent;
+      if (ua.indexOf('Firefox') !== -1) return 'Firefox';
+      if (ua.indexOf('Opera') !== -1 || ua.indexOf('OPR') !== -1) return 'Opera';
+      if (ua.indexOf('Trident') !== -1) return 'Internet Explorer';
+      if (ua.indexOf('Edge') !== -1) return 'Edge';
+      if (ua.indexOf('Chrome') !== -1) return 'Chrome';
+      if (ua.indexOf('Safari') !== -1) return 'Safari';
+      return navigator.appName || 'Unknown';
+    }
+
+    function pad(n){ return n < 10 ? '0'+n : n; }
+    function isoTimestamp(){
+      const d = new Date();
+      return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+    }
+
+    const browser = getBrowser() + ' (' + navigator.appVersion.split(')')[0] + ')';
+    const resolution = screen.width + 'x' + screen.height;
+    const os = detectOS();
+    const ts = isoTimestamp();
+
+    // Fill visible fields
+    document.getElementById('si_browser').textContent = browser;
+    document.getElementById('si_resolution').textContent = resolution;
+    document.getElementById('si_os').textContent = os;
+    document.getElementById('si_timestamp').textContent = ts;
+
+    // Fill hidden inputs if present
+    const in_browser = document.getElementById('input_si_browser');
+    if(in_browser) in_browser.value = browser;
+    const in_res = document.getElementById('input_si_resolution'); if(in_res) in_res.value = resolution;
+    const in_os = document.getElementById('input_si_os'); if(in_os) in_os.value = os;
+    const in_ts = document.getElementById('input_si_timestamp'); if(in_ts) in_ts.value = ts;
+  })();
+</script>

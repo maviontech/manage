@@ -289,8 +289,34 @@
       color:var(--muted);
       text-decoration:none;
       border-radius:8px;
+      border: none;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
     }
     .submenu-link:hover { background: rgba(255,255,255,0.02); color: var(--text); }
+
+    /* Nested submenu styling */
+    .nested-submenu {
+      padding-left: 20px;
+    }
+    .submenu .has-sub.open > .nested-submenu {
+      padding-top: 4px;
+      padding-bottom: 4px;
+      max-height: 400px;
+      opacity: 1; /* ensure nested submenu is visible when opened */
+      transition: max-height var(--transition) ease, opacity var(--transition) ease;
+    }
+    .submenu .has-sub > .submenu-link .caret {
+      display:inline-block;
+      margin-left:auto;
+      transition: transform .22s ease;
+      color: rgba(255,255,255,0.5);
+      font-size: 12px;
+    }
+    .submenu .has-sub.open > .submenu-link .caret {
+      transform: rotate(90deg);
+    }
 
     /* Caret rotation */
     .menu-link .caret {
@@ -377,8 +403,44 @@
               <li role="none" class="{% if page == 'unassigned' %}active{% endif %}">
                 <a href="{% url 'unassigned_tasks' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-user-clock"></i><span>Unassigned Tasks</span></a>
               </li>
-              <li role="none" class="{% if page == 'task_create' %}active{% endif %}">
-                <a href="{% url 'create_task' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-plus"></i><span>Create Task</span></a>
+              <li role="none" class="has-sub {% if page == 'task_create' %}active open{% endif %}">
+                <button class="submenu-link sub-toggle ripple" aria-expanded="{% if page == 'task_create' %}true{% else %}false{% endif %}" aria-controls="submenu-create-task">
+                  <i class="fa-solid fa-plus"></i>
+                  <span>Create</span>
+                  <span class="caret" aria-hidden="true">▸</span>
+                </button>
+                <ul id="submenu-create-task" class="submenu nested-submenu" role="menu" aria-label="Create task types">
+                  {% if has_task %}
+                  <li role="none">
+                    <a href="{% url 'create_task' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-check-circle"></i><span>Task</span></a>
+                  </li>
+                  {% endif %}
+                  {% if has_bug %}
+                  <li role="none">
+                    <a href="{% url 'create_bug' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-bug"></i><span>Bug</span></a>
+                  </li>
+                  {% endif %}
+                  {% if has_story %}
+                  <li role="none">
+                    <a href="{% url 'create_story' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-book"></i><span>Story</span></a>
+                  </li>
+                  {% endif %}
+                  {% if has_defect %}
+                  <li role="none">
+                    <a href="{% url 'create_defect' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-exclamation-triangle"></i><span>Defect</span></a>
+                  </li>
+                  {% endif %}
+                  {% if has_subtask %}
+                  <li role="none">
+                    <a href="{% url 'create_subtask' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-list-check"></i><span>Subtask</span></a>
+                  </li>
+                  {% endif %}
+                  {% if has_change_request %}
+                  <li role="none">
+                    <a href="{% url 'create_change_request' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-edit"></i><span>Change Request</span></a>
+                  </li>
+                  {% endif %}
+                </ul>
               </li>
               <li role="none" class="{% if page == 'bulk_import' %}active{% endif %}">
                 <a href="{% url 'bulk_import' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-file-csv"></i><span>Bulk Import (CSV)</span></a>
@@ -698,49 +760,54 @@
     (function(){
       document.querySelectorAll('.sub-toggle').forEach(btn=>{
         const id = btn.getAttribute('aria-controls');            // e.g. submenu-tasks
-        const li = btn.closest('.menu-item');
+        const li = btn.closest('.menu-item, .has-sub');
 
         btn.addEventListener('click', function(e){
           e.preventDefault();
+
+          // Check if this is a nested submenu (has-sub within submenu)
+          const isNested = li.classList.contains('has-sub') && !li.classList.contains('menu-item');
 
           // toggle current
           const isNowOpen = li.classList.toggle('open');
           btn.setAttribute('aria-expanded', isNowOpen ? 'true' : 'false');
 
-          // close any other open menu-item (only keep this one open)
-          document.querySelectorAll('.menu-item.open').forEach(other=>{
-            if (other === li) return; // skip the one we just toggled
-            other.classList.remove('open');
+          // For main menu items (not nested), close any other open main menu-item
+          if (!isNested) {
+            document.querySelectorAll('.menu-item.open').forEach(other=>{
+              if (other === li) return; // skip the one we just toggled
+              other.classList.remove('open');
 
-            // ensure button aria-expanded for the other submenu is false
-            const otherBtn = other.querySelector('.sub-toggle');
-            if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+              // ensure button aria-expanded for the other submenu is false
+              const otherBtn = other.querySelector('.sub-toggle');
+              if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
 
-            // defensive: remove inline max-height/padding if any left by legacy code
-            const otherSub = other.querySelector('.submenu');
-            if (otherSub) {
-              otherSub.style.maxHeight = null;
-              otherSub.style.paddingTop = null;
-              otherSub.style.paddingBottom = null;
-            }
-          });
-
-          // persist per-submenu and collapsed state into localStorage
-          try {
-            const saved = JSON.parse(localStorage.getItem(SIDEBAR_KEY) || "{}");
-
-            // set this submenu state
-            saved[id] = isNowOpen;
-
-            // ensure all other submenu keys are set to false (so only this one opens next time)
-            document.querySelectorAll('.sub-toggle').forEach(b=>{
-              const k = b.getAttribute('aria-controls');
-              if (k !== id) saved[k] = false;
+              // defensive: remove inline max-height/padding if any left by legacy code
+              const otherSub = other.querySelector('.submenu');
+              if (otherSub) {
+                otherSub.style.maxHeight = null;
+                otherSub.style.paddingTop = null;
+                otherSub.style.paddingBottom = null;
+              }
             });
 
-            localStorage.setItem(SIDEBAR_KEY, JSON.stringify(saved));
-          } catch(e) {
-            // ignore storage errors
+            // persist per-submenu and collapsed state into localStorage
+            try {
+              const saved = JSON.parse(localStorage.getItem(SIDEBAR_KEY) || "{}");
+
+              // set this submenu state
+              saved[id] = isNowOpen;
+
+              // ensure all other submenu keys are set to false (so only this one opens next time)
+              document.querySelectorAll('.menu-item > .sub-toggle').forEach(b=>{
+                const k = b.getAttribute('aria-controls');
+                if (k !== id) saved[k] = false;
+              });
+
+              localStorage.setItem(SIDEBAR_KEY, JSON.stringify(saved));
+            } catch(e) {
+              // ignore storage errors
+            }
           }
         });
 

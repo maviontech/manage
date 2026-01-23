@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
 # helper: get connection for current tenant
-from .db_helpers import get_tenant_conn, get_visible_task_user_ids
+from .db_helpers import get_tenant_conn, get_visible_task_user_ids, get_tenant_work_types
 import json
 
 # PDF generation
@@ -44,6 +44,12 @@ def create_task_view(request):
         status = data.get("status") or "Open"
         work_type = data.get("work_type") or "Task"  # NEW: Get work type from form
         created_by = request.session.get("user_id")
+        
+        # Capture system information
+        si_browser = data.get("si_browser") or None
+        si_resolution = data.get("si_resolution") or None
+        si_os = data.get("si_os") or None
+        si_timestamp = data.get("si_timestamp") or None
 
         # --- NEW FIX ---
         assigned_raw = data.get("assigned_to") or None
@@ -58,8 +64,9 @@ def create_task_view(request):
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, 
+                si_browser, si_resolution, si_os, si_timestamp, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
@@ -73,6 +80,10 @@ def create_task_view(request):
                 due_date,
                 closure_date,
                 work_type,
+                si_browser,
+                si_resolution,
+                si_os,
+                si_timestamp,
             ),
         )
         task_id = cur.lastrowid
@@ -135,8 +146,8 @@ def create_task_view(request):
     cur.execute("SELECT id, name FROM teams ORDER BY name")
     teams = cur.fetchall()
     
-    # Get default work types (can be extended per project later)
-    default_work_types = ['Task', 'Bug', 'Story', 'Defect', 'Sub Task', 'Report', 'Change Request']
+    # Get tenant-specific work types from configuration
+    work_types = get_tenant_work_types(request)
     
     cur.close()
 
@@ -148,7 +159,7 @@ def create_task_view(request):
             "members": members, 
             "teams": teams, 
             "page": "task_create",
-            "work_types": default_work_types
+            "work_types": work_types
         },
     )
 
@@ -1281,6 +1292,13 @@ def create_bug_view(request):
     """
     Creates a new bug with bug-specific fields
     """
+    # Check if Bug work type is enabled for this tenant
+    enabled_work_types = get_tenant_work_types(request)
+    if 'Bug' not in enabled_work_types:
+        from django.contrib import messages
+        messages.error(request, "Bug work type is not enabled for your organization.")
+        return redirect("task_board")
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
@@ -1300,6 +1318,12 @@ def create_bug_view(request):
         status = data.get("status") or "Open"
         work_type = "Bug"
         created_by = request.session.get("user_id")
+        
+        # Capture system information
+        si_browser = data.get("si_browser") or None
+        si_resolution = data.get("si_resolution") or None
+        si_os = data.get("si_os") or None
+        si_timestamp = data.get("si_timestamp") or None
 
         # Combine bug-specific fields into description
         full_description = f"{description}\n\n"
@@ -1323,8 +1347,9 @@ def create_bug_view(request):
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type,
+                si_browser, si_resolution, si_os, si_timestamp, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
@@ -1338,6 +1363,10 @@ def create_bug_view(request):
                 due_date,
                 closure_date,
                 work_type,
+                si_browser,
+                si_resolution,
+                si_os,
+                si_timestamp,
             ),
         )
         task_id = cur.lastrowid
@@ -1398,6 +1427,13 @@ def create_story_view(request):
     """
     Creates a new user story with story-specific fields
     """
+    # Check if Story work type is enabled for this tenant
+    enabled_work_types = get_tenant_work_types(request)
+    if 'Story' not in enabled_work_types:
+        from django.contrib import messages
+        messages.error(request, "Story work type is not enabled for your organization.")
+        return redirect("task_board")
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
@@ -1415,6 +1451,12 @@ def create_story_view(request):
         status = data.get("status") or "Open"
         work_type = "Story"
         created_by = request.session.get("user_id")
+        
+        # Capture system information
+        si_browser = data.get("si_browser") or None
+        si_resolution = data.get("si_resolution") or None
+        si_os = data.get("si_os") or None
+        si_timestamp = data.get("si_timestamp") or None
 
         # Combine story-specific fields into description
         full_description = ""
@@ -1438,8 +1480,9 @@ def create_story_view(request):
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type,
+                si_browser, si_resolution, si_os, si_timestamp, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
@@ -1453,6 +1496,10 @@ def create_story_view(request):
                 due_date,
                 closure_date,
                 work_type,
+                si_browser,
+                si_resolution,
+                si_os,
+                si_timestamp,
             ),
         )
         task_id = cur.lastrowid
@@ -1513,6 +1560,13 @@ def create_defect_view(request):
     """
     Creates a new defect with defect-specific fields
     """
+    # Check if Defect work type is enabled for this tenant
+    enabled_work_types = get_tenant_work_types(request)
+    if 'Defect' not in enabled_work_types:
+        from django.contrib import messages
+        messages.error(request, "Defect work type is not enabled for your organization.")
+        return redirect("task_board")
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
@@ -1530,6 +1584,12 @@ def create_defect_view(request):
         status = data.get("status") or "Open"
         work_type = "Defect"
         created_by = request.session.get("user_id")
+        
+        # Capture system information
+        si_browser = data.get("si_browser") or None
+        si_resolution = data.get("si_resolution") or None
+        si_os = data.get("si_os") or None
+        si_timestamp = data.get("si_timestamp") or None
 
         # Combine defect-specific fields into description
         full_description = f"{description}\n\n"
@@ -1550,8 +1610,9 @@ def create_defect_view(request):
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type,
+                si_browser, si_resolution, si_os, si_timestamp, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
@@ -1565,6 +1626,10 @@ def create_defect_view(request):
                 due_date,
                 closure_date,
                 work_type,
+                si_browser,
+                si_resolution,
+                si_os,
+                si_timestamp,
             ),
         )
         task_id = cur.lastrowid
@@ -1625,6 +1690,13 @@ def create_subtask_view(request):
     """
     Creates a new sub task with parent task selection
     """
+    # Check if Sub Task work type is enabled for this tenant
+    enabled_work_types = get_tenant_work_types(request)
+    if 'Sub Task' not in enabled_work_types:
+        from django.contrib import messages
+        messages.error(request, "Sub Task work type is not enabled for your organization.")
+        return redirect("task_board")
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
@@ -1642,6 +1714,12 @@ def create_subtask_view(request):
         status = data.get("status") or "Open"
         work_type = "Sub Task"
         created_by = request.session.get("user_id")
+        
+        # Capture system information
+        si_browser = data.get("si_browser") or None
+        si_resolution = data.get("si_resolution") or None
+        si_os = data.get("si_os") or None
+        si_timestamp = data.get("si_timestamp") or None
 
         # Add parent task info to description
         full_description = f"{description}\n\n"
@@ -1666,8 +1744,9 @@ def create_subtask_view(request):
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type,
+                si_browser, si_resolution, si_os, si_timestamp, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
@@ -1681,6 +1760,10 @@ def create_subtask_view(request):
                 due_date,
                 closure_date,
                 work_type,
+                si_browser,
+                si_resolution,
+                si_os,
+                si_timestamp,
             ),
         )
         task_id = cur.lastrowid
@@ -1744,6 +1827,13 @@ def create_report_view(request):
     """
     Creates a new report task
     """
+    # Check if Report work type is enabled for this tenant
+    enabled_work_types = get_tenant_work_types(request)
+    if 'Report' not in enabled_work_types:
+        from django.contrib import messages
+        messages.error(request, "Report work type is not enabled for your organization.")
+        return redirect("task_board")
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
@@ -1763,6 +1853,12 @@ def create_report_view(request):
         status = data.get("status") or "Open"
         work_type = "Report"
         created_by = request.session.get("user_id")
+        
+        # Capture system information
+        si_browser = data.get("si_browser") or None
+        si_resolution = data.get("si_resolution") or None
+        si_os = data.get("si_os") or None
+        si_timestamp = data.get("si_timestamp") or None
 
         # Build report description
         full_description = f"**Report Type:** {report_type}\n\n"
@@ -1787,8 +1883,9 @@ def create_report_view(request):
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type,
+                si_browser, si_resolution, si_os, si_timestamp, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
@@ -1802,6 +1899,10 @@ def create_report_view(request):
                 due_date,
                 closure_date,
                 work_type,
+                si_browser,
+                si_resolution,
+                si_os,
+                si_timestamp,
             ),
         )
         task_id = cur.lastrowid
@@ -1862,6 +1963,13 @@ def create_change_request_view(request):
     """
     Creates a new change request
     """
+    # Check if Change Request work type is enabled for this tenant
+    enabled_work_types = get_tenant_work_types(request)
+    if 'Change Request' not in enabled_work_types:
+        from django.contrib import messages
+        messages.error(request, "Change Request work type is not enabled for your organization.")
+        return redirect("task_board")
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
@@ -1882,6 +1990,12 @@ def create_change_request_view(request):
         status = data.get("status") or "Pending Approval"
         work_type = "Change Request"
         created_by = request.session.get("user_id")
+        
+        # Capture system information
+        si_browser = data.get("si_browser") or None
+        si_resolution = data.get("si_resolution") or None
+        si_os = data.get("si_os") or None
+        si_timestamp = data.get("si_timestamp") or None
 
         # Build change request description
         full_description = f"**Change Type:** {change_type}\n\n"
@@ -1909,8 +2023,9 @@ def create_change_request_view(request):
         cur.execute(
             """INSERT INTO tasks
                (project_id, subproject_id, title, description, status, priority,
-                assigned_to, assigned_type, created_by, due_date, closure_date, work_type, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                assigned_to, assigned_type, created_by, due_date, closure_date, work_type,
+                si_browser, si_resolution, si_os, si_timestamp, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
@@ -1924,6 +2039,10 @@ def create_change_request_view(request):
                 due_date,
                 closure_date,
                 work_type,
+                si_browser,
+                si_resolution,
+                si_os,
+                si_timestamp,
             ),
         )
         task_id = cur.lastrowid
@@ -1975,3 +2094,405 @@ def create_change_request_view(request):
             "page": "task_create"
         },
     )
+
+
+# ==============================
+#  TASK PAGE VIEW (Jira-style detail page)
+# ==============================
+def task_page_view(request, task_id):
+    """
+    Display a detailed Jira-style view of a task with:
+    - Description
+    - Comments
+    - Activity Timeline
+    - Details (Reporter, Assignee, Module, Resolution, Dates)
+    - Environment (Browser, OS, Resolution)
+    - Actions (Change Status, Update Priority, Add Attachment, Delete)
+    """
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    # Check if system info columns exist
+    cur.execute("SHOW COLUMNS FROM tasks LIKE 'si_browser'")
+    has_system_info = cur.fetchone() is not None
+    
+    # Build query based on available columns
+    system_info_fields = ""
+    if has_system_info:
+        system_info_fields = "t.si_browser, t.si_resolution, t.si_os, t.si_timestamp,"
+    
+    # Get task details with all system information
+    query = f"""
+        SELECT 
+            t.id, t.title, t.description, t.priority, t.status, t.work_type,
+            t.due_date, t.closure_date, t.created_at, t.created_by,
+            t.project_id, t.subproject_id,
+            t.assigned_type, t.assigned_to,
+            {system_info_fields}
+            p.name AS project_name,
+            sp.name AS subproject_name,
+            CONCAT(creator.first_name, ' ', creator.last_name) AS creator_name,
+            creator.email AS creator_email,
+            CASE 
+                WHEN t.assigned_type = 'member' THEN CONCAT(assignee.first_name, ' ', assignee.last_name)
+                WHEN t.assigned_type = 'team' THEN tm.name
+                ELSE NULL
+            END AS assignee_name,
+            CASE 
+                WHEN t.assigned_type = 'member' THEN assignee.email
+                ELSE NULL
+            END AS assignee_email,
+            tm.name AS team_name
+        FROM tasks t
+        LEFT JOIN projects p ON t.project_id = p.id
+        LEFT JOIN subprojects sp ON t.subproject_id = sp.id
+        LEFT JOIN members creator ON t.created_by = creator.id
+        LEFT JOIN members assignee ON t.assigned_type = 'member' AND t.assigned_to = assignee.id
+        LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
+        WHERE t.id = %s
+    """
+    
+    cur.execute(query, (task_id,))
+    
+    issue = cur.fetchone()
+    
+    if not issue:
+        cur.close()
+        return render(request, 'core/404.html', {'message': 'Task not found'}, status=404)
+    
+    # Prepare issue data for template
+    issue_data = {
+        'id': issue['id'],
+        'issue_id': f"TASK-{issue['id']:04d}",  # Format as TASK-0001
+        'summary': issue['title'],
+        'description': issue['description'],
+        'priority': issue['priority'],
+        'status': issue['status'],
+        'issue_type': issue['work_type'] or 'Task',
+        'severity': 'BLOCKER' if issue['priority'] == 'Critical' else 'MAJOR' if issue['priority'] == 'High' else 'MINOR',
+        'module': issue['project_name'],
+        'resolution': 'PENDING' if issue['status'] in ['Open', 'New'] else 'FINISHED' if issue['status'] == 'Closed' else 'IN_PROGRESS',
+        'created_at': issue['created_at'],
+        'due_date': issue['due_date'],
+        'closed_date': issue['closure_date'],
+        'start_date': None,  # Can be added if you have a start_date field
+        'reporter_name': issue['creator_name'],
+        'reporter_email': issue['creator_email'],
+        'reporter_ldap': issue['creator_email'],
+        'assignee_name': issue['assignee_name'] or issue['team_name'],
+        'assignee_ldap': issue['assignee_email'] or f"Team: {issue['team_name']}" if issue['team_name'] else None,
+        'browser_info': issue.get('si_browser') if has_system_info else None,
+        'screen_resolution': issue.get('si_resolution') if has_system_info else None,
+        'os_info': issue.get('si_os') if has_system_info else None,
+    }
+    
+    # Get comments from task_comments table
+    cur.execute("""
+        SELECT 
+            id, comment_text, commenter_id, commenter_name, 
+            is_internal, created_at
+        FROM task_comments
+        WHERE task_id = %s
+        ORDER BY created_at ASC
+    """, (task_id,))
+    
+    comments = cur.fetchall()
+    
+    # Get activity timeline from activity_log table
+    activities = []
+    
+    # Add task creation activity
+    activities.append({
+        'user_name': issue['creator_name'],
+        'action_type': 'created',
+        'old_value': None,
+        'new_value': None,
+        'description': f"Issue {issue_data['issue_id']} created",
+        'created_at': issue['created_at']
+    })
+    
+    # If assigned, add assignment activity
+    if issue['assignee_name'] or issue['team_name']:
+        assignee_text = issue['assignee_name'] or f"Team: {issue['team_name']}"
+        activities.append({
+            'user_name': issue['creator_name'],
+            'action_type': 'assigned',
+            'old_value': 'Unassigned',
+            'new_value': assignee_text,
+            'description': f"Assigned to {assignee_text}",
+            'created_at': issue['created_at']
+        })
+    
+    # Get activities from activity_log table
+    cur.execute("""
+        SELECT 
+            al.action,
+            al.timestamp as created_at,
+            CONCAT(m.first_name, ' ', m.last_name) as user_name
+        FROM activity_log al
+        LEFT JOIN members m ON al.performed_by = m.id
+        WHERE al.entity_type = 'task' AND al.entity_id = %s
+        ORDER BY al.timestamp ASC
+    """, (task_id,))
+    
+    log_activities = cur.fetchall()
+    
+    # Add logged activities to timeline
+    for log_activity in log_activities:
+        action_text = log_activity['action']
+        
+        # Parse status/priority changes
+        if 'status from' in action_text.lower():
+            parts = action_text.split(' from ')
+            if len(parts) == 2:
+                old_new = parts[1].split(' to ')
+                activities.append({
+                    'user_name': log_activity['user_name'],
+                    'action_type': 'status_changed',
+                    'old_value': old_new[0].strip() if len(old_new) > 0 else None,
+                    'new_value': old_new[1].strip() if len(old_new) > 1 else None,
+                    'description': action_text,
+                    'created_at': log_activity['created_at']
+                })
+        elif 'priority from' in action_text.lower():
+            parts = action_text.split(' from ')
+            if len(parts) == 2:
+                old_new = parts[1].split(' to ')
+                activities.append({
+                    'user_name': log_activity['user_name'],
+                    'action_type': 'priority_changed',
+                    'old_value': old_new[0].strip() if len(old_new) > 0 else None,
+                    'new_value': old_new[1].strip() if len(old_new) > 1 else None,
+                    'description': action_text,
+                    'created_at': log_activity['created_at']
+                })
+        elif 'added comment' in action_text.lower() or 'added internal comment' in action_text.lower():
+            activities.append({
+                'user_name': log_activity['user_name'],
+                'action_type': 'commented',
+                'old_value': None,
+                'new_value': None,
+                'description': action_text,
+                'created_at': log_activity['created_at']
+            })
+        else:
+            activities.append({
+                'user_name': log_activity['user_name'],
+                'action_type': 'updated',
+                'old_value': None,
+                'new_value': None,
+                'description': action_text,
+                'created_at': log_activity['created_at']
+            })
+    
+    # Sort activities by timestamp
+    activities = sorted(activities, key=lambda x: x['created_at'])
+    
+    # Get attachments (empty for now - can be implemented later)
+    attachments = []
+    
+    # Get user role for permissions
+    user_role = request.session.get('role', 'USER')
+    user_ldap = request.session.get('user_email', '')
+    
+    cur.close()
+    
+    return render(
+        request,
+        'core/task_page_view.html',
+        {
+            'issue': issue_data,
+            'comments': comments,
+            'activities': activities,
+            'attachments': attachments,
+            'user_role': user_role,
+            'user_ldap': user_ldap,
+            'page': 'task_detail'
+        }
+    )
+
+# ==============================
+#  UPDATE TASK STATUS (API)
+# ==============================
+@require_POST
+def update_task_status(request, task_id):
+    '''Update task status via AJAX'''
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status')
+        
+        if not new_status:
+            return JsonResponse({'success': False, 'error': 'Status is required'})
+        
+        conn = get_tenant_conn(request)
+        cur = conn.cursor()
+        
+        # Get old status
+        cur.execute('SELECT status FROM tasks WHERE id = %s', (task_id,))
+        task = cur.fetchone()
+        old_status = task['status'] if task else None
+        
+        # Update task status
+        cur.execute('''
+            UPDATE tasks 
+            SET status = %s, updated_at = NOW()
+            WHERE id = %s
+        ''', (new_status, task_id))
+        
+        # Log activity
+        user_id = request.session.get('user_id')
+        cur.execute('''
+            INSERT INTO activity_log 
+            (entity_type, entity_id, action, performed_by, timestamp)
+            VALUES ('task', %s, %s, %s, NOW())
+        ''', (task_id, f'Changed status from {old_status} to {new_status}', user_id))
+        
+        conn.commit()
+        cur.close()
+        
+        return JsonResponse({'success': True, 'message': 'Status updated successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==============================
+#  UPDATE TASK PRIORITY (API)
+# ==============================
+@require_POST
+def update_task_priority(request, task_id):
+    '''Update task priority via AJAX'''
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        new_priority = data.get('priority')
+        
+        if not new_priority:
+            return JsonResponse({'success': False, 'error': 'Priority is required'})
+        
+        conn = get_tenant_conn(request)
+        cur = conn.cursor()
+        
+        # Get old priority
+        cur.execute('SELECT priority FROM tasks WHERE id = %s', (task_id,))
+        task = cur.fetchone()
+        old_priority = task['priority'] if task else None
+        
+        # Update task priority
+        cur.execute('''
+            UPDATE tasks 
+            SET priority = %s, updated_at = NOW()
+            WHERE id = %s
+        ''', (new_priority, task_id))
+        
+        # Log activity
+        user_id = request.session.get('user_id')
+        cur.execute('''
+            INSERT INTO activity_log 
+            (entity_type, entity_id, action, performed_by, timestamp)
+            VALUES ('task', %s, %s, %s, NOW())
+        ''', (task_id, f'Changed priority from {old_priority} to {new_priority}', user_id))
+        
+        conn.commit()
+        cur.close()
+        
+        return JsonResponse({'success': True, 'message': 'Priority updated successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==============================
+#  ADD TASK COMMENT (API)
+# ==============================
+@require_POST
+def add_task_comment(request, task_id):
+    '''Add comment to task via AJAX'''
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        comment_text = data.get('comment_text', '').strip()
+        is_internal = data.get('is_internal', False)
+        
+        if not comment_text:
+            return JsonResponse({'success': False, 'error': 'Comment text is required'})
+        
+        conn = get_tenant_conn(request)
+        cur = conn.cursor()
+        
+        # Get commenter info
+        user_id = request.session.get('user_id')
+        user_email = request.session.get('user_email', '')
+        
+        # Get commenter name
+        cur.execute('''
+            SELECT CONCAT(first_name, ' ', last_name) as name 
+            FROM members 
+            WHERE id = %s
+        ''', (user_id,))
+        
+        commenter = cur.fetchone()
+        commenter_name = commenter['name'] if commenter else user_email
+        
+        # Insert comment
+        cur.execute('''
+            INSERT INTO task_comments 
+            (task_id, comment_text, commenter_id, commenter_name, is_internal, created_at)
+            VALUES (%s, %s, %s, %s, %s, NOW())
+        ''', (task_id, comment_text, user_id, commenter_name, is_internal))
+        
+        # Log activity
+        comment_type = "internal comment" if is_internal else "comment"
+        cur.execute('''
+            INSERT INTO activity_log 
+            (entity_type, entity_id, action, performed_by, timestamp)
+            VALUES ('task', %s, %s, %s, NOW())
+        ''', (task_id, f'Added {comment_type}', user_id))
+        
+        conn.commit()
+        cur.close()
+        
+        return JsonResponse({'success': True, 'message': 'Comment posted successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==============================
+#  ASSIGN MEMBER TO TASK (API)
+# ==============================
+@require_POST
+def assign_member_to_task(request, task_id):
+    '''Assign a member to task via AJAX'''
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        member_id = data.get('member_id')
+        
+        if not member_id:
+            return JsonResponse({'success': False, 'error': 'Member ID is required'})
+        
+        conn = get_tenant_conn(request)
+        cur = conn.cursor()
+        
+        # Update task with member assignment
+        cur.execute('''
+            UPDATE tasks 
+            SET assigned_type = 'member',
+                assigned_to = %s,
+                updated_at = NOW()
+            WHERE id = %s
+        ''', (member_id, task_id))
+        
+        conn.commit()
+        cur.close()
+        
+        return JsonResponse({'success': True, 'message': 'Member assigned successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

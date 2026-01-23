@@ -206,6 +206,23 @@ def new_tenant_view(request):
     except Exception:
         pass
 
+    # Save work types configuration
+    work_types = request.POST.getlist('work_types')
+    if work_types:
+        try:
+            admin_conn = pymysql.connect(**ADMIN_CONF)
+            cur = admin_conn.cursor()
+            for work_type in work_types:
+                cur.execute("""
+                    INSERT INTO master_db.tenant_work_types (tenant_id, work_type, is_enabled, created_at)
+                    VALUES (%s, %s, TRUE, NOW())
+                    ON DUPLICATE KEY UPDATE is_enabled=TRUE, updated_at=NOW()
+                """, (client_row['id'], work_type))
+            cur.close()
+            admin_conn.close()
+        except Exception as e:
+            messages.warning(request, f"Work types saved with some issues: {e}")
+
     # Success message
     messages.success(request, f"Tenant {client_name} created. Admin account: {admin_email}")
     messages.info(request, f"Temporary admin password: {temp_admin_pw} (please change immediately)")

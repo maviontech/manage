@@ -304,7 +304,7 @@
 
   <!-- Form Card -->
   <div class="form-main-card">
-    <form method="post" id="createTaskForm" novalidate>
+    <form method="post" id="createTaskForm" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
 
       <!-- Main Form Fields -->
@@ -393,6 +393,12 @@
         <textarea name="description" rows="6" class="field-textarea" placeholder="Add detailed notes, acceptance criteria, links, steps to reproduce..."></textarea>
         <span class="field-hint">Optional — good place for acceptance criteria or reproduction steps</span>
       </div>
+
+      <!-- Attachments -->
+      {% include "core/_attachments.html" %}
+
+      <!-- System Information -->
+      {% include "core/_system_info.html" %}
 
       <!-- Action Buttons -->
       <div class="form-actions">

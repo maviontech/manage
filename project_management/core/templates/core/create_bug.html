@@ -297,7 +297,7 @@
   </div>
 
   <!-- Form Card -->
-  <form method="post" class="form-main-card">
+  <form method="post" class="form-main-card" enctype="multipart/form-data">
     {% csrf_token %}
     
     <!-- Basic Information -->
@@ -455,6 +455,12 @@
         <span class="field-hint">What actually happens</span>
       </div>
     </div>
+
+    <!-- Attachments -->
+    {% include "core/_attachments.html" %}
+
+    <!-- System Information -->
+    {% include "core/_system_info.html" %}
 
     <!-- Action Buttons -->
     <div class="form-actions">
