@@ -54,30 +54,6 @@ def initialize_master_database():
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """)
         
-        # Create tenants table
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS tenants (
-                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                company_name VARCHAR(255) NOT NULL,
-                company_domain VARCHAR(255) NOT NULL UNIQUE,
-                company_code VARCHAR(50) NOT NULL UNIQUE,
-                admin_username VARCHAR(150) NOT NULL,
-                admin_password VARCHAR(255) NOT NULL,
-                custom_database TINYINT(1) DEFAULT 0,
-                DB_name VARCHAR(100) NOT NULL UNIQUE,
-                DB_host VARCHAR(255),
-                DB_port INT,
-                DB_user VARCHAR(100),
-                DB_password VARCHAR(255),
-                created_by INT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_company_domain (company_domain),
-                INDEX idx_company_code (company_code),
-                INDEX idx_created_by (created_by)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        """)
-        
         # Create tenants_admin table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS tenants_admin (
@@ -135,8 +111,6 @@ def initialize_master_database():
                 hashed_password,
                 'Default tenant admin account - please change password after first login'
             ))
-            print(f"✓ Default tenant admin created - Username: 'tenant', Password: 'tenant'")
-        
         cur.close()
         conn.close()
         
