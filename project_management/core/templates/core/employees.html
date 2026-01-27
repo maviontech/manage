@@ -11,6 +11,8 @@
     padding: 32px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.08);
     margin-bottom: 24px;
+    overflow: visible;
+    max-width: 100%;
   }
   .employees-header {
     display: flex;
@@ -57,31 +59,62 @@
     margin-top: 20px;
     border-radius: 12px;
     overflow: hidden;
+    table-layout: auto;
   }
   .employees-table thead {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: white;
   }
   .employees-table th {
-    padding: 16px;
+    padding: 16px 12px;
     text-align: left;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    white-space: nowrap;
   }
   .employees-table td {
-    padding: 16px;
+    padding: 16px 12px;
     border-bottom: 1px solid #f1f5f9;
     font-size: 14px;
     color: #334155;
+    max-width: 200px;
   }
   .employees-table tbody tr {
     transition: all 0.2s ease;
   }
   .employees-table tbody tr:hover {
     background: linear-gradient(90deg, #f0f9ff, #ffffff);
-    transform: translateX(4px);
+  }
+  .employees-table td:last-child {
+    white-space: nowrap;
+    min-width: 110px;
+    max-width: none;
+    padding-right: 16px;
+  }
+  .employees-table td:nth-child(1) {
+    min-width: 100px;
+    font-weight: 600;
+  }
+  .employees-table td:nth-child(2) {
+    min-width: 160px;
+  }
+  .employees-table td:nth-child(3) {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .employees-table td:nth-child(4) {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .employees-table td:nth-child(5) {
+    max-width: 120px;
+  }
+  .employees-table td:nth-child(6) {
+    max-width: 130px;
   }
   .btn-primary {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
@@ -281,6 +314,19 @@
     color: #64748b;
     font-size: 16px;
     margin: 0;
+  }
+  
+  #employeesTableContainer {
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+  }
+  
+  @media (max-width: 1400px) {
+    .employees-table {
+      min-width: 1000px;
+    }
   }
   
   @media (max-width: 900px) {
@@ -594,7 +640,7 @@ function renderEmployees(employees) {
         <td><strong style="color:#3b82f6;">${emp.employee_code}</strong></td>
         <td>
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:65px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:13px;">
+            <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:18px;">
               ${emp.full_name.charAt(0).toUpperCase()}
             </div>
             <strong>${emp.full_name}</strong>
@@ -607,16 +653,16 @@ function renderEmployees(employees) {
         <td style="color:#64748b;">
           ${emp.phone ? `<i class="fa fa-phone" style="color:#3b82f6;margin-right:6px;"></i>${emp.phone}` : '-'}
         </td>
-        <td>
-          ${emp.department ? `<span style="background:#f0f9ff;color:#0284c7;border-radius:8px;font-size:13px;font-weight:600;">${emp.department}</span>` : '-'}
-        </td>
-        <td style="color:#64748b;">${emp.designation || '-'}</td>
-        <td><span class="status-badge status-${statusClass}">${emp.status}</span></td>
         <td style="white-space:nowrap;">
-          <button class="btn-secondary" onclick="editEmployee(${emp.id})" title="Edit Employee">
+          ${emp.department ? `<span style="background:#f0f9ff;color:#0284c7;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;display:inline-block;">${emp.department}</span>` : '-'}
+        </td>
+        <td style="color:#64748b;white-space:nowrap;">${emp.designation || '-'}</td>
+        <td style="white-space:nowrap;"><span class="status-badge status-${statusClass}">${emp.status}</span></td>
+        <td style="white-space:nowrap;">
+          <button class="btn-secondary" onclick="editEmployee(${emp.id})" title="Edit Employee" style="display:inline-block;">
             <i class="fa fa-edit"></i>
           </button>
-          <button class="btn-danger" onclick="deleteEmployee(${emp.id}, '${emp.full_name}')" title="Delete Employee">
+          <button class="btn-danger" onclick="deleteEmployee(${emp.id}, '${emp.full_name}')" title="Delete Employee" style="display:inline-block;">
             <i class="fa fa-trash"></i>
           </button>
         </td>

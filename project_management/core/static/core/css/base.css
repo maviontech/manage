@@ -414,7 +414,7 @@ body.sidebar-collapsed .search-wrapper{min-width:220px}
 
 /* main content */
 .main{flex:1 1 auto;padding:24px}
-.container{max-width:1180px;margin:0 auto}
+.container{max-width:calc(100vw - 300px);margin:0 auto;padding:0 20px}
 .page-title{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 
 /* card */

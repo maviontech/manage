@@ -836,29 +836,6 @@
 {% block page_subtitle %}Overview of your projects and tasks{% endblock %}
 
 {% block content %}
-<div class="welcome-banner">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-    <div style="position:relative;z-index:1;">
-      <h3>Welcome, {{ user.first_name|default:user.email }}</h3>
-      <div class="user-email-info">Your registered email: <strong>{{ user.email }}</strong></div>
-    </div>
-
-    <div class="top-actions">
-      {% if is_team_lead %}
-        <button id="teamViewBtn" class="btn-team" title="Team view (if you are a team lead)">
-          <i class="fas fa-users"></i> Team View
-        </button>
-      {% endif %}
-      <form method="post" action="{% url 'logout' %}" style="display:inline;">
-        {% csrf_token %}
-        <button class="btn-logout" type="submit">
-          <i class="fas fa-sign-out-alt"></i> Logout
-        </button>
-      </form>
-    </div>
-  </div>
-</div>
-
 <div class="dashboard-grid">
   <div class="metric-card total-tasks">
     <div class="label">Total Tasks Assigned</div>
