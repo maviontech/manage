@@ -442,7 +442,7 @@
       <div style="overflow:auto;">
         <table class="table" id="people-table" aria-live="polite">
           <thead>
-            <tr><th style="width:64px">Avatar</th><th>Name</th><th>Email</th><th>Phone</th><th style="width:120px">Actions</th></tr>
+            <tr><th style="width:64px">Avatar</th><th>Name</th><th>Email</th><th>Phone</th></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -533,7 +533,7 @@ function renderTable() {
   document.getElementById('list-stats').textContent = `${total} member${total !== 1 ? 's' : ''}`;
 
   if (total === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty">No members found. Add a member using the form.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">No members found. Add a member using the form.</td></tr>`;
     document.getElementById('pager').innerHTML = '';
     return;
   }
@@ -551,10 +551,7 @@ function renderTable() {
       <td><div class="avatar">${avatarChar}</div></td>
       <td><div style="font-weight:600">${name}</div></td>
       <td>${p.email}</td>
-      <td>${p.phone || ''}</td>
-      <td>
-        <button class="btn small ghost" data-email="${p.email}" onclick="onEdit('${p.email}')">Edit</button>
-      </td>`;
+      <td>${p.phone || ''}</td>`;
     tbody.appendChild(tr);
   }
 
