@@ -6,6 +6,8 @@ Run this after adding the profile photo feature to update existing tenants.
 import os
 import sys
 import pymysql
+import logging
+logger = logging.getLogger('project_management')
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,7 +34,7 @@ def add_profile_photo_column():
         )
         
         if not master_conn:
-            print("❌ Failed to connect to master database")
+            logger.error("❌ Failed to connect to master database")
             return
         
         master_cursor = master_conn.cursor()
@@ -42,13 +44,13 @@ def add_profile_photo_column():
         tenants = master_cursor.fetchall()
         
         if not tenants:
-            print("⚠️  No tenants found in master database")
+            logger.warning("⚠️  No tenants found in master database")
             master_cursor.close()
             master_conn.close()
             return
         
-        print(f"\n📋 Found {len(tenants)} tenant(s)")
-        print("=" * 60)
+        logger.info(f"\n📋 Found {len(tenants)} tenant(s)")
+        logger.info("=" * 60)
         
         success_count = 0
         error_count = 0
@@ -62,11 +64,11 @@ def add_profile_photo_column():
             db_port = tenant.get('db_port', 3306)
             
             if not all([db_name, db_user, db_password]):
-                print(f"⚠️  Skipping tenant {tenant_id}: Missing database credentials")
+                logger.warning(f"⚠️  Skipping tenant {tenant_id}: Missing database credentials")
                 continue
             
             try:
-                print(f"\n🔧 Processing tenant: {tenant_id} (DB: {db_name})")
+                logger.info(f"\n🔧 Processing tenant: {tenant_id} (DB: {db_name})")
                 
                 # Connect to tenant database
                 tenant_conn = pymysql.connect(
@@ -93,7 +95,7 @@ def add_profile_photo_column():
                 column_exists = tenant_cursor.fetchone()
                 
                 if column_exists:
-                    print(f"   ⏭️  Column 'profile_photo' already exists in members table")
+                    logger.info(f"   ⏭️  Column 'profile_photo' already exists in members table")
                 else:
                     # Add the profile_photo column
                     tenant_cursor.execute("""
@@ -102,31 +104,31 @@ def add_profile_photo_column():
                         COMMENT 'Path to profile photo file'
                     """)
                     tenant_conn.commit()
-                    print(f"   ✅ Added 'profile_photo' column to members table")
+                    logger.info(f"   ✅ Added 'profile_photo' column to members table")
                 
                 tenant_cursor.close()
                 tenant_conn.close()
                 success_count += 1
                 
             except Exception as e:
-                print(f"   ❌ Error processing tenant {tenant_id}: {str(e)}")
+                logger.error(f"   ❌ Error processing tenant {tenant_id}: {str(e)}", exc_info=True)
                 error_count += 1
                 continue
         
         master_cursor.close()
         master_conn.close()
         
-        print("\n" + "=" * 60)
-        print(f"📊 Summary:")
-        print(f"   ✅ Success: {success_count}")
-        print(f"   ❌ Errors: {error_count}")
-        print("=" * 60 + "\n")
+        logger.info("\n" + "=" * 60)
+        logger.info(f"📊 Summary:")
+        logger.info(f"   ✅ Success: {success_count}")
+        logger.info(f"   ❌ Errors: {error_count}")
+        logger.info("=" * 60 + "\n")
         
     except Exception as e:
-        print(f"❌ Fatal error: {str(e)}")
+        logger.error(f"❌ Fatal error: {str(e)}", exc_info=True)
 
 if __name__ == "__main__":
-    print("\n" + "=" * 60)
-    print("🖼️  Adding profile_photo column to members table")
-    print("=" * 60)
+    logger.info("\n" + "=" * 60)
+    logger.info("🖼️  Adding profile_photo column to members table")
+    logger.info("=" * 60)
     add_profile_photo_column()

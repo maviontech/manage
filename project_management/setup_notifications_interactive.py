@@ -4,13 +4,17 @@ Run this script and follow the prompts
 """
 
 import pymysql
+import logging
 
-print("\n" + "="*70)
-print(" "*20 + "NOTIFICATIONS TABLE SETUP")
-print("="*70)
+# Use project logger
+logger = logging.getLogger('project_management')
 
-print("\n📋 MySQL Connection Details")
-print("-" * 70)
+logger.info("\n" + "="*70)
+logger.info(" "*20 + "NOTIFICATIONS TABLE SETUP")
+logger.info("="*70)
+
+logger.info("\n📋 MySQL Connection Details")
+logger.info("-" * 70)
 
 # Get database credentials
 db_host = input("MySQL Host [localhost]: ").strip() or "localhost"
@@ -19,10 +23,10 @@ db_password = input("MySQL Password [press Enter if none]: ").strip()
 db_name = input("Database Name: ").strip()
 
 if not db_name:
-    print("\n❌ Database name is required!")
+    logger.error("\n❌ Database name is required!")
     exit(1)
 
-print(f"\n🔌 Connecting to {db_user}@{db_host}/{db_name}...")
+logger.info(f"\n🔌 Connecting to {db_user}@{db_host}/{db_name}...")
 
 try:
     # Connect to the database
@@ -35,12 +39,12 @@ try:
         cursorclass=pymysql.cursors.DictCursor
     )
     
-    print("✅ Connected successfully!")
+    logger.info("✅ Connected successfully!")
     
     cursor = conn.cursor()
     
     # Check if table already exists
-    print(f"\n🔍 Checking if notifications table exists...")
+    logger.info(f"\n🔍 Checking if notifications table exists...")
     cursor.execute("""
         SELECT COUNT(*) as count 
         FROM information_schema.tables 
@@ -50,22 +54,22 @@ try:
     result = cursor.fetchone()
     
     if result['count'] > 0:
-        print(f"   ⚠️  notifications table already exists!")
-        print(f"\n   Drop and recreate? (yes/no): ", end='')
+        logger.warning(f"   ⚠️  notifications table already exists!")
+        logger.info(f"\n   Drop and recreate? (yes/no): ")
         answer = input().strip().lower()
         
         if answer != 'yes':
-            print("\n   ✅ Keeping existing table. Exiting.\n")
+            logger.info("\n   ✅ Keeping existing table. Exiting.\n")
             cursor.close()
             conn.close()
             exit(0)
         
         cursor.execute("DROP TABLE notifications")
         conn.commit()
-        print("   🗑️  Old table dropped")
+        logger.info("   🗑️  Old table dropped")
     
     # Create notifications table
-    print("\n🔧 Creating notifications table...")
+    logger.info("\n🔧 Creating notifications table...")
     
     cursor.execute("""
         CREATE TABLE notifications (
@@ -86,10 +90,10 @@ try:
     
     conn.commit()
     
-    print("   ✅ Table created successfully!")
+    logger.info("   ✅ Table created successfully!")
     
     # Insert sample notifications
-    print("\n🔔 Creating sample notifications...")
+    logger.info("\n🔔 Creating sample notifications...")
     
     cursor.execute("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM members LIMIT 3")
     members = cursor.fetchall()
@@ -107,50 +111,49 @@ try:
                 "/notifications/"
             ))
         conn.commit()
-        print(f"   ✅ Created {len(members)} sample notification(s)")
+        logger.info(f"   ✅ Created {len(members)} sample notification(s)")
     else:
-        print("   ⚠️  No members found - skipping sample notifications")
+        logger.warning("   ⚠️  No members found - skipping sample notifications")
     
     # Show table info
-    print("\n📊 Table Structure:")
-    print("-" * 70)
+    logger.info("\n📊 Table Structure:")
+    logger.info("-" * 70)
     cursor.execute("DESCRIBE notifications")
     columns = cursor.fetchall()
     
-    print(f"{'Field':<20} {'Type':<35} {'Null':<8} {'Key'}")
-    print("-" * 70)
+    logger.info(f"{'Field':<20} {'Type':<35} {'Null':<8} {'Key'}")
+    logger.info("-" * 70)
     for col in columns:
-        print(f"{col['Field']:<20} {col['Type']:<35} {col['Null']:<8} {col['Key']}")
+        logger.info(f"{col['Field']:<20} {col['Type']:<35} {col['Null']:<8} {col['Key']}")
     
     # Count notifications
     cursor.execute("SELECT COUNT(*) as count FROM notifications")
     count_result = cursor.fetchone()
     
-    print(f"\n📈 Total Notifications: {count_result['count']}")
+    logger.info(f"\n📈 Total Notifications: {count_result['count']}")
     
     cursor.close()
     conn.close()
     
-    print("\n" + "="*70)
-    print("✨ SUCCESS! Your notifications system is ready!")
-    print("="*70)
-    print("\n💡 Actions:")
-    print(f"   1. Restart your Django server if it's running")
-    print(f"   2. Visit: http://127.0.0.1:8000/notifications/")
-    print(f"   3. Check the bell icon in the header for notifications")
-    print()
+    logger.info ("\n" + "="*70)
+    logger.info("✨ SUCCESS! Your notifications system is ready!")
+    logger.info("="*70)
+    logger.info("\n💡 Actions:")
+    logger.info(f"   1. Restart your Django server if it's running")
+    logger.info(f"   2. Visit: http://127.0.0.1:8000/notifications/")
+    logger.info(f"   3. Check the bell icon in the header for notifications")
     
 except pymysql.Error as e:
-    print(f"\n❌ Database Error:")
-    print(f"   {e}")
-    print("\n💡 Common fixes:")
-    print("   - Check your MySQL username and password")
-    print("   - Make sure the database exists")
-    print("   - Verify MySQL server is running")
-    print()
+    logger.error(f"\n❌ Database Error:")
+    logger.error(f"   {e}")
+    logger.error("\n💡 Common fixes:")
+    logger.error("   - Check your MySQL username and password")
+    logger.error("   - Make sure the database exists")
+    logger.error("   - Verify MySQL server is running")
+    logger.error("")
     exit(1)
 except Exception as e:
-    print(f"\n❌ Unexpected Error: {e}")
+    logger.error(f"\n❌ Unexpected Error: {e}")
     import traceback
     traceback.print_exc()
     exit(1)

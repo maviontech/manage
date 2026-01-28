@@ -1,4 +1,6 @@
 from django.apps import AppConfig
+import logging
+logger = logging.getLogger('project_management')
 
 
 class CoreConfig(AppConfig):
@@ -14,4 +16,4 @@ class CoreConfig(AppConfig):
                 from core.db_initializer import initialize_master_database
                 initialize_master_database()
             except Exception as e:
-                print(f"✗ Error initializing master database: {e}")
+                logger.error(f"✗ Error initializing master database: {e}")

@@ -4,7 +4,11 @@ from asgiref.sync import sync_to_async
 from core.db_helpers import exec_sql, get_tenant_conn
 import pymysql
 import os
+import logging
 
+# Use the project logger configured in settings.LOGGING so messages
+# route to the websocket/notifications handler (websocket.log)
+logger = logging.getLogger('notifications')
 
 # Master DB connection config
 MASTER_DB_CONFIG = {
@@ -30,7 +34,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         user_id = session.get("user_id")
         
         if not member_id and not user_id:
-            print("WS rejected: no authenticated session")
+            logger.info("WS rejected: no authenticated session")
             await self.close(code=4001)
             return
 
@@ -38,7 +42,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         self.tenant_id = qs.get("tenant", [None])[0]
 
         if not self.tenant_id:
-            print("WS rejected: tenant missing")
+            logger.info("WS rejected: tenant missing")
             await self.close(code=4002)
             return
 
@@ -63,7 +67,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         if self.group_id:
             self.group_channel = f"chat_group_{self.tenant_id}_{self.group_id}"
             await self.channel_layer.group_add(self.group_channel, self.channel_name)
-            print(f"📨 Joined group channel: {self.group_channel}")
+            logger.info(f"📨 Joined group channel: {self.group_channel}")
         
         # Join conversation-specific room for read receipts if peer is specified
         if self.peer and self.me:
@@ -81,16 +85,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             # Ensure total length is under 100 characters
             if len(self.conversation_room) < 100:
                 await self.channel_layer.group_add(self.conversation_room, self.channel_name)
-                print(f"📨 Joined conversation room: {self.conversation_room}")
+                logger.info(f"📨 Joined conversation room: {self.conversation_room}")
             else:
-                print(f"⚠️ Conversation room name too long, skipping: {len(self.conversation_room)} chars")
+                logger.info(f"⚠️ Conversation room name too long, skipping: {len(self.conversation_room)} chars")
                 self.conversation_room = None
         else:
             self.conversation_room = None
         
         await self.accept()
 
-        print(f"✅ WS connected: {self.me} (tenant: {self.tenant_id})")
+        logger.info(f"✅ WS connected: {self.me} (tenant: {self.tenant_id})")
         
         # Broadcast online presence to all users in tenant
         try:
@@ -103,10 +107,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 },
             )
         except Exception as e:
-            print(f"Error broadcasting online presence: {e}")
+            logger.error(f"Error broadcasting online presence: {e}")
 
     async def disconnect(self, close_code):
-        print(f"🔌 WS disconnect: {getattr(self, 'me', 'unknown')} (code: {close_code})")
+        logger.info(f"🔌 WS disconnect: {getattr(self, 'me', 'unknown')} (code: {close_code})")
         if hasattr(self, "presence_group"):
             try:
                 await self.channel_layer.group_send(
@@ -118,14 +122,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     },
                 )
             except Exception as e:
-                print(f"Error sending presence update: {e}")
+                logger.error(f"Error sending presence update: {e}")
             
             try:
                 await self.channel_layer.group_discard(
                     self.presence_group, self.channel_name
                 )
             except Exception as e:
-                print(f"Error leaving group: {e}")
+                logger.error(f"Error leaving group: {e}")
         
         # Leave conversation room if joined
         if hasattr(self, "conversation_room") and self.conversation_room:
@@ -133,9 +137,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 await self.channel_layer.group_discard(
                     self.conversation_room, self.channel_name
                 )
-                print(f"📤 Left conversation room: {self.conversation_room}")
+                logger.info(f"📤 Left conversation room: {self.conversation_room}")
             except Exception as e:
-                print(f"Error leaving conversation room: {e}")
+                logger.error(f"Error leaving conversation room: {e}")
         
         # Leave group channel if joined
         if hasattr(self, "group_channel") and self.group_channel:
@@ -143,12 +147,12 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 await self.channel_layer.group_discard(
                     self.group_channel, self.channel_name
                 )
-                print(f"📤 Left group channel: {self.group_channel}")
+                logger.info(f"📤 Left group channel: {self.group_channel}")
             except Exception as e:
-                print(f"Error leaving group channel: {e}")
+                logger.error(f"Error leaving group channel: {e}")
 
     async def receive_json(self, content):
-        print(f"📨 Received: {content}")
+        logger.info(f"📨 Received: {content}")
         
         msg_type = content.get("type")
         
@@ -159,17 +163,17 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             cid = content.get("cid")
             
             if not text or not group_id:
-                print(f"⚠️ Missing text or group_id: text={bool(text)}, group_id={bool(group_id)}")
+                logger.warning(f"⚠️ Missing text or group_id: text={bool(text)}, group_id={bool(group_id)}")
                 return
             
-            print(f"💬 Saving group message from {self.me} to group {group_id}: {text[:50]}...")
+            logger.info(f"💬 Saving group message from {self.me} to group {group_id}: {text[:50]}...")
             
             try:
                 saved = await sync_to_async(self.save_group_message)(
                     self.tenant_id, group_id, self.me, text
                 )
                 
-                print(f"✅ Group message saved, broadcasting...")
+                logger.info(f"✅ Group message saved, broadcasting...")
                 
                 # Broadcast to group channel
                 group_channel = f"chat_group_{self.tenant_id}_{group_id}"
@@ -189,16 +193,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     },
                 )
                 
-                print(f"✅ Group message broadcasted successfully")
+                logger.info(f"✅ Group message broadcasted successfully")
             except Exception as e:
-                print(f"❌ Error processing group message: {e}")
+                logger.error(f"❌ Error processing group message: {e}")
                 import traceback
                 traceback.print_exc()
             return
         
         # Handle direct messages
         if msg_type != "message":
-            print(f"⚠️ Ignoring non-message type: {msg_type}")
+            logger.warning(f"⚠️ Ignoring non-message type: {msg_type}")
             return
 
         text = content.get("message")
@@ -206,17 +210,17 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         cid = content.get("cid")  # Get client ID for optimistic UI matching
 
         if not text or not to_user:
-            print(f"⚠️ Missing text or to_user: text={bool(text)}, to_user={bool(to_user)}")
+            logger.warning(f"⚠️ Missing text or to_user: text={bool(text)}, to_user={bool(to_user)}")
             return
 
-        print(f"💬 Saving message from {self.me} to {to_user}: {text[:50]}...")
+        logger.info(f"💬 Saving message from {self.me} to {to_user}: {text[:50]}...")
         
         try:
             saved = await sync_to_async(self.save_message)(
                 self.tenant_id, self.me, to_user, text
             )
 
-            print(f"✅ Message saved, broadcasting...")
+            logger.info(f"✅ Message saved, broadcasting...")
             
             # Broadcast with CID so clients can match optimistic messages
             await self.channel_layer.group_send(
@@ -232,9 +236,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 },
             )
             
-            print(f"✅ Message broadcasted successfully")
+            logger.info(f"✅ Message broadcasted successfully")
         except Exception as e:
-            print(f"❌ Error processing message: {e}")
+            logger.error(f"❌ Error processing message: {e}")
             import traceback
             traceback.print_exc()
 
@@ -242,13 +246,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         try:
             await self.send_json(event)
         except Exception as e:
-            print(f"❌ Error in ChatConsumer.new_message: {e}")
+            logger.error(f"❌ Error in ChatConsumer.new_message: {e}")
 
     async def presence_update(self, event):
         try:
             await self.send_json(event)
         except Exception as e:
-            print(f"❌ Error in ChatConsumer.presence_update: {e}")
+            logger.error(f"❌ Error in ChatConsumer.presence_update: {e}")
             import traceback
             traceback.print_exc()
 
@@ -257,12 +261,12 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         try:
             await self.send_json(event)
         except Exception as e:
-            print(f"❌ Error in ChatConsumer.typing_update: {e}")
+            logger.error(f"❌ Error in ChatConsumer.typing_update: {e}")
 
     async def chat_message_read(self, event):
         """Handle read receipt notifications and broadcast to clients"""
-        print(f"📖 Read receipt handler called: {event}")
-        print(f"📖 Sending {len(event.get('message_ids', []))} message IDs as read")
+        logger.info(f"📖 Read receipt handler called: {event}")
+        logger.info(f"📖 Sending {len(event.get('message_ids', []))} message IDs as read")
         # Forward the entire event to the client
         await self.send_json({
             'type': event.get('type', 'message_read'),
@@ -486,23 +490,23 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         session = self.scope.get("session", {})
         
         # Debug: Log session contents
-        print(f"🔍 NotificationConsumer session keys: {list(session.keys()) if session else 'None'}")
-        print(f"🔍 Session data: member_id={session.get('member_id')}, user_id={session.get('user_id')}")
+        logger.debug(f"🔍 NotificationConsumer session keys: {list(session.keys()) if session else 'None'}")
+        logger.debug(f"🔍 Session data: member_id={session.get('member_id')}, user_id={session.get('user_id')}")
         
         # Check for session-based authentication
         member_id = session.get("member_id")
         user_id = session.get("user_id")
         
         if not member_id and not user_id:
-            print("❌ Notification WS rejected: no authenticated session")
-            print(f"   Available session keys: {list(session.keys())}")
+            logger.error("❌ Notification WS rejected: no authenticated session")
+            logger.error(f"   Available session keys: {list(session.keys())}")
             await self.close(code=4001)
             return
 
         qs = parse_qs(self.scope.get("query_string", b"").decode())
         tenant = qs.get("tenant", [None])[0]
         if not tenant:
-            print("❌ Notification WS rejected: tenant missing")
+            logger.error("❌ Notification WS rejected: tenant missing")
             await self.close(code=4002)
             return
 
@@ -514,28 +518,28 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             # Join tenant-wide presence group (for chat/presence updates)
             self.presence_group = f"presence_{tenant}"
             await self.channel_layer.group_add(self.presence_group, self.channel_name)
-            print(f"✅ Joined presence group: {self.presence_group}")
+            logger.info(f"✅ Joined presence group: {self.presence_group}")
 
             # Join user-specific notification group (for system notifications)
             if self.member_id:
                 self.user_notification_group = f"user_notifications_{tenant}_{self.member_id}"
                 await self.channel_layer.group_add(self.user_notification_group, self.channel_name)
-                print(f"✅ Joined user notification group: {self.user_notification_group}")
-                print(f"✅ NotificationConsumer connected: member_id={self.member_id}, tenant={tenant}")
+                logger.info(f"✅ Joined user notification group: {self.user_notification_group}")
+                logger.info(f"✅ NotificationConsumer connected: member_id={self.member_id}, tenant={tenant}")
             else:
-                print(f"✅ NotificationConsumer connected: user_id={user_id}, tenant={tenant}")
+                logger.info(f"✅ NotificationConsumer connected: user_id={user_id}, tenant={tenant}")
         except Exception as e:
-            print(f"❌ Error joining channel groups: {e}")
+            logger.error(f"❌ Error joining channel groups: {e}")
             import traceback
             traceback.print_exc()
             await self.close(code=4003)
             return
 
         await self.accept()
-        print(f"✅ NotificationConsumer WebSocket accepted and ready")
+        logger.info(f"✅ NotificationConsumer WebSocket accepted and ready")
 
     async def disconnect(self, close_code):
-        print(f"🔌 NotificationConsumer disconnect: code={close_code}, member_id={getattr(self, 'member_id', 'unknown')}")
+        logger.info(f"🔌 NotificationConsumer disconnect: code={close_code}, member_id={getattr(self, 'member_id', 'unknown')}")
         # Leave presence group
         if getattr(self, "presence_group", None):
             await self.channel_layer.group_discard(self.presence_group, self.channel_name)
@@ -546,7 +550,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
     async def receive_json(self, content):
         """Handle any incoming messages from client (currently read-only, but prevents crashes)"""
-        print(f"📥 NotificationConsumer received message: {content}")
+        logger.info(f"📥 NotificationConsumer received message: {content}")
         # NotificationConsumer is primarily for receiving server-pushed notifications
         # If client needs to send data, handle it here
         pass
@@ -559,35 +563,35 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             client_event['event'] = 'presence_update'
             await self.send_json(client_event)
         except Exception as e:
-            print(f"❌ Error sending presence_update: {e}")
+            logger.error(f"❌ Error sending presence_update: {e}")
 
     async def new_message(self, event):
         # forward new chat messages to client
         try:
-            print(f"📨 NotificationConsumer forwarding new_message: {event.get('from')} -> {event.get('to')}")
+            logger.info(f"📨 NotificationConsumer forwarding new_message: {event.get('from')} -> {event.get('to')}")
             # Remove 'type' field before sending to client to avoid confusion
             # The 'type' field is for Django Channels routing, not for the client
             client_event = {k: v for k, v in event.items() if k != 'type'}
             client_event['event'] = 'new_message'  # Add event field for client
             await self.send_json(client_event)
-            print(f"✅ Successfully sent new_message to client")
+            logger.info(f"✅ Successfully sent new_message to client")
         except Exception as e:
-            print(f"❌ Error sending new_message: {e}")
+            logger.error(f"❌ Error sending new_message: {e}")
             import traceback
             traceback.print_exc()
 
     async def chat_message(self, event):
         # forward chat messages that were also broadcast to presence_group
         try:
-            print(f"📨 NotificationConsumer forwarding chat_message: {event}")
+            logger.info(f"📨 NotificationConsumer forwarding chat_message: {event}")
             # Remove 'type' field and add 'event' field for client
             client_event = {k: v for k, v in event.items() if k != 'type'}
             if 'event' not in client_event:
                 client_event['event'] = 'chat_message'
             await self.send_json(client_event)
-            print(f"✅ Successfully sent chat_message to client")
+            logger.info(f"✅ Successfully sent chat_message to client")
         except Exception as e:
-            print(f"❌ Error sending chat_message: {e}")
+            logger.error(f"❌ Error sending chat_message: {e}")
 
     async def system_notification(self, event):
         """Handle system notifications (task assignments, mentions, etc.)"""
@@ -602,7 +606,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 'created_at': event.get('created_at'),
             })
         except Exception as e:
-            print(f"❌ Error sending system_notification: {e}")
+            logger.error(f"❌ Error sending system_notification: {e}")
 
     async def typing_update(self, event):
         """Handle typing indicator updates"""
@@ -613,7 +617,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 client_event['event'] = 'typing'
             await self.send_json(client_event)
         except Exception as e:
-            print(f"❌ Error sending typing_update: {e}")
+            logger.error(f"❌ Error sending typing_update: {e}")
 
 
 class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
@@ -633,14 +637,14 @@ class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
         user_id = session.get("user_id")
         
         if not member_id and not user_id:
-            print("Typing WS rejected: no authenticated session")
+            logger.info("Typing WS rejected: no authenticated session")
             await self.close(code=4001)
             return
 
         qs = parse_qs(self.scope.get("query_string", b"").decode())
         tenant = qs.get("tenant", [None])[0]
         if not tenant:
-            print("Typing WS rejected: tenant missing")
+            logger.info("Typing WS rejected: tenant missing")
             await self.close(code=4002)
             return
 
@@ -654,7 +658,7 @@ class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
         self.presence_group = f"presence_{tenant}"
         await self.channel_layer.group_add(self.presence_group, self.channel_name)
         await self.accept()
-        print(f"✅ Typing WS connected: {self.me} (tenant: {tenant})")
+        logger.info(f"✅ Typing WS connected: {self.me} (tenant: {tenant})")
 
     async def disconnect(self, close_code):
         if getattr(self, "presence_group", None):
@@ -672,7 +676,7 @@ class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
         # Use session identity as sender if not provided
         from_user = content.get("from") or self.me
         
-        print(f"📝 Typing indicator: {from_user} -> {to_user} ({status})")
+        logger.info(f"📝 Typing indicator: {from_user} -> {to_user} ({status})")
 
         # relay typing indicator to presence group
         await self.channel_layer.group_send(
@@ -698,7 +702,7 @@ class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
             client_event['event'] = 'presence_update'
             await self.send_json(client_event)
         except Exception as e:
-            print(f"❌ Error in TypingIndicatorConsumer.presence_update: {e}")
+            logger.error(f"❌ Error in TypingIndicatorConsumer.presence_update: {e}")
 
     async def new_message(self, event):
         """Handle new chat messages"""
@@ -708,11 +712,11 @@ class TypingIndicatorConsumer(AsyncJsonWebsocketConsumer):
             client_event['event'] = 'new_message'
             await self.send_json(client_event)
         except Exception as e:
-            print(f"❌ Error in TypingIndicatorConsumer.new_message: {e}")
+            logger.error(f"❌ Error in TypingIndicatorConsumer.new_message: {e}")
 
     async def chat_message(self, event):
         """Handle group chat messages"""
         try:
             await self.send_json(event)
         except Exception as e:
-            print(f"❌ Error in TypingIndicatorConsumer.chat_message: {e}")
+            logger.error(f"❌ Error in TypingIndicatorConsumer.chat_message: {e}")

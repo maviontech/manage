@@ -8,7 +8,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from .db_helpers import get_tenant_conn, exec_sql
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('notifications')
 
 
 class NotificationManager:

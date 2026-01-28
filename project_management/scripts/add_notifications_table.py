@@ -6,6 +6,7 @@ Run this after adding the notifications feature to update existing tenants
 import os
 import sys
 import pymysql
+import logging
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,7 +38,7 @@ def add_notifications_table():
         # Get master database connection
         master_conn = get_master_connection()
         if not master_conn:
-            print("❌ Failed to connect to master database")
+            logging.error("❌ Failed to connect to master database")
             return
         
         master_cursor = master_conn.cursor(pymysql.cursors.DictCursor)
@@ -47,12 +48,12 @@ def add_notifications_table():
         tenants = master_cursor.fetchall()
         
         if not tenants:
-            print("⚠️  No tenants found in master database")
+            logging.warning("⚠️  No tenants found in master database")
             master_conn.close()
             return
         
-        print(f"\n📋 Found {len(tenants)} tenant(s)")
-        print("=" * 60)
+        logging.info(f"\n📋 Found {len(tenants)} tenant(s)")
+        logging.info("=" * 60)
         
         success_count = 0
         error_count = 0
@@ -62,7 +63,7 @@ def add_notifications_table():
             db_name = tenant['db_name']
             
             try:
-                print(f"\n🔧 Processing tenant: {tenant_id} (DB: {db_name})")
+                logging.info(f"\n🔧 Processing tenant: {tenant_id} (DB: {db_name})")
                 
                 # Connect to tenant database
                 tenant_conn = pymysql.connect(
@@ -86,44 +87,44 @@ def add_notifications_table():
                 result = tenant_cursor.fetchone()
                 
                 if result['count'] > 0:
-                    print(f"   ℹ️  notifications table already exists, skipping...")
+                    logging.info(f"   ℹ️  notifications table already exists, skipping...")
                 else:
                     # Create notifications table
                     tenant_cursor.execute(NOTIFICATIONS_DDL)
                     tenant_conn.commit()
-                    print(f"   ✅ notifications table created successfully")
+                    logging.info(f"   ✅ notifications table created successfully")
                 
                 tenant_conn.close()
                 success_count += 1
                 
             except Exception as e:
-                print(f"   ❌ Error: {str(e)}")
+                logging.error(f"   ❌ Error: {str(e)}", exc_info=True)
                 error_count += 1
                 continue
         
         master_conn.close()
         
-        print("\n" + "=" * 60)
-        print(f"\n📊 Summary:")
-        print(f"   ✅ Successful: {success_count}")
-        print(f"   ❌ Errors: {error_count}")
-        print(f"   📝 Total: {len(tenants)}")
-        print("\n✨ Migration completed!\n")
+        logging.info("\n" + "=" * 60)
+        logging.info(f"\n📊 Summary:")
+        logging.info(f"   ✅ Successful: {success_count}")
+        logging.info(f"   ❌ Errors: {error_count}")
+        logging.info(f"   📝 Total: {len(tenants)}")
+        logging.info("\n✨ Migration completed!\n")
         
     except Exception as e:
-        print(f"\n❌ Fatal error: {str(e)}")
+        logging.error(f"\n❌ Fatal error: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
 
 if __name__ == '__main__':
-    print("\n" + "=" * 60)
-    print("🔔 NOTIFICATIONS TABLE MIGRATION")
-    print("=" * 60)
-    print("\nThis script will add the notifications table to all tenant databases.")
-    print("\nPress Ctrl+C to cancel, or Enter to continue...")
+    logging.info("\n" + "=" * 60)
+    logging.info("🔔 NOTIFICATIONS TABLE MIGRATION")
+    logging.info("=" * 60)
+    logging.info("\nThis script will add the notifications table to all tenant databases.")
+    logging.info("\nPress Ctrl+C to cancel, or Enter to continue...")
     
     try:
         input()
         add_notifications_table()
     except KeyboardInterrupt:
-        print("\n\n❌ Migration cancelled by user\n")
+        logging.info("\n\n❌ Migration cancelled by user\n")

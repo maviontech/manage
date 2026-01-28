@@ -35,7 +35,7 @@ import logging
 from typing import Optional, List, Dict, Any, Union
 from django.db import connections, connection as default_connection
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('utility')
 
 # Thread-local cache for tenant connections
 _tlocal = threading.local()

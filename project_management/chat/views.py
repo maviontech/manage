@@ -144,7 +144,7 @@ def conversation_history(request):
     if not request.session.get('member_id'):
         return HttpResponseForbidden("Not authenticated")
        
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('project_management')
     peer = request.GET.get("peer")
     if not peer:
             logger.error("conversation_history: Missing 'peer' param")
@@ -195,7 +195,7 @@ def send_message(request):
         return HttpResponseBadRequest("Missing 'to' or 'text'")
 
     tenant_conn = get_tenant_conn(request)
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('project_management')
 
     # Normalize identities to canonical form (prefer email)
     me_raw = (request.session.get('ident_email') or getattr(request.user, 'email', None)) or request.session.get('member_id')
@@ -290,7 +290,7 @@ def mark_read(request):
         return HttpResponseForbidden("Not authenticated")
     
     import logging
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('project_management')
     tenant_conn = get_tenant_conn(request)
     if not tenant_conn:
         logger.error("No tenant connection in mark_read")

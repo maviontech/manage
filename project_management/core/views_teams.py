@@ -145,7 +145,7 @@ def api_create_member(request):
     except Exception as ex:
         # log exception server-side and return friendly message
         import logging
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger('project_management')
         logger.exception("Error in api_create_member")
         return JsonResponse({'ok': False, 'error': 'server_error', 'detail': str(ex)}, status=500)
 
@@ -209,7 +209,7 @@ import json
 import logging
 from core.db_helpers import get_tenant_conn  # make sure the path is correct
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('project_management')
 
 
 @csrf_exempt

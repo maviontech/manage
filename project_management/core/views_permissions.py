@@ -17,7 +17,7 @@ from .db_helpers import get_tenant_conn  # your existing helper (adapt import pa
 # --- Change Password (user) ---
 def change_password_page(request):
     import logging
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('project_management')
 
     # local import of auth helpers (adjust if your package layout differs)
     try:

@@ -12,8 +12,9 @@ from math import ceil
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from datetime import date, datetime
+import logging
 
-
+logger = logging.getLogger('project_management')
 
 # Import Excel export function
 from .views_export import export_projects_excel
@@ -71,6 +72,7 @@ def identify_view(request):
         return render(request, 'core/identify.html', {})
     email = request.POST.get('email','').strip()
     if not email or '@' not in email:
+        logger.info(f"Invalid email entered: {email}")
         return render(request, 'core/identify.html', {'error': 'Enter a valid email.'})
     tenant = identify_tenant_by_email(email)
     if not tenant:
@@ -121,10 +123,10 @@ def login_password_view(request):
 
     # ✅ Auth success — store user in session (keep what you already did)
     request.session['user'] = user
-    print("Authenticated user:", user)
+    logger.info(f"Authenticated user: {user}")
     request.session['tenant_config'] = tenant_conf
     set_current_tenant(tenant_conf)
-    print("User authenticated:", email)
+    logger.info(f"User authenticated: {email}")
 
     # --- Determine a sensible full name for the user ---
     user_fullname = None
@@ -197,7 +199,7 @@ def login_password_view(request):
         cur.close()
         conn.close()
     except Exception as ex:
-        print("ensure_member_and_set_session failed:", ex)
+        logger.error(f"ensure_member_and_set_session failed: {ex}")
         member_id = None
 
     # save canonical id and display name to session
@@ -207,9 +209,9 @@ def login_password_view(request):
     request.session['tenant_name'] = tenant_conf.get('client_name', 'Team Chat')  # Set tenant name for display
     request.session['user_id'] = member_id  # Ensure user_id is set for task views
     request.session['profile_photo'] = profile_photo if 'profile_photo' in locals() else None
-    print("Login successful for user:", member_id)
-    print("Login successful for user:", member_name)
-    print("Tenant ID set to:", tenant_conf.get('tenant_id'))
+    logger.info(f"Login successful for user: {member_id}")
+    logger.info(f"Login successful for user: {member_name}")
+    logger.info(f"Tenant ID set to: {tenant_conf.get('tenant_id')}")
 
     # Add explicit tenant DB credentials to session for your db_helpers
     request.session['tenant_db_name'] = tenant_conf.get('db_name')
@@ -342,7 +344,7 @@ def dashboard_view(request):
         """)
         active_projects = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
-        print("ERROR active_projects:", e)
+        logger.error(f"ERROR active_projects: {e}")
         active_projects = 0
 
     projects_completed = 0
@@ -372,7 +374,7 @@ def dashboard_view(request):
                 tuple(visible_user_ids))
             tasks_pending = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
-        print("ERROR tasks_pending:", e)
+        logger.error(f"ERROR tasks_pending: {e}")
         tasks_pending = 0
 
     progress_completed = progress_inprogress = progress_pending = 0
@@ -399,7 +401,8 @@ def dashboard_view(request):
                         progress_inprogress += cnt
                     else:
                         progress_pending += cnt
-    except Exception:
+    except Exception as e:
+        logger.error(f"ERROR progress counts: {e}")
         progress_completed = progress_inprogress = progress_pending = 0
 
     priority_buckets = {'Critical': 0, 'High': 0, 'Normal': 0, 'Low': 0}
@@ -476,7 +479,7 @@ def dashboard_view(request):
             cur.execute(f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND NOT (status = 'Closed')", tuple(visible_user_ids))
             board_open_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
-        print("ERROR: board_open_count", e)
+        logger.error(f"ERROR: board_open_count {e}")
         board_open_count = 0
 
     # My new tasks count: tasks assigned to visible users and status is 'New' (or similar)
@@ -487,7 +490,7 @@ def dashboard_view(request):
             cur.execute(f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND status IN ('New','Open')", tuple(visible_user_ids))
             my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
-        print("ERROR: my_new_tasks_count", e)
+        logger.error(f"ERROR: my_new_tasks_count {e}")
         my_new_tasks_count = 0
 
     # ---------------------- PLANNED TASKS (Show all pending tasks) ----------------------
@@ -513,7 +516,7 @@ def dashboard_view(request):
                             LIMIT 10
                     """, tuple(params))
             rows = cur.fetchall() or []
-            print(f"DEBUG: planned_tasks found {len(rows)} tasks for visible users between {start_date} and {end_date}")
+            logger.debug(f"DEBUG: planned_tasks found {len(rows)} tasks for visible users between {start_date} and {end_date}")
 
         for r in rows:
             if isinstance(r, dict):
@@ -531,7 +534,7 @@ def dashboard_view(request):
                     'due_date': r[3],
                 })
     except Exception as e:
-        print("ERROR: planned_tasks", e)
+        logger.error(f"ERROR: planned_tasks {e}")
         import traceback
         traceback.print_exc()
         planned_tasks = []
@@ -578,7 +581,7 @@ def dashboard_view(request):
             else:
                 line_chart_completed.append(0)
     except Exception as e:
-        print("ERROR: line_chart_data", e)
+        logger.error(f"ERROR: line_chart_data {e}", exc_info=True)
         line_chart_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         line_chart_created = [0, 0, 0, 0, 0, 0, 0]
         line_chart_completed = [0, 0, 0, 0, 0, 0, 0]
@@ -874,7 +877,7 @@ def api_get_team_members(request):
                     'phone': r[4] or ''
                 } for r in rows]
     except Exception as e:
-        print(f"Error fetching team members: {e}")
+        logger.error(f"Error fetching team members: {e}", exc_info=True)
         members = []
     finally:
         cur.close()
@@ -904,6 +907,7 @@ def api_get_team_members(request):
                             })
                 debug_info['sample'] = sample
             except Exception as _e:
+                logger.error(f"Error building debug sample: {_e}", exc_info=True)
                 debug_info['error'] = str(_e)
     except Exception:
         debug_info = {}
@@ -1066,7 +1070,7 @@ def profile_edit_view(request):
             return redirect('profile')
         except Exception as e:
             conn.rollback()
-            print("Profile update failed:", e)  # Debug print
+            logger.error(f"Profile update failed: {e}", exc_info=True)
             error_msg = f"Update failed: {str(e)}"
 
     # ---------------------- GET: Fetch Profile Data ----------------------
@@ -1349,7 +1353,7 @@ def projects_report_view(request):
         }
         
     except Exception as e:
-        print(f"Error in projects_report_view: {e}")
+        logger.error(f"Error in projects_report_view: {e}", exc_info=True)
         projects = []
         summary = {
             'total_projects': 0,
@@ -1371,7 +1375,7 @@ def projects_report_view(request):
     # Fetch all tasks with project and assignee information (reuse same connection)
     try:
         cur = conn.cursor()
-        print("Fetching tasks...")
+        logger.debug("Fetching tasks...")
         cur.execute("""
             SELECT 
                 t.id,
@@ -1397,7 +1401,7 @@ def projects_report_view(request):
             ORDER BY t.created_at DESC
         """)
         rows = cur.fetchall()
-        print(f"Found {len(rows)} tasks")
+        logger.debug(f"Found {len(rows)} tasks")
         
         for r in rows:
             # Determine assigned name
@@ -1421,9 +1425,9 @@ def projects_report_view(request):
                 'assigned_type': r['assigned_type'],
                 'created_by_name': r['created_by_name'] or 'Unknown'
             })
-        print(f"Tasks list prepared: {len(tasks_list)} tasks")
+        logger.debug(f"Tasks list prepared: {len(tasks_list)} tasks")
     except Exception as e:
-        print(f"Error fetching tasks: {e}")
+        logger.error(f"Error fetching tasks: {e}", exc_info=True)
         import traceback
         traceback.print_exc()
     finally:
@@ -1441,10 +1445,10 @@ def projects_report_view(request):
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"Error fetching teams: {e}")
+        logger.error(f"Error fetching teams: {e}", exc_info=True)
         teams = []
 
-    print(f"Rendering template with {len(projects)} projects, {len(tasks_list)} tasks, and {len(teams)} teams")
+    logger.debug(f"Rendering template with {len(projects)} projects, {len(tasks_list)} tasks, and {len(teams)} teams")
     return render(request, 'core/projects_report.html', {
         'projects': projects,
         'tasks': tasks_list,
@@ -1502,6 +1506,7 @@ def api_employees_list(request):
             'created_at': r['created_at'].strftime('%Y-%m-%d %H:%M:%S') if r['created_at'] else ''
         } for r in rows]
     except Exception as e:
+        logger.error(f"Error fetching employees: {e}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
     finally:
         cur.close()
@@ -1811,7 +1816,7 @@ def api_notifications_list(request):
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
-        print(f"Notification API Error: {error_detail}")
+        logger.error(f"Notification API Error: {error_detail}", exc_info=True)
         return JsonResponse({
             'error': str(e),
             'notifications': [],
@@ -1937,7 +1942,7 @@ def api_notifications_unread_count(request):
         return JsonResponse({'count': count})
         
     except Exception as e:
-        print(f"Error getting unread count: {e}")
+        logger.error(f"Error getting unread count: {e}", exc_info=True)
         return JsonResponse({'count': 0})
 
 
@@ -2118,6 +2123,7 @@ def api_timer_current(request):
             return JsonResponse({'running': False})
             
     except Exception as e:
+        logger.error(f"Error in api_timer_current: {e}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
     finally:
         cur.close()
@@ -2162,7 +2168,7 @@ def api_timer_history(request):
         return JsonResponse({'sessions': sessions})
         
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error(f"Error in api_timer_history: {e}", exc_info=True)
     finally:
         cur.close()
         conn.close()

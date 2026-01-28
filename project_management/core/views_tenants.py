@@ -8,6 +8,8 @@ from django.utils import timezone
 from django.conf import settings
 import os
 from django.views.decorators.csrf import csrf_exempt
+import logging
+logger = logging.getLogger('project_management')
 
 import pymysql
 from .db_initializer import DBInitializer  # uses the file you already have. :contentReference[oaicite:1]{index=1}
@@ -377,13 +379,13 @@ def add_tenant_admin_view(request, tenant_id=None):
     email = request.POST.get('email', '').strip()
     password = request.POST.get('password', '').strip()
     
-    print(f"DEBUG: Creating admin - Type: {admin_type}, Email: {email}")  # Debug logging
+    logger.info(f"DEBUG: Creating admin - Type: {admin_type}, Email: {email}")  # Debug logging
     
     # Validate email format
     import re
     if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
         messages.error(request, 'Invalid email format.')
-        print(f"DEBUG: Invalid email format: {email}")  # Debug logging
+        logger.info(f"DEBUG: Invalid email format: {email}")  # Debug logging
         return redirect('add_tenant_admin')
     
     if admin_type == 'tenant_admin':
@@ -395,14 +397,14 @@ def add_tenant_admin_view(request, tenant_id=None):
         
         if not admin_username or not first_name or not last_name or not email or not password:
             messages.error(request, 'All required fields must be filled for Tenant Admin.')
-            print(f"DEBUG: Missing required fields - Username: {admin_username}, FirstName: {first_name}, LastName: {last_name}")  # Debug
+            logger.info(f"DEBUG: Missing required fields - Username: {admin_username}, FirstName: {first_name}, LastName: {last_name}")  # Debug
             return redirect('add_tenant_admin')
         
         try:
             # Hash the password
             hashed = hash_password(password)
             
-            print(f"DEBUG: Attempting to create tenant admin: {admin_username}")  # Debug logging
+            logger.info(f"DEBUG: Attempting to create tenant admin: {admin_username}")  # Debug logging
             
             # Connect to master database
             admin_conn = pymysql.connect(**ADMIN_CONF)
@@ -417,7 +419,7 @@ def add_tenant_admin_view(request, tenant_id=None):
             
             if existing:
                 messages.error(request, f'Tenant admin with username "{admin_username}" or email "{email}" already exists.')
-                print(f"DEBUG: Duplicate found - Username: {admin_username}, Email: {email}")  # Debug
+                logger.info(f"DEBUG: Duplicate found - Username: {admin_username}, Email: {email}")  # Debug
                 cur.close()
                 admin_conn.close()
                 return redirect('add_tenant_admin')
@@ -433,7 +435,7 @@ def add_tenant_admin_view(request, tenant_id=None):
             cur.close()
             admin_conn.close()
             
-            print(f"DEBUG: Successfully created tenant admin: {admin_username}")  # Debug logging
+            logger.info(f"DEBUG: Successfully created tenant admin: {admin_username}")  # Debug logging
             
             messages.success(request, 
                 f'Tenant Administrator {first_name} {last_name} (username: {admin_username}) has been created successfully. '
@@ -442,7 +444,7 @@ def add_tenant_admin_view(request, tenant_id=None):
             
         except Exception as e:
             messages.error(request, f"Error creating tenant admin: {e}")
-            print(f"DEBUG: Exception creating tenant admin: {str(e)}")  # Debug logging
+            logger.error(f"DEBUG: Exception creating tenant admin: {str(e)}")  # Debug logging
             return redirect('add_tenant_admin')
     
     else:  # company_user
@@ -489,6 +491,7 @@ def add_tenant_admin_view(request, tenant_id=None):
             existing_user = tcur.fetchone()
             
             if existing_user:
+                logger.info(f"DEBUG: User with email {email} already exists in {tenant['client_name']}.")  # Debug logging
                 messages.error(request, f'User with email {email} already exists in {tenant["client_name"]}.')
                 tcur.close()
                 tenant_conn.close()
@@ -534,5 +537,6 @@ def add_tenant_admin_view(request, tenant_id=None):
             return redirect('tenant_dashboard')
             
         except Exception as e:
+            logger.error(f"DEBUG: Error creating company user: {e}")  # Debug logging
             messages.error(request, f"Error creating company user: {e}")
             return redirect('add_tenant_admin')

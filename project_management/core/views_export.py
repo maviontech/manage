@@ -6,7 +6,9 @@ from django.shortcuts import redirect
 from io import BytesIO
 from datetime import datetime
 from .db_helpers import get_tenant_conn
+import logging
 
+logger = logging.getLogger('project_management')
 try:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -301,7 +303,7 @@ def export_projects_excel(request):
         return response
         
     except Exception as e:
-        print(f"Error exporting to Excel: {e}")
+        logger.error(f"Error exporting to Excel: {e}")
         import traceback
         traceback.print_exc()
         return HttpResponse(f"Error exporting data: {str(e)}", status=500)

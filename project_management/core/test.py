@@ -1,5 +1,6 @@
 import hashlib, base64
-
+import logging
+logger = logging.getLogger('project_management')
 def verify_pbkdf2_sha256(stored_hash, candidate):
     # stored_hash like: 'pbkdf2_sha256$1000000$salt$base64dk'
     algo, iter_s, salt, b64_dk = stored_hash.split('$')
@@ -12,4 +13,4 @@ def verify_pbkdf2_sha256(stored_hash, candidate):
 
 # Example usage:
 stored = "pbkdf2_sha256$1000000$DX3I0ec38XsR4oEPaaDff1$SKHd7MKhM8HY2kI70xLgB27Fokdxn2mfVm9b769h/Tc="
-print(verify_pbkdf2_sha256(stored, "candidate_password"))
+logger.info(f"Password verification result: {verify_pbkdf2_sha256(stored, 'candidate_password')}")

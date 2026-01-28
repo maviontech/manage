@@ -4,6 +4,10 @@ import pymysql
 import secrets
 import string
 from core.auth import hash_password
+import logging
+
+# Use the 'utility' logger configured in settings.LOGGING
+logger = logging.getLogger('utility')
 
 MASTER_DB = os.environ.get('MASTER_DB_NAME', 'master_db')
 ADMIN_HOST = os.environ.get('MYSQL_ADMIN_HOST', '127.0.0.1')
@@ -28,10 +32,10 @@ def initialize_master_database():
             autocommit=True
         )
         cur = conn.cursor()
-        
+        logger.info(f"✓ Successfully connected to MySQL server")
         # Create master_db if it doesn't exist
         cur.execute(f"CREATE DATABASE IF NOT EXISTS {MASTER_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-        print(f"✓ Successfully connected to MySQL database: {MASTER_DB}")
+        logger.info(f"✓ Successfully connected to MySQL database: {MASTER_DB}")
         
         # Now connect to the master_db
         cur.execute(f"USE {MASTER_DB}")
@@ -89,7 +93,7 @@ def initialize_master_database():
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """)
         
-        print(f"✓ Tenant management tables created or already exist.")
+        logger.info(f"✓ Tenant management tables created or already exist.")
         
         # Create default tenant admin if not exists
         cur.execute("SELECT COUNT(*) AS cnt FROM tenants_admin WHERE admin_username = 'tenant'")
@@ -115,9 +119,9 @@ def initialize_master_database():
         conn.close()
         
     except pymysql.Error as e:
-        print(f"✗ MySQL Error: {e}")
+        logger.error(f"✗ MySQL Error: {e}")
     except Exception as e:
-        print(f"✗ Error initializing master database: {e}")
+        logger.error(f"✗ Error initializing master database: {e}")
 
 TENANT_DDL = [
     """
@@ -546,14 +550,14 @@ class DBInitializer:
             cur.execute(f"CREATE USER IF NOT EXISTS '{tenant_user}'@'%' IDENTIFIED BY %s;", (tenant_pwd,))
         except Exception as e:
             # fallback: attempt create; if fails try alter
-            print(f"[init] CREATE USER failed for {tenant_user}, attempting ALTER USER. Error: {e}")
+            logger.info(f"[init] CREATE USER failed for {tenant_user}, attempting ALTER USER. Error: {e}")
             try:
 
                 cur.execute(f"CREATE USER '{tenant_user}'@'%' IDENTIFIED BY '{tenant_pwd}';")
             except Exception as e:
                 # Python
                 # Python
-                print(f"[init] ALTER USER for {tenant_user}. Error: {e}")
+                logger.info(f"[init] ALTER USER for {tenant_user}. Error: {e}")
                 query = f"ALTER USER '{tenant_user}'@'%' IDENTIFIED BY '{tenant_pwd}';"
                 cur.execute(query)
         # Grant
@@ -561,7 +565,7 @@ class DBInitializer:
         cur.execute("FLUSH PRIVILEGES;")
         # update master_db credentials
         cur.execute(f"UPDATE {MASTER_DB}.clients_master SET db_user=%s, db_password=%s WHERE id=%s;", (tenant_user, tenant_pwd, client['id']))
-        print(f"[init] Created DB `{db_name}` and user `{tenant_user}` for client id {client['id']}.")
+        logger.info(f"[init] Created DB `{db_name}` and user `{tenant_user}` for client id {client['id']}.")
         return tenant_user, tenant_pwd
 
     def run_ddl_on_tenant(self, db_name, tenant_user, tenant_pwd):
@@ -574,12 +578,11 @@ class DBInitializer:
           for ddl in TENANT_DDL:
               cur.execute(ddl)
         except Exception as e:
-          print(f"[init] Error executing DDL on {db_name}: {e}")
+          logger.error(f"[init] Error executing DDL on {db_name}: {e}")
           raise e
         cur.close()
         conn.close()
-        print(f"[init] Tenant DDL executed on {db_name}")
-
+        logger.info(f"[init] Tenant DDL executed on {db_name}")
     def seed_roles_and_permissions(self, db_name, tenant_user, tenant_pwd):
         conn = pymysql.connect(
             host=ADMIN_HOST, port=ADMIN_PORT, user=tenant_user, password=tenant_pwd,
@@ -665,7 +668,7 @@ class DBInitializer:
 
         cur.close()
         conn.close()
-        print(f"[init] Seeded roles & permissions for {db_name}")
+        logger.info(f"[init] Seeded roles & permissions for {db_name}")
 
     def seed_admin(self, db_name, tenant_user, tenant_pwd, domain_postfix):
         conn = pymysql.connect(
@@ -685,19 +688,19 @@ class DBInitializer:
             hashed = hash_password(pw)
             cur.execute("INSERT INTO users (email, full_name, password_hash, role, is_active) VALUES (%s,%s,%s,%s,%s)",
                         (admin_email, "Tenant Admin", hashed, "Admin", 1))
-            print(f"[init] Seeded admin {admin_email} with username 'tenant' and password 'tenant' in {db_name}")
+            logger.info(f"[init] Seeded admin {admin_email} with username 'tenant' and password 'tenant' in {db_name}")
         cur.close()
         conn.close()
 
     def run(self):
         clients = self.get_clients()
         if not clients:
-            print("[init] No clients found in master_db.clients_master. Insert client rows first.")
+            logger.info("[init] No clients found in master_db.clients_master. Insert client rows first.")
             return
         for client in clients:
             # if db_user present skip creation steps (idempotent)
             if client.get('db_user'):
-                print(f"[init] client id {client['id']} already has db_user {client['db_user']}; using stored credentials.")
+                logger.info(f"[init] client id {client['id']} already has db_user {client['db_user']}; using stored credentials.")
                 tenant_user, tenant_pwd = client['db_user'], client['db_password']
             else:
                 tenant_user, tenant_pwd = self.create_db_and_user(client)
@@ -707,14 +710,14 @@ class DBInitializer:
                 self.seed_admin(client['db_name'], tenant_user, tenant_pwd, client['domain_postfix'])
                 self.seed_roles_and_permissions(client['db_name'], tenant_user, tenant_pwd)
             except Exception as e:
-                print("[init] Error provisioning tenant:", e)
-        print("[init] Done provisioning all tenants.")
+                logger.error(f"[init] Error provisioning tenant: {e}")
+        logger.info("[init] Done provisioning all tenants.")
 
 if __name__ == "__main__":
 # validate admin creds presence
     if not ADMIN_PWD:
         import getpass
         ADMIN_PWD = getpass.getpass("MySQL admin password: ")
-    print("[init] Connecting to MySQL admin at", ADMIN_HOST)
+    logger.info(f"[init] Connecting to MySQL admin at {ADMIN_HOST}")
     init = DBInitializer()
     init.run()
