@@ -141,6 +141,10 @@ EMAIL_HOST_PASSWORD = "smtp-pass"
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = "no-reply@example.com"
 
+MYSQL_ADMIN_HOST = '127.0.0.1'
+MYSQL_ADMIN_PORT = 3306
+MYSQL_ADMIN_USER = 'root'
+MYSQL_ADMIN_PWD = 'root'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
