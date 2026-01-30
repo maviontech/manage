@@ -194,7 +194,8 @@ def my_tasks_view(request):
     if visible_user_ids:
         placeholders = ','.join(['%s'] * len(visible_user_ids))
         cur.execute(
-            f"""SELECT id, title, status, priority, due_date, closure_date, COALESCE(work_type, 'Task') AS work_type
+            f"""SELECT id, title, status, priority, due_date, closure_date, COALESCE(work_type, 'Task') AS work_type,
+                       assigned_to
                FROM tasks
                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
                ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
@@ -208,7 +209,7 @@ def my_tasks_view(request):
     cur.close()
 
     today = datetime.date.today()
-    return render(request, "core/tasks_my.html", {"tasks": tasks, "page": "my_tasks", "today": today})
+    return render(request, "core/tasks_my.html", {"tasks": tasks, "page": "my_tasks", "today": today, "current_user_id": user_id})
 
 
 # ==============================

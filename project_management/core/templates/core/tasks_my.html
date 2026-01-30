@@ -18,6 +18,11 @@
         <p class="page-subtitle">View, track and manage your assigned work items</p>
       </div>
       <div class="header-actions">
+        <select id="assignedFilter" class="filter-select">
+          <option value="all">All tasks</option>
+          <option value="mine">Only my tasks</option>
+          <option value="others">Only others</option>
+        </select>
         <select id="workTypeFilter" class="filter-select">
           <option value="">All work types</option>
           <option value="Task">Task</option>
@@ -102,7 +107,7 @@
         </thead>
         <tbody>
           {% for t in tasks %}
-          <tr class="task-row" data-href="{% url 'task_detail' t.id %}" data-work-type="{{ t.work_type|default:'Task' }}">
+          <tr class="task-row" data-href="{% url 'task_detail' t.id %}" data-work-type="{{ t.work_type|default:'Task' }}" data-assigned-to="{{ t.assigned_to }}">
             <td>
               <span class="task-id">#{{ t.id }}</span>
             </td>
@@ -613,7 +618,7 @@
 </style>
 <script>
 // Make table rows clickable to open task detail (except when clicking action buttons)
-document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.task-row').forEach(function(row) {
     row.style.cursor = 'pointer';
     row.addEventListener('click', function() {
@@ -625,27 +630,44 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   // Work type filter functionality
+  // expose current user id for client-side filtering
+  const currentUserId = "{{ current_user_id|default:'' }}";
+
   const workTypeFilter = document.getElementById('workTypeFilter');
-  if (workTypeFilter) {
-    workTypeFilter.addEventListener('change', function() {
-      const selectedType = this.value;
-      const rows = document.querySelectorAll('.task-row');
-      
-      rows.forEach(function(row) {
-        const taskId = row.getAttribute('data-href');
-        if (!taskId) return;
-        
-        // Get work type from data attribute or row
-        const workType = row.dataset.workType || '';
-        
-        if (selectedType === '' || workType === selectedType) {
-          row.style.display = '';
-        } else {
-          row.style.display = 'none';
-        }
-      });
+  const assignedFilter = document.getElementById('assignedFilter');
+
+  function applyFilters() {
+    const selectedType = workTypeFilter ? workTypeFilter.value : '';
+    const assignedMode = assignedFilter ? assignedFilter.value : 'all';
+    const rows = document.querySelectorAll('.task-row');
+
+    rows.forEach(function(row) {
+      const taskId = row.getAttribute('data-href');
+      if (!taskId) return;
+
+      const workType = row.dataset.workType || '';
+      const assignedTo = row.dataset.assignedTo || '';
+
+      let show = true;
+
+      // work type filter
+      if (selectedType && selectedType !== '' && workType !== selectedType) {
+        show = false;
+      }
+
+      // assigned filter
+      if (assignedMode === 'mine') {
+        if (!assignedTo || String(assignedTo) !== String(currentUserId)) show = false;
+      } else if (assignedMode === 'others') {
+        if (!assignedTo || String(assignedTo) === String(currentUserId)) show = false;
+      }
+
+      row.style.display = show ? '' : 'none';
     });
   }
+
+  if (workTypeFilter) workTypeFilter.addEventListener('change', applyFilters);
+  if (assignedFilter) assignedFilter.addEventListener('change', applyFilters);
 });
 </script>
 {% endblock %}
