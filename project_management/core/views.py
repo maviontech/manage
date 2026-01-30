@@ -1809,7 +1809,7 @@ def api_notifications_list(request):
         conn.close()
         
         return JsonResponse({
-            'notifications': notifications,
+            'notifications': notifications_list,
             'unread_count': unread_count
         })
         

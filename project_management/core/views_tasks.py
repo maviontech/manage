@@ -109,7 +109,7 @@ def create_task_view(request):
                 "New Task Assigned",
                 f"{creator_name} assigned you to '{title}'",
                 "task",
-                f"/tasks/detail/{task_id}"
+                f"/tasks/{task_id}/view/"
             ))
         
         # Create notification for team members if assigned to a team
@@ -131,7 +131,7 @@ def create_task_view(request):
                     "New Team Task Assigned",
                     f"{creator_name} assigned a task to your team: '{title}'",
                     "task",
-                    f"/tasks/detail/{task_id}"
+                    f"/tasks/{task_id}/view/"
                 ))
 
         conn.commit()
@@ -459,7 +459,7 @@ def assign_task_api(request):
             "Task Assigned to You",
             f"{assigner_name} assigned you to '{task_title}'",
             "task",
-            f"/tasks/detail/{task_id}"
+            f"/tasks/{task_id}/view/"
         ))
     
     elif assigned_type == "team":
@@ -480,7 +480,7 @@ def assign_task_api(request):
                 "Team Task Assignment",
                 f"{assigner_name} assigned a task to your team: '{task_title}'",
                 "task",
-                f"/tasks/detail/{task_id}"
+                f"/tasks/{task_id}/view/"
             ))
     
     conn.commit()
@@ -557,7 +557,7 @@ def api_update_status(request):
                     "Task Completed",
                     f"{updater_name} completed task '{task_title}'",
                     "success",
-                    f"/tasks/detail/{task_id}"
+                    f"/tasks/{task_id}/view/"
                 ))
             
             # Notify assigned member if they're not the one who completed it
@@ -570,7 +570,7 @@ def api_update_status(request):
                     "Task Completed",
                     f"{updater_name} marked '{task_title}' as complete",
                     "success",
-                    f"/tasks/detail/{task_id}"
+                    f"/tasks/{task_id}/view/"
                 ))
 
     # 6. SAVE CHANGES
@@ -1398,7 +1398,7 @@ def create_bug_view(request):
                 "New Bug Assigned",
                 f"{creator_name} assigned you a bug: '{title}'",
                 "task",
-                f"/tasks/detail/{task_id}"
+                f"/tasks/{task_id}/view/"
             ))
 
         conn.commit()
@@ -1531,7 +1531,7 @@ def create_story_view(request):
                 "New Story Assigned",
                 f"{creator_name} assigned you a story: '{title}'",
                 "task",
-                f"/tasks/detail/{task_id}"
+                f"/tasks/{task_id}/view/"
             ))
 
         conn.commit()
@@ -1661,7 +1661,7 @@ def create_defect_view(request):
                 "New Defect Assigned",
                 f"{creator_name} assigned you a defect: '{title}'",
                 "task",
-                f"/tasks/detail/{task_id}"
+                f"/tasks/{task_id}/view/"
             ))
 
         conn.commit()
@@ -1795,7 +1795,7 @@ def create_subtask_view(request):
                 "New Sub Task Assigned",
                 f"{creator_name} assigned you a sub task: '{title}'",
                 "task",
-                f"/tasks/detail/{task_id}"
+                f"/tasks/{task_id}/view/"
             ))
 
         conn.commit()

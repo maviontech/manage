@@ -53,6 +53,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             or session.get("user")
         )
 
+        # also keep numeric member_id if available for user-specific groups
+        self.member_id = session.get("member_id")
+
         # Get peer from query string for DM conversations
         self.peer = qs.get("peer", [None])[0]
         
@@ -221,22 +224,44 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             )
 
             logger.info(f"✅ Message saved, broadcasting...")
-            
-            # Broadcast with CID so clients can match optimistic messages
-            await self.channel_layer.group_send(
-                self.presence_group,
-                {
-                    "type": "new_message",
-                    "message": text,
-                    "from": self.me,
-                    "to": to_user,
-                    "created_at": saved["created_at"],
-                    "id": saved.get("id"),  # Include message ID for read receipts
-                    "cid": cid,  # Include client ID in broadcast
-                },
-            )
-            
-            logger.info(f"✅ Message broadcasted successfully")
+            # Build event payload for clients
+            event = {
+                "type": "new_message",
+                "message": text,
+                "from": self.me,
+                "to": to_user,
+                "created_at": saved["created_at"],
+                "id": saved.get("id"),
+                "cid": cid,
+            }
+
+            # If we know the recipient's member_id (from save_message), send to their user-specific group
+            to_member_id = saved.get("to_member_id")
+            if to_member_id:
+                user_group = f"user_notifications_{self.tenant_id}_{to_member_id}"
+                try:
+                    await self.channel_layer.group_send(user_group, event)
+                    logger.info(f"✅ Sent direct message to user group: {user_group}")
+                except Exception as e:
+                    logger.error(f"❌ Error sending to user group {user_group}: {e}")
+            else:
+                # Fallback: broadcast to tenant presence group so clients can filter
+                try:
+                    await self.channel_layer.group_send(self.presence_group, event)
+                    logger.info("⚠️ Recipient member_id unknown — broadcasted to presence_group as fallback")
+                except Exception as e:
+                    logger.error(f"❌ Error broadcasting fallback new_message: {e}")
+
+            # Also send the event to the sender's own user group if we have their member_id
+            if getattr(self, "member_id", None):
+                try:
+                    sender_group = f"user_notifications_{self.tenant_id}_{self.member_id}"
+                    await self.channel_layer.group_send(sender_group, event)
+                    logger.info(f"✅ Also sent new_message to sender group: {sender_group}")
+                except Exception as e:
+                    logger.error(f"❌ Error sending new_message to sender group: {e}")
+
+            logger.info(f"✅ Direct message dispatch complete")
         except Exception as e:
             logger.error(f"❌ Error processing message: {e}")
             import traceback
@@ -336,6 +361,19 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     member_row = cur.fetchone()
                     if member_row and member_row.get('email'):
                         sender_norm = str(member_row['email']).strip().lower()
+
+                # Try to resolve member ids for sender and receiver (if available)
+                sender_member_id = None
+                receiver_member_id = None
+                cur.execute("SELECT id FROM members WHERE email=%s", [sender_norm])
+                _s = cur.fetchone()
+                if _s and _s.get('id'):
+                    sender_member_id = _s.get('id')
+
+                cur.execute("SELECT id FROM members WHERE email=%s", [receiver_norm])
+                _r = cur.fetchone()
+                if _r and _r.get('id'):
+                    receiver_member_id = _r.get('id')
                 
                 # Sort users for consistent conversation matching
                 users = sorted([sender_norm, receiver_norm])
@@ -373,7 +411,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 
             return {
                 "id": message_id,
-                "created_at": timestamp_row['created_at'].isoformat() if timestamp_row else None
+                "created_at": timestamp_row['created_at'].isoformat() if timestamp_row else None,
+                "from_member_id": sender_member_id,
+                "to_member_id": receiver_member_id,
             }
         finally:
             conn.close()

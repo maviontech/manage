@@ -473,8 +473,8 @@ document.addEventListener('DOMContentLoaded', function() {
   taskRows.forEach(row => {
     row.addEventListener('click', function() {
       const taskId = this.querySelector('td strong').textContent.replace('#', '');
-      // Navigate to task detail page
-      window.location.href = '/tasks/detail/' + taskId;
+      // Navigate to task view page
+      window.location.href = '/tasks/' + taskId + '/view/';
     });
   });
 
