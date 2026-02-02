@@ -36,11 +36,13 @@
     padding: 2.5rem 3rem;
     max-width: 740px;
     width: 100%;
+    max-height: 90vh;
     box-shadow: 0px 32px 80px rgba(0, 0, 0, 0.15), 0px 8px 24px rgba(0, 0, 0, 0.08);
     position: relative;
     animation: slideUp 0.35s cubic-bezier(0.17, 0.84, 0.44, 1);
     border: 2px solid rgba(59, 130, 246, 0.1);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .task-modal-content::before {
@@ -55,9 +57,12 @@
 
 /* Close Button - Enhanced */
 .modal-close-btn {
-    position: absolute;
+    position: sticky;
     top: 20px;
-    right: 20px;
+    float: right;
+    margin-bottom: -44px;
+    margin-right: -20px;
+    z-index: 10;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border: 2px solid #e2e8f0;
     border-radius: 50%;
