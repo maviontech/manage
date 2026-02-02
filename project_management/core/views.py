@@ -2083,6 +2083,148 @@ def api_timer_stop(request):
         conn.close()
 
 
+def api_timer_pause(request):
+    """Pause the current running timer."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    from datetime import datetime
+    data = json.loads(request.body)
+    session_id = data.get('session_id')
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Get the running timer
+        if session_id:
+            cur.execute("""
+                SELECT id, start_time, paused, paused_duration 
+                FROM timer_sessions 
+                WHERE id = %s AND user_id = %s AND is_running = 1
+            """, (session_id, member_id))
+        else:
+            cur.execute("""
+                SELECT id, start_time, paused, paused_duration 
+                FROM timer_sessions 
+                WHERE user_id = %s AND is_running = 1
+                ORDER BY start_time DESC LIMIT 1
+            """, (member_id,))
+        
+        timer = cur.fetchone()
+        
+        if not timer:
+            return JsonResponse({'error': 'No running timer found'}, status=404)
+        
+        if timer.get('paused'):
+            return JsonResponse({'error': 'Timer is already paused'}, status=400)
+        
+        # Pause the timer
+        now = datetime.now()
+        cur.execute("""
+            UPDATE timer_sessions 
+            SET paused = 1, paused_at = %s
+            WHERE id = %s
+        """, (now, timer['id']))
+        
+        conn.commit()
+        
+        return JsonResponse({
+            'success': True,
+            'session_id': timer['id'],
+            'paused_at': now.isoformat()
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def api_timer_resume(request):
+    """Resume a paused timer."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    user = request.session.get('user')
+    if not user:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    member_id = request.session.get('member_id')
+    
+    import json
+    from datetime import datetime
+    data = json.loads(request.body)
+    session_id = data.get('session_id')
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Get the paused timer
+        if session_id:
+            cur.execute("""
+                SELECT id, paused, paused_at, paused_duration 
+                FROM timer_sessions 
+                WHERE id = %s AND user_id = %s AND is_running = 1
+            """, (session_id, member_id))
+        else:
+            cur.execute("""
+                SELECT id, paused, paused_at, paused_duration 
+                FROM timer_sessions 
+                WHERE user_id = %s AND is_running = 1
+                ORDER BY start_time DESC LIMIT 1
+            """, (member_id,))
+        
+        timer = cur.fetchone()
+        
+        if not timer:
+            return JsonResponse({'error': 'No running timer found'}, status=404)
+        
+        if not timer.get('paused'):
+            return JsonResponse({'error': 'Timer is not paused'}, status=400)
+        
+        # Calculate pause duration and add to total paused_duration
+        now = datetime.now()
+        paused_at = timer['paused_at']
+        pause_duration_ms = int((now - paused_at).total_seconds() * 1000)
+        
+        current_paused_duration = timer.get('paused_duration', 0) or 0
+        new_paused_duration = current_paused_duration + pause_duration_ms
+        
+        # Resume the timer
+        cur.execute("""
+            UPDATE timer_sessions 
+            SET paused = 0, paused_at = NULL, paused_duration = %s
+            WHERE id = %s
+        """, (new_paused_duration, timer['id']))
+        
+        conn.commit()
+        
+        return JsonResponse({
+            'success': True,
+            'session_id': timer['id'],
+            'resumed_at': now.isoformat(),
+            'paused_duration': new_paused_duration
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        cur.close()
+        conn.close()
+
+
 def api_timer_current(request):
     """Get the current running timer for the user."""
     user = request.session.get('user')
@@ -2110,15 +2252,23 @@ def api_timer_current(request):
             start_time = timer['start_time']
             elapsed = int((datetime.now() - start_time).total_seconds())
             
-            return JsonResponse({
+            response_data = {
                 'running': True,
                 'session_id': timer['id'],
                 'task_id': timer['task_id'],
                 'task_title': timer['task_title'],
                 'start_time': start_time.isoformat(),
                 'elapsed_seconds': elapsed,
-                'notes': timer['notes']
-            })
+                'notes': timer['notes'],
+                'paused': timer.get('paused', 0),
+                'paused_duration': timer.get('paused_duration', 0) or 0
+            }
+            
+            # Include paused_at timestamp if paused
+            if timer.get('paused') and timer.get('paused_at'):
+                response_data['paused_at'] = timer['paused_at'].isoformat()
+            
+            return JsonResponse(response_data)
         else:
             return JsonResponse({'running': False})
             

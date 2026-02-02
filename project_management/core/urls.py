@@ -117,6 +117,8 @@ urlpatterns = [
     path('timer/', views.timer_page, name='timer_page'),
     path('api/timer/start', views.api_timer_start, name='api_timer_start'),
     path('api/timer/stop', views.api_timer_stop, name='api_timer_stop'),
+    path('api/timer/pause', views.api_timer_pause, name='api_timer_pause'),
+    path('api/timer/resume', views.api_timer_resume, name='api_timer_resume'),
     path('api/timer/current', views.api_timer_current, name='api_timer_current'),
     path('api/timer/history', views.api_timer_history, name='api_timer_history'),
     # Time Entries

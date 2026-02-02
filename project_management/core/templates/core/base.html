@@ -939,6 +939,9 @@
   let headerTimerActive = false;
   let headerTimerStart = null;
   let headerTimerTask = null;
+  let headerTimerPaused = false;
+  let headerTimerPausedAt = null;
+  let headerTimerPausedDuration = 0;
 
   // Restore timer state from localStorage on page load
   document.addEventListener('DOMContentLoaded', function() {
@@ -948,6 +951,23 @@
         const state = JSON.parse(timerState);
         if (state.active && state.startTime) {
           showHeaderTimer(state.startTime, state.taskName || '');
+          // Restore pause state if it was paused
+          if (state.paused && state.pausedAt) {
+            headerTimerPaused = true;
+            headerTimerPausedAt = new Date(state.pausedAt);
+            headerTimerPausedDuration = state.pausedDuration || 0;
+            document.getElementById('header-timer-status').innerHTML = `<span class='header-timer-status-badge' style='background:#f59e0b;'>Paused</span>`;
+            // Stop the interval since it's paused
+            if (headerTimerInterval) {
+              clearInterval(headerTimerInterval);
+              headerTimerInterval = null;
+            }
+            // Update display once to show correct paused time
+            updateHeaderTimerDisplay();
+          } else if (state.pausedDuration) {
+            // Not currently paused but has accumulated pause duration
+            headerTimerPausedDuration = state.pausedDuration;
+          }
         }
       } catch (e) {}
     }
@@ -968,12 +988,17 @@
     localStorage.setItem('headerTimerState', JSON.stringify({
       active: true,
       startTime: headerTimerStart.toISOString(),
-      taskName: headerTimerTask
+      taskName: headerTimerTask,
+      paused: false,
+      pausedDuration: 0
     }));
   }
 
   function hideHeaderTimer() {
     headerTimerActive = false;
+    headerTimerPaused = false;
+    headerTimerPausedAt = null;
+    headerTimerPausedDuration = 0;
     document.getElementById('header-timer').style.display = 'none';
     document.getElementById('header-timer-label').textContent = '00:00:00';
     document.getElementById('header-timer-task').textContent = '';
@@ -988,7 +1013,14 @@
   function updateHeaderTimerDisplay() {
     if (!headerTimerActive || !headerTimerStart) return;
     const now = new Date();
-    let elapsed = Math.floor((now - headerTimerStart) / 1000);
+    let elapsed;
+    if (headerTimerPaused) {
+      // When paused, calculate elapsed time up to pause point
+      elapsed = Math.floor((headerTimerPausedAt - headerTimerStart - headerTimerPausedDuration) / 1000);
+    } else {
+      // When running, calculate current elapsed time minus paused duration
+      elapsed = Math.floor((now - headerTimerStart - headerTimerPausedDuration) / 1000);
+    }
     document.getElementById('header-timer-label').textContent = formatHeaderTime(elapsed);
     // Animate progress bar (0-60s loop for demo, or you can use task duration/goal)
     setHeaderTimerProgress((elapsed % 60) / 60);
@@ -1024,8 +1056,57 @@
     hideHeaderTimer();
   });
 
+  window.addEventListener('pauseTaskTimer', function(e) {
+    if (headerTimerActive && !headerTimerPaused) {
+      headerTimerPaused = true;
+      headerTimerPausedAt = new Date();
+      document.getElementById('header-timer-status').innerHTML = `<span class='header-timer-status-badge' style='background:#f59e0b;'>Paused</span>`;
+      // Stop updating display while paused
+      if (headerTimerInterval) {
+        clearInterval(headerTimerInterval);
+        headerTimerInterval = null;
+      }
+      // Update localStorage with pause state
+      localStorage.setItem('headerTimerState', JSON.stringify({
+        active: true,
+        startTime: headerTimerStart.toISOString(),
+        taskName: headerTimerTask,
+        paused: true,
+        pausedAt: headerTimerPausedAt.toISOString(),
+        pausedDuration: headerTimerPausedDuration
+      }));
+    }
+  });
+
+  window.addEventListener('resumeTaskTimer', function(e) {
+    if (headerTimerActive && headerTimerPaused) {
+      // Calculate pause duration and add to total
+      const now = new Date();
+      const pauseDuration = now - headerTimerPausedAt;
+      headerTimerPausedDuration += pauseDuration;
+      headerTimerPaused = false;
+      headerTimerPausedAt = null;
+      document.getElementById('header-timer-status').innerHTML = `<span class='header-timer-status-badge'>Open</span>`;
+      // Resume updating display
+      if (!headerTimerInterval) {
+        headerTimerInterval = setInterval(updateHeaderTimerDisplay, 1000);
+      }
+      updateHeaderTimerDisplay();
+      // Update localStorage with resume state
+      localStorage.setItem('headerTimerState', JSON.stringify({
+        active: true,
+        startTime: headerTimerStart.toISOString(),
+        taskName: headerTimerTask,
+        paused: false,
+        pausedDuration: headerTimerPausedDuration
+      }));
+    }
+  });
+
   // To trigger: dispatchEvent(new CustomEvent('startTaskTimer', { detail: { startTime: ..., taskName: ... } }))
   // To stop: dispatchEvent(new CustomEvent('stopTaskTimer'))
+  // To pause: dispatchEvent(new CustomEvent('pauseTaskTimer'))
+  // To resume: dispatchEvent(new CustomEvent('resumeTaskTimer'))
   </script>
   
   <!-- Global Search Functionality -->
