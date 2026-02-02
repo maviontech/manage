@@ -235,7 +235,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 "cid": cid,
             }
 
-            # If we know the recipient's member_id (from save_message), send to their user-specific group
+            # Send to recipient's user-specific group ONLY (no fallback broadcast)
             to_member_id = saved.get("to_member_id")
             if to_member_id:
                 user_group = f"user_notifications_{self.tenant_id}_{to_member_id}"
@@ -245,12 +245,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 except Exception as e:
                     logger.error(f"❌ Error sending to user group {user_group}: {e}")
             else:
-                # Fallback: broadcast to tenant presence group so clients can filter
-                try:
-                    await self.channel_layer.group_send(self.presence_group, event)
-                    logger.info("⚠️ Recipient member_id unknown — broadcasted to presence_group as fallback")
-                except Exception as e:
-                    logger.error(f"❌ Error broadcasting fallback new_message: {e}")
+                # CRITICAL: Do NOT broadcast to presence_group for personal messages
+                # This would expose private messages to all users in the tenant
+                logger.error(f"❌ Cannot send direct message notification: recipient member_id not found for {to_user}")
+                logger.error(f"   Message saved but notification not sent. Recipient must refresh to see message.")
 
             # Also send the event to the sender's own user group if we have their member_id
             if getattr(self, "member_id", None):
