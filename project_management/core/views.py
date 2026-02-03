@@ -551,33 +551,43 @@ def dashboard_view(request):
             day = today - timedelta(days=i)
             line_chart_labels.append(day_names[day.weekday()])
             
-            # Count tasks created on this day
-            cur.execute("""
-                SELECT COUNT(*) as cnt FROM tasks 
-                WHERE assigned_type='member' AND assigned_to=%s 
-                AND DATE(created_at) = %s
-            """, (member_id, day))
-            created_row = cur.fetchone()
-            if created_row:
-                if isinstance(created_row, dict):
-                    line_chart_created.append(created_row.get('cnt', 0) or 0)
+            # Count tasks created on this day for visible users
+            if visible_user_ids:
+                placeholders = ','.join(['%s'] * len(visible_user_ids))
+                params = list(visible_user_ids) + [day]
+                cur.execute(f"""
+                    SELECT COUNT(*) as cnt FROM tasks 
+                    WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+                    AND DATE(created_at) = %s
+                """, tuple(params))
+                created_row = cur.fetchone()
+                if created_row:
+                    if isinstance(created_row, dict):
+                        line_chart_created.append(created_row.get('cnt', 0) or 0)
+                    else:
+                        line_chart_created.append(created_row[0] or 0)
                 else:
-                    line_chart_created.append(created_row[0] or 0)
+                    line_chart_created.append(0)
             else:
                 line_chart_created.append(0)
             
-            # Count tasks completed on this day
-            cur.execute("""
-                SELECT COUNT(*) as cnt FROM tasks 
-                WHERE assigned_type='member' AND assigned_to=%s 
-                AND status='Completed' AND DATE(updated_at) = %s
-            """, (member_id, day))
-            completed_row = cur.fetchone()
-            if completed_row:
-                if isinstance(completed_row, dict):
-                    line_chart_completed.append(completed_row.get('cnt', 0) or 0)
+            # Count tasks completed on this day for visible users
+            if visible_user_ids:
+                placeholders = ','.join(['%s'] * len(visible_user_ids))
+                params = list(visible_user_ids) + [day]
+                cur.execute(f"""
+                    SELECT COUNT(*) as cnt FROM tasks 
+                    WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+                    AND status='Completed' AND DATE(updated_at) = %s
+                """, tuple(params))
+                completed_row = cur.fetchone()
+                if completed_row:
+                    if isinstance(completed_row, dict):
+                        line_chart_completed.append(completed_row.get('cnt', 0) or 0)
+                    else:
+                        line_chart_completed.append(completed_row[0] or 0)
                 else:
-                    line_chart_completed.append(completed_row[0] or 0)
+                    line_chart_completed.append(0)
             else:
                 line_chart_completed.append(0)
     except Exception as e:
@@ -626,6 +636,322 @@ def dashboard_view(request):
         'planned_start': start_date,
         'planned_end': end_date,
         'planned_limit': 10,
+    }
+
+    return render(request, 'core/dashboard.html', ctx)
+
+
+def user_dashboard_view(request):
+    """
+    User-specific dashboard showing only the logged-in user's tasks, projects, and statistics.
+    This is a personalized view for individual users.
+    """
+    tenant = get_current_tenant() or request.session.get('tenant_config')
+    if not tenant:
+        return redirect('identify')
+
+    # Use member_id from session for all queries
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('login_password')
+
+    # Open DB connection for current tenant
+    conn = get_connection_from_config({
+        'db_engine': tenant.get('db_engine', 'mysql'),
+        'db_name': tenant.get('db_name'),
+        'db_host': tenant.get('db_host'),
+        'db_port': tenant.get('db_port'),
+        'db_user': tenant.get('db_user'),
+        'db_password': tenant.get('db_password')
+    })
+    cur = conn.cursor()
+
+    def scalar_from_row(row, key_alias='c'):
+        if row is None:
+            return 0
+        if isinstance(row, dict):
+            return int(row.get(key_alias) or next(iter(row.values()), 0))
+        if isinstance(row, (list, tuple)):
+            return int(row[0]) if len(row) > 0 and row[0] is not None else 0
+        return 0
+
+    # Get tasks assigned ONLY to this user (not using visible_user_ids)
+    assigned_count = 0
+    try:
+        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s", (member_id,))
+        assigned_count = scalar_from_row(cur.fetchone(), 'c')
+    except Exception:
+        assigned_count = 0
+
+    # Get active projects that have tasks assigned to this user
+    active_projects = 0
+    try:
+        cur.execute("""
+            SELECT COUNT(DISTINCT p.id) AS c
+            FROM projects p
+            INNER JOIN tasks t ON t.project_id = p.id
+            WHERE p.status = 'Active' 
+            AND t.assigned_type = 'member'
+            AND t.assigned_to = %s
+        """, (member_id,))
+        active_projects = scalar_from_row(cur.fetchone(), 'c')
+    except Exception as e:
+        logger.error(f"ERROR active_projects: {e}")
+        active_projects = 0
+
+    # Get completed tasks for this user only
+    tasks_completed = 0
+    try:
+        cur.execute(
+            "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status = 'Closed'",
+            (member_id,))
+        tasks_completed = scalar_from_row(cur.fetchone(), 'c')
+    except Exception:
+        tasks_completed = 0
+
+    # Get pending tasks for this user only
+    tasks_pending = 0
+    try:
+        cur.execute(
+            "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status NOT IN ('Closed', 'In Progress', 'Review', 'In-Progress')",
+            (member_id,))
+        tasks_pending = scalar_from_row(cur.fetchone(), 'c')
+    except Exception as e:
+        logger.error(f"ERROR tasks_pending: {e}")
+        tasks_pending = 0
+
+    # Task breakdown by status for this user
+    progress_completed = progress_inprogress = progress_pending = 0
+    try:
+        cur.execute("""
+            SELECT status, COUNT(*) AS c
+            FROM tasks
+            WHERE assigned_type='member' AND assigned_to=%s
+            GROUP BY status
+        """, (member_id,))
+        rows = cur.fetchall() or []
+        if rows:
+            if isinstance(rows[0], dict):
+                items = [(r.get('status'), int(r.get('c') or 0)) for r in rows]
+            else:
+                items = [(r[0], int(r[1] or 0)) for r in rows]
+            for status, cnt in items:
+                s = (status or '').lower()
+                if s == 'closed':
+                    progress_completed += cnt
+                elif s in ('in progress', 'review', 'in-progress'):
+                    progress_inprogress += cnt
+                else:
+                    progress_pending += cnt
+    except Exception as e:
+        logger.error(f"ERROR progress counts: {e}")
+        progress_completed = progress_inprogress = progress_pending = 0
+
+    # Priority breakdown for this user
+    priority_buckets = {'Critical': 0, 'High': 0, 'Normal': 0, 'Low': 0}
+    try:
+        cur.execute("""
+            SELECT COALESCE(priority,'Normal') AS p, COUNT(*) AS c
+            FROM tasks
+            WHERE assigned_type='member' AND assigned_to=%s
+            GROUP BY p
+        """, (member_id,))
+        rows = cur.fetchall() or []
+        if rows:
+            if isinstance(rows[0], dict):
+                items = [(r.get('p'), int(r.get('c') or 0)) for r in rows]
+            else:
+                items = [(r[0], int(r[1] or 0)) for r in rows]
+            for p, cnt in items:
+                key = (p or 'Normal').title()
+                priority_buckets[key] = cnt
+    except Exception:
+        pass
+
+    # Priority open/closed breakdown
+    pri_keys = ['Critical', 'High', 'Normal', 'Low']
+    pri_open = {k: 0 for k in pri_keys}
+    pri_closed = {k: 0 for k in pri_keys}
+    try:
+        cur.execute("""
+            SELECT COALESCE(priority,'Normal') AS p, status, COUNT(*) AS c
+            FROM tasks
+            WHERE assigned_type='member' AND assigned_to=%s
+            GROUP BY p, status
+        """, (member_id,))
+        rows = cur.fetchall() or []
+        if rows:
+            if isinstance(rows[0], dict):
+                for r in rows:
+                    p = (r.get('p') or 'Normal').title()
+                    st = (r.get('status') or '').lower()
+                    cnt = int(r.get('c') or 0)
+                    if st == 'closed':
+                        pri_closed[p] = pri_closed.get(p, 0) + cnt
+                    else:
+                        pri_open[p] = pri_open.get(p, 0) + cnt
+            else:
+                for r in rows:
+                    p = (r[0] or 'Normal').title()
+                    st = (r[1] or '').lower()
+                    cnt = int(r[2] or 0)
+                    if st == 'closed':
+                        pri_closed[p] = pri_closed.get(p, 0) + cnt
+                    else:
+                        pri_open[p] = pri_open.get(p, 0) + cnt
+    except Exception:
+        pass
+
+    # Check if user is team lead
+    is_team_lead = False
+    try:
+        cur.execute("SELECT 1 FROM teams WHERE lead_id = %s LIMIT 1", (member_id,))
+        row = cur.fetchone()
+        if row:
+            is_team_lead = True
+    except Exception:
+        is_team_lead = False
+
+    # Board open count for this user
+    board_open_count = 0
+    try:
+        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND NOT (status = 'Closed')", (member_id,))
+        board_open_count = scalar_from_row(cur.fetchone(), 'c')
+    except Exception as e:
+        logger.error(f"ERROR: board_open_count {e}")
+        board_open_count = 0
+
+    # My new tasks count
+    my_new_tasks_count = 0
+    try:
+        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status IN ('New','Open')", (member_id,))
+        my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
+    except Exception as e:
+        logger.error(f"ERROR: my_new_tasks_count {e}")
+        my_new_tasks_count = 0
+
+    # Planned tasks for this user (next 7 days)
+    from datetime import datetime, timedelta
+    import json
+    planned_tasks = []
+    try:
+        from datetime import date, timedelta
+        start_date = date.today()
+        end_date = start_date + timedelta(days=7)
+        cur.execute("""
+            SELECT id, title, status, due_date, created_at
+            FROM tasks
+            WHERE assigned_type='member' AND assigned_to=%s
+              AND status NOT IN ('Completed', 'Closed', 'completed', 'closed')
+              AND due_date IS NOT NULL
+              AND DATE(due_date) BETWEEN %s AND %s
+            ORDER BY due_date ASC
+            LIMIT 10
+        """, (member_id, start_date, end_date))
+        rows = cur.fetchall() or []
+        for r in rows:
+            if isinstance(r, dict):
+                planned_tasks.append({
+                    'id': r.get('id'),
+                    'title': r.get('title'),
+                    'status': r.get('status'),
+                    'due_date': r.get('due_date'),
+                })
+            else:
+                planned_tasks.append({
+                    'id': r[0],
+                    'title': r[1],
+                    'status': r[2],
+                    'due_date': r[3],
+                })
+    except Exception as e:
+        logger.error(f"ERROR: planned_tasks {e}")
+        import traceback
+        traceback.print_exc()
+        planned_tasks = []
+
+    # Line chart data (tasks created/completed last 7 days) for this user
+    line_chart_labels = []
+    line_chart_created = []
+    line_chart_completed = []
+    try:
+        today = datetime.now().date()
+        day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        for i in range(6, -1, -1):
+            day = today - timedelta(days=i)
+            line_chart_labels.append(day_names[day.weekday()])
+            
+            # Count tasks created on this day
+            cur.execute("""
+                SELECT COUNT(*) as cnt FROM tasks 
+                WHERE assigned_type='member' AND assigned_to=%s 
+                AND DATE(created_at) = %s
+            """, (member_id, day))
+            created_row = cur.fetchone()
+            if created_row:
+                if isinstance(created_row, dict):
+                    line_chart_created.append(created_row.get('cnt', 0) or 0)
+                else:
+                    line_chart_created.append(created_row[0] or 0)
+            else:
+                line_chart_created.append(0)
+            
+            # Count tasks completed on this day
+            cur.execute("""
+                SELECT COUNT(*) as cnt FROM tasks 
+                WHERE assigned_type='member' AND assigned_to=%s 
+                AND status='Completed' AND DATE(updated_at) = %s
+            """, (member_id, day))
+            completed_row = cur.fetchone()
+            if completed_row:
+                if isinstance(completed_row, dict):
+                    line_chart_completed.append(completed_row.get('cnt', 0) or 0)
+                else:
+                    line_chart_completed.append(completed_row[0] or 0)
+            else:
+                line_chart_completed.append(0)
+    except Exception as e:
+        logger.error(f"ERROR: line_chart_data {e}", exc_info=True)
+        line_chart_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        line_chart_created = [0, 0, 0, 0, 0, 0, 0]
+        line_chart_completed = [0, 0, 0, 0, 0, 0, 0]
+
+    cur.close()
+    conn.close()
+
+    ctx = {
+        'user': request.session.get('user'),
+        'assigned_count': assigned_count,
+        'active_projects': active_projects,
+        'projects_completed': 0,  # Not tracking individual user project completion
+        'tasks_completed': tasks_completed,
+        'tasks_pending': tasks_pending,
+        'progress_completed': progress_completed,
+        'progress_inprogress': progress_inprogress,
+        'progress_pending': progress_pending,
+        'pri_critical': priority_buckets.get('Critical', 0),
+        'pri_high': priority_buckets.get('High', 0),
+        'pri_normal': priority_buckets.get('Normal', 0),
+        'pri_low': priority_buckets.get('Low', 0),
+        'pri_critical_open': pri_open.get('Critical', 0),
+        'pri_high_open': pri_open.get('High', 0),
+        'pri_normal_open': pri_open.get('Normal', 0),
+        'pri_low_open': pri_open.get('Low', 0),
+        'pri_critical_closed': pri_closed.get('Critical', 0),
+        'pri_high_closed': pri_closed.get('High', 0),
+        'pri_normal_closed': pri_closed.get('Normal', 0),
+        'pri_low_closed': pri_closed.get('Low', 0),
+        'is_team_lead': is_team_lead,
+        'board_open_count': board_open_count,
+        'my_new_tasks_count': my_new_tasks_count,
+        'planned_tasks': planned_tasks,
+        'line_chart_labels': json.dumps(line_chart_labels),
+        'line_chart_created': json.dumps(line_chart_created),
+        'line_chart_completed': json.dumps(line_chart_completed),
+        'planned_start': start_date,
+        'planned_end': end_date,
+        'planned_limit': 10,
+        'is_user_dashboard': True,  # Flag to indicate this is user-specific view
     }
 
     return render(request, 'core/dashboard.html', ctx)

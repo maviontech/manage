@@ -622,6 +622,19 @@
                 </div>
               </div>
             </div>
+            
+            <!-- Dashboard Toggle Button -->
+            <div style="position: relative;">
+              <button id="dashboard-toggle" class="btn-ghost" aria-label="Toggle Dashboard View" title="Toggle Dashboard View" onclick="toggleDashboardView()" style="display: none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                  <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                  <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                  <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                </svg>
+                <span id="dashboard-view-label" style="font-size:13px;font-weight:500;margin-left:6px;">My View</span>
+              </button>
+            </div>
           </div>
 
           <a href="{% url 'profile' %}" class="user-mini-box" title="View Profile">
@@ -1778,7 +1791,33 @@
         const headerDot = document.getElementById('header-online-indicator');
         if(headerDot && CURRENT_USER_EMAIL){ headerDot.style.display = 'inline-block'; }
       }catch(e){ /* ignore */ }
+      
+      // Show dashboard toggle button only on dashboard page
+      const currentPath = window.location.pathname;
+      const dashboardToggle = document.getElementById('dashboard-toggle');
+      if (dashboardToggle && (currentPath === '/dashboard/' || currentPath === '/user-dashboard/')) {
+        dashboardToggle.style.display = 'flex';
+        dashboardToggle.style.alignItems = 'center';
+        dashboardToggle.style.gap = '6px';
+        
+        // Update label based on current page
+        const label = document.getElementById('dashboard-view-label');
+        if (currentPath === '/dashboard/') {
+          label.textContent = 'My View';
+        } else {
+          label.textContent = 'Admin View';
+        }
+      }
     });
+    
+    function toggleDashboardView() {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/dashboard/') {
+        window.location.href = '/user-dashboard/';
+      } else {
+        window.location.href = '/dashboard/';
+      }
+    }
   </script>
 
   <!-- Popup Notification Container -->

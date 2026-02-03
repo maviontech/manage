@@ -836,6 +836,43 @@
 {% block page_subtitle %}Overview of your projects and tasks{% endblock %}
 
 {% block content %}
+<!-- Dashboard View Indicator -->
+{% if is_user_dashboard %}
+<div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 12px 24px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+    <div>
+      <div style="font-size: 16px; font-weight: 700;">My Personal Dashboard</div>
+      <div style="font-size: 13px; opacity: 0.9;">Showing only your assigned tasks and projects</div>
+    </div>
+  </div>
+  <a href="{% url 'dashboard' %}" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+    Switch to Admin View
+  </a>
+</div>
+{% else %}
+<div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 24px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+      <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+      <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+      <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+    </svg>
+    <div>
+      <div style="font-size: 16px; font-weight: 700;">Admin Dashboard</div>
+      <div style="font-size: 13px; opacity: 0.9;">Showing all team tasks and projects</div>
+    </div>
+  </div>
+  <a href="{% url 'user_dashboard' %}" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+    Switch to My View
+  </a>
+</div>
+{% endif %}
+
 <div class="dashboard-grid">
   <div class="metric-card total-tasks">
     <div class="label">Total Tasks Assigned</div>
