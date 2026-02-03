@@ -291,6 +291,7 @@ def board_data_api(request):
     # ---- Status Filter + Assigned Filter ----
     status = request.GET.get("status")
     assigned_to = request.GET.get("assigned_to")
+    exclude_closed = request.GET.get("exclude_closed")  # For timer dropdown
 
     # ---- Pagination ----
     try:
@@ -323,6 +324,9 @@ def board_data_api(request):
         # Only member-assigned tasks should be considered when filtering by assigned_to
         count_filters.append("assigned_type = 'member' AND assigned_to = %s")
         count_params.append(assigned_to)
+    if exclude_closed:
+        # Exclude closed, cancelled, and completed tasks (for timer dropdown)
+        count_filters.append("status NOT IN ('Closed', 'Cancelled', 'Completed')")
 
     if count_filters:
         count_sql += " WHERE " + " AND ".join(count_filters)
@@ -385,6 +389,9 @@ def board_data_api(request):
     if assigned_to:
         main_filters.append("t.assigned_type = 'member' AND t.assigned_to = %s")
         params.append(assigned_to)
+    if exclude_closed:
+        # Exclude closed, cancelled, and completed tasks (for timer dropdown)
+        main_filters.append("t.status NOT IN ('Closed', 'Cancelled', 'Completed')")
 
     if main_filters:
         sql += " WHERE " + " AND ".join(main_filters)

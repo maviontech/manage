@@ -888,9 +888,9 @@ async function loadCurrentTimer() {
 async function loadTasks() {
   try {
     const memberId = '{{ member_id|default:"" }}';
-    let url = '/tasks/api/board-data/';
+    let url = '/tasks/api/board-data/?exclude_closed=1';
     if (memberId) {
-      url += '?assigned_to=' + encodeURIComponent(memberId);
+      url += '&assigned_to=' + encodeURIComponent(memberId);
     }
 
     const response = await fetch(url);
