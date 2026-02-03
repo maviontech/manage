@@ -41,6 +41,23 @@
         </select>
       </div>
 
+      <div class="filter-select">
+        <select id="unassignedProject" class="modern-select">
+          <option value="">All projects</option>
+        </select>
+      </div>
+
+      <div class="filter-select">
+        <select id="unassignedDueDate" class="modern-select">
+          <option value="">All due dates</option>
+          <option value="overdue">Overdue</option>
+          <option value="today">Due Today</option>
+          <option value="this-week">Due This Week</option>
+          <option value="this-month">Due This Month</option>
+          <option value="no-due-date">No Due Date</option>
+        </select>
+      </div>
+
       <div class="filter-actions">
         <button id="refreshUnassigned" class="btn-filter secondary">🔄 Refresh</button>
         <label class="checkbox-modern">
@@ -75,7 +92,7 @@
       <div id="unassignedList" class="tasks-list">
         {% comment %} rows will be present server-side too for SEO / noscript - JS will paginate/filter {% endcomment %}
         {% for t in tasks %}
-        <div class="task-row d-flex align-items-center mb-2" data-task-id="{{ t.id }}" data-title="{{ t.title|escapejs }}" data-desc="{{ t.description|default:''|escapejs }}" data-priority="{{ t.priority|default:'Normal' }}">
+        <div class="task-row d-flex align-items-center mb-2" data-task-id="{{ t.id }}" data-title="{{ t.title|escapejs }}" data-desc="{{ t.description|default:''|escapejs }}" data-priority="{{ t.priority|default:'Normal' }}" data-project-id="{{ t.project_id|default:'' }}" data-project-name="{{ t.project_name|default:'' }}" data-status="{{ t.status|default:'Open' }}" data-due-date="{{ t.due_date|default:'' }}">
           <div class="col id-col d-flex align-items-center">
             <input type="checkbox" class="task-select form-check-input me-2" data-task="{{ t.id }}">
             <span class="small text-muted">#{{ t.id }}</span>
@@ -997,6 +1014,10 @@ document.addEventListener('DOMContentLoaded', () => {
       title: el.getAttribute('data-title') || (el.querySelector('.fw-semibold')?.textContent || ''),
       desc: el.getAttribute('data-desc') || '',
       priority: el.getAttribute('data-priority') || 'Normal',
+      projectId: el.getAttribute('data-project-id') || '',
+      projectName: el.getAttribute('data-project-name') || '',
+      status: el.getAttribute('data-status') || 'Open',
+      dueDate: el.getAttribute('data-due-date') || '',
       project: (el.querySelector('.project-col')?.textContent || '').trim(),
       due: (el.querySelector('.due-col')?.textContent || '').trim(),
       el: el
@@ -1011,7 +1032,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const unassignedList = $('#unassignedList');
   const unassignedSearch = $('#unassignedSearch');
   const unassignedPriority = $('#unassignedPriority');
+  const unassignedProject = $('#unassignedProject');
+  const unassignedDueDate = $('#unassignedDueDate');
   const refreshUnassigned = $('#refreshUnassigned');
+
+  // Populate project filter with unique projects
+  function populateProjectFilter() {
+    if (!unassignedProject) return;
+    const projects = new Map();
+    ALL_TASK_ROWS.forEach(t => {
+      if (t.projectId && t.projectName) {
+        projects.set(t.projectId, t.projectName);
+      }
+    });
+    const sortedProjects = Array.from(projects.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+    sortedProjects.forEach(([id, name]) => {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = name;
+      unassignedProject.appendChild(option);
+    });
+  }
+  populateProjectFilter();
   const selectAllPage = $('#selectAllPage');
   const assignSelectedBtn = $('#assignSelectedBtn');
   const unassignedCount = $('#unassignedCount');
@@ -1078,7 +1120,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const qraw = (unassignedSearch?.value || '').trim();
     const q = qraw.toLowerCase();
     const pri = (unassignedPriority?.value || '').trim();
+    const proj = (unassignedProject?.value || '').trim();
+    const dueDateFilter = (unassignedDueDate?.value || '').trim();
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     filtered = ALL_TASK_ROWS.filter(t => {
+      // Text/ID search
       let idMatch = false;
       if (q) {
         if (q.startsWith('#')) idMatch = (t.id === q.substring(1));
@@ -1088,14 +1137,60 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const textMatch = (t.title + ' ' + t.desc + ' ' + (t.project||'')).toLowerCase().includes(q);
       const matchesTextOrId = (!q) || idMatch || textMatch;
+      
+      // Priority filter
       const matchesPriority = (!pri) || (t.priority === pri);
-      return matchesTextOrId && matchesPriority;
+      
+      // Project filter
+      const matchesProject = (!proj) || (t.projectId === proj);
+      
+      // Due date filter
+      let matchesDueDate = true;
+      if (dueDateFilter) {
+        if (dueDateFilter === 'no-due-date') {
+          matchesDueDate = !t.dueDate;
+        } else if (dueDateFilter === 'overdue') {
+          if (t.dueDate) {
+            const dueDate = new Date(t.dueDate);
+            matchesDueDate = dueDate < today;
+          } else {
+            matchesDueDate = false;
+          }
+        } else if (dueDateFilter === 'today') {
+          if (t.dueDate) {
+            const dueDate = new Date(t.dueDate);
+            matchesDueDate = dueDate.toDateString() === today.toDateString();
+          } else {
+            matchesDueDate = false;
+          }
+        } else if (dueDateFilter === 'this-week') {
+          if (t.dueDate) {
+            const dueDate = new Date(t.dueDate);
+            const weekFromNow = new Date(today);
+            weekFromNow.setDate(weekFromNow.getDate() + 7);
+            matchesDueDate = dueDate >= today && dueDate <= weekFromNow;
+          } else {
+            matchesDueDate = false;
+          }
+        } else if (dueDateFilter === 'this-month') {
+          if (t.dueDate) {
+            const dueDate = new Date(t.dueDate);
+            matchesDueDate = dueDate.getMonth() === today.getMonth() && dueDate.getFullYear() === today.getFullYear();
+          } else {
+            matchesDueDate = false;
+          }
+        }
+      }
+      
+      return matchesTextOrId && matchesPriority && matchesProject && matchesDueDate;
     });
     renderPage(1);
   }
 
   if (unassignedSearch) unassignedSearch.addEventListener('input', applyFilter);
   if (unassignedPriority) unassignedPriority.addEventListener('change', applyFilter);
+  if (unassignedProject) unassignedProject.addEventListener('change', applyFilter);
+  if (unassignedDueDate) unassignedDueDate.addEventListener('change', applyFilter);
   if (refreshUnassigned) refreshUnassigned.addEventListener('click', () => location.reload());
 
   if (selectAllPage) {

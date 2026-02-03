@@ -194,12 +194,14 @@ def my_tasks_view(request):
     if visible_user_ids:
         placeholders = ','.join(['%s'] * len(visible_user_ids))
         cur.execute(
-            f"""SELECT id, title, status, priority, due_date, closure_date, COALESCE(work_type, 'Task') AS work_type,
-                       assigned_to
-               FROM tasks
-               WHERE assigned_type='member' AND assigned_to IN ({placeholders})
-               ORDER BY FIELD(status,'Open','In Progress','Review','Blocked','Closed'),
-                        due_date IS NULL, due_date ASC""",
+            f"""SELECT t.id, t.title, t.status, t.priority, t.due_date, t.closure_date, 
+                       COALESCE(t.work_type, 'Task') AS work_type,
+                       t.assigned_to, t.project_id, p.name AS project_name
+               FROM tasks t
+               LEFT JOIN projects p ON p.id = t.project_id
+               WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
+               ORDER BY FIELD(t.status,'Open','In Progress','Review','Blocked','Closed'),
+                        t.due_date IS NULL, t.due_date ASC""",
             tuple(visible_user_ids),
         )
         tasks = cur.fetchall()
@@ -222,20 +224,28 @@ def unassigned_tasks_view(request):
     sql = """
         SELECT 
             t.id, 
-            t.title, 
+            t.title,
+            t.description,
+            t.status,
             t.priority,
             t.due_date,
+            t.created_at,
             t.assigned_type, 
             t.assigned_to,
+            t.project_id,
             p.name AS project_name,
             sp.name AS subproject_name
         FROM tasks t
         LEFT JOIN projects p ON p.id = t.project_id
         LEFT JOIN subprojects sp ON sp.id = t.subproject_id
-        WHERE t.assigned_to IS NOT NULL
-        ORDER BY t.priority DESC                            
+        WHERE (t.assigned_to IS NULL OR t.assigned_to = '')
+          AND t.status NOT IN ('Blocked', 'Closed')
+          AND t.status IN ('Open', 'In Progress', 'Review', 'Pending', 'New')
+        ORDER BY 
+            CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END,
+            t.due_date ASC,
+            t.created_at ASC                            
             """    
-    # the change the query to fetch only unassigned tasks                              
     cur.execute(sql)
     rows = cur.fetchall()
 

@@ -33,6 +33,9 @@
           <option value="Report">Report</option>
           <option value="Change Request">Change Request</option>
         </select>
+        <select id="projectFilter" class="filter-select">
+          <option value="">All projects</option>
+        </select>
         <a href="{% url 'create_task' %}" class="btn-modern btn-primary">
           <i class="fa-solid fa-plus"></i>
           New Task
@@ -107,7 +110,7 @@
         </thead>
         <tbody>
           {% for t in tasks %}
-          <tr class="task-row" data-href="{% url 'task_detail' t.id %}" data-work-type="{{ t.work_type|default:'Task' }}" data-assigned-to="{{ t.assigned_to }}">
+          <tr class="task-row" data-href="{% url 'task_detail' t.id %}" data-work-type="{{ t.work_type|default:'Task' }}" data-assigned-to="{{ t.assigned_to }}" data-project-id="{{ t.project_id|default:'' }}" data-project-name="{{ t.project_name|default:'' }}">
             <td>
               <span class="task-id">#{{ t.id }}</span>
             </td>
@@ -267,7 +270,8 @@
   color: #1e293b;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 180px;
+  min-width: 150px;
+  max-width: 150px;
 }
 
 .filter-select:focus {
@@ -635,10 +639,37 @@
 
   const workTypeFilter = document.getElementById('workTypeFilter');
   const assignedFilter = document.getElementById('assignedFilter');
+  const projectFilter = document.getElementById('projectFilter');
+
+  // Populate project filter with unique projects from tasks
+  function populateProjectFilter() {
+    const rows = document.querySelectorAll('.task-row');
+    const projects = new Map();
+    
+    rows.forEach(function(row) {
+      const projectId = row.dataset.projectId;
+      const projectName = row.dataset.projectName;
+      if (projectId && projectName) {
+        projects.set(projectId, projectName);
+      }
+    });
+    
+    // Sort projects by name
+    const sortedProjects = Array.from(projects.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+    
+    // Add options to filter
+    sortedProjects.forEach(([id, name]) => {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = name;
+      projectFilter.appendChild(option);
+    });
+  }
 
   function applyFilters() {
     const selectedType = workTypeFilter ? workTypeFilter.value : '';
     const assignedMode = assignedFilter ? assignedFilter.value : 'all';
+    const selectedProject = projectFilter ? projectFilter.value : '';
     const rows = document.querySelectorAll('.task-row');
 
     rows.forEach(function(row) {
@@ -647,6 +678,7 @@
 
       const workType = row.dataset.workType || '';
       const assignedTo = row.dataset.assignedTo || '';
+      const projectId = row.dataset.projectId || '';
 
       let show = true;
 
@@ -662,12 +694,21 @@
         if (!assignedTo || String(assignedTo) === String(currentUserId)) show = false;
       }
 
+      // project filter
+      if (selectedProject && selectedProject !== '' && projectId !== selectedProject) {
+        show = false;
+      }
+
       row.style.display = show ? '' : 'none';
     });
   }
 
+  // Initialize project filter on page load
+  if (projectFilter) populateProjectFilter();
+
   if (workTypeFilter) workTypeFilter.addEventListener('change', applyFilters);
   if (assignedFilter) assignedFilter.addEventListener('change', applyFilters);
+  if (projectFilter) projectFilter.addEventListener('change', applyFilters);
 });
 </script>
 {% endblock %}
