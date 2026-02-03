@@ -179,6 +179,26 @@
     .btn-save-assignee.active {
         display: inline-block;
     }
+    
+    /* Attachment hover effects */
+    .attachment-item:hover {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+        border-color: #3b82f6 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+    
+    .attachment-item .btn-icon:hover {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+        border-color: #3b82f6 !important;
+        color: #ffffff !important;
+        transform: scale(1.05);
+    }
+    
+    .attachment-name:hover {
+        color: #2563eb !important;
+        text-decoration: underline !important;
+    }
 </style>
 {% endblock %}
 
@@ -239,42 +259,49 @@
                     <div class="description-content">
                         {{ issue.description|linebreaks|default:"No description provided." }}
                     </div>
-                </div>
-            </div>
-
-            <!-- Attachments Section -->
-            {% if attachments %}
-            <div class="card attachments-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-paperclip"></i> Attachments ({{ attachments|length }})</h3>
-                    <button class="btn-icon" onclick="uploadAttachment()">
-                        <i class="fas fa-upload"></i>
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div class="attachments-grid">
-                        {% for att in attachments %}
-                        <div class="attachment-item">
-                            <div class="attachment-icon">
-                                <i class="fas fa-file"></i>
-                            </div>
-                            <div class="attachment-info">
-                                <a href="{{ att.file_path }}" target="_blank" class="attachment-name">
-                                    {{ att.file_name }}
+                    
+                    <!-- Attachments within Description -->
+                    {% if attachments %}
+                    <div class="description-attachments" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e2e8f0;">
+                        <h4 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-paperclip" style="color: #3b82f6;"></i> Attachments ({{ attachments|length }})
+                        </h4>
+                        <div class="attachments-grid" style="display: grid; gap: 0.75rem;">
+                            {% for att in attachments %}
+                            <div class="attachment-item" style="display: flex; align-items: center; gap: 1rem; padding: 0.875rem 1rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 2px solid #e2e8f0; border-radius: 10px; transition: all 0.3s ease;">
+                                <div class="attachment-icon" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 8px; flex-shrink: 0;">
+                                    <i class="fas {{ att.icon }}" style="color: #ffffff; font-size: 1.125rem;"></i>
+                                </div>
+                                <div class="attachment-info" style="flex: 1; min-width: 0;">
+                                    {% if 'image' in att.file_type|lower %}
+                                    <!-- For images, make them viewable inline -->
+                                    <a href="{{ MEDIA_URL }}{{ att.file_path }}" target="_blank" class="attachment-name" style="display: block; font-weight: 600; color: #1e40af; text-decoration: none; word-break: break-all; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                                        <i class="fas fa-eye" style="margin-right: 0.25rem;"></i>{{ att.file_name }}
+                                    </a>
+                                    <!-- Show image preview -->
+                                    <div style="margin-top: 0.5rem;">
+                                        <img src="{{ MEDIA_URL }}{{ att.file_path }}" alt="{{ att.file_name }}" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 2px solid #e2e8f0;">
+                                    </div>
+                                    {% else %}
+                                    <!-- For non-images, provide download link -->
+                                    <a href="{{ MEDIA_URL }}{{ att.file_path }}" download="{{ att.file_name }}" class="attachment-name" style="display: block; font-weight: 600; color: #1e40af; text-decoration: none; word-break: break-all; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                                        <i class="fas fa-download" style="margin-right: 0.25rem;"></i>{{ att.file_name }}
+                                    </a>
+                                    {% endif %}
+                                    <span class="attachment-meta" style="display: block; font-size: 0.8rem; color: #64748b;">
+                                        {{ att.file_size_display }} • Uploaded by {{ att.uploaded_by_name|default:"Unknown" }} • {{ att.uploaded_at|date:"M d, Y" }}
+                                    </span>
+                                </div>
+                                <a href="{{ MEDIA_URL }}{{ att.file_path }}" download="{{ att.file_name }}" class="btn-icon" style="padding: 0.5rem; background: #ffffff; border: 2px solid #e2e8f0; border-radius: 8px; color: #64748b; cursor: pointer; transition: all 0.2s ease; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-download"></i>
                                 </a>
-                                <span class="attachment-meta">
-                                    {{ att.file_size|filesizeformat }} • {{ att.uploaded_at|date:"M d, Y" }}
-                                </span>
                             </div>
-                            <button class="btn-icon" onclick="downloadFile('{{ att.file_path }}')">
-                                <i class="fas fa-download"></i>
-                            </button>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
 
             <!-- Comments Section -->
             <div class="card comments-card">

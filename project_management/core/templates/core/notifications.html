@@ -320,8 +320,11 @@ function renderNotifications() {
     container.innerHTML = `
       <div class="empty-state">
         <i class="fa fa-bell-slash"></i>
-        <h3>No notifications yet</h3>
-        <p>You're all caught up! New notifications will appear here.</p>
+        <h3>No unread notifications</h3>
+        <p>You're all caught up! When you receive new notifications, they will appear here.</p>
+        <p style="font-size: 12px; color: #9ca3af; margin-top: 12px;">
+          <i class="fa fa-info-circle"></i> Read notifications are automatically hidden
+        </p>
       </div>
     `;
     return;
@@ -386,6 +389,13 @@ function getTimeAgo(dateString) {
 }
 
 function handleNotificationClick(id, link) {
+  // Immediately remove notification from UI for instant feedback
+  const notifElement = document.querySelector(`[onclick*="handleNotificationClick(${id}"]`);
+  if (notifElement) {
+    notifElement.style.opacity = '0.5';
+    notifElement.style.pointerEvents = 'none';
+  }
+  
   markAsRead(id);
   if (link && link !== 'null' && link !== '') {
     setTimeout(() => {
@@ -406,13 +416,35 @@ function markAsRead(id) {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      loadNotifications();
+      // Remove the notification from the list with animation
+      const notifElement = document.querySelector(`[onclick*="handleNotificationClick(${id}"]`);
+      if (notifElement) {
+        notifElement.style.transition = 'all 0.3s ease';
+        notifElement.style.opacity = '0';
+        notifElement.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+          loadNotifications();
+        }, 300);
+      } else {
+        loadNotifications();
+      }
     }
   })
   .catch(error => console.error('Error:', error));
 }
 
 function markAllAsRead() {
+  if (!notifications || notifications.length === 0) return;
+  
+  if (!confirm('Mark all notifications as read? They will be removed from this list.')) return;
+  
+  // Fade out all notifications
+  document.querySelectorAll('.notification-item').forEach(item => {
+    item.style.transition = 'all 0.3s ease';
+    item.style.opacity = '0';
+    item.style.transform = 'translateX(20px)';
+  });
+  
   fetch('{% url "api_notifications_mark_read" %}', {
     method: 'POST',
     headers: {
@@ -424,7 +456,9 @@ function markAllAsRead() {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      loadNotifications();
+      setTimeout(() => {
+        loadNotifications();
+      }, 300);
     }
   })
   .catch(error => console.error('Error:', error));

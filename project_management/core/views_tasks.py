@@ -1,11 +1,13 @@
 
-import csv, io, datetime
+import csv, io, datetime, os
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
+from django.conf import settings
+from django.core.files.storage import default_storage
 
 # helper: get connection for current tenant
 from .db_helpers import get_tenant_conn, get_visible_task_user_ids, get_tenant_work_types
@@ -19,6 +21,68 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.pdfgen import canvas
+
+
+# ==============================
+#  HELPER FUNCTION FOR ATTACHMENTS
+# ==============================
+def save_task_attachments(request, task_id, cur, created_by):
+    """
+    Helper function to save task attachments to disk and database
+    
+    Args:
+        request: Django request object containing FILES
+        task_id: The ID of the task to attach files to
+        cur: Database cursor for executing queries
+        created_by: User ID of the person uploading files
+    
+    Returns:
+        int: Number of files successfully saved
+    """
+    attachments = request.FILES.getlist('attachments')
+    if not attachments:
+        return 0
+    
+    # Create attachments directory if it doesn't exist
+    attachments_dir = os.path.join(settings.MEDIA_ROOT, 'task_attachments')
+    os.makedirs(attachments_dir, exist_ok=True)
+    
+    saved_count = 0
+    for uploaded_file in attachments:
+        try:
+            # Generate unique filename with timestamp
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_filename = f"{task_id}_{timestamp}_{uploaded_file.name}"
+            file_path = os.path.join(attachments_dir, safe_filename)
+            
+            # Save the file to disk
+            with open(file_path, 'wb+') as destination:
+                for chunk in uploaded_file.chunks():
+                    destination.write(chunk)
+            
+            # Store relative path for database
+            relative_path = os.path.join('task_attachments', safe_filename)
+            
+            # Save attachment info to database
+            cur.execute("""
+                INSERT INTO task_attachments 
+                (task_id, file_name, file_path, file_size, file_type, uploaded_by)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                task_id,
+                uploaded_file.name,
+                relative_path,
+                uploaded_file.size,
+                uploaded_file.content_type,
+                created_by
+            ))
+            saved_count += 1
+        except Exception as e:
+            # Log error but continue processing other files
+            print(f"Error saving attachment {uploaded_file.name}: {e}")
+            continue
+    
+    return saved_count
 
 
 # ==============================
@@ -133,6 +197,9 @@ def create_task_view(request):
                     "task",
                     f"/tasks/{task_id}/view/"
                 ))
+
+        # Handle file attachments using helper function
+        save_task_attachments(request, task_id, cur, created_by)
 
         conn.commit()
         cur.close()
@@ -1418,6 +1485,9 @@ def create_bug_view(request):
                 f"/tasks/{task_id}/view/"
             ))
 
+        # Handle file attachments using helper function
+        save_task_attachments(request, task_id, cur, created_by)
+
         conn.commit()
         cur.close()
         return redirect("task_board")
@@ -1551,6 +1621,9 @@ def create_story_view(request):
                 f"/tasks/{task_id}/view/"
             ))
 
+        # Handle file attachments using helper function
+        save_task_attachments(request, task_id, cur, created_by)
+
         conn.commit()
         cur.close()
         return redirect("task_board")
@@ -1680,6 +1753,9 @@ def create_defect_view(request):
                 "task",
                 f"/tasks/{task_id}/view/"
             ))
+
+        # Handle file attachments using helper function
+        save_task_attachments(request, task_id, cur, created_by)
 
         conn.commit()
         cur.close()
@@ -1814,6 +1890,9 @@ def create_subtask_view(request):
                 "task",
                 f"/tasks/{task_id}/view/"
             ))
+
+        # Handle file attachments using helper function
+        save_task_attachments(request, task_id, cur, created_by)
 
         conn.commit()
         cur.close()
@@ -2094,6 +2173,9 @@ def create_change_request_view(request):
                 f"/tasks/detail/{task_id}"
             ))
 
+        # Handle file attachments using helper function
+        save_task_attachments(request, task_id, cur, created_by)
+
         conn.commit()
         cur.close()
         return redirect("task_board")
@@ -2312,8 +2394,44 @@ def task_page_view(request, task_id):
     # Sort activities by timestamp
     activities = sorted(activities, key=lambda x: x['created_at'])
     
-    # Get attachments (empty for now - can be implemented later)
-    attachments = []
+    # Get attachments from database
+    cur.execute("""
+        SELECT 
+            ta.id, ta.file_name, ta.file_path, ta.file_size, 
+            ta.file_type, ta.uploaded_at,
+            CONCAT(m.first_name, ' ', m.last_name) AS uploaded_by_name
+        FROM task_attachments ta
+        LEFT JOIN members m ON ta.uploaded_by = m.id
+        WHERE ta.task_id = %s
+        ORDER BY ta.uploaded_at DESC
+    """, (task_id,))
+    
+    attachments = cur.fetchall()
+    
+    # Convert file sizes to human-readable format
+    for attachment in attachments:
+        size_bytes = attachment.get('file_size', 0)
+        if size_bytes < 1024:
+            attachment['file_size_display'] = f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            attachment['file_size_display'] = f"{size_bytes / 1024:.1f} KB"
+        else:
+            attachment['file_size_display'] = f"{size_bytes / (1024 * 1024):.1f} MB"
+        
+        # Determine file icon based on file type
+        file_type = attachment.get('file_type', '').lower()
+        if 'image' in file_type:
+            attachment['icon'] = 'fa-file-image'
+        elif 'pdf' in file_type:
+            attachment['icon'] = 'fa-file-pdf'
+        elif 'word' in file_type or 'document' in file_type:
+            attachment['icon'] = 'fa-file-word'
+        elif 'excel' in file_type or 'spreadsheet' in file_type:
+            attachment['icon'] = 'fa-file-excel'
+        elif 'text' in file_type:
+            attachment['icon'] = 'fa-file-alt'
+        else:
+            attachment['icon'] = 'fa-file'
     
     # Get user role for permissions
     user_role = request.session.get('role', 'USER')

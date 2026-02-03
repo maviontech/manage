@@ -2104,11 +2104,11 @@ def api_notifications_list(request):
                 'message': 'Notifications table not found. Run migration script.'
             })
         
-        # Get all notifications for user
+        # Get only unread notifications for user
         cur.execute("""
             SELECT id, title, message, type, is_read, link, created_at
             FROM notifications
-            WHERE user_id = %s
+            WHERE user_id = %s AND is_read = 0
             ORDER BY created_at DESC
             LIMIT 50
         """, (member_id,))

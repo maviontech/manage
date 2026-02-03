@@ -1676,8 +1676,8 @@
           container.innerHTML = `
             <div style="text-align:center;padding:40px 20px;color:#9ca3af;">
               <i class="fa fa-bell-slash" style="font-size:32px;color:#d1d5db;"></i>
-              <p style="margin-top:12px;font-size:14px;font-weight:600;">No notifications</p>
-              <p style="font-size:12px;margin-top:4px;">You're all caught up!</p>
+              <p style="margin-top:12px;font-size:14px;font-weight:600;">No unread notifications</p>
+              <p style="font-size:12px;margin-top:4px;color:#9ca3af;">You're all caught up!</p>
             </div>
           `;
           return;
@@ -1757,6 +1757,10 @@
   }
 
   function handleNotifClick(id, link) {
+    // Immediately fade out the clicked notification
+    event.currentTarget.style.opacity = '0.5';
+    event.currentTarget.style.pointerEvents = 'none';
+    
     // Mark as read
     fetch('{% url "api_notifications_mark_read" %}', {
       method: 'POST',
@@ -1767,11 +1771,21 @@
       body: JSON.stringify({ id: id })
     })
     .then(() => {
+      // Update notification count immediately
       updateNotificationCount();
+      
+      // Reload the dropdown to remove the read notification
+      if (notificationsDropdownOpen) {
+        setTimeout(() => {
+          loadNotificationsPreview();
+        }, 200);
+      }
+      
+      // Navigate to link after a short delay
       if (link && link !== 'null' && link !== '') {
-        window.location.href = link;
-      } else {
-        window.location.href = '{% url "notifications_page" %}';
+        setTimeout(() => {
+          window.location.href = link;
+        }, 300);
       }
     })
     .catch(error => console.error('Error:', error));

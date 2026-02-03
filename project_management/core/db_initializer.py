@@ -348,6 +348,22 @@ TENANT_DDL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
+    CREATE TABLE IF NOT EXISTS task_attachments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      task_id INT NOT NULL,
+      file_name VARCHAR(255) NOT NULL,
+      file_path VARCHAR(512) NOT NULL,
+      file_size INT,
+      file_type VARCHAR(100),
+      uploaded_by INT,
+      uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_task_id (task_id),
+      INDEX idx_uploaded_at (uploaded_at),
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (uploaded_by) REFERENCES members(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """,
+    """
     CREATE TABLE IF NOT EXISTS comments (
       id INT AUTO_INCREMENT PRIMARY KEY,
       task_id INT,
