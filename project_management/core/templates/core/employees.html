@@ -59,27 +59,28 @@
     margin-top: 20px;
     border-radius: 12px;
     overflow: hidden;
-    table-layout: auto;
+    table-layout: fixed;
   }
   .employees-table thead {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: white;
   }
   .employees-table th {
-    padding: 16px 12px;
+    padding: 14px 10px;
     text-align: left;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     white-space: nowrap;
   }
   .employees-table td {
-    padding: 16px 12px;
+    padding: 14px 10px;
     border-bottom: 1px solid #f1f5f9;
-    font-size: 14px;
+    font-size: 13px;
     color: #334155;
-    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .employees-table tbody tr {
     transition: all 0.2s ease;
@@ -87,34 +88,41 @@
   .employees-table tbody tr:hover {
     background: linear-gradient(90deg, #f0f9ff, #ffffff);
   }
-  .employees-table td:last-child {
-    white-space: nowrap;
-    min-width: 110px;
-    max-width: none;
-    padding-right: 16px;
-  }
+  /* Column widths optimized for laptop screens */
+  .employees-table th:nth-child(1), 
   .employees-table td:nth-child(1) {
-    min-width: 100px;
+    width: 8%;
     font-weight: 600;
   }
+  .employees-table th:nth-child(2), 
   .employees-table td:nth-child(2) {
-    min-width: 160px;
+    width: 16%;
   }
+  .employees-table th:nth-child(3), 
   .employees-table td:nth-child(3) {
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    width: 18%;
   }
+  .employees-table th:nth-child(4), 
   .employees-table td:nth-child(4) {
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    width: 12%;
   }
+  .employees-table th:nth-child(5), 
   .employees-table td:nth-child(5) {
-    max-width: 120px;
+    width: 13%;
   }
+  .employees-table th:nth-child(6), 
   .employees-table td:nth-child(6) {
-    max-width: 130px;
+    width: 14%;
+  }
+  .employees-table th:nth-child(7), 
+  .employees-table td:nth-child(7) {
+    width: 9%;
+  }
+  .employees-table th:nth-child(8), 
+  .employees-table td:nth-child(8) {
+    width: 10%;
+    white-space: nowrap;
+    text-align: center;
   }
   .btn-primary {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
@@ -139,12 +147,12 @@
     background: linear-gradient(135deg, #64748b, #475569);
     color: white;
     border: none;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
     cursor: pointer;
-    margin-right: 6px;
+    margin-right: 4px;
     transition: all 0.2s ease;
-    font-size: 13px;
+    font-size: 12px;
   }
   .btn-secondary:hover {
     transform: translateY(-2px);
@@ -154,11 +162,11 @@
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
     border: none;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 13px;
+    font-size: 12px;
   }
   .btn-danger:hover {
     transform: translateY(-2px);
@@ -166,11 +174,13 @@
   }
   .status-badge {
     display: inline-block;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
     letter-spacing: 0.3px;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
   .status-active {
     background: linear-gradient(135deg, #10b981, #059669);
@@ -321,11 +331,41 @@
     width: 100%;
     -webkit-overflow-scrolling: touch;
     border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  
+  /* Responsive adjustments for different screen sizes */
+  @media (max-width: 1600px) {
+    .employees-table th, 
+    .employees-table td {
+      padding: 12px 8px;
+      font-size: 12px;
+    }
+    .employees-table th {
+      font-size: 11px;
+    }
   }
   
   @media (max-width: 1400px) {
+    .employees-container {
+      padding: 24px;
+    }
+    .employees-table th, 
+    .employees-table td {
+      padding: 10px 6px;
+      font-size: 11px;
+    }
+    .employees-table th {
+      font-size: 10px;
+    }
+  }
+  
+  @media (max-width: 1200px) {
     .employees-table {
       min-width: 1000px;
+    }
+    #employeesTableContainer {
+      overflow-x: auto;
     }
   }
   
@@ -345,11 +385,13 @@
       grid-template-columns: 1fr;
     }
     .employees-table {
-      font-size: 13px;
+      min-width: 900px;
+      font-size: 12px;
     }
     .employees-table th,
     .employees-table td {
-      padding: 12px 8px;
+      padding: 10px 6px;
+      font-size: 11px;
     }
   }
 </style>
@@ -390,7 +432,7 @@
               <rect x="14" y="14" width="7" height="7"></rect>
               <rect x="3" y="14" width="7" height="7"></rect>
             </svg>
-            Employee Code
+             Code
           </th>
           <th>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
@@ -635,34 +677,37 @@ function renderEmployees(employees) {
   
   tbody.innerHTML = employees.map(emp => {
     const statusClass = emp.status.toLowerCase().replace(' ', '');
+    const initials = emp.full_name.split(' ').map(n => n.charAt(0).toUpperCase()).join('').substring(0, 2);
     return `
       <tr>
         <td><strong style="color:#3b82f6;">${emp.employee_code}</strong></td>
         <td>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:18px;">
-              ${emp.full_name.charAt(0).toUpperCase()}
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:13px;flex-shrink:0;">
+              ${initials}
             </div>
-            <strong>${emp.full_name}</strong>
+            <strong style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${emp.full_name}">${emp.full_name}</strong>
           </div>
         </td>
-        <td style="color:#64748b;">
-          <i class="fa fa-envelope" style="color:#3b82f6;margin-right:6px;"></i>
-          ${emp.email}
+        <td style="color:#64748b;" title="${emp.email}">
+          <i class="fa fa-envelope" style="color:#3b82f6;margin-right:4px;"></i>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:calc(100% - 20px);vertical-align:middle;">${emp.email}</span>
         </td>
         <td style="color:#64748b;">
-          ${emp.phone ? `<i class="fa fa-phone" style="color:#3b82f6;margin-right:6px;"></i>${emp.phone}` : '-'}
+          ${emp.phone ? `<i class="fa fa-phone" style="color:#3b82f6;margin-right:4px;"></i><span style="white-space:nowrap;">${emp.phone}</span>` : '-'}
         </td>
-        <td style="white-space:nowrap;">
-          ${emp.department ? `<span style="background:#f0f9ff;color:#0284c7;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;display:inline-block;">${emp.department}</span>` : '-'}
+        <td>
+          ${emp.department ? `<span style="background:#f0f9ff;color:#0284c7;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;" title="${emp.department}">${emp.department}</span>` : '-'}
         </td>
-        <td style="color:#64748b;white-space:nowrap;">${emp.designation || '-'}</td>
-        <td style="white-space:nowrap;"><span class="status-badge status-${statusClass}">${emp.status}</span></td>
-        <td style="white-space:nowrap;">
-          <button class="btn-secondary" onclick="editEmployee(${emp.id})" title="Edit Employee" style="display:inline-block;">
+        <td style="color:#64748b;" title="${emp.designation || '-'}">
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${emp.designation || '-'}</span>
+        </td>
+        <td><span class="status-badge status-${statusClass}">${emp.status}</span></td>
+        <td>
+          <button class="btn-secondary" onclick="editEmployee(${emp.id})" title="Edit Employee" style="display:inline-block;padding:6px 10px;margin-right:4px;">
             <i class="fa fa-edit"></i>
           </button>
-          <button class="btn-danger" onclick="deleteEmployee(${emp.id}, '${emp.full_name}')" title="Delete Employee" style="display:inline-block;">
+          <button class="btn-danger" onclick="deleteEmployee(${emp.id}, '${emp.full_name.replace(/'/g, "\\'")}')" title="Delete Employee" style="display:inline-block;padding:6px 10px;">
             <i class="fa fa-trash"></i>
           </button>
         </td>
