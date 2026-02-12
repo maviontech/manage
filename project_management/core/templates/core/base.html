@@ -917,6 +917,46 @@
         window.addEventListener('beforeunload', function(){
           try{ if(presenceSocket && presenceSocket.readyState === WebSocket.OPEN){ presenceSocket.send(JSON.stringify({ type:'presence', status:'offline', user: CURRENT_USER })); presenceSocket.close(); } }catch(e){}
         });
+    
+        // --- Global chat unread badge updater (updates floating chat FAB) ---
+        async function updateGlobalChatBadge() {
+          try {
+            // Fetch DM unread counts
+            const dmRes = await fetch('/chat/unread/', { credentials: 'same-origin' });
+            let total = 0;
+            if (dmRes.ok) {
+              const data = await dmRes.json();
+              (data.unread || []).forEach(u => { total += parseInt(u.count || 0, 10); });
+            }
+
+            // Fetch groups and sum unread
+            try {
+              const gr = await fetch('/chat/groups/', { credentials: 'same-origin' });
+              if (gr.ok) {
+                const gdata = await gr.json();
+                (gdata.groups || []).forEach(g => { total += parseInt(g.unread || 0, 10) || 0; });
+              }
+            } catch (e) { /* ignore group fetch errors */ }
+
+            const badge = document.getElementById('chat-unread-badge');
+            if (!badge) return;
+            if (total > 0) {
+              badge.textContent = total;
+              badge.style.display = '';
+              badge.classList.remove('hidden');
+            } else {
+              badge.style.display = 'none';
+              badge.classList.add('hidden');
+            }
+          } catch (e) {
+            console.error('updateGlobalChatBadge error', e);
+          }
+        }
+
+        // Update on load, on focus/visibility and poll periodically
+        try { updateGlobalChatBadge(); } catch(e){}
+        document.addEventListener('visibilitychange', function(){ if (!document.hidden) { try { updateGlobalChatBadge(); } catch(e){} } });
+        setInterval(function(){ try{ updateGlobalChatBadge(); }catch(e){} }, 8000);
 
         // helper: toggle any element that represents a user (data-user-email attr)
         function setUserOnlineIndicator(email, isOnline){

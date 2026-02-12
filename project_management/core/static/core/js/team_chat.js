@@ -74,6 +74,11 @@
             }
         }
 
+        // Periodic refresh for unread counts (DMs + Groups)
+        setInterval(() => {
+            try { refreshUnreadCounts(); } catch(e) { /* ignore */ }
+        }, 8000);
+
         // Play notification sound
         function playNotificationSound() {
             if (notificationSound) {
@@ -281,6 +286,70 @@
             } catch (e) {
                 console.error('loadMembers error', e);
                 dmList.innerHTML = '<div style="padding:16px;color:#ff6b6b;">Error loading members</div>';
+            }
+        }
+
+        // Refresh unread counts for DMs and groups and update the overall unread badge
+        async function refreshUnreadCounts() {
+            try {
+                // Fetch DM unread counts
+                const res = await fetch('/chat/unread/', { credentials: 'same-origin' });
+                let dmUnread = {};
+                if (res.ok) {
+                    const data = await res.json();
+                    (data.unread || []).forEach(u => {
+                        dmUnread[(u.from||'').toString().toLowerCase()] = parseInt(u.count||0, 10);
+                    });
+                }
+
+                // Update DM badges
+                let total = 0;
+                document.querySelectorAll('#dm-list .dm-item').forEach(el => {
+                    const badge = el.querySelector('.badge[data-unread-for]');
+                    const email = (el.dataset.userEmail || '').toString().toLowerCase();
+                    const id = (el.dataset.id || '').toString();
+                    const count = dmUnread[email] || dmUnread[id] || 0;
+                    if (badge) {
+                        if (count > 0) {
+                            badge.textContent = count;
+                            badge.style.display = '';
+                            el.classList.add('unread');
+                        } else {
+                            badge.style.display = 'none';
+                            el.classList.remove('unread');
+                        }
+                    }
+                    total += count;
+                });
+
+                // Refresh group unread counts from server to remain authoritative
+                try {
+                    const gr = await fetch('/chat/groups/', { credentials: 'same-origin' });
+                    if (gr.ok) {
+                        const gdata = await gr.json();
+                        (gdata.groups || []).forEach(g => {
+                            const badge = document.querySelector(`.badge[data-unread-for-group="${g.id}"]`);
+                            const count = parseInt(g.unread||0,10) || 0;
+                            if (badge) {
+                                if (count > 0) { badge.textContent = count; badge.style.display = ''; } else { badge.style.display = 'none'; }
+                            }
+                            total += count;
+                        });
+                    }
+                } catch (e) { /* ignore group refresh errors */ }
+
+                // Update overall unread badge
+                const overall = document.getElementById('unread-badge');
+                if (overall) {
+                    if (total > 0) {
+                        overall.textContent = total;
+                        overall.style.display = '';
+                    } else {
+                        overall.style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                console.error('refreshUnreadCounts error', e);
             }
         }
 
@@ -592,6 +661,7 @@
                                     markRead(selectedPeer);
                                 }
                             }
+                        try { refreshUnreadCounts(); } catch(e) { /* ignore */ }
                         }
                     }
                     
@@ -639,6 +709,7 @@
                                             // Group messages: ALWAYS show popup to all group members (except sender)
                                             // Everyone in the group should see the notification
                                             showPopupNotification(senderName, normalizedSender, incoming.text, groupName, incomingGroupId);
+                                            try { refreshUnreadCounts(); } catch(e) { /* ignore */ }
                                         }
                                         
                                         // Only show if we're viewing this group
@@ -666,6 +737,7 @@
                                             appendMessage(incoming);
                                         }
                                         return; // Handled group message
+                                            try { refreshUnreadCounts(); } catch(e) { /* ignore */ }
                                     }
                                     
                                     // Handle DM messages
