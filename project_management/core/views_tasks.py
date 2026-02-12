@@ -679,21 +679,55 @@ def bulk_import_csv_view(request):
         reader = csv.DictReader(io.StringIO(text))
         inserted, errors = 0, []
 
-        for i, row in enumerate(reader, start=1):
+        # enforce required header columns (match UI requirements)
+        required_cols = {"title", "description", "project_id", "subproject_id", "status", "priority", "assigned_to", "due_date"}
+        present = set((reader.fieldnames or []))
+        missing = required_cols - present
+        if missing:
+            errors.append({"row": 0, "error": f"Missing required columns: {', '.join(sorted(missing))}", "data": {}})
+            context.update({"inserted": 0, "errors": errors})
+            cur.close()
+            return render(request, "core/tasks_bulk_import_result.html", context)
+
+        for i, raw_row in enumerate(reader, start=1):
             try:
-                # Validate required fields
+                # normalize/strip all values
+                row = {k: (v.strip() if isinstance(v, str) else v) for k, v in raw_row.items()}
+
+                # required per-row
                 if not row.get("title"):
                     raise Exception("Missing required field: title")
                 if not row.get("project_id"):
                     raise Exception("Missing required field: project_id")
 
-                assigned_raw = row.get("assigned_to") or None
+                # assigned_to parsing: accepts 'member:ID' or 'team:ID' or plain member ID
+                assigned_raw = row.get("assigned_to") or ""
                 assigned_to, assigned_type = None, None
                 if assigned_raw:
                     if ":" in assigned_raw:
-                        assigned_type, assigned_to = assigned_raw.split(":", 1)
+                        atype, aid = assigned_raw.split(":", 1)
+                        atype = atype.strip().lower()
+                        aid = aid.strip()
+                        if atype not in ("member", "team"):
+                            raise Exception(f"Invalid assigned_to type '{atype}'. Use 'member' or 'team'.")
+                        if not aid.isdigit():
+                            raise Exception(f"Invalid assigned_to id '{aid}'. Must be numeric.")
+                        assigned_type, assigned_to = atype, int(aid)
                     else:
-                        assigned_type, assigned_to = "member", assigned_raw
+                        # assume member id
+                        aid = assigned_raw.strip()
+                        if not aid.isdigit():
+                            raise Exception(f"Invalid assigned_to value '{aid}'. Use 'member:ID' or 'team:ID' or numeric member ID.")
+                        assigned_type, assigned_to = "member", int(aid)
+
+                # due_date validation (empty allowed)
+                due_date = row.get("due_date") or None
+                if due_date:
+                    try:
+                        # accept YYYY-MM-DD only
+                        datetime.datetime.strptime(due_date, "%Y-%m-%d")
+                    except Exception:
+                        raise Exception("Invalid due_date. Use YYYY-MM-DD format.")
 
                 cur.execute(
                     """INSERT INTO tasks
@@ -701,8 +735,8 @@ def bulk_import_csv_view(request):
                         assigned_to, assigned_type, created_by, due_date, created_at)
                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
                     (
-                        row.get("project_id") or None,
-                        row.get("subproject_id") or None,
+                        int(row.get("project_id")) if row.get("project_id") and str(row.get("project_id")).isdigit() else row.get("project_id") or None,
+                        int(row.get("subproject_id")) if row.get("subproject_id") and str(row.get("subproject_id")).isdigit() else row.get("subproject_id") or None,
                         row["title"],
                         row.get("description"),
                         row.get("status") or "Open",
@@ -710,13 +744,12 @@ def bulk_import_csv_view(request):
                         assigned_to,
                         assigned_type,
                         request.session.get("user_id"),
-                        row.get("due_date") or None,
+                        due_date,
                     ),
                 )
                 inserted += 1
             except Exception as e:
-                # Add row data to error for easier debugging
-                errors.append({"row": i, "error": str(e), "data": dict(row)})
+                errors.append({"row": i, "error": str(e), "data": dict(raw_row)})
 
         conn.commit()
         cur.close()
