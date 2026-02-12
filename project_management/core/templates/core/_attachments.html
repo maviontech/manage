@@ -130,6 +130,9 @@
       return (bytes/(1024*1024)).toFixed(1) + ' MB';
     }
 
+    // maintain a local list of selected files so incremental additions are preserved
+    let selectedFiles = [];
+
     function renderFiles(files){
       list.innerHTML = '';
       Array.from(files).forEach((f, idx)=>{
@@ -139,18 +142,20 @@
         remove.className = 'remove';
         remove.innerHTML = '<i class="fa-solid fa-trash"></i>';
         remove.addEventListener('click', ()=>{
+          selectedFiles = selectedFiles.filter((_,i)=> i!==idx);
           const dt = new DataTransfer();
-          Array.from(input.files).forEach((file,i)=>{ if(i!==idx) dt.items.add(file); });
+          selectedFiles.forEach(f => dt.items.add(f));
           input.files = dt.files;
-          renderFiles(input.files);
+          renderFiles(selectedFiles);
         });
         li.appendChild(remove);
         list.appendChild(li);
       });
     }
 
-    dropzone.addEventListener('click', ()=>{ input.value = null; input.click(); });
-    dropzone.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.value = null; input.click(); } });
+    // Open file picker without clearing previous selection so users can add files incrementally
+    dropzone.addEventListener('click', ()=>{ input.click(); });
+    dropzone.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
     dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.classList.add('dragover'); });
     dropzone.addEventListener('dragleave', function(e){ dropzone.classList.remove('dragover'); });
     dropzone.addEventListener('drop', function(e){
@@ -162,7 +167,7 @@
     input.addEventListener('change', function(){ handleNewFiles(this.files); });
 
     function handleNewFiles(fileList){
-      const existing = Array.from(input.files || []);
+      const existing = Array.from(selectedFiles || []);
       const incoming = Array.from(fileList || []);
 
       // dedupe by name+size+lastModified
@@ -175,10 +180,11 @@
 
       for(const f of filtered){ if(f.size > MAX_SIZE){ alert(f.name + ' exceeds 10MB limit'); return; } }
 
+      selectedFiles = combined;
       const dt = new DataTransfer();
-      combined.forEach(f => dt.items.add(f));
+      selectedFiles.forEach(f => dt.items.add(f));
       input.files = dt.files;
-      renderFiles(input.files);
+      renderFiles(selectedFiles);
     }
   })();
 </script>
