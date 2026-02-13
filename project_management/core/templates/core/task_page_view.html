@@ -199,6 +199,115 @@
         color: #2563eb !important;
         text-decoration: underline !important;
     }
+
+    /* Status bar: clean, card-like container with pill badges */
+    .status-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        align-items: center;
+        background: linear-gradient(180deg,#ffffff,#fbfdff);
+        border: 1px solid #e6eefb;
+        padding: 14px 18px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+        margin-bottom: 18px;
+    }
+
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+    }
+
+    .status-item .label {
+        font-size: 13px;
+        color: #475569;
+        font-weight: 600;
+        margin-right: 6px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #0f172a;
+        background: #f8fafc;
+        border: 1px solid rgba(15,23,42,0.04);
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+    }
+
+    /* status colors (match substrings in class attribute) */
+    .badge[class*="closed"] { background: #eef2ff; color: #3730a3; border-color: #dbeafe; }
+    .badge[class*="open"] { background: #ecfdf5; color: #065f46; border-color: #bbf7d0; }
+    .badge[class*="in"] { /* matches 'in progress' substring 'in' */ background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+    .badge[class*="review"] { background: #f5f3ff; color: #6d28d9; border-color: #ede9fe; }
+    .badge[class*="blocked"] { background: #fff1f2; color: #b91c1c; border-color: #fecaca; }
+
+    /* priority */
+    .badge[class*="priority-medium"], .badge-priority-medium { background: linear-gradient(90deg,#fff7ed,#ffedd5); color:#92400e; border-color:#ffedd5; }
+    .badge[class*="priority-high"], .badge-priority-high { background: linear-gradient(90deg,#fff1f2,#ffe4e6); color:#9f1239; border-color:#fecaca; }
+    .badge[class*="priority-low"], .badge-priority-low { background: #ecfeff; color:#065f46; border-color:#bbf7d0; }
+
+    /* type and severity */
+    .badge[class*="bug"] { background: linear-gradient(90deg,#f5f3ff,#fdf4ff); color:#6b21a8; border-color:#ede9fe; }
+    .badge[class*="minor"] { background: linear-gradient(90deg,#fff7ed,#fffaf0); color:#92400e; border-color:#ffedd5; }
+
+    /* responsive adjustments */
+    @media (max-width: 720px) {
+        .status-bar { gap: 10px; padding: 12px; }
+        .badge { padding: 6px 10px; font-size: 12px; }
+    }
+
+    /* Back button: clean, pill-style, subtle shadow */
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #ffffff;
+        border: 1px solid #e6eefb;
+        color: #0f172a;
+        border-radius: 999px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+        transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+        margin-right: 14px;
+    }
+
+    .btn-back i {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(180deg,#ffffff, #f8fafc);
+        color: #2563eb;
+        border-radius: 50%;
+        font-size: 12px;
+        box-shadow: 0 1px 2px rgba(37,99,235,0.08) inset;
+    }
+
+    .btn-back:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+        background: #ffffff;
+        text-decoration: none;
+    }
+
+    .btn-back:focus {
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(37,99,235,0.08);
+    }
 </style>
 {% endblock %}
 

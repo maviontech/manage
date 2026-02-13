@@ -1795,7 +1795,20 @@ def employees_page(request):
     if not user:
         return redirect('identify')
 
-    return render(request, 'core/employees.html', {'page': 'employees'})
+    # determine if current user is admin (case-insensitive match)
+    is_admin = False
+    try:
+        role = user.get('role') if isinstance(user, dict) else getattr(user, 'role', None)
+        if role and 'admin' in str(role).lower():
+            is_admin = True
+    except Exception:
+        is_admin = False
+
+    # Only allow admins to access the employees page; redirect others to dashboard
+    if not is_admin:
+        return redirect('dashboard')
+
+    return render(request, 'core/employees.html', {'page': 'employees', 'is_admin': is_admin})
 
 
 def api_employees_list(request):
@@ -1847,6 +1860,14 @@ def api_create_employee(request):
     user = request.session.get('user')
     if not user:
         return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    # only admin may create employees
+    try:
+        role = user.get('role') if isinstance(user, dict) else getattr(user, 'role', None)
+    except Exception:
+        role = None
+    if not role or 'admin' not in str(role).lower():
+        return JsonResponse({'error': 'Forbidden'}, status=403)
 
     import json
     data = json.loads(request.body)
@@ -1914,6 +1935,14 @@ def api_update_employee(request):
     if not user:
         return JsonResponse({'error': 'Not authenticated'}, status=401)
 
+    # only admin may update employees
+    try:
+        role = user.get('role') if isinstance(user, dict) else getattr(user, 'role', None)
+    except Exception:
+        role = None
+    if not role or 'admin' not in str(role).lower():
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
     import json
     data = json.loads(request.body)
     
@@ -1961,6 +1990,14 @@ def api_delete_employee(request):
     user = request.session.get('user')
     if not user:
         return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    # only admin may delete employees
+    try:
+        role = user.get('role') if isinstance(user, dict) else getattr(user, 'role', None)
+    except Exception:
+        role = None
+    if not role or 'admin' not in str(role).lower():
+        return JsonResponse({'error': 'Forbidden'}, status=403)
 
     import json
     data = json.loads(request.body)
@@ -2326,6 +2363,15 @@ def api_timer_start(request):
         """, (member_id, task_id, now, notes))
         
         session_id = cur.lastrowid
+        # Log to activity timeline
+        try:
+            cur.execute(
+                "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                ("task", task_id, f"Started timer (session {session_id})", member_id),
+            )
+        except Exception:
+            pass
+
         conn.commit()
         
         return JsonResponse({
@@ -2362,15 +2408,15 @@ def api_timer_stop(request):
     cur = conn.cursor()
     
     try:
-        # Get the running timer
+        # Get the running timer (include task_id for logging)
         if session_id:
             cur.execute("""
-                SELECT id, start_time FROM timer_sessions 
+                SELECT id, start_time, task_id FROM timer_sessions 
                 WHERE id = %s AND user_id = %s AND is_running = 1
             """, (session_id, member_id))
         else:
             cur.execute("""
-                SELECT id, start_time FROM timer_sessions 
+                SELECT id, start_time, task_id FROM timer_sessions 
                 WHERE user_id = %s AND is_running = 1
                 ORDER BY start_time DESC LIMIT 1
             """, (member_id,))
@@ -2391,7 +2437,16 @@ def api_timer_stop(request):
             SET end_time = %s, duration_seconds = %s, is_running = 0
             WHERE id = %s
         """, (now, duration, timer['id']))
-        
+        # Log timer stop to activity timeline
+        try:
+            task_for_session = timer.get('task_id') if isinstance(timer, dict) else None
+            cur.execute(
+                "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                ("task", task_for_session, f"Stopped timer (session {timer['id']})", member_id),
+            )
+        except Exception:
+            pass
+
         conn.commit()
         
         return JsonResponse({
@@ -2429,16 +2484,16 @@ def api_timer_pause(request):
     cur = conn.cursor()
     
     try:
-        # Get the running timer
+        # Get the running timer (include task_id for logging)
         if session_id:
             cur.execute("""
-                SELECT id, start_time, paused, paused_duration 
+                SELECT id, start_time, paused, paused_duration, task_id 
                 FROM timer_sessions 
                 WHERE id = %s AND user_id = %s AND is_running = 1
             """, (session_id, member_id))
         else:
             cur.execute("""
-                SELECT id, start_time, paused, paused_duration 
+                SELECT id, start_time, paused, paused_duration, task_id 
                 FROM timer_sessions 
                 WHERE user_id = %s AND is_running = 1
                 ORDER BY start_time DESC LIMIT 1
@@ -2459,7 +2514,16 @@ def api_timer_pause(request):
             SET paused = 1, paused_at = %s
             WHERE id = %s
         """, (now, timer['id']))
-        
+        # Log pause to activity timeline
+        try:
+            task_for_session = timer.get('task_id') if isinstance(timer, dict) else None
+            cur.execute(
+                "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                ("task", task_for_session, f"Paused timer (session {timer['id']})", member_id),
+            )
+        except Exception:
+            pass
+
         conn.commit()
         
         return JsonResponse({

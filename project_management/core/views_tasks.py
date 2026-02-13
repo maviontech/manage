@@ -77,6 +77,14 @@ def save_task_attachments(request, task_id, cur, created_by):
                 uploaded_file.content_type,
                 created_by
             ))
+            # Log attachment upload to activity timeline
+            try:
+                cur.execute(
+                    "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                    ("task", task_id, f"Added attachment {uploaded_file.name}", created_by),
+                )
+            except Exception:
+                pass
             saved_count += 1
         except Exception as e:
             # Log error but continue processing other files
@@ -1150,16 +1158,56 @@ def edit_task_view(request, task_id):
         else:
             closure_date=None
 
-        # Fetch existing meta before update so we can notify creator if needed
-        cur.execute("SELECT id, title, created_by, assigned_to, assigned_type FROM tasks WHERE id=%s LIMIT 1", (task_id,))
+        # Fetch existing meta before update so we can log and notify
+        cur.execute("SELECT id, title, description, status, priority, due_date, created_by, assigned_to, assigned_type FROM tasks WHERE id=%s LIMIT 1", (task_id,))
         _existing = cur.fetchone()
 
+        # Perform update
         cur.execute(
             """UPDATE tasks
                SET title=%s, description=%s, status=%s, priority=%s, due_date=%s, closure_date=%s, updated_at=NOW()
                WHERE id=%s""",
             (title, description, status, priority, due_date, closure_date, task_id),
         )
+
+        # Log changes to activity_log for timeline
+        try:
+            performed_by = request.session.get('user_id') or request.session.get('member_id')
+            if _existing:
+                # Compare and log status change
+                old_status = _existing.get('status') if isinstance(_existing, dict) else None
+                if old_status != status:
+                    cur.execute(
+                        "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                        ("task", task_id, f"Changed status from {old_status} to {status}", performed_by),
+                    )
+
+                # Compare and log priority change
+                old_priority = _existing.get('priority') if isinstance(_existing, dict) else None
+                if old_priority != priority:
+                    cur.execute(
+                        "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                        ("task", task_id, f"Changed priority from {old_priority} to {priority}", performed_by),
+                    )
+
+                # Title change
+                old_title = _existing.get('title') if isinstance(_existing, dict) else None
+                if old_title != title:
+                    cur.execute(
+                        "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                        ("task", task_id, f"Changed title from {old_title} to {title}", performed_by),
+                    )
+
+                # Description change
+                old_desc = _existing.get('description') if isinstance(_existing, dict) else None
+                if (old_desc or '') != (description or ''):
+                    cur.execute(
+                        "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                        ("task", task_id, f"Updated description", performed_by),
+                    )
+        except Exception:
+            pass
+
         conn.commit()
 
         # If status moved to closed and the closer is the assignee, notify the creator
@@ -2757,6 +2805,15 @@ def assign_member_to_task(request, task_id):
                 updated_at = NOW()
             WHERE id = %s
         ''', (member_id, task_id))
+        # Log activity: assignment
+        try:
+            performed_by = request.session.get('user_id')
+            cur.execute(
+                "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                ("task", task_id, f"Assigned to member {member_id}", performed_by),
+            )
+        except Exception:
+            pass
         
         conn.commit()
         cur.close()

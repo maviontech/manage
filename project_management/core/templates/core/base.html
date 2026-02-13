@@ -509,13 +509,15 @@
             </ul>
           </li>
 
-          <!-- Employees -->
+          <!-- Employees (only visible to admins) -->
+          {% if is_admin %}
           <li class="menu-item {% if page == 'employees' %}active{% endif %}">
-            <a href="{% url 'employees_page' %}" class="menu-link ripple" role="menuitem" aria-current="{% if page == 'employees' %}true{% else %}false{% endif %}">
+            <a href="{% url 'employees_page' %}" class="menu-link" role="menuitem" aria-current="{% if page == 'employees' %}true{% else %}false{% endif %}">
               <span class="icon" aria-hidden="true"><i class="fa-solid fa-id-card"></i></span>
               <span class="label">Employees</span>
             </a>
           </li>
+          {% endif %}
 
           <!-- Reports -->
           <li class="menu-item {% if page == 'reports' %}active{% endif %}">

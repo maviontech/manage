@@ -414,10 +414,12 @@
     </div>
     <div class="header-actions">
       <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search employees...">
+      {% if is_admin %}
       <button class="btn-primary" onclick="openAddModal()">
         <i class="fa fa-plus"></i>
         Add Employee
       </button>
+      {% endif %}
     </div>
   </div>
 
@@ -626,6 +628,8 @@
 
 {% block extra_js %}
 <script>
+// is_admin flag from server
+var IS_ADMIN = {% if is_admin %}true{% else %}false{% endif %};
 let allEmployees = [];
 
 // Load employees on page load
@@ -678,6 +682,14 @@ function renderEmployees(employees) {
   tbody.innerHTML = employees.map(emp => {
     const statusClass = emp.status.toLowerCase().replace(' ', '');
     const initials = emp.full_name.split(' ').map(n => n.charAt(0).toUpperCase()).join('').substring(0, 2);
+    const actions = IS_ADMIN ? `
+          <button class="btn-secondary" onclick="editEmployee(${emp.id})" title="Edit Employee" style="display:inline-block;padding:6px 10px;margin-right:4px;">
+            <i class="fa fa-edit"></i>
+          </button>
+          <button class="btn-danger" onclick="deleteEmployee(${emp.id}, '${emp.full_name.replace(/'/g, "\\'")}')" title="Delete Employee" style="display:inline-block;padding:6px 10px;">
+            <i class="fa fa-trash"></i>
+          </button>` : `-`;
+
     return `
       <tr>
         <td><strong style="color:#3b82f6;">${emp.employee_code}</strong></td>
@@ -704,12 +716,7 @@ function renderEmployees(employees) {
         </td>
         <td><span class="status-badge status-${statusClass}">${emp.status}</span></td>
         <td>
-          <button class="btn-secondary" onclick="editEmployee(${emp.id})" title="Edit Employee" style="display:inline-block;padding:6px 10px;margin-right:4px;">
-            <i class="fa fa-edit"></i>
-          </button>
-          <button class="btn-danger" onclick="deleteEmployee(${emp.id}, '${emp.full_name.replace(/'/g, "\\'")}')" title="Delete Employee" style="display:inline-block;padding:6px 10px;">
-            <i class="fa fa-trash"></i>
-          </button>
+          ${actions}
         </td>
       </tr>
     `;

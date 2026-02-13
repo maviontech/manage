@@ -153,8 +153,8 @@ def project_create(request):
                             ))
                 
                 conn.commit()
-                # Redirect to configuration page after project creation
-                return redirect(reverse('project_configure', args=[new_id]))
+                # Previously redirected to configuration step. Skip that and go to projects list.
+                return redirect(reverse('projects_list'))
             finally:
                 cur.close(); conn.close()
     else:

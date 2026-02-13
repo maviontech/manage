@@ -14,6 +14,16 @@ def tenant_work_types(request):
     try:
         if hasattr(request, 'session') and request.session:
             work_types = get_tenant_work_types(request)
+            # determine admin role from session user if present
+            is_admin = False
+            try:
+                user = request.session.get('user')
+                role = user.get('role') if isinstance(user, dict) else getattr(user, 'role', None)
+                if role and 'admin' in str(role).lower():
+                    is_admin = True
+            except Exception:
+                is_admin = False
+
             return {
                 'tenant_work_types': work_types,
                 'has_task': 'Task' in work_types,
@@ -23,6 +33,7 @@ def tenant_work_types(request):
                 'has_subtask': 'Sub Task' in work_types,
                 'has_change_request': 'Change Request' in work_types,
                 'has_report': 'Report' in work_types,
+                'is_admin': is_admin,
             }
     except Exception:
         pass
@@ -37,4 +48,5 @@ def tenant_work_types(request):
         'has_subtask': True,
         'has_change_request': True,
         'has_report': True,
+        'is_admin': False,
     }
