@@ -41,6 +41,9 @@
         let lastMessageDate = 0;
         let typingTimeout = null;
         let remoteTypingTimeout = null; // Timeout for remote typing indicator
+        // Pending image attachment (not yet sent)
+        let pendingImageFile = null;
+        let pendingImagePreviewEl = null;
         // track appended messages to avoid re-rendering the feed (prevents blinking)
         let existingMessageIds = new Set();
 
@@ -54,6 +57,11 @@
             return (name || '').split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase() || '??';
         }
 
+        // Detect if a string is an image URL
+        function isImageUrl(s) {
+            if (!s || typeof s !== 'string') return false;
+            return !!s.match(/\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/i);
+        }
         // Popup notification system
         const popupNotificationContainer = document.getElementById('popup-notification-container');
         let notificationQueue = [];
@@ -466,6 +474,18 @@
             const msgEl = document.createElement('div');
             msgEl.className = 'message-group';
             if (isMe) msgEl.classList.add('sent-message');
+
+            // Render message content: support image previews when message contains image_url or text is an image URL
+            let contentHtml = '';
+            const textVal = (m.text || '').toString();
+            if (m.image_url) {
+                contentHtml = `<div class="text"><img src="${escapeHtml(m.image_url)}" style="max-width:420px;max-height:420px;border-radius:12px;display:block;" /></div>`;
+            } else if (isImageUrl(textVal)) {
+                contentHtml = `<div class="text"><img src="${escapeHtml(textVal)}" style="max-width:420px;max-height:420px;border-radius:12px;display:block;" /></div>`;
+            } else {
+                contentHtml = `<div class="text">${escapeHtml(textVal)}</div>`;
+            }
+
             msgEl.innerHTML = `
                 <div class="avatar">${initials}</div>
                 <div class="message-content">
@@ -473,7 +493,7 @@
                         <span class="username">${senderName}</span>
                         <span class="timestamp">${timeStr}</span>
                     </div>
-                    <div class="text">${escapeHtml(m.text || '')}</div>
+                    ${contentHtml}
                 </div>
             `;
             // insert date separator when day changes
@@ -1246,7 +1266,8 @@
             const input = document.getElementById('message-input');
             const text = input ? input.value.trim() : '';
 
-            if (!text) {
+            // Allow sending when there's a pending image even if text is empty
+            if (!text && !pendingImageFile) {
                 console.warn('sendMessage: message empty');
                 if (typeof showToast === 'function') showToast('Enter a message before sending');
                 return;
@@ -1256,6 +1277,34 @@
             if (sendBtn) sendBtn.style.opacity = '0.5';
 
             try {
+                // If there's a pending image, upload it first and send the returned URL as the message
+                let sendText = text;
+                if (pendingImageFile) {
+                    try {
+                        showToast('Uploading image...');
+                        const fd = new FormData();
+                        fd.append('file', pendingImageFile);
+                        const upl = await fetch('/chat/upload/', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                            body: fd
+                        });
+                        if (!upl.ok) throw new Error('upload failed');
+                        const ud = await upl.json();
+                        if (!ud || !ud.ok || !ud.url) throw new Error(ud && ud.error ? ud.error : 'upload error');
+                        sendText = ud.url;
+                        // clear preview now that it's uploaded (will be appended optimistically below)
+                        if (pendingImagePreviewEl && pendingImagePreviewEl.parentElement) pendingImagePreviewEl.remove();
+                        pendingImagePreviewEl = null;
+                        pendingImageFile = null;
+                    } catch (ue) {
+                        console.error('Image upload failed', ue);
+                        showToast('Image upload failed');
+                        if (sendBtn) sendBtn.style.opacity = '1';
+                        return;
+                    }
+                }
                 if (currentMode === 'group') {
                     if (!selectedGroup) {
                         if (typeof showToast === 'function') showToast('Select a group first');
@@ -1265,7 +1314,7 @@
                         const cid = 'cid-' + Date.now() + '-' + Math.random().toString(36).slice(2,9);
                         // Prefer websocket for real-time group send
                         if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'group_message', group_id: selectedGroup, text: text, cid }));
+                            ws.send(JSON.stringify({ type: 'group_message', group_id: selectedGroup, text: sendText, cid }));
                         } else {
                         // fallback to HTTP
                         const res = await fetch('/chat/group/send/', {
@@ -1275,7 +1324,7 @@
                                 'Content-Type': 'application/json',
                                 'X-CSRFToken': getCookie('csrftoken'),
                             },
-                            body: JSON.stringify({ group_id: selectedGroup, text }),
+                            body: JSON.stringify({ group_id: selectedGroup, text: sendText }),
                         });
                         if (!res.ok) {
                             const err = await res.text().catch(()=>res.statusText||'error');
@@ -1285,7 +1334,11 @@
                         }
                     }
                         // optimistic append with cid so server echo can match
-                        appendMessage({ sender: CURRENT_USER, text, created_at: new Date().toISOString(), cid });
+                        if (isImageUrl(sendText)) {
+                            appendMessage({ sender: CURRENT_USER, text: '', image_url: sendText, created_at: new Date().toISOString(), cid });
+                        } else {
+                            appendMessage({ sender: CURRENT_USER, text: sendText, created_at: new Date().toISOString(), cid });
+                        }
                     if (input) input.value = '';
                     
                     // Silently refresh chat content without visible page reload
@@ -1308,7 +1361,7 @@
                 // generate cid for optimistic UI
                 const cid = 'cid-' + Date.now() + '-' + Math.random().toString(36).slice(2,9);
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'message', tenant: TENANT_ID, to: selectedPeer, message: text, cid }));
+                    ws.send(JSON.stringify({ type: 'message', tenant: TENANT_ID, to: selectedPeer, message: sendText, cid }));
                 } else {
                     const res = await fetch('/chat/send/', {
                         method: 'POST',
@@ -1317,7 +1370,7 @@
                             'Content-Type': 'application/json',
                             'X-CSRFToken': getCookie('csrftoken'),
                         },
-                        body: JSON.stringify({ to: selectedPeer, text }),
+                        body: JSON.stringify({ to: selectedPeer, text: sendText }),
                     });
                     if (!res.ok) {
                         const errText = await res.text().catch(()=>res.statusText || 'error');
@@ -1328,7 +1381,11 @@
                 }
                 
                 // optimistic append with cid so server echo can match
-                appendMessage({ sender: CURRENT_USER, text, created_at: new Date().toISOString(), cid });
+                if (isImageUrl(sendText)) {
+                    appendMessage({ sender: CURRENT_USER, text: '', image_url: sendText, created_at: new Date().toISOString(), cid });
+                } else {
+                    appendMessage({ sender: CURRENT_USER, text: sendText, created_at: new Date().toISOString(), cid });
+                }
                 if (input) input.value = '';
                 
                 // Silently refresh chat content without visible page reload
@@ -1735,9 +1792,78 @@
                     const action = it.dataset.action;
                     plusOverlay.style.display='none'; plusOverlay.setAttribute('aria-hidden','true');
                     if (action === 'attach') {
-                        // open file picker
-                        const fileInput = document.createElement('input'); fileInput.type='file'; fileInput.multiple=false;
-                        fileInput.addEventListener('change', ()=>{ showToast('File selected (preview): ' + (fileInput.files[0] ? fileInput.files[0].name : '')); });
+                        // open image picker, upload and send
+                        const fileInput = document.createElement('input');
+                        fileInput.type = 'file';
+                        fileInput.accept = 'image/*';
+                        fileInput.multiple = false;
+                        fileInput.addEventListener('change', async () => {
+                            const file = fileInput.files[0];
+                            if (!file) return;
+                            // Ensure a conversation is selected
+                            if (currentMode === 'dm' && !selectedPeer) {
+                                showToast('Select a member to message first');
+                                return;
+                            }
+                            if (currentMode === 'group' && !selectedGroup) {
+                                showToast('Select a group first');
+                                return;
+                            }
+
+                            // Create preview element above input box
+                            try {
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                    // remove existing preview if any
+                                    if (pendingImagePreviewEl && pendingImagePreviewEl.parentElement) pendingImagePreviewEl.remove();
+
+                                    const container = document.createElement('div');
+                                    container.className = 'image-attachment-preview';
+                                    container.style.display = 'flex';
+                                    container.style.alignItems = 'center';
+                                    container.style.gap = '12px';
+                                    container.style.padding = '10px 14px';
+                                    container.style.borderTop = '1px solid var(--border-light)';
+                                    container.style.background = '#fcfcfd';
+
+                                    const thumb = document.createElement('img');
+                                    thumb.src = e.target.result;
+                                    thumb.style.maxWidth = '120px';
+                                    thumb.style.maxHeight = '90px';
+                                    thumb.style.borderRadius = '8px';
+                                    thumb.style.objectFit = 'cover';
+
+                                    const meta = document.createElement('div');
+                                    meta.style.flex = '1';
+                                    meta.innerHTML = `<div style="font-weight:600;margin-bottom:6px;">${escapeHtml(file.name)}</div><div style="color:var(--text-muted);font-size:13px;">Image ready — press Send to include it</div>`;
+
+                                    const removeBtn = document.createElement('button');
+                                    removeBtn.className = 'msg-action-btn';
+                                    removeBtn.textContent = 'Remove';
+                                    removeBtn.style.padding = '8px 10px';
+                                    removeBtn.style.marginLeft = '8px';
+                                    removeBtn.addEventListener('click', () => {
+                                        if (container && container.parentElement) container.parentElement.removeChild(container);
+                                        pendingImageFile = null;
+                                        pendingImagePreviewEl = null;
+                                    });
+
+                                    container.appendChild(thumb);
+                                    container.appendChild(meta);
+                                    container.appendChild(removeBtn);
+
+                                    const inputBox = document.querySelector('.input-box');
+                                    if (inputBox) inputBox.insertBefore(container, inputBox.firstChild);
+                                    pendingImagePreviewEl = container;
+                                    pendingImageFile = file;
+                                    showToast('Image ready — press Send to include it');
+                                };
+                                reader.readAsDataURL(file);
+                            } catch (err) {
+                                console.error('preview failed', err);
+                                showToast('Failed to preview image');
+                            }
+                        });
                         fileInput.click();
                     } else if (action === 'invite') {
                         const email = prompt('Enter email to invite to team chat:');

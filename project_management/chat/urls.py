@@ -20,4 +20,5 @@ urlpatterns = [
     path("mark_all_read/", views.mark_all_read, name="mark_all_read"),
     path("unread/", views.unread_counts, name="unread"),
     path("mark_read/", views.mark_read, name="mark_read"),
+    path("upload/", views.upload_image, name="upload"),
 ]

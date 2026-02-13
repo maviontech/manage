@@ -15,6 +15,10 @@ import time
 import logging
 import pymysql
 import logging
+import os
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.utils.crypto import get_random_string
 
 def team_chat_page(request, peer_id=None):
     """
@@ -232,6 +236,34 @@ def send_message(request):
 
     # Optionally notify via websocket/consumer
     return JsonResponse({"ok": True})
+
+
+@require_POST
+def upload_image(request):
+    """Upload image for chat attachment. Expects multipart form field 'file'.
+    Returns JSON: { ok: True, url: '<media url>' }
+    """
+    # require authenticated session
+    if not request.session.get('member_id'):
+        return HttpResponseForbidden('Not authenticated')
+
+    if 'file' not in request.FILES:
+        return HttpResponseBadRequest('Missing file')
+
+    f = request.FILES['file']
+    try:
+        tenant_id = str(request.session.get('tenant_id', '') or 'public')
+        subdir = os.path.join('chat_uploads', tenant_id)
+        # ensure filename is safe and unique
+        name = get_random_string(12) + '_' + os.path.basename(f.name).replace(' ', '_')
+        save_path = os.path.join(subdir, name)
+        # default_storage will use MEDIA_ROOT and configured storage backend
+        saved = default_storage.save(save_path, f)
+        url = default_storage.url(saved)
+        return JsonResponse({'ok': True, 'url': url})
+    except Exception as e:
+        logging.exception('upload_image failed: %s', e)
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
 
 
 # chat/views.py (append these handlers)
