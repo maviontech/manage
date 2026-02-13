@@ -10,7 +10,8 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 
 # helper: get connection for current tenant
-from .db_helpers import get_tenant_conn, get_visible_task_user_ids, get_tenant_work_types
+from .db_helpers import get_tenant_conn, get_visible_task_user_ids, get_tenant_work_types, resolve_tenant_key_from_request
+from .notifications import NotificationManager
 import json
 
 # PDF generation
@@ -687,7 +688,7 @@ def bulk_import_csv_view(request):
             errors.append({"row": 0, "error": f"Missing required columns: {', '.join(sorted(missing))}", "data": {}})
             context.update({"inserted": 0, "errors": errors})
             cur.close()
-            return render(request, "core/tasks_bulk_import_result.html", context)
+            return render(request, "core/tasks_bulk_import.html", context)
 
         for i, raw_row in enumerate(reader, start=1):
             try:
@@ -722,6 +723,8 @@ def bulk_import_csv_view(request):
 
                 # due_date validation (empty allowed)
                 due_date = row.get("due_date") or None
+                # optional work_type (if provided in CSV)
+                work_type = row.get("work_type") or None
                 if due_date:
                     try:
                         # accept YYYY-MM-DD only
@@ -731,9 +734,9 @@ def bulk_import_csv_view(request):
 
                 cur.execute(
                     """INSERT INTO tasks
-                       (project_id, subproject_id, title, description, status, priority,
+                       (project_id, subproject_id, title, description, status, priority, work_type,
                         assigned_to, assigned_type, created_by, due_date, created_at)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
                     (
                         int(row.get("project_id")) if row.get("project_id") and str(row.get("project_id")).isdigit() else row.get("project_id") or None,
                         int(row.get("subproject_id")) if row.get("subproject_id") and str(row.get("subproject_id")).isdigit() else row.get("subproject_id") or None,
@@ -741,6 +744,7 @@ def bulk_import_csv_view(request):
                         row.get("description"),
                         row.get("status") or "Open",
                         row.get("priority") or "Normal",
+                        work_type,
                         assigned_to,
                         assigned_type,
                         request.session.get("user_id"),
@@ -754,7 +758,7 @@ def bulk_import_csv_view(request):
         conn.commit()
         cur.close()
         context.update({"inserted": inserted, "errors": errors})
-        return render(request, "core/tasks_bulk_import_result.html", context)
+        return render(request, "core/tasks_bulk_import.html", context)
 
     return render(request, "core/tasks_bulk_import.html", context)
 
@@ -914,7 +918,7 @@ def api_task_update(request):
     cur = conn.cursor()
     try:
         # check exists
-        cur.execute("SELECT id, created_by FROM tasks WHERE id = %s LIMIT 1", (tid,))
+        cur.execute("SELECT id, title, status, created_by, assigned_to, assigned_type FROM tasks WHERE id = %s LIMIT 1", (tid,))
         existing = cur.fetchone()
         if not existing:
             return JsonResponse({'ok': False, 'error': 'task not found'}, status=404)
@@ -1018,6 +1022,39 @@ def api_task_update(request):
             pass
 
         conn.commit()
+
+        # If status changed to a closed/finished state and the closer is the assignee,
+        # send a real-time pop notification to the assigner (created_by) only.
+        try:
+            closed_states = ('Closed', 'Finished', 'Completed')
+            new_status = status
+            # determine current user id (member or user session)
+            cur_user = request.session.get('user_id') or request.session.get('member_id')
+
+            assigned_type = existing.get('assigned_type') if isinstance(existing, dict) else None
+            assigned_to = existing.get('assigned_to') if isinstance(existing, dict) else None
+            creator_id = existing.get('created_by') if isinstance(existing, dict) else None
+            task_title = existing.get('title') if isinstance(existing, dict) else None
+
+            if new_status and new_status in closed_states and assigned_type == 'member' and assigned_to and cur_user and int(assigned_to) == int(cur_user):
+                # Only notify if creator exists and is different from the closer
+                if creator_id and int(creator_id) != int(cur_user):
+                    tenant_key = request.session.get('tenant_id') or resolve_tenant_key_from_request(request)
+                    # Build message
+                    message = f"{task_title or 'Task'} has been marked as {new_status} by the assignee."
+                    NotificationManager.send_notification(
+                        tenant_key,
+                        int(creator_id),
+                        "Task Completed",
+                        message,
+                        notification_type='task',
+                        link=f"/tasks/{tid}/view/",
+                        created_by_id=cur_user,
+                    )
+        except Exception:
+            # don't block API response if notification fails
+            pass
+
         return JsonResponse({'ok': True})
     except Exception as e:
         # log or return reasonable error message
@@ -1113,6 +1150,10 @@ def edit_task_view(request, task_id):
         else:
             closure_date=None
 
+        # Fetch existing meta before update so we can notify creator if needed
+        cur.execute("SELECT id, title, created_by, assigned_to, assigned_type FROM tasks WHERE id=%s LIMIT 1", (task_id,))
+        _existing = cur.fetchone()
+
         cur.execute(
             """UPDATE tasks
                SET title=%s, description=%s, status=%s, priority=%s, due_date=%s, closure_date=%s, updated_at=NOW()
@@ -1120,6 +1161,32 @@ def edit_task_view(request, task_id):
             (title, description, status, priority, due_date, closure_date, task_id),
         )
         conn.commit()
+
+        # If status moved to closed and the closer is the assignee, notify the creator
+        try:
+            closed_states = ('Closed', 'Finished', 'Completed')
+            cur_user = request.session.get('user_id') or request.session.get('member_id')
+            if status in closed_states and _existing:
+                assigned_type = _existing.get('assigned_type') if isinstance(_existing, dict) else None
+                assigned_to = _existing.get('assigned_to') if isinstance(_existing, dict) else None
+                creator_id = _existing.get('created_by') if isinstance(_existing, dict) else None
+                task_title = _existing.get('title') if isinstance(_existing, dict) else None
+                if assigned_type == 'member' and assigned_to and cur_user and int(assigned_to) == int(cur_user):
+                    if creator_id and int(creator_id) != int(cur_user):
+                        tenant_key = request.session.get('tenant_id') or resolve_tenant_key_from_request(request)
+                        message = f"{task_title or 'Task'} has been marked as {status} by the assignee."
+                        NotificationManager.send_notification(
+                            tenant_key,
+                            int(creator_id),
+                            "Task Completed",
+                            message,
+                            notification_type='task',
+                            link=f"/tasks/{task_id}/view/",
+                            created_by_id=cur_user,
+                        )
+        except Exception:
+            pass
+
         # Re-fetch updated task
         cur.execute("SELECT id, title, description, status, priority, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
         task = cur.fetchone()
@@ -2324,6 +2391,33 @@ def task_page_view(request, task_id):
         'screen_resolution': issue.get('si_resolution') if has_system_info else None,
         'os_info': issue.get('si_os') if has_system_info else None,
     }
+
+    # If assignee email is missing (e.g. stored inconsistently), try to resolve it from members table
+    if not issue_data.get('assignee_ldap') and issue_data.get('assignee_name'):
+        try:
+            # try exact full-name match
+            cur.execute(
+                "SELECT email FROM members WHERE CONCAT(first_name, ' ', last_name) = %s LIMIT 1",
+                (issue_data['assignee_name'],),
+            )
+            mem = cur.fetchone()
+            if mem and mem.get('email'):
+                issue_data['assignee_ldap'] = mem['email']
+            else:
+                # try matching by first name (best-effort)
+                parts = issue_data['assignee_name'].split()
+                if parts:
+                    cur.execute("SELECT email FROM members WHERE first_name = %s LIMIT 1", (parts[0],))
+                    mem = cur.fetchone()
+                    if mem and mem.get('email'):
+                        issue_data['assignee_ldap'] = mem['email']
+        except Exception:
+            # don't fail rendering if lookup errors
+            pass
+
+    # Normalize missing values to empty string so template doesn't print 'None'
+    if issue_data.get('assignee_ldap') in (None, 'None'):
+        issue_data['assignee_ldap'] = ''
     
     # Get comments from task_comments table
     cur.execute("""

@@ -7,6 +7,27 @@
       padding: 0 !important;   /* <--- ADD THIS LINE */
     }
 
+    /* Responsive overlay/open state for small screens */
+    .sidebar {
+      position: relative;
+      z-index: 1000;
+      transition: transform 0.22s ease, width 0.22s ease;
+    }
+
+    .sidebar-open {
+      position: fixed !important;
+      left: 0; top: 0; bottom: 0;
+      width: 280px !important;
+      transform: translateX(0) !important;
+      box-shadow: 0 20px 60px rgba(2,6,23,0.4);
+      background: linear-gradient(180deg, var(--sidebar-bg) 0%, #1F2023 100%);
+    }
+
+    /* overlay that appears when sidebar is open on small screens */
+    #sidebar-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 900; display:none;
+    }
+
     /* Header Timer Circle Animation */
     #header-timer {
       transition: box-shadow 0.2s;
@@ -1288,17 +1309,41 @@
     // Sidebar toggle
     var toggleBtn = document.getElementById('menu-toggle');
     var sidebar = document.getElementById('sidebar');
+    var overlay = null;
     if (toggleBtn && sidebar) {
       toggleBtn.addEventListener('click', function() {
-        sidebar.classList.toggle('sidebar-collapsed');
-        if (sidebar.classList.contains('sidebar-collapsed')) {
-          localStorage.setItem('sidebar-collapsed', '1');
+        var vw = window.innerWidth || document.documentElement.clientWidth;
+        // On narrow screens, open sidebar as overlay
+        if (vw < 900) {
+          var isOpen = sidebar.classList.toggle('sidebar-open');
+          // create overlay when opening
+          if (isOpen) {
+            overlay = document.getElementById('sidebar-overlay');
+            if (!overlay) {
+              overlay = document.createElement('div'); overlay.id = 'sidebar-overlay'; document.body.appendChild(overlay);
+            }
+            overlay.style.display = 'block';
+            overlay.addEventListener('click', function() { sidebar.classList.remove('sidebar-open'); overlay.style.display='none'; });
+          } else {
+            if (overlay) overlay.style.display = 'none';
+          }
         } else {
-          localStorage.removeItem('sidebar-collapsed');
+          // desktop behaviour: collapse width
+          sidebar.classList.toggle('sidebar-collapsed');
+          if (sidebar.classList.contains('sidebar-collapsed')) {
+            localStorage.setItem('sidebar-collapsed', '1');
+          } else {
+            localStorage.removeItem('sidebar-collapsed');
+          }
         }
       });
+
+      // restore desktop collapsed state where appropriate
       if (localStorage.getItem('sidebar-collapsed') === '1') {
-        sidebar.classList.add('sidebar-collapsed');
+        // Only apply collapsed automatically for sufficiently wide screens
+        if ((window.innerWidth || document.documentElement.clientWidth) >= 900) {
+          sidebar.classList.add('sidebar-collapsed');
+        }
       }
     }
     

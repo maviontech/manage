@@ -431,7 +431,7 @@
 
                     <div class="metadata-group assignee-section">
                         <label>Assignee</label>
-                        {% if issue.assignee_ldap %}
+                        {% if issue.assignee_name or issue.assignee_ldap %}
                         <div class="user-info" id="currentAssignee">
                             <i class="fas fa-user-tie"></i>
                             <div>
@@ -442,20 +442,20 @@
                         {% endif %}
 
                         <div class="assignee-input-wrapper">
-                            <input
+                            <!-- <input
                                 type="text"
                                 id="assignee-search"
                                 class="assignee-input"
                                 placeholder="Type name or LDAP username (min 3 chars)..."
                                 autocomplete="off"
-                            >
+                            > -->
                             <button type="button" class="clear-assignee" id="clear-assignee">
                                 <i class="fas fa-times"></i>
                             </button>
                             <div class="search-results" id="search-results"></div>
                         </div>
                         <div class="search-hint">
-                            <i class="fas fa-info-circle"></i> Type at least 3 characters to search
+                            <!-- <i class="fas fa-info-circle"></i> Type at least 3 characters to search -->
                         </div>
                         <button type="button" class="btn-save-assignee" id="save-assignee">
                             <i class="fas fa-check"></i> Save Assignee
@@ -463,7 +463,7 @@
                     </div>
 
                     <div class="metadata-group">
-                        <label>Module</label>
+                        <label>Project</label>
                         <div class="metadata-value">
                             {% if issue.module %}
                             <span class="badge badge-module">{{ issue.module }}</span>

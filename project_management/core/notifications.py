@@ -32,52 +32,60 @@ class NotificationManager:
             dict: Notification data with ID
         """
         try:
-            # Get database connection
-            conn = get_tenant_conn(tenant_id=tenant_id)
-            if not conn:
-                logger.error(f"Failed to get tenant connection for tenant: {tenant_id}")
-                return None
-
             # Prepare notification data
             now = datetime.now()
             created_at_str = now.strftime('%Y-%m-%d %H:%M:%S')
 
-            # Save notification to database
-            result = exec_sql(
-                conn,
-                """
-                INSERT INTO notifications (user_id, title, message, type, link, is_read, created_at)
-                VALUES (%s, %s, %s, %s, %s, 0, %s)
-                """,
-                [user_id, title, message, notification_type, link, now],
-                fetch=False
-            )
+            notification_id = None
+            saved_to_db = False
 
-            # Get the notification ID
-            notification_id_result = exec_sql(conn, "SELECT LAST_INSERT_ID() as id", [])
-            notification_id = notification_id_result[0]['id'] if notification_id_result else None
+            # Try to save notification to tenant DB; if this fails, log and continue to broadcast
+            try:
+                conn = get_tenant_conn(tenant_key=tenant_id)
+                if conn:
+                    # Save notification to database
+                    exec_sql(
+                        conn,
+                        """
+                        INSERT INTO notifications (user_id, title, message, type, link, is_read, created_at)
+                        VALUES (%s, %s, %s, %s, %s, 0, %s)
+                        """,
+                        [user_id, title, message, notification_type, link, now],
+                        fetch=False
+                    )
+                    # Attempt to fetch last inserted id (works on some connectors)
+                    try:
+                        notification_id_result = exec_sql(conn, "SELECT LAST_INSERT_ID() as id", [])
+                        notification_id = notification_id_result[0]['id'] if notification_id_result else None
+                    except Exception:
+                        notification_id = None
+                    saved_to_db = True
+                    logger.info(f"Notification saved to DB for tenant={tenant_id}: user_id={user_id}, title={title}")
+                else:
+                    logger.warning(f"No tenant DB connection available for tenant: {tenant_id}; skipping DB save")
+            except Exception as db_exc:
+                logger.warning(f"Failed to save notification to tenant DB (tenant={tenant_id}): {db_exc}")
 
-            logger.info(f"Notification saved to DB: ID={notification_id}, user_id={user_id}, title={title}")
-
-            # Broadcast notification via WebSocket
+            # Broadcast notification via WebSocket regardless of DB save success
             channel_layer = get_channel_layer()
-            if channel_layer and notification_id:
-                # User-specific notification group
-                group_name = f'user_notifications_{tenant_id}_{user_id}'
-                
-                notification_data = {
-                    'type': 'system.notification',  # Maps to system_notification method in consumer
-                    'notification_id': notification_id,
-                    'notification_type': notification_type,
-                    'title': title,
-                    'message': message,
-                    'link': link,
-                    'created_at': created_at_str,
-                }
+            group_name = f'user_notifications_{tenant_id}_{user_id}'
+            notification_data = {
+                'type': 'system.notification',  # Maps to system_notification method in consumer
+                'notification_id': notification_id,
+                'notification_type': notification_type,
+                'title': title,
+                'message': message,
+                'link': link,
+                'created_at': created_at_str,
+            }
 
-                # Send to WebSocket group
-                async_to_sync(channel_layer.group_send)(group_name, notification_data)
-                logger.info(f"Notification broadcast to WebSocket group: {group_name}")
+            if channel_layer:
+                try:
+                    logger.debug(f"Attempting group_send to {group_name} with payload: {notification_data}")
+                    async_to_sync(channel_layer.group_send)(group_name, notification_data)
+                    logger.info(f"Notification broadcast to WebSocket group: {group_name}")
+                except Exception as e:
+                    logger.error(f"Failed to group_send notification to {group_name}: {e}", exc_info=True)
 
             return {
                 'id': notification_id,
@@ -87,6 +95,7 @@ class NotificationManager:
                 'type': notification_type,
                 'link': link,
                 'created_at': created_at_str,
+                'saved_to_db': saved_to_db,
             }
 
         except Exception as e:
@@ -139,7 +148,7 @@ class NotificationManager:
             bool: Success status
         """
         try:
-            conn = get_tenant_conn(tenant_id=tenant_id)
+            conn = get_tenant_conn(tenant_key=tenant_id)
             if not conn:
                 return False
 
@@ -167,7 +176,7 @@ class NotificationManager:
             bool: Success status
         """
         try:
-            conn = get_tenant_conn(tenant_id=tenant_id)
+            conn = get_tenant_conn(tenant_key=tenant_id)
             if not conn:
                 return False
 
@@ -197,7 +206,7 @@ class NotificationManager:
             list: List of notification dicts
         """
         try:
-            conn = get_tenant_conn(tenant_id=tenant_id)
+            conn = get_tenant_conn(tenant_key=tenant_id)
             if not conn:
                 return []
 

@@ -634,15 +634,19 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     async def system_notification(self, event):
         """Handle system notifications (task assignments, mentions, etc.)"""
         try:
-            await self.send_json({
+            # Log the raw event for debugging delivery issues
+            logger.debug(f"NotificationConsumer.system_notification received event: {event}")
+            payload = {
                 'event': 'system_notification',
                 'notification_id': event.get('notification_id'),
-                'type': event.get('notification_type', 'info'),
+                'type': event.get('notification_type', event.get('type', 'info')),
                 'title': event.get('title'),
                 'message': event.get('message'),
                 'link': event.get('link'),
                 'created_at': event.get('created_at'),
-            })
+            }
+            await self.send_json(payload)
+            logger.info(f"System notification forwarded to client (member_id={getattr(self, 'member_id', None)}): {payload.get('title')}")
         except Exception as e:
             logger.error(f"❌ Error sending system_notification: {e}")
 
