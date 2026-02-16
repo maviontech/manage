@@ -8,7 +8,106 @@ from .db_helpers import get_tenant_conn_and_cursor
 from .forms import ProjectForm, SubprojectForm
 import math
 
+
+def can_manage_project(request, project_id, conn=None):
+    """
+    Check if the current user can manage (edit/create subprojects) a project.
+    Returns True if:
+    - User is a tenant Admin, OR
+    - User is assigned to the project (employee_id matches)
+    """
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return False
+
+    close_conn = False
+    if conn is None:
+        conn, _ = get_tenant_conn_and_cursor(request)
+        close_conn = True
+
+    cur = conn.cursor()
+    try:
+        # Check if user is Admin
+        cur.execute("""
+            SELECT 1 FROM tenant_role_assignments tra
+            JOIN roles r ON r.id = tra.role_id
+            WHERE tra.member_id = %s AND r.name = 'Admin' LIMIT 1
+        """, (member_id,))
+        if cur.fetchone():
+            return True
+
+        # Check if user is assigned to the project
+        # First, get the employee_id from the project
+        cur.execute("SELECT employee_id FROM projects WHERE id=%s", (project_id,))
+        project = cur.fetchone()
+        if not project or not project.get('employee_id'):
+            return False
+
+        # Find if this member corresponds to the assigned employee
+        # Match by member_id to employee relationship
+        cur.execute("""
+            SELECT 1 FROM members m
+            JOIN employees e ON (m.email = e.email OR (m.first_name = e.first_name AND m.last_name = e.last_name))
+            WHERE m.id = %s AND e.id = %s LIMIT 1
+        """, (member_id, project['employee_id']))
+
+        return cur.fetchone() is not None
+
+    finally:
+        cur.close()
+        if close_conn:
+            conn.close()
+
 PAGE_SIZE = 10
+
+def can_manage_project(request, project_id, conn=None):
+    """
+    Check if the current user can manage (edit/create subprojects) a project.
+    Returns True if:
+    - User is a tenant Admin, OR
+    - User is assigned to the project (employee_id matches)
+    """
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return False
+    
+    close_conn = False
+    if conn is None:
+        conn, _ = get_tenant_conn_and_cursor(request)
+        close_conn = True
+    
+    cur = conn.cursor()
+    try:
+        # Check if user is Admin
+        cur.execute("""
+            SELECT 1 FROM tenant_role_assignments tra
+            JOIN roles r ON r.id = tra.role_id
+            WHERE tra.member_id = %s AND r.name = 'Admin' LIMIT 1
+        """, (member_id,))
+        if cur.fetchone():
+            return True
+        
+        # Check if user is assigned to the project
+        # First, get the employee_id from the project
+        cur.execute("SELECT employee_id FROM projects WHERE id=%s", (project_id,))
+        project = cur.fetchone()
+        if not project or not project.get('employee_id'):
+            return False
+        
+        # Find if this member corresponds to the assigned employee
+        # Match by member_id to employee relationship
+        cur.execute("""
+            SELECT 1 FROM members m 
+            JOIN employees e ON (m.email = e.email OR (m.first_name = e.first_name AND m.last_name = e.last_name))
+            WHERE m.id = %s AND e.id = %s LIMIT 1
+        """, (member_id, project['employee_id']))
+        
+        return cur.fetchone() is not None
+        
+    finally:
+        cur.close()
+        if close_conn:
+            conn.close()
 
 def projects_list(request):
     page = int(request.GET.get('page', 1))
@@ -166,6 +265,10 @@ def project_create(request):
 from datetime import date
 
 def project_edit(request, project_id):
+    # Check if user can manage this project
+    if not can_manage_project(request, project_id):
+        return render(request, 'core/Permission_denied.html', status=403)
+    
     conn, cur = get_tenant_conn_and_cursor(request)
     try:
         cur.execute("SELECT * FROM projects WHERE id=%s", (project_id,))
@@ -382,6 +485,10 @@ def subprojects_list(request, project_id):
         "q": q if q else ""
     })
 def subproject_create(request, project_id):
+    # Check if user can manage this project
+    if not can_manage_project(request, project_id):
+        return render(request, 'core/Permission_denied.html', status=403)
+    
     conn, cur = get_tenant_conn_and_cursor(request)
     try:
         cur.execute("SELECT * FROM projects WHERE id=%s", (project_id,))
@@ -419,6 +526,10 @@ def subproject_create(request, project_id):
         "project_id": project_id
     })
 def subproject_edit(request, project_id, sub_id):
+    # Check if user can manage this project
+    if not can_manage_project(request, project_id):
+        return render(request, 'core/Permission_denied.html', status=403)
+    
     conn, cur = get_tenant_conn_and_cursor(request)
     try:
         cur.execute("SELECT * FROM projects WHERE id=%s", (project_id,))
