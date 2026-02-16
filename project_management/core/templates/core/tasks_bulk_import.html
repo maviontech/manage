@@ -451,13 +451,13 @@
       <div class="upload-icon">
         <i class="fas fa-cloud-upload-alt"></i>
       </div>
-      <h2 class="upload-title">Upload Your CSV File</h2>
-      <p class="upload-description">Select a properly formatted CSV file to import tasks in bulk</p>
+      <h2 class="upload-title">Upload Your CSV or Excel File</h2>
+      <p class="upload-description">Select a properly formatted CSV or Excel file to import tasks in bulk</p>
       
       <form id="bulkForm" method="post" enctype="multipart/form-data" style="position: relative; z-index: 1;">
         {% csrf_token %}
         <div class="form-group-professional" style="max-width: 500px; margin: 0 auto 1.5rem;">
-          <input type="file" name="csv_file" id="csv_file" accept=".csv" required class="form-control-professional" style="background: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.5);">
+          <input type="file" name="csv_file" id="csv_file" accept=".csv,.xlsx,.xls" required class="form-control-professional" style="background: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.5);">
         </div>
         <button type="submit" class="btn-professional btn-primary-professional" style="padding: 14px 32px; font-size: 16px;">
           <i class="fas fa-upload"></i> Upload & Import Tasks
@@ -470,32 +470,54 @@
       <div class="info-box">
         <div class="info-box-title">
           <i class="fas fa-info-circle"></i>
-          CSV Format Requirements
+          CSV/Excel Format Requirements
         </div>
         <p class="info-box-content" style="margin-bottom: 0.75rem;">
-          Your CSV file must include the following columns:
+          Your file must include these <strong>required columns</strong>:
         </p>
         <p class="info-box-content" style="font-weight: 600; margin-bottom: 0.75rem;">
-          <code>title</code>, <code>description</code>, <code>project_id</code>, <code>subproject_id</code>, <code>work_type</code>
-          <code>status</code>, <code>priority</code>, <code>assigned_to</code>, <code>due_date</code>
+          <code>title</code>, <code>project_id</code>
         </p>
-        <p class="info-box-content" style="margin-bottom: 0;">
-          <strong>Tips:</strong> Use <code>member:ID</code> or <code>team:ID</code> format in the <code>assigned_to</code> column. 
-          Dates should be in <code>YYYY-MM-DD</code> format.
+        <p class="info-box-content" style="margin-bottom: 0.75rem;">
+          <strong>Optional columns:</strong>
         </p>
+        <p class="info-box-content" style="font-weight: 600; margin-bottom: 0.75rem;">
+          <code>description</code>, <code>subproject_id</code>, <code>status</code>, <code>priority</code>, 
+          <code>assigned_to</code>, <code>due_date</code>, <code>work_type</code>
+        </p>
+        <div style="background: rgba(37, 99, 235, 0.05); padding: 12px; border-radius: 6px; margin-top: 12px;">
+          <p class="info-box-content" style="margin-bottom: 8px;">
+            <strong><i class="fas fa-lightbulb"></i> Important Tips:</strong>
+          </p>
+          <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: var(--gray-700);">
+            <li>Use <code>member:ID</code> or <code>team:ID</code> format in <code>assigned_to</code> column (e.g., member:5 or team:2)</li>
+            <li>Dates must be in <code>YYYY-MM-DD</code> format (e.g., 2026-03-15)</li>
+            <li>Valid status values: Open, In Progress, Review, Blocked, Closed, Pending, New</li>
+            <li>Valid priority values: Low, Normal, High, Critical</li>
+            <li>Supported formats: CSV (.csv), Excel (.xlsx, .xls)</li>
+            <li>File size limit: 5MB</li>
+            <li>Encoding: UTF-8</li>
+          </ul>
+        </div>
       </div>
 
       <!-- Download Sample -->
-      <div style="text-align: center;">
-        <a href="{% static 'samples/sample_tasks_import.csv' %}" download class="btn-professional btn-outline-professional">
-          <i class="fas fa-download"></i> Download Sample CSV Template
+      <div style="text-align: center; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url 'download_excel_template' %}" class="btn-professional btn-primary-professional" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+          <i class="fas fa-file-excel"></i> Download Excel Template (Recommended)
+        </a>
+        <a href="{% url 'download_csv_template' %}" class="btn-professional btn-primary-professional" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+          <i class="fas fa-file-csv"></i> Download CSV Template (Dynamic)
+        </a>
+        <a href="{% static 'samples/BULK_IMPORT_QUICK_REFERENCE.txt' %}" download class="btn-professional btn-outline-professional">
+          <i class="fas fa-file-alt"></i> Quick Reference
         </a>
       </div>
     </div>
   </div>
 
   <!-- Import Result Panel -->
-  {% if inserted is defined %}
+  {% if inserted is not None %}
   <div class="professional-card">
     <div class="card-section-header">
       <h2 class="section-title">
@@ -510,11 +532,32 @@
           <div class="result-stat-label">Tasks Created</div>
           <div class="result-stat-value">{{ inserted }}</div>
         </div>
+        {% if total_rows %}
+        <div class="result-stat" style="background: linear-gradient(135deg, var(--info-color) 0%, #0284c7 100%);">
+          <div class="result-stat-label">Total Rows Processed</div>
+          <div class="result-stat-value">{{ total_rows }}</div>
+        </div>
+        {% endif %}
         <div class="result-stat error">
           <div class="result-stat-label">Errors Found</div>
           <div class="result-stat-value">{{ errors|length }}</div>
         </div>
       </div>
+
+      <!-- Warnings -->
+      {% if warnings %}
+      <div class="info-box" style="background: #fef3c7; border-left-color: var(--warning-color); margin-bottom: 1.5rem;">
+        <div class="info-box-title" style="color: var(--warning-color);">
+          <i class="fas fa-exclamation-circle"></i>
+          Warnings
+        </div>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: var(--gray-700);">
+          {% for warning in warnings %}
+          <li>{{ warning }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
 
       <!-- Error Table -->
       {% if errors %}
@@ -666,10 +709,68 @@
 </div>
 
 <script>
-document.getElementById('bulkForm')?.addEventListener('submit', async function(ev){
-  const btn = ev.target.querySelector('button[type="submit"]');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing Tasks...';
+// File validation and preview
+const fileInput = document.getElementById('csv_file');
+const bulkForm = document.getElementById('bulkForm');
+
+if (fileInput) {
+  fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    const fileName = file.name.toLowerCase();
+    if (!(fileName.endsWith('.csv') || fileName.endsWith('.xlsx') || fileName.endsWith('.xls'))) {
+      alert('Please select a CSV or Excel file (.csv, .xlsx, or .xls extension)');
+      fileInput.value = '';
+      return;
+    }
+    
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      alert('File size exceeds 5MB limit. Please choose a smaller file.');
+      fileInput.value = '';
+      return;
+    }
+    
+    // Show file info
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+    console.log(`File selected: ${file.name} (${sizeInMB} MB)`);
+  });
+}
+
+if (bulkForm) {
+  bulkForm.addEventListener('submit', async function(ev) {
+    const file = fileInput.files[0];
+    if (!file) {
+      ev.preventDefault();
+      alert('Please select a CSV or Excel file to upload');
+      return;
+    }
+    
+    const btn = ev.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing Tasks...';
+    
+    // Optional: Add a timeout to re-enable button if something goes wrong
+    setTimeout(() => {
+      if (btn.disabled) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload"></i> Upload & Import Tasks';
+      }
+    }, 60000); // 60 seconds timeout
+  });
+}
+
+// Auto-scroll to results if present
+window.addEventListener('DOMContentLoaded', function() {
+  const resultsSection = document.querySelector('.result-summary');
+  if (resultsSection) {
+    setTimeout(() => {
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 500);
+  }
 });
 </script>
 {% endblock %}

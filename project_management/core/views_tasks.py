@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.http import require_GET, require_POST
+from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.conf import settings
@@ -676,99 +677,611 @@ def api_update_status(request):
 # ==============================
 #  BULK IMPORT CSV
 # ==============================
+def download_excel_template(request):
+    """Generate Excel template with dropdowns for projects, subprojects, and members"""
+    # Check authentication
+    if not request.session.get('user_id'):
+        return redirect('identify')
+    
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.worksheet.datavalidation import DataValidation
+    from django.http import HttpResponse
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Fetch data for dropdowns
+        cur.execute("SELECT id, name FROM projects ORDER BY name")
+        projects = cur.fetchall()
+        
+        cur.execute("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM members ORDER BY first_name")
+        members = cur.fetchall()
+        
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Tasks Import"
+        
+        # Create hidden sheets for dropdown data
+        projects_sheet = wb.create_sheet("Projects_Data")
+        members_sheet = wb.create_sheet("Members_Data")
+        subprojects_sheet = wb.create_sheet("Subprojects_Data")
+        
+        # Hide data sheets
+        projects_sheet.sheet_state = 'hidden'
+        members_sheet.sheet_state = 'hidden'
+        subprojects_sheet.sheet_state = 'hidden'
+        
+        # Populate Projects data sheet
+        projects_sheet['A1'] = 'project_id'
+        projects_sheet['B1'] = 'project_name'
+        for idx, proj in enumerate(projects, start=2):
+            projects_sheet[f'A{idx}'] = proj['id']
+            projects_sheet[f'B{idx}'] = proj['name']
+        
+        # Populate Members data sheet
+        members_sheet['A1'] = 'member_id'
+        members_sheet['B1'] = 'member_name'
+        for idx, mem in enumerate(members, start=2):
+            members_sheet[f'A{idx}'] = mem['id']
+            members_sheet[f'B{idx}'] = mem['name']
+        
+        # Fetch all subprojects with project reference
+        cur.execute("SELECT id, name, project_id FROM subprojects ORDER BY project_id, name")
+        subprojects = cur.fetchall()
+        
+        # Populate Subprojects data sheet with project info for reference
+        subprojects_sheet['A1'] = 'subproject_id'
+        subprojects_sheet['B1'] = 'subproject_name'
+        subprojects_sheet['C1'] = 'project_id'
+        subprojects_sheet['D1'] = 'project_name'
+        
+        # Build project name lookup
+        project_names = {proj['id']: proj['name'] for proj in projects}
+        
+        for idx, subproj in enumerate(subprojects, start=2):
+            subprojects_sheet[f'A{idx}'] = subproj['id']
+            subprojects_sheet[f'B{idx}'] = subproj['name']
+            subprojects_sheet[f'C{idx}'] = subproj['project_id']
+            subprojects_sheet[f'D{idx}'] = project_names.get(subproj['project_id'], '')
+        
+        # Setup main sheet headers - Changed to show user-friendly names
+        headers = ['title', 'description', 'project_name', 'subproject_name', 'status', 
+                   'priority', 'assigned_to_name', 'due_date', 'work_type', 'note']
+        
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        for col_num, header in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+        
+        # Set column widths
+        ws.column_dimensions['A'].width = 30  # title
+        ws.column_dimensions['B'].width = 40  # description
+        ws.column_dimensions['C'].width = 25  # project_name
+        ws.column_dimensions['D'].width = 25  # subproject_name
+        ws.column_dimensions['E'].width = 12  # status
+        ws.column_dimensions['F'].width = 12  # priority
+        ws.column_dimensions['G'].width = 25  # assigned_to_name
+        ws.column_dimensions['H'].width = 12  # due_date
+        ws.column_dimensions['I'].width = 15  # work_type
+        ws.column_dimensions['J'].width = 40  # note
+        
+        # Add data validation for project_name (column C) - Show names
+        if len(projects) > 0:
+            project_dv = DataValidation(
+                type="list",
+                formula1=f"=Projects_Data!$B$2:$B${len(projects)+1}",  # Changed to column B (names)
+                allow_blank=True
+            )
+            project_dv.error = 'Please select a valid project'
+            project_dv.errorTitle = 'Invalid Project'
+            ws.add_data_validation(project_dv)
+            project_dv.add(f'C2:C1000')
+        
+        # Add data validation for subproject_name (column D) - Show names
+        # NOTE: Shows ALL subprojects - user must select one that matches their project
+        if len(subprojects) > 0:
+            subproject_dv = DataValidation(
+                type="list",
+                formula1=f"=Subprojects_Data!$B$2:$B${len(subprojects)+1}",  # Changed to column B (names)
+                allow_blank=True
+            )
+            subproject_dv.error = 'Please select a valid subproject for your project'
+            subproject_dv.errorTitle = 'Invalid Subproject'
+            ws.add_data_validation(subproject_dv)
+            subproject_dv.add(f'D2:D1000')
+        
+        # Add data validation for status (column E)
+        status_dv = DataValidation(
+            type="list",
+            formula1='"Open,In Progress,Review,Blocked,Closed,Pending,New"',
+            allow_blank=True
+        )
+        status_dv.error = 'Please select a valid status'
+        status_dv.errorTitle = 'Invalid Status'
+        ws.add_data_validation(status_dv)
+        status_dv.add('E2:E1000')
+        
+        # Add data validation for priority (column F)
+        priority_dv = DataValidation(
+            type="list",
+            formula1='"Low,Normal,High,Critical"',
+            allow_blank=True
+        )
+        priority_dv.error = 'Please select a valid priority'
+        priority_dv.errorTitle = 'Invalid Priority'
+        ws.add_data_validation(priority_dv)
+        priority_dv.add('F2:F1000')
+        
+        # Add data validation for assigned_to_name (column G) - Show names
+        if len(members) > 0:
+            member_dv = DataValidation(
+                type="list",
+                formula1=f"=Members_Data!$B$2:$B${len(members)+1}",  # Changed to column B (names)
+                allow_blank=True
+            )
+            member_dv.error = 'Please select a valid member'
+            member_dv.errorTitle = 'Invalid Member'
+            ws.add_data_validation(member_dv)
+            member_dv.add(f'G2:G1000')
+        
+        # Add data validation for work_type (column I)
+        worktype_dv = DataValidation(
+            type="list",
+            formula1='"Task,Bug,Story,Defect,Subtask,Report,Change Request"',
+            allow_blank=True
+        )
+        worktype_dv.error = 'Please select a valid work type'
+        worktype_dv.errorTitle = 'Invalid Work Type'
+        ws.add_data_validation(worktype_dv)
+        worktype_dv.add('I2:I1000')
+        
+        # Add instruction row with NAMES instead of IDs
+        ws['A2'] = 'Fix login bug'
+        ws['B2'] = 'Users cannot login with special characters in password'
+        ws['C2'] = projects[0]['name'] if projects else ''  # Changed to name
+        # Find a subproject for the first project
+        first_project_subproject = None
+        if projects and subprojects:
+            for subproj in subprojects:
+                if subproj['project_id'] == projects[0]['id']:
+                    first_project_subproject = subproj['name']
+                    break
+        ws['D2'] = first_project_subproject if first_project_subproject else ''
+        ws['E2'] = 'Open'
+        ws['F2'] = 'High'
+        ws['G2'] = members[0]['name'] if members else ''  # Changed to name
+        ws['H2'] = '2026-03-15'
+        ws['I2'] = 'Task'
+        ws['J2'] = 'Check Subprojects_Data sheet to see which subprojects belong to your project'
+        
+        # Create response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=tasks_import_template.xlsx'
+        
+        wb.save(response)
+        return response
+        
+    except Exception as e:
+        return HttpResponse(f"Error generating template: {str(e)}", status=500)
+    finally:
+        cur.close()
+
+
+def download_csv_template(request):
+    """Generate CSV template with reference data in comments"""
+    # Check authentication
+    if not request.session.get('user_id'):
+        return redirect('identify')
+    
+    from django.http import HttpResponse
+    import csv
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    try:
+        # Fetch data for reference
+        cur.execute("SELECT id, name FROM projects ORDER BY name")
+        projects = cur.fetchall()
+
+        cur.execute("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM members ORDER BY first_name")
+        members = cur.fetchall()
+
+        cur.execute("SELECT id, name, project_id FROM subprojects ORDER BY project_id, name")
+        subprojects = cur.fetchall()
+
+        # Create response
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename=tasks_import_template.csv'
+
+        writer = csv.writer(response)
+
+        # Write reference data as comments
+        writer.writerow(['# BULK IMPORT TEMPLATE - REFERENCE DATA'])
+        writer.writerow(['# '])
+        writer.writerow(['# AVAILABLE PROJECTS:'])
+        for proj in projects:
+            writer.writerow([f'#   project_id: {proj["id"]} - {proj["name"]}'])
+
+        writer.writerow(['# '])
+        writer.writerow(['# AVAILABLE MEMBERS:'])
+        for mem in members:
+            writer.writerow([f'#   member_id: {mem["id"]} - {mem["name"]}'])
+
+        writer.writerow(['# '])
+        writer.writerow(['# AVAILABLE SUBPROJECTS:'])
+        for subproj in subprojects:
+            writer.writerow([f'#   subproject_id: {subproj["id"]} - {subproj["name"]} (project: {subproj["project_id"]})'])
+
+        writer.writerow(['# '])
+        writer.writerow(['# VALID STATUS: Open, In Progress, Review, Blocked, Closed, Pending, New'])
+        writer.writerow(['# VALID PRIORITY: Low, Normal, High, Critical'])
+        writer.writerow(['# VALID WORK_TYPE: Task, Bug, Story, Defect, Subtask, Report, Change Request'])
+        writer.writerow(['# DATE FORMAT: YYYY-MM-DD (e.g., 2026-03-15)'])
+        writer.writerow(['# ASSIGNED_TO FORMAT: member:ID or team:ID (e.g., member:5 or team:2)'])
+        writer.writerow(['# '])
+        writer.writerow(['# DELETE ALL COMMENT LINES (starting with #) BEFORE UPLOADING'])
+        writer.writerow(['# '])
+
+        # Write header row
+        writer.writerow(['title', 'description', 'project_id', 'subproject_id', 'status',
+                        'priority', 'assigned_to', 'due_date', 'work_type'])
+
+        # Write sample row
+        if projects:
+            writer.writerow([
+                'Fix login bug',
+                'Users cannot login with special characters in password',
+                projects[0]['id'],
+                '',
+                'Open',
+                'High',
+                f'member:{members[0]["id"]}' if members else '',
+                '2026-03-15',
+                'Task'
+            ])
+
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"Error generating template: {str(e)}", status=500)
+    finally:
+        cur.close()
+
+
+
 def bulk_import_csv_view(request):
-    """Upload & import CSV file of tasks"""
+    """Upload & import CSV file of tasks with comprehensive validation"""
     context = {"page": "bulk_import"}
 
     if request.method == "POST" and request.FILES.get("csv_file"):
         conn = get_tenant_conn(request)
         cur = conn.cursor()
-        f = request.FILES["csv_file"]
-        text = f.read().decode("utf-8")
-        reader = csv.DictReader(io.StringIO(text))
-        inserted, errors = 0, []
-
-        # enforce required header columns (match UI requirements)
-        required_cols = {"title", "description", "project_id", "subproject_id", "status", "priority", "assigned_to", "due_date"}
-        present = set((reader.fieldnames or []))
-        missing = required_cols - present
-        if missing:
-            errors.append({"row": 0, "error": f"Missing required columns: {', '.join(sorted(missing))}", "data": {}})
-            context.update({"inserted": 0, "errors": errors})
-            cur.close()
-            return render(request, "core/tasks_bulk_import.html", context)
-
-        for i, raw_row in enumerate(reader, start=1):
-            try:
-                # normalize/strip all values
-                row = {k: (v.strip() if isinstance(v, str) else v) for k, v in raw_row.items()}
-
-                # required per-row
-                if not row.get("title"):
-                    raise Exception("Missing required field: title")
-                if not row.get("project_id"):
-                    raise Exception("Missing required field: project_id")
-
-                # assigned_to parsing: accepts 'member:ID' or 'team:ID' or plain member ID
-                assigned_raw = row.get("assigned_to") or ""
-                assigned_to, assigned_type = None, None
-                if assigned_raw:
-                    if ":" in assigned_raw:
-                        atype, aid = assigned_raw.split(":", 1)
-                        atype = atype.strip().lower()
-                        aid = aid.strip()
-                        if atype not in ("member", "team"):
-                            raise Exception(f"Invalid assigned_to type '{atype}'. Use 'member' or 'team'.")
-                        if not aid.isdigit():
-                            raise Exception(f"Invalid assigned_to id '{aid}'. Must be numeric.")
-                        assigned_type, assigned_to = atype, int(aid)
-                    else:
-                        # assume member id
-                        aid = assigned_raw.strip()
-                        if not aid.isdigit():
-                            raise Exception(f"Invalid assigned_to value '{aid}'. Use 'member:ID' or 'team:ID' or numeric member ID.")
-                        assigned_type, assigned_to = "member", int(aid)
-
-                # due_date validation (empty allowed)
-                due_date = row.get("due_date") or None
-                # optional work_type (if provided in CSV)
-                work_type = row.get("work_type") or None
-                if due_date:
+        
+        try:
+            f = request.FILES["csv_file"]
+            
+            # Validate file size (max 5MB)
+            if f.size > 5 * 1024 * 1024:
+                context.update({
+                    "inserted": 0, 
+                    "errors": [{"row": 0, "error": "File size exceeds 5MB limit", "data": {}}]
+                })
+                cur.close()
+                return render(request, "core/tasks_bulk_import.html", context)
+            
+            # Validate file extension - accept both CSV and Excel
+            file_ext = f.name.lower()
+            if not (file_ext.endswith('.csv') or file_ext.endswith('.xlsx') or file_ext.endswith('.xls')):
+                context.update({
+                    "inserted": 0, 
+                    "errors": [{"row": 0, "error": "Invalid file type. Please upload a CSV or Excel file (.csv, .xlsx, .xls)", "data": {}}]
+                })
+                cur.close()
+                return render(request, "core/tasks_bulk_import.html", context)
+            
+            # Read file based on type
+            if file_ext.endswith('.csv'):
+                # Read and decode CSV file
+                try:
+                    text = f.read().decode("utf-8")
+                except UnicodeDecodeError:
                     try:
-                        # accept YYYY-MM-DD only
-                        datetime.datetime.strptime(due_date, "%Y-%m-%d")
+                        f.seek(0)
+                        text = f.read().decode("utf-8-sig")  # Try with BOM
                     except Exception:
-                        raise Exception("Invalid due_date. Use YYYY-MM-DD format.")
+                        context.update({
+                            "inserted": 0, 
+                            "errors": [{"row": 0, "error": "Unable to decode CSV file. Please ensure it's UTF-8 encoded.", "data": {}}]
+                        })
+                        cur.close()
+                        return render(request, "core/tasks_bulk_import.html", context)
+                
+                reader = csv.DictReader(io.StringIO(text))
+            else:
+                # Read Excel file
+                from openpyxl import load_workbook
+                try:
+                    wb = load_workbook(f, data_only=True)
+                    ws = wb.active
+                    
+                    # Convert Excel to dict format
+                    data = []
+                    headers = []
+                    for row_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
+                        if row_idx == 1:
+                            headers = [str(cell).strip() if cell else '' for cell in row]
+                        else:
+                            if any(row):  # Skip empty rows
+                                row_dict = {}
+                                for col_idx, value in enumerate(row):
+                                    if col_idx < len(headers):
+                                        # Convert None to empty string, handle dates
+                                        if value is None:
+                                            row_dict[headers[col_idx]] = ''
+                                        elif hasattr(value, 'strftime'):  # Date object
+                                            row_dict[headers[col_idx]] = value.strftime('%Y-%m-%d')
+                                        else:
+                                            row_dict[headers[col_idx]] = str(value).strip()
+                                data.append(row_dict)
+                    
+                    # Create a simple class to mimic csv.DictReader
+                    class ExcelReader:
+                        def __init__(self, data, fieldnames):
+                            self.data = data
+                            self.fieldnames = fieldnames
+                        
+                        def __iter__(self):
+                            return iter(self.data)
+                    
+                    reader = ExcelReader(data, headers)
+                    
+                except Exception as e:
+                    context.update({
+                        "inserted": 0, 
+                        "errors": [{"row": 0, "error": f"Unable to read Excel file: {str(e)}", "data": {}}]
+                    })
+                    cur.close()
+                    return render(request, "core/tasks_bulk_import.html", context)
+            
+            inserted, errors, warnings = 0, [], []
 
-                cur.execute(
-                    """INSERT INTO tasks
-                       (project_id, subproject_id, title, description, status, priority, work_type,
-                        assigned_to, assigned_type, created_by, due_date, created_at)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
-                    (
-                        int(row.get("project_id")) if row.get("project_id") and str(row.get("project_id")).isdigit() else row.get("project_id") or None,
-                        int(row.get("subproject_id")) if row.get("subproject_id") and str(row.get("subproject_id")).isdigit() else row.get("subproject_id") or None,
-                        row["title"],
-                        row.get("description"),
-                        row.get("status") or "Open",
-                        row.get("priority") or "Normal",
-                        work_type,
-                        assigned_to,
-                        assigned_type,
-                        request.session.get("user_id"),
-                        due_date,
-                    ),
-                )
-                inserted += 1
-            except Exception as e:
-                errors.append({"row": i, "error": str(e), "data": dict(raw_row)})
+            # Enforce required header columns - Support both old (ID) and new (name) formats
+            required_cols_old = {"title", "project_id"}
+            required_cols_new = {"title", "project_name"}
+            optional_cols_old = {"description", "subproject_id", "status", "priority", "assigned_to", "due_date", "work_type"}
+            optional_cols_new = {"description", "subproject_name", "status", "priority", "assigned_to_name", "due_date", "work_type", "note"}
+            
+            present = set((reader.fieldnames or []))
+            
+            # Check if using old format (IDs) or new format (names)
+            using_names = "project_name" in present
+            
+            if using_names:
+                required_cols = required_cols_new
+                optional_cols = optional_cols_new
+            else:
+                required_cols = required_cols_old
+                optional_cols = optional_cols_old
+            
+            missing = required_cols - present
+            if missing:
+                errors.append({
+                    "row": 0, 
+                    "error": f"Missing required columns: {', '.join(sorted(missing))}", 
+                    "data": {}
+                })
+                context.update({"inserted": 0, "errors": errors})
+                cur.close()
+                return render(request, "core/tasks_bulk_import.html", context)
+            
+            # Warn about unexpected columns
+            expected = required_cols | optional_cols
+            unexpected = present - expected
+            if unexpected:
+                warnings.append(f"Unexpected columns will be ignored: {', '.join(sorted(unexpected))}")
 
-        conn.commit()
-        cur.close()
-        context.update({"inserted": inserted, "errors": errors})
+            # Build lookup dictionaries for name-to-ID conversion
+            cur.execute("SELECT id, name FROM projects")
+            projects_dict = {row['name']: row['id'] for row in cur.fetchall()}
+            projects_dict_by_id = {str(row['id']): row['id'] for row in cur.fetchall()}
+            
+            cur.execute("SELECT id FROM projects")
+            valid_projects = {str(row['id']) for row in cur.fetchall()}
+            
+            cur.execute("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM members")
+            members_dict = {row['name']: row['id'] for row in cur.fetchall()}
+            
+            cur.execute("SELECT id FROM members")
+            valid_members = {str(row['id']) for row in cur.fetchall()}
+            
+            cur.execute("SELECT id, name, project_id FROM subprojects")
+            subprojects_list = cur.fetchall()
+            subprojects_dict = {(row['name'], row['project_id']): row['id'] for row in subprojects_list}
+            
+            cur.execute("SELECT id FROM teams")
+            valid_teams = {str(row['id']) for row in cur.fetchall()}
+
+            # Process each row
+            for i, raw_row in enumerate(reader, start=1):
+                try:
+                    # Normalize/strip all values
+                    row = {k: (v.strip() if isinstance(v, str) else v) for k, v in raw_row.items()}
+
+                    # Validate required fields
+                    if not row.get("title"):
+                        raise Exception("Missing required field: title")
+                    
+                    # Handle project - convert name to ID if using new format
+                    if using_names:
+                        project_name = row.get("project_name", "").strip()
+                        if not project_name:
+                            raise Exception("Missing required field: project_name")
+                        
+                        if project_name not in projects_dict:
+                            raise Exception(f"Invalid project_name: '{project_name}'. Project does not exist.")
+                        
+                        project_id = projects_dict[project_name]
+                    else:
+                        if not row.get("project_id"):
+                            raise Exception("Missing required field: project_id")
+                        
+                        project_id = str(row.get("project_id")).strip()
+                        if project_id not in valid_projects:
+                            raise Exception(f"Invalid project_id: {project_id}. Project does not exist.")
+                        project_id = int(project_id)
+
+                    # Handle subproject - convert name to ID if using new format
+                    subproject_id = None
+                    if using_names:
+                        subproject_name = row.get("subproject_name", "").strip()
+                        if subproject_name:
+                            # Look up subproject by name and project_id
+                            subproject_key = (subproject_name, project_id)
+                            if subproject_key not in subprojects_dict:
+                                raise Exception(f"Invalid subproject_name: '{subproject_name}' for selected project")
+                            subproject_id = subprojects_dict[subproject_key]
+                    else:
+                        subproject_id_str = row.get("subproject_id", "").strip()
+                        if subproject_id_str:
+                            cur.execute("SELECT id FROM subprojects WHERE id=%s AND project_id=%s", 
+                                      (subproject_id_str, project_id))
+                            if not cur.fetchone():
+                                raise Exception(f"Invalid subproject_id: {subproject_id_str} for project {project_id}")
+                            subproject_id = int(subproject_id_str)
+
+                    # Parse assigned_to - handle both old format (IDs) and new format (names)
+                    assigned_to, assigned_type = None, None
+                    
+                    if using_names:
+                        # New format: assigned_to_name column with member names
+                        assigned_name = row.get("assigned_to_name", "").strip()
+                        if assigned_name:
+                            if assigned_name not in members_dict:
+                                raise Exception(f"Invalid assigned_to_name: '{assigned_name}'. Member does not exist.")
+                            assigned_to = members_dict[assigned_name]
+                            assigned_type = "member"
+                    else:
+                        # Old format: assigned_to column with 'member:ID' or 'team:ID' or plain ID
+                        assigned_raw = row.get("assigned_to", "").strip()
+                        if assigned_raw:
+                            if ":" in assigned_raw:
+                                atype, aid = assigned_raw.split(":", 1)
+                                atype = atype.strip().lower()
+                                aid = aid.strip()
+                                if atype not in ("member", "team"):
+                                    raise Exception(f"Invalid assigned_to type '{atype}'. Use 'member:ID' or 'team:ID'.")
+                                if not aid.isdigit():
+                                    raise Exception(f"Invalid assigned_to id '{aid}'. Must be numeric.")
+                                
+                                # Validate member/team exists
+                                if atype == "member" and aid not in valid_members:
+                                    raise Exception(f"Invalid member ID: {aid}. Member does not exist.")
+                                elif atype == "team" and aid not in valid_teams:
+                                    raise Exception(f"Invalid team ID: {aid}. Team does not exist.")
+                                
+                                assigned_type, assigned_to = atype, int(aid)
+                            else:
+                                # Assume member id
+                                aid = assigned_raw.strip()
+                                if aid and not aid.isdigit():
+                                    raise Exception(f"Invalid assigned_to value '{aid}'. Use 'member:ID', 'team:ID', or numeric member ID.")
+                                if aid and aid not in valid_members:
+                                    raise Exception(f"Invalid member ID: {aid}. Member does not exist.")
+                                assigned_type, assigned_to = "member", int(aid) if aid else None
+
+                    # Validate status
+                    status = row.get("status") or "Open"
+                    valid_statuses = ["Open", "In Progress", "Review", "Blocked", "Closed", "Pending", "New"]
+                    if status not in valid_statuses:
+                        raise Exception(f"Invalid status: {status}. Must be one of: {', '.join(valid_statuses)}")
+
+                    # Validate priority
+                    priority = row.get("priority") or "Normal"
+                    valid_priorities = ["Low", "Normal", "High", "Critical"]
+                    if priority not in valid_priorities:
+                        raise Exception(f"Invalid priority: {priority}. Must be one of: {', '.join(valid_priorities)}")
+
+                    # Validate due_date (empty allowed)
+                    due_date = row.get("due_date") or None
+                    if due_date:
+                        try:
+                            # Accept YYYY-MM-DD only
+                            datetime.datetime.strptime(due_date, "%Y-%m-%d")
+                        except Exception:
+                            raise Exception("Invalid due_date. Use YYYY-MM-DD format (e.g., 2024-12-31).")
+
+                    # Optional work_type
+                    work_type = row.get("work_type") or "Task"
+
+                    # Insert task
+                    cur.execute(
+                        """INSERT INTO tasks
+                           (project_id, subproject_id, title, description, status, priority, work_type,
+                            assigned_to, assigned_type, created_by, due_date, created_at)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+                        (
+                            int(project_id),
+                            int(subproject_id) if subproject_id else None,
+                            row["title"],
+                            row.get("description") or "",
+                            status,
+                            priority,
+                            work_type,
+                            assigned_to,
+                            assigned_type,
+                            request.session.get("user_id"),
+                            due_date,
+                        ),
+                    )
+                    
+                    task_id = cur.lastrowid
+                    
+                    # Log activity
+                    try:
+                        cur.execute(
+                            "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+                            ("task", task_id, "created via bulk import", request.session.get("user_id")),
+                        )
+                    except Exception:
+                        pass  # Don't fail import if logging fails
+                    
+                    inserted += 1
+                    
+                except Exception as e:
+                    errors.append({"row": i, "error": str(e), "data": dict(raw_row)})
+
+            conn.commit()
+            context.update({
+                "inserted": inserted, 
+                "errors": errors,
+                "warnings": warnings,
+                "total_rows": i if 'i' in locals() else 0
+            })
+            
+        except Exception as e:
+            conn.rollback()
+            context.update({
+                "inserted": 0, 
+                "errors": [{"row": 0, "error": f"Unexpected error: {str(e)}", "data": {}}]
+            })
+        finally:
+            cur.close()
+        
         return render(request, "core/tasks_bulk_import.html", context)
 
     return render(request, "core/tasks_bulk_import.html", context)
+
 
 @require_GET
 def api_task_detail(request):
