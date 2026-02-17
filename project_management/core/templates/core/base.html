@@ -1368,20 +1368,23 @@
       });
 
       // Close sidebar when clicking menu links on mobile
-      if (window.innerWidth < 900) {
-        document.querySelectorAll('.sidebar a, .sidebar .submenu-link').forEach(function(link) {
-          link.addEventListener('click', function() {
-            if (window.innerWidth < 900) {
+      document.querySelectorAll('.sidebar a, .sidebar .submenu-link, .sidebar .menu-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          // Only close sidebar if on mobile and sidebar is open
+          if (window.innerWidth < 900 && sidebar.classList.contains('sidebar-open')) {
+            // Don't prevent default - let the link navigate
+            // Just close the sidebar
+            setTimeout(function() {
               sidebar.classList.remove('sidebar-open');
               if (overlay) {
                 overlay.style.display = 'none';
                 overlay.classList.remove('show');
               }
               document.body.style.overflow = '';
-            }
-          });
+            }, 100); // Small delay to ensure click registers
+          }
         });
-      }
+      });
 
       // restore desktop collapsed state where appropriate
       if (localStorage.getItem('sidebar-collapsed') === '1') {

@@ -326,11 +326,16 @@
       box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
       position: relative;
       overflow: hidden;
-      /* Mobile touch improvements */
+      /* Mobile touch improvements - CRITICAL */
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-appearance: none;
+      appearance: none;
+      /* Ensure button is always clickable */
+      pointer-events: auto !important;
+      z-index: 10;
     }
     
     button.submit::before {
@@ -342,6 +347,8 @@
       height: 100%;
       background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
       transition: left 0.5s;
+      pointer-events: none; /* Don't block clicks */
+      z-index: -1;
     }
     
     button.submit:hover::before {
@@ -379,10 +386,27 @@
       text-decoration: none;
       font-weight: 700;
       transition: color 0.3s ease;
+      /* Mobile touch improvements */
+      padding: 10px 12px;
+      border-radius: 8px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
     }
     
     a.link:hover {
       color: #2563eb;
+      background: rgba(59, 130, 246, 0.05);
+    }
+    
+    a.link:active {
+      background: rgba(59, 130, 246, 0.1);
+      transform: scale(0.98);
     }
     
     .visually-hidden { 
@@ -433,10 +457,26 @@
         font-size: 15px;
       }
       
-      /* Stack link actions vertically */
+      /* Stack link actions vertically on mobile */
       .link-actions {
         flex-direction: column;
-        gap: 12px;
+        gap: 8px;
+        padding-top: 20px;
+      }
+      
+      /* Make links full width and more tappable on mobile */
+      a.link {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 15px;
+        min-height: 48px;
+        background: rgba(59, 130, 246, 0.05);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+      }
+      
+      a.link:active {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.3);
       }
     }
   </style>
@@ -506,13 +546,19 @@
       const btnText = document.getElementById('btn-text');
       const btnSpinner = document.getElementById('btn-spinner');
 
+      // Ensure button is always enabled on page load
+      submitBtn.disabled = false;
+
       function showError(msg){
         pwError.textContent = msg;
         pwError.style.display = msg ? 'block' : 'none';
         pw.setAttribute('aria-invalid', !!msg);
       }
 
-      toggle.addEventListener('click', () => {
+      // Toggle password visibility
+      toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if(pw.type === 'password'){
           pw.type = 'text';
           toggle.textContent = 'Hide';
@@ -523,6 +569,12 @@
           toggle.setAttribute('aria-label','Show password');
         }
         pw.focus();
+      });
+
+      // Add touch event for mobile
+      toggle.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        toggle.click();
       });
 
       // very simple strength estimate
@@ -555,9 +607,21 @@
         }
       });
 
+      // Handle form submission
       form.addEventListener('submit', (e) => {
+        console.log('Form submit triggered');
+        
+        // Prevent double submission
+        if(submitBtn.disabled){
+          console.log('Button already disabled, preventing double submit');
+          e.preventDefault();
+          return false;
+        }
+
         // client-side validations
         const value = pw.value || '';
+        console.log('Password length:', value.length);
+        
         if(!value){
           e.preventDefault();
           showError('Password is required.');
@@ -578,14 +642,30 @@
           return false;
         }
 
+        console.log('Validation passed, submitting form');
+        
         // on pass: disable button + show spinner and allow normal POST
         submitBtn.disabled = true;
         btnText.style.display = 'none';
         btnSpinner.classList.remove('visually-hidden');
+        
+        // Allow form to submit
         return true;
       });
 
-      // Accessibility: hide spinner initially (CSS class .visually-hidden used by identify.html)
+      // Add direct click handler for mobile
+      submitBtn.addEventListener('click', (e) => {
+        console.log('Button clicked');
+        // Don't prevent default - let the form submit naturally
+      });
+
+      // Add touch event for mobile
+      submitBtn.addEventListener('touchend', (e) => {
+        console.log('Button touched');
+        // Don't prevent default - let the click event fire
+      });
+
+      // Accessibility: hide spinner initially
       // Re-enable submit if user interaction after server error page reloads is handled by server (page re-render).
     })();
   </script>
