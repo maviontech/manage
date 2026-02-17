@@ -253,7 +253,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
@@ -268,6 +268,9 @@
   
   {# Global Notification System - Toast styles #}
   <link rel="stylesheet" href="{% static 'core/css/notifications.css' %}">
+  
+  {# Mobile Responsive Styles #}
+  <link rel="stylesheet" href="{% static 'core/css/mobile.css' %}">
 
   {# Small local overrides to ensure submenus collapse without leaving vertical gaps #}
   <style>
@@ -1312,22 +1315,46 @@
     var toggleBtn = document.getElementById('menu-toggle');
     var sidebar = document.getElementById('sidebar');
     var overlay = null;
+    
     if (toggleBtn && sidebar) {
-      toggleBtn.addEventListener('click', function() {
+      toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
         var vw = window.innerWidth || document.documentElement.clientWidth;
+        
         // On narrow screens, open sidebar as overlay
         if (vw < 900) {
           var isOpen = sidebar.classList.toggle('sidebar-open');
+          
           // create overlay when opening
           if (isOpen) {
             overlay = document.getElementById('sidebar-overlay');
             if (!overlay) {
-              overlay = document.createElement('div'); overlay.id = 'sidebar-overlay'; document.body.appendChild(overlay);
+              overlay = document.createElement('div');
+              overlay.id = 'sidebar-overlay';
+              overlay.className = 'show';
+              document.body.appendChild(overlay);
             }
             overlay.style.display = 'block';
-            overlay.addEventListener('click', function() { sidebar.classList.remove('sidebar-open'); overlay.style.display='none'; });
+            overlay.classList.add('show');
+            
+            // Close sidebar when clicking overlay
+            overlay.addEventListener('click', function() {
+              sidebar.classList.remove('sidebar-open');
+              overlay.style.display = 'none';
+              overlay.classList.remove('show');
+            });
+            
+            // Prevent body scroll when sidebar is open
+            document.body.style.overflow = 'hidden';
           } else {
-            if (overlay) overlay.style.display = 'none';
+            if (overlay) {
+              overlay.style.display = 'none';
+              overlay.classList.remove('show');
+            }
+            // Restore body scroll
+            document.body.style.overflow = '';
           }
         } else {
           // desktop behaviour: collapse width
@@ -1340,6 +1367,22 @@
         }
       });
 
+      // Close sidebar when clicking menu links on mobile
+      if (window.innerWidth < 900) {
+        document.querySelectorAll('.sidebar a, .sidebar .submenu-link').forEach(function(link) {
+          link.addEventListener('click', function() {
+            if (window.innerWidth < 900) {
+              sidebar.classList.remove('sidebar-open');
+              if (overlay) {
+                overlay.style.display = 'none';
+                overlay.classList.remove('show');
+              }
+              document.body.style.overflow = '';
+            }
+          });
+        });
+      }
+
       // restore desktop collapsed state where appropriate
       if (localStorage.getItem('sidebar-collapsed') === '1') {
         // Only apply collapsed automatically for sufficiently wide screens
@@ -1347,6 +1390,20 @@
           sidebar.classList.add('sidebar-collapsed');
         }
       }
+      
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        var vw = window.innerWidth || document.documentElement.clientWidth;
+        if (vw >= 900) {
+          // Desktop mode - remove mobile classes
+          sidebar.classList.remove('sidebar-open');
+          if (overlay) {
+            overlay.style.display = 'none';
+            overlay.classList.remove('show');
+          }
+          document.body.style.overflow = '';
+        }
+      });
     }
     
     // Global Search Implementation

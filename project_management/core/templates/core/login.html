@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
   <title>Enter Your Password — Sign in</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -326,6 +326,11 @@
       box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
       position: relative;
       overflow: hidden;
+      /* Mobile touch improvements */
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
     }
     
     button.submit::before {
@@ -393,20 +398,45 @@
     }
 
     @media (max-width:480px) { 
+      body {
+        padding: 16px;
+      }
+      
       .card { 
-        padding: 36px 28px; 
+        padding: 32px 24px; 
         border-radius: 20px; 
       }
+      
       h1 {
         font-size: 24px;
       }
+      
       .logo { 
         width: 70px; 
         height: 70px; 
       }
+      
       .logo svg { 
         width: 35px; 
         height: 35px; 
+      }
+      
+      /* Ensure inputs don't zoom on iOS */
+      input[type="password"],
+      input[type="text"] {
+        font-size: 16px !important;
+      }
+      
+      /* Improve button tap target */
+      button.submit {
+        min-height: 48px;
+        font-size: 15px;
+      }
+      
+      /* Stack link actions vertically */
+      .link-actions {
+        flex-direction: column;
+        gap: 12px;
       }
     }
   </style>
