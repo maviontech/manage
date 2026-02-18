@@ -103,6 +103,16 @@
             background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             position: relative;
             overflow: hidden;
+            /* CRITICAL: Mobile button fixes */
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: transparent !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            z-index: 100 !important;
         }
 
         .btn-gradient::before {
@@ -114,10 +124,16 @@
             height: 100%;
             background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.5s;
+            pointer-events: none !important;
+            z-index: -1 !important;
         }
 
         .btn-gradient:hover::before {
             left: 100%;
+        }
+
+        .btn-gradient:active {
+            transform: scale(0.98) !important;
         }
 
         /* Logo Animation */
@@ -132,6 +148,59 @@
 
         .hidden-step {
             display: none;
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 640px) {
+            .sm\:mx-auto {
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .sm\:w-full {
+                width: 100%;
+            }
+
+            .sm\:max-w-md {
+                max-width: 28rem;
+            }
+
+            .sm\:rounded-3xl {
+                border-radius: 1.5rem;
+            }
+
+            .sm\:px-12 {
+                padding-left: 3rem;
+                padding-right: 3rem;
+            }
+
+            /* Ensure all inputs are properly sized */
+            input[type="text"],
+            input[type="password"] {
+                font-size: 16px !important;
+                -webkit-appearance: none !important;
+                appearance: none !important;
+            }
+
+            /* Ensure button is tappable */
+            button[type="submit"] {
+                min-height: 48px !important;
+                touch-action: manipulation !important;
+                -webkit-tap-highlight-color: transparent !important;
+                pointer-events: auto !important;
+                cursor: pointer !important;
+                z-index: 100 !important;
+            }
+
+            /* Make links more tappable */
+            a {
+                min-height: 44px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                padding: 10px 12px !important;
+                touch-action: manipulation !important;
+                -webkit-tap-highlight-color: transparent !important;
+            }
         }
     </style>
 </head>
