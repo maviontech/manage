@@ -284,20 +284,30 @@ function deleteIssue() {
 
 // Attachment Management
 function uploadAttachment() {
+    console.log('uploadAttachment called, issueId:', issueId);
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
 
     input.onchange = async (e) => {
         const files = e.target.files;
+        console.log('Files selected:', files.length);
+        
+        if (!files || files.length === 0) {
+            alert('Please select at least one file to upload');
+            return;
+        }
+        
         const formData = new FormData();
 
         for (let file of files) {
+            console.log('Adding file:', file.name, 'size:', file.size);
             formData.append('files', file);
         }
 
         try {
-            const response = await fetch(`/projects/feedback/${issueId}/upload/`, {
+            console.log('Sending upload request to:', `/tasks/${issueId}/upload-attachment/`);
+            const response = await fetch(`/tasks/${issueId}/upload-attachment/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken
@@ -305,16 +315,19 @@ function uploadAttachment() {
                 body: formData
             });
 
+            console.log('Response status:', response.status);
             const data = await response.json();
+            console.log('Response data:', data);
 
             if (data.success) {
+                alert(data.message || 'Files uploaded successfully!');
                 location.reload();
             } else {
                 alert('Error: ' + (data.error || 'Failed to upload files'));
             }
         } catch (error) {
             console.error('Upload error:', error);
-            alert('Failed to upload files');
+            alert('Failed to upload files. Please try again.');
         }
     };
 
@@ -359,13 +372,13 @@ function submitPriorityChange() {
 
 function submitAttachment() {
     const fileInput = document.getElementById('attachmentFile');
-    if (fileInput.files.length > 0) {
+    if (fileInput && fileInput.files.length > 0) {
         const formData = new FormData();
         for (let file of fileInput.files) {
             formData.append('files', file);
         }
 
-        fetch(`/projects/feedback/${issueId}/upload/`, {
+        fetch(`/tasks/${issueId}/upload-attachment/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrfToken
@@ -374,6 +387,7 @@ function submitAttachment() {
         }).then(response => response.json())
           .then(data => {
               if (data.success) {
+                  alert(data.message || 'Files uploaded successfully!');
                   closeModal('uploadModal');
                   location.reload();
               } else {
@@ -382,8 +396,10 @@ function submitAttachment() {
           })
           .catch(error => {
               console.error('Upload error:', error);
-              alert('Failed to upload files');
+              alert('Failed to upload files. Please try again.');
           });
+    } else {
+        alert('Please select at least one file to upload');
     }
 }
 

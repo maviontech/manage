@@ -73,6 +73,7 @@ urlpatterns = [
     path("tasks/<int:task_id>/update-status/", views_tasks.update_task_status, name="update_task_status"),
     path("tasks/<int:task_id>/update-priority/", views_tasks.update_task_priority, name="update_task_priority"),
     path("tasks/<int:task_id>/add-comment/", views_tasks.add_task_comment, name="add_task_comment"),
+    path("tasks/<int:task_id>/upload-attachment/", views_tasks.upload_task_attachment, name="upload_task_attachment"),
 
     # APIs
     path("tasks/api/assign/", views_tasks.assign_task_api, name="api_assign_task"),

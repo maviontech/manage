@@ -3520,6 +3520,117 @@ def add_task_comment(request, task_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+@require_POST
+def upload_task_attachment(request, task_id):
+    '''Upload attachment to task via AJAX'''
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+    try:
+        files = request.FILES.getlist('files')
+        logger.info(f"Upload attempt for task {task_id}, files received: {len(files)}")
+
+        if not files:
+            logger.warning(f"No files in request for task {task_id}")
+            return JsonResponse({'success': False, 'error': 'No files uploaded'})
+
+        conn = get_tenant_conn(request)
+        cur = conn.cursor()
+
+        # Verify task exists
+        cur.execute('SELECT id FROM tasks WHERE id = %s', (task_id,))
+        task_exists = cur.fetchone()
+        if not task_exists:
+            cur.close()
+            logger.error(f"Task {task_id} not found")
+            return JsonResponse({'success': False, 'error': 'Task not found'})
+
+        # Get user ID
+        user_id = request.session.get('user_id')
+        logger.info(f"User ID: {user_id}")
+
+        # Create attachments directory if it doesn't exist
+        attachments_dir = os.path.join(settings.MEDIA_ROOT, 'task_attachments')
+        os.makedirs(attachments_dir, exist_ok=True)
+        logger.info(f"Attachments directory: {attachments_dir}")
+
+        saved_count = 0
+        errors = []
+        
+        for uploaded_file in files:
+            try:
+                # Generate unique filename with timestamp
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                safe_filename = f"{task_id}_{timestamp}_{uploaded_file.name}"
+                file_path = os.path.join(attachments_dir, safe_filename)
+                
+                logger.info(f"Saving file: {safe_filename}")
+
+                # Save the file to disk
+                with open(file_path, 'wb+') as destination:
+                    for chunk in uploaded_file.chunks():
+                        destination.write(chunk)
+
+                # Store relative path for database (use forward slashes for consistency)
+                relative_path = f'task_attachments/{safe_filename}'
+
+                # Save attachment info to database
+                cur.execute("""
+                    INSERT INTO task_attachments
+                    (task_id, file_name, file_path, file_size, file_type, uploaded_by)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (
+                    task_id,
+                    uploaded_file.name,
+                    relative_path,
+                    uploaded_file.size,
+                    uploaded_file.content_type or 'application/octet-stream',
+                    user_id
+                ))
+
+                # Log attachment upload to activity timeline
+                try:
+                    cur.execute(
+                        "INSERT INTO activity_log (entity_type, entity_id, action, performed_by, timestamp) VALUES (%s,%s,%s,%s,NOW())",
+                        ("task", task_id, f"Added attachment {uploaded_file.name}", user_id),
+                    )
+                except Exception as log_err:
+                    logger.warning(f"Failed to log activity: {log_err}")
+
+                saved_count += 1
+                logger.info(f"Successfully saved: {safe_filename}")
+                
+            except Exception as e:
+                error_msg = f"Error saving {uploaded_file.name}: {str(e)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+                continue
+
+        conn.commit()
+        cur.close()
+
+        if saved_count > 0:
+            logger.info(f"Upload complete: {saved_count} files saved")
+            return JsonResponse({
+                'success': True,
+                'message': f'{saved_count} file(s) uploaded successfully'
+            })
+        else:
+            error_detail = '; '.join(errors) if errors else 'Unknown error'
+            logger.error(f"Upload failed: {error_detail}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Failed to upload files: {error_detail}'
+            })
+
+    except Exception as e:
+        logger.exception(f"Upload exception for task {task_id}")
+        return JsonResponse({'success': False, 'error': f'Server error: {str(e)}'})
+
+
 
 # ==============================
 #  ASSIGN MEMBER TO TASK (API)
