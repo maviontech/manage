@@ -678,7 +678,7 @@ def api_update_status(request):
 #  BULK IMPORT CSV
 # ==============================
 def download_excel_template(request):
-    """Generate Excel template with dropdowns for projects, subprojects, and members"""
+    """Generate work-type-specific Excel template with dropdowns"""
     # Check authentication
     if not request.session.get('user_id'):
         return redirect('identify')
@@ -687,6 +687,32 @@ def download_excel_template(request):
     from openpyxl.styles import Font, PatternFill, Alignment
     from openpyxl.worksheet.datavalidation import DataValidation
     from django.http import HttpResponse
+    
+    # Get work_type from query parameter (default to 'Task')
+    work_type = request.GET.get('work_type', 'Task')
+    
+    # Define work-type-specific columns (work_type removed, file_attachment added)
+    WORK_TYPE_COLUMNS = {
+        'Task': ['title', 'description', 'project_name', 'subproject_name', 'priority', 
+                 'due_date', 'assigned_to_name', 'file_attachment'],
+        'Bug': ['title', 'project_name', 'subproject_name', 'severity', 'priority', 
+                'status', 'due_date', 'assigned_to_name', 'description', 
+                'steps_to_reproduce', 'expected_behavior', 'actual_behavior', 'file_attachment'],
+        'Story': ['title', 'description', 'project_name', 'subproject_name', 'priority', 
+                  'story_points', 'acceptance_criteria', 'due_date', 'assigned_to_name', 'file_attachment'],
+        'Defect': ['title', 'project_name', 'subproject_name', 'severity', 'priority', 
+                   'status', 'due_date', 'assigned_to_name', 'description', 
+                   'steps_to_reproduce', 'expected_behavior', 'actual_behavior', 'file_attachment'],
+        'Subtask': ['title', 'description', 'project_name', 'subproject_name', 'parent_task_id',
+                    'priority', 'due_date', 'assigned_to_name', 'file_attachment'],
+        'Report': ['title', 'description', 'project_name', 'subproject_name', 'report_type',
+                   'priority', 'due_date', 'assigned_to_name', 'file_attachment'],
+        'Change Request': ['title', 'description', 'project_name', 'subproject_name', 
+                          'change_type', 'impact', 'priority', 'due_date', 'assigned_to_name', 'file_attachment']
+    }
+    
+    # Get columns for selected work_type
+    headers = WORK_TYPE_COLUMNS.get(work_type, WORK_TYPE_COLUMNS['Task'])
     
     conn = get_tenant_conn(request)
     cur = conn.cursor()
@@ -747,10 +773,7 @@ def download_excel_template(request):
             subprojects_sheet[f'C{idx}'] = subproj['project_id']
             subprojects_sheet[f'D{idx}'] = project_names.get(subproj['project_id'], '')
         
-        # Setup main sheet headers - Changed to show user-friendly names
-        headers = ['title', 'description', 'project_name', 'subproject_name', 'status', 
-                   'priority', 'assigned_to_name', 'due_date', 'work_type', 'note']
-        
+        # Setup main sheet headers
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF")
         
@@ -761,112 +784,202 @@ def download_excel_template(request):
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center')
         
-        # Set column widths
-        ws.column_dimensions['A'].width = 30  # title
-        ws.column_dimensions['B'].width = 40  # description
-        ws.column_dimensions['C'].width = 25  # project_name
-        ws.column_dimensions['D'].width = 25  # subproject_name
-        ws.column_dimensions['E'].width = 12  # status
-        ws.column_dimensions['F'].width = 12  # priority
-        ws.column_dimensions['G'].width = 25  # assigned_to_name
-        ws.column_dimensions['H'].width = 12  # due_date
-        ws.column_dimensions['I'].width = 15  # work_type
-        ws.column_dimensions['J'].width = 40  # note
+        # Set column widths dynamically
+        column_widths = {
+            'title': 30, 'description': 40, 'project_name': 25, 'subproject_name': 25,
+            'status': 12, 'priority': 12, 'severity': 12, 'assigned_to_name': 25,
+            'due_date': 12, 'file_attachment': 40, 'steps_to_reproduce': 40,
+            'expected_behavior': 35, 'actual_behavior': 35, 'story_points': 12,
+            'acceptance_criteria': 40, 'parent_task_id': 15, 'report_type': 20,
+            'change_type': 20, 'impact': 15
+        }
         
-        # Add data validation for project_name (column C) - Show names
-        if len(projects) > 0:
+        for col_num, header in enumerate(headers, start=1):
+            col_letter = chr(64 + col_num)  # A=65, so 64+1=A
+            ws.column_dimensions[col_letter].width = column_widths.get(header, 20)
+        
+        # Add data validations based on columns present
+        col_index = {header: idx + 1 for idx, header in enumerate(headers)}
+        
+        # Project name validation
+        if 'project_name' in col_index and len(projects) > 0:
+            col_letter = chr(64 + col_index['project_name'])
             project_dv = DataValidation(
                 type="list",
-                formula1=f"=Projects_Data!$B$2:$B${len(projects)+1}",  # Changed to column B (names)
+                formula1=f"=Projects_Data!$B$2:$B${len(projects)+1}",
                 allow_blank=True
             )
             project_dv.error = 'Please select a valid project'
             project_dv.errorTitle = 'Invalid Project'
             ws.add_data_validation(project_dv)
-            project_dv.add(f'C2:C1000')
+            project_dv.add(f'{col_letter}2:{col_letter}1000')
         
-        # Add data validation for subproject_name (column D) - Show names
-        # NOTE: Shows ALL subprojects - user must select one that matches their project
-        if len(subprojects) > 0:
+        # Subproject name validation
+        if 'subproject_name' in col_index and len(subprojects) > 0:
+            col_letter = chr(64 + col_index['subproject_name'])
             subproject_dv = DataValidation(
                 type="list",
-                formula1=f"=Subprojects_Data!$B$2:$B${len(subprojects)+1}",  # Changed to column B (names)
+                formula1=f"=Subprojects_Data!$B$2:$B${len(subprojects)+1}",
                 allow_blank=True
             )
             subproject_dv.error = 'Please select a valid subproject for your project'
             subproject_dv.errorTitle = 'Invalid Subproject'
             ws.add_data_validation(subproject_dv)
-            subproject_dv.add(f'D2:D1000')
+            subproject_dv.add(f'{col_letter}2:{col_letter}1000')
         
-        # Add data validation for status (column E)
-        status_dv = DataValidation(
-            type="list",
-            formula1='"Open,In Progress,Review,Blocked,Closed,Pending,New"',
-            allow_blank=True
-        )
-        status_dv.error = 'Please select a valid status'
-        status_dv.errorTitle = 'Invalid Status'
-        ws.add_data_validation(status_dv)
-        status_dv.add('E2:E1000')
+        # Status validation
+        if 'status' in col_index:
+            col_letter = chr(64 + col_index['status'])
+            status_dv = DataValidation(
+                type="list",
+                formula1='"Open,In Progress,Review,Blocked,Closed,Pending,New"',
+                allow_blank=True
+            )
+            status_dv.error = 'Please select a valid status'
+            status_dv.errorTitle = 'Invalid Status'
+            ws.add_data_validation(status_dv)
+            status_dv.add(f'{col_letter}2:{col_letter}1000')
         
-        # Add data validation for priority (column F)
-        priority_dv = DataValidation(
-            type="list",
-            formula1='"Low,Normal,High,Critical"',
-            allow_blank=True
-        )
-        priority_dv.error = 'Please select a valid priority'
-        priority_dv.errorTitle = 'Invalid Priority'
-        ws.add_data_validation(priority_dv)
-        priority_dv.add('F2:F1000')
+        # Priority validation
+        if 'priority' in col_index:
+            col_letter = chr(64 + col_index['priority'])
+            priority_dv = DataValidation(
+                type="list",
+                formula1='"Low,Normal,High,Critical"',
+                allow_blank=True
+            )
+            priority_dv.error = 'Please select a valid priority'
+            priority_dv.errorTitle = 'Invalid Priority'
+            ws.add_data_validation(priority_dv)
+            priority_dv.add(f'{col_letter}2:{col_letter}1000')
         
-        # Add data validation for assigned_to_name (column G) - Show names
-        if len(members) > 0:
+        # Severity validation (for Bug/Defect)
+        if 'severity' in col_index:
+            col_letter = chr(64 + col_index['severity'])
+            severity_dv = DataValidation(
+                type="list",
+                formula1='"Low,Medium,High,Critical"',
+                allow_blank=True
+            )
+            severity_dv.error = 'Please select a valid severity'
+            severity_dv.errorTitle = 'Invalid Severity'
+            ws.add_data_validation(severity_dv)
+            severity_dv.add(f'{col_letter}2:{col_letter}1000')
+        
+        # Assigned to validation
+        if 'assigned_to_name' in col_index and len(members) > 0:
+            col_letter = chr(64 + col_index['assigned_to_name'])
             member_dv = DataValidation(
                 type="list",
-                formula1=f"=Members_Data!$B$2:$B${len(members)+1}",  # Changed to column B (names)
+                formula1=f"=Members_Data!$B$2:$B${len(members)+1}",
                 allow_blank=True
             )
             member_dv.error = 'Please select a valid member'
             member_dv.errorTitle = 'Invalid Member'
             ws.add_data_validation(member_dv)
-            member_dv.add(f'G2:G1000')
+            member_dv.add(f'{col_letter}2:{col_letter}1000')
         
-        # Add data validation for work_type (column I)
-        worktype_dv = DataValidation(
-            type="list",
-            formula1='"Task,Bug,Story,Defect,Subtask,Report,Change Request"',
-            allow_blank=True
-        )
-        worktype_dv.error = 'Please select a valid work type'
-        worktype_dv.errorTitle = 'Invalid Work Type'
-        ws.add_data_validation(worktype_dv)
-        worktype_dv.add('I2:I1000')
+        # Note: work_type column removed - it's determined by the template downloaded
+        # file_attachment column is for file paths (no validation needed)
         
-        # Add instruction row with NAMES instead of IDs
-        ws['A2'] = 'Fix login bug'
-        ws['B2'] = 'Users cannot login with special characters in password'
-        ws['C2'] = projects[0]['name'] if projects else ''  # Changed to name
-        # Find a subproject for the first project
-        first_project_subproject = None
-        if projects and subprojects:
-            for subproj in subprojects:
-                if subproj['project_id'] == projects[0]['id']:
-                    first_project_subproject = subproj['name']
-                    break
-        ws['D2'] = first_project_subproject if first_project_subproject else ''
-        ws['E2'] = 'Open'
-        ws['F2'] = 'High'
-        ws['G2'] = members[0]['name'] if members else ''  # Changed to name
-        ws['H2'] = '2026-03-15'
-        ws['I2'] = 'Task'
-        ws['J2'] = 'Check Subprojects_Data sheet to see which subprojects belong to your project'
+        # Add sample row based on work_type
+        sample_data = {
+            'Task': {
+                'title': 'Fix login bug',
+                'description': 'Users cannot login with special characters in password',
+                'priority': 'High',
+                'due_date': '2026-03-15',
+                'file_attachment': 'C:\\path\\to\\screenshot.png'
+            },
+            'Bug': {
+                'title': 'Login fails with special characters',
+                'description': 'Users cannot login when password contains special characters',
+                'severity': 'High',
+                'priority': 'Critical',
+                'status': 'Open',
+                'due_date': '2026-03-15',
+                'steps_to_reproduce': '1. Enter username\n2. Enter password with @ symbol\n3. Click login',
+                'expected_behavior': 'User should be logged in successfully',
+                'actual_behavior': 'Error message displayed: Invalid credentials',
+                'file_attachment': 'C:\\path\\to\\error_screenshot.png'
+            },
+            'Story': {
+                'title': 'User can reset password',
+                'description': 'As a user, I want to reset my password so that I can regain access to my account',
+                'priority': 'High',
+                'story_points': '5',
+                'acceptance_criteria': '- User receives reset email\n- Link expires after 24 hours\n- Password meets security requirements',
+                'due_date': '2026-03-20',
+                'file_attachment': 'C:\\path\\to\\mockup.png'
+            },
+            'Defect': {
+                'title': 'Dashboard shows incorrect data',
+                'description': 'Dashboard displays wrong task counts',
+                'severity': 'Medium',
+                'priority': 'High',
+                'status': 'New',
+                'due_date': '2026-03-18',
+                'steps_to_reproduce': '1. Login to dashboard\n2. Check task count widget',
+                'expected_behavior': 'Shows correct count of tasks',
+                'actual_behavior': 'Shows count from previous day',
+                'file_attachment': 'C:\\path\\to\\dashboard_screenshot.png'
+            },
+            'Subtask': {
+                'title': 'Design login form mockup',
+                'description': 'Create mockup for new login form design',
+                'parent_task_id': '123',
+                'priority': 'Normal',
+                'due_date': '2026-03-12',
+                'file_attachment': 'C:\\path\\to\\design.png'
+            },
+            'Report': {
+                'title': 'Monthly performance report',
+                'description': 'Generate monthly performance metrics report',
+                'report_type': 'Performance',
+                'priority': 'Normal',
+                'due_date': '2026-03-31',
+                'file_attachment': 'C:\\path\\to\\report_data.xlsx'
+            },
+            'Change Request': {
+                'title': 'Add two-factor authentication',
+                'description': 'Implement 2FA for enhanced security',
+                'change_type': 'Enhancement',
+                'impact': 'High',
+                'priority': 'High',
+                'due_date': '2026-04-15',
+                'file_attachment': 'C:\\path\\to\\requirements.pdf'
+            }
+        }
         
-        # Create response
+        sample = sample_data.get(work_type, sample_data['Task'])
+        
+        # Fill sample row
+        for col_num, header in enumerate(headers, start=1):
+            col_letter = chr(64 + col_num)
+            if header == 'project_name':
+                ws[f'{col_letter}2'] = projects[0]['name'] if projects else ''
+            elif header == 'subproject_name':
+                # Find a subproject for the first project
+                first_project_subproject = None
+                if projects and subprojects:
+                    for subproj in subprojects:
+                        if subproj['project_id'] == projects[0]['id']:
+                            first_project_subproject = subproj['name']
+                            break
+                ws[f'{col_letter}2'] = first_project_subproject if first_project_subproject else ''
+            elif header == 'assigned_to_name':
+                ws[f'{col_letter}2'] = members[0]['name'] if members else ''
+            elif header in sample:
+                ws[f'{col_letter}2'] = sample[header]
+            else:
+                ws[f'{col_letter}2'] = ''
+        
+        # Create response with work-type-specific filename
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-        response['Content-Disposition'] = 'attachment; filename=tasks_import_template.xlsx'
+        filename = f'tasks_import_{work_type.lower().replace(" ", "_")}_template.xlsx'
+        response['Content-Disposition'] = f'attachment; filename={filename}'
         
         wb.save(response)
         return response
@@ -965,6 +1078,9 @@ def bulk_import_csv_view(request):
     context = {"page": "bulk_import"}
 
     if request.method == "POST" and request.FILES.get("csv_file"):
+        # Get work_type from POST data (passed from the form)
+        work_type = request.POST.get("work_type", "Task")
+        
         conn = get_tenant_conn(request)
         cur = conn.cursor()
         
@@ -1059,8 +1175,22 @@ def bulk_import_csv_view(request):
             # Enforce required header columns - Support both old (ID) and new (name) formats
             required_cols_old = {"title", "project_id"}
             required_cols_new = {"title", "project_name"}
-            optional_cols_old = {"description", "subproject_id", "status", "priority", "assigned_to", "due_date", "work_type"}
-            optional_cols_new = {"description", "subproject_name", "status", "priority", "assigned_to_name", "due_date", "work_type", "note"}
+            
+            # Extended optional columns to support work-type-specific fields
+            optional_cols_old = {"description", "subproject_id", "status", "priority", "assigned_to", "due_date", "work_type", "file_attachment"}
+            optional_cols_new = {
+                "description", "subproject_name", "status", "priority", "assigned_to_name", "due_date", "work_type", "note", "file_attachment",
+                # Bug/Defect specific
+                "severity", "steps_to_reproduce", "expected_behavior", "actual_behavior",
+                # Story specific
+                "story_points", "acceptance_criteria",
+                # Subtask specific
+                "parent_task_id",
+                # Report specific
+                "report_type",
+                # Change Request specific
+                "change_type", "impact"
+            }
             
             present = set((reader.fieldnames or []))
             
@@ -1221,8 +1351,62 @@ def bulk_import_csv_view(request):
                         except Exception:
                             raise Exception("Invalid due_date. Use YYYY-MM-DD format (e.g., 2024-12-31).")
 
-                    # Optional work_type
-                    work_type = row.get("work_type") or "Task"
+                    # Optional work_type - use from Excel if present, otherwise use from form
+                    row_work_type = row.get("work_type", "").strip()
+                    if not row_work_type:
+                        row_work_type = work_type  # Use work_type from form/URL
+                    
+                    # Build description with work-type-specific fields
+                    base_description = row.get("description") or ""
+                    full_description = base_description
+                    
+                    # Add work-type-specific fields to description
+                    if row_work_type in ["Bug", "Defect"]:
+                        # Validate severity for bugs/defects
+                        severity = row.get("severity", "")
+                        if severity:
+                            valid_severities = ["Low", "Medium", "High", "Critical"]
+                            if severity not in valid_severities:
+                                raise Exception(f"Invalid severity: {severity}. Must be one of: {', '.join(valid_severities)}")
+                            # Use severity as priority for bugs/defects
+                            priority = severity
+                        
+                        # Append bug-specific fields to description
+                        if row.get("steps_to_reproduce"):
+                            full_description += f"\n\n**Steps to Reproduce:**\n{row.get('steps_to_reproduce')}"
+                        if row.get("expected_behavior"):
+                            full_description += f"\n\n**Expected Behavior:**\n{row.get('expected_behavior')}"
+                        if row.get("actual_behavior"):
+                            full_description += f"\n\n**Actual Behavior:**\n{row.get('actual_behavior')}"
+                    
+                    elif row_work_type == "Story":
+                        # Append story-specific fields to description
+                        if row.get("story_points"):
+                            full_description += f"\n\n**Story Points:** {row.get('story_points')}"
+                        if row.get("acceptance_criteria"):
+                            full_description += f"\n\n**Acceptance Criteria:**\n{row.get('acceptance_criteria')}"
+                    
+                    elif row_work_type == "Subtask":
+                        # Handle parent_task_id
+                        parent_task_id = row.get("parent_task_id", "").strip()
+                        if parent_task_id:
+                            # Validate parent task exists
+                            cur.execute("SELECT id FROM tasks WHERE id=%s", (parent_task_id,))
+                            if not cur.fetchone():
+                                raise Exception(f"Invalid parent_task_id: {parent_task_id}. Parent task does not exist.")
+                            full_description += f"\n\n**Parent Task ID:** {parent_task_id}"
+                    
+                    elif row_work_type == "Report":
+                        # Append report-specific fields
+                        if row.get("report_type"):
+                            full_description += f"\n\n**Report Type:** {row.get('report_type')}"
+                    
+                    elif row_work_type == "Change Request":
+                        # Append change request-specific fields
+                        if row.get("change_type"):
+                            full_description += f"\n\n**Change Type:** {row.get('change_type')}"
+                        if row.get("impact"):
+                            full_description += f"\n\n**Impact:** {row.get('impact')}"
 
                     # Insert task
                     cur.execute(
@@ -1234,10 +1418,10 @@ def bulk_import_csv_view(request):
                             int(project_id),
                             int(subproject_id) if subproject_id else None,
                             row["title"],
-                            row.get("description") or "",
+                            full_description,  # Use full_description with work-type-specific fields
                             status,
                             priority,
-                            work_type,
+                            row_work_type,  # Use row_work_type
                             assigned_to,
                             assigned_type,
                             request.session.get("user_id"),
@@ -1246,6 +1430,51 @@ def bulk_import_csv_view(request):
                     )
                     
                     task_id = cur.lastrowid
+                    
+                    # Handle file attachment if provided
+                    file_path = row.get("file_attachment", "").strip()
+                    if file_path:
+                        import os
+                        from django.core.files.base import ContentFile
+                        
+                        # Check if file exists
+                        if os.path.exists(file_path):
+                            try:
+                                # Read the file
+                                with open(file_path, 'rb') as f:
+                                    file_content = f.read()
+                                
+                                # Get filename
+                                filename = os.path.basename(file_path)
+                                
+                                # Generate unique filename
+                                import time
+                                timestamp = int(time.time())
+                                unique_filename = f"{task_id}_{timestamp}_{filename}"
+                                
+                                # Save to media/task_attachments/
+                                from django.conf import settings
+                                upload_dir = os.path.join(settings.MEDIA_ROOT, 'task_attachments')
+                                os.makedirs(upload_dir, exist_ok=True)
+                                
+                                file_save_path = os.path.join(upload_dir, unique_filename)
+                                with open(file_save_path, 'wb') as dest:
+                                    dest.write(file_content)
+                                
+                                # Store relative path in database
+                                relative_path = f'task_attachments/{unique_filename}'
+                                
+                                # Insert attachment record
+                                cur.execute(
+                                    """INSERT INTO task_attachments 
+                                       (task_id, file_path, uploaded_by, uploaded_at) 
+                                       VALUES (%s, %s, %s, NOW())""",
+                                    (task_id, relative_path, request.session.get("user_id"))
+                                )
+                            except Exception as e:
+                                warnings.append(f"Row {i}: Could not attach file '{file_path}': {str(e)}")
+                        else:
+                            warnings.append(f"Row {i}: File not found: '{file_path}'")
                     
                     # Log activity
                     try:

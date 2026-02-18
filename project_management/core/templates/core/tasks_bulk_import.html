@@ -456,6 +456,7 @@
       
       <form id="bulkForm" method="post" enctype="multipart/form-data" style="position: relative; z-index: 1;">
         {% csrf_token %}
+        <input type="hidden" name="work_type" id="workTypeInput" value="">
         <div class="form-group-professional" style="max-width: 500px; margin: 0 auto 1.5rem;">
           <input type="file" name="csv_file" id="csv_file" accept=".csv,.xlsx,.xls" required class="form-control-professional" style="background: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.5);">
         </div>
@@ -470,49 +471,203 @@
       <div class="info-box">
         <div class="info-box-title">
           <i class="fas fa-info-circle"></i>
-          CSV/Excel Format Requirements
+          Work-Type Specific Templates
         </div>
         <p class="info-box-content" style="margin-bottom: 0.75rem;">
-          Your file must include these <strong>required columns</strong>:
+          Each work type has its own set of columns tailored to its needs:
         </p>
-        <p class="info-box-content" style="font-weight: 600; margin-bottom: 0.75rem;">
-          <code>title</code>, <code>project_id</code>
-        </p>
-        <p class="info-box-content" style="margin-bottom: 0.75rem;">
-          <strong>Optional columns:</strong>
-        </p>
-        <p class="info-box-content" style="font-weight: 600; margin-bottom: 0.75rem;">
-          <code>description</code>, <code>subproject_id</code>, <code>status</code>, <code>priority</code>, 
-          <code>assigned_to</code>, <code>due_date</code>, <code>work_type</code>
-        </p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div style="background: rgba(37, 99, 235, 0.05); padding: 12px; border-radius: 6px;">
+            <p style="font-weight: 600; color: var(--primary-color); margin-bottom: 8px;">
+              <i class="fas fa-tasks"></i> Task
+            </p>
+            <p style="font-size: 13px; color: var(--gray-700); margin: 0;">
+              title, description, project, subproject, priority, due_date, assigned_to, file_attachment
+            </p>
+          </div>
+          
+          <div style="background: rgba(239, 68, 68, 0.05); padding: 12px; border-radius: 6px;">
+            <p style="font-weight: 600; color: #ef4444; margin-bottom: 8px;">
+              <i class="fas fa-bug"></i> Bug
+            </p>
+            <p style="font-size: 13px; color: var(--gray-700); margin: 0;">
+              title, project, severity, priority, status, steps_to_reproduce, expected_behavior, actual_behavior, file_attachment
+            </p>
+          </div>
+          
+          <div style="background: rgba(16, 185, 129, 0.05); padding: 12px; border-radius: 6px;">
+            <p style="font-weight: 600; color: #10b981; margin-bottom: 8px;">
+              <i class="fas fa-book"></i> Story
+            </p>
+            <p style="font-size: 13px; color: var(--gray-700); margin: 0;">
+              title, description, project, priority, story_points, acceptance_criteria, due_date, file_attachment
+            </p>
+          </div>
+          
+          <div style="background: rgba(245, 158, 11, 0.05); padding: 12px; border-radius: 6px;">
+            <p style="font-weight: 600; color: #f59e0b; margin-bottom: 8px;">
+              <i class="fas fa-exclamation-triangle"></i> Defect
+            </p>
+            <p style="font-size: 13px; color: var(--gray-700); margin: 0;">
+              title, project, severity, priority, status, steps_to_reproduce, expected_behavior, actual_behavior, file_attachment
+            </p>
+          </div>
+          
+          <div style="background: rgba(139, 92, 246, 0.05); padding: 12px; border-radius: 6px;">
+            <p style="font-weight: 600; color: #8b5cf6; margin-bottom: 8px;">
+              <i class="fas fa-sitemap"></i> Subtask
+            </p>
+            <p style="font-size: 13px; color: var(--gray-700); margin: 0;">
+              title, description, project, parent_task_id, priority, due_date, assigned_to, file_attachment
+            </p>
+          </div>
+          
+          <div style="background: rgba(59, 130, 246, 0.05); padding: 12px; border-radius: 6px;">
+            <p style="font-weight: 600; color: #3b82f6; margin-bottom: 8px;">
+              <i class="fas fa-file-alt"></i> Report
+            </p>
+            <p style="font-size: 13px; color: var(--gray-700); margin: 0;">
+              title, description, project, report_type, priority, due_date, assigned_to, file_attachment
+            </p>
+          </div>
+          
+          <div style="background: rgba(236, 72, 153, 0.05); padding: 12px; border-radius: 6px;">
+            <p style="font-weight: 600; color: #ec4899; margin-bottom: 8px;">
+              <i class="fas fa-exchange-alt"></i> Change Request
+            </p>
+            <p style="font-size: 13px; color: var(--gray-700); margin: 0;">
+              title, description, project, change_type, impact, priority, due_date, assigned_to, file_attachment
+            </p>
+          </div>
+        </div>
+        
         <div style="background: rgba(37, 99, 235, 0.05); padding: 12px; border-radius: 6px; margin-top: 12px;">
           <p class="info-box-content" style="margin-bottom: 8px;">
             <strong><i class="fas fa-lightbulb"></i> Important Tips:</strong>
           </p>
           <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: var(--gray-700);">
-            <li>Use <code>member:ID</code> or <code>team:ID</code> format in <code>assigned_to</code> column (e.g., member:5 or team:2)</li>
+            <li>Download the template for your specific work type to get the right columns</li>
+            <li>The work type is determined by which template you download (no work_type column needed)</li>
+            <li>All templates include dropdowns for projects, subprojects, and team members</li>
+            <li><strong>file_attachment</strong>: Enter the full file path (e.g., C:\path\to\file.png) to attach files</li>
+            <li>Files will be automatically uploaded and attached to the task during import</li>
             <li>Dates must be in <code>YYYY-MM-DD</code> format (e.g., 2026-03-15)</li>
-            <li>Valid status values: Open, In Progress, Review, Blocked, Closed, Pending, New</li>
-            <li>Valid priority values: Low, Normal, High, Critical</li>
-            <li>Supported formats: CSV (.csv), Excel (.xlsx, .xls)</li>
-            <li>File size limit: 5MB</li>
-            <li>Encoding: UTF-8</li>
+            <li>Supported formats: Excel (.xlsx) with data validation</li>
           </ul>
         </div>
       </div>
 
       <!-- Download Sample -->
-      <div style="text-align: center; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-        <a href="{% url 'download_excel_template' %}" class="btn-professional btn-primary-professional" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-          <i class="fas fa-file-excel"></i> Download Excel Template (Recommended)
-        </a>
-        <a href="{% url 'download_csv_template' %}" class="btn-professional btn-primary-professional" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
-          <i class="fas fa-file-csv"></i> Download CSV Template (Dynamic)
-        </a>
-        <a href="{% static 'samples/BULK_IMPORT_QUICK_REFERENCE.txt' %}" download class="btn-professional btn-outline-professional">
-          <i class="fas fa-file-alt"></i> Quick Reference
-        </a>
+      <div style="background: var(--gray-50); border-radius: var(--border-radius); padding: 2rem; margin-top: 1.5rem;">
+        <h3 style="font-size: 18px; font-weight: 600; color: var(--gray-800); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 10px;">
+          <i class="fas fa-download" style="color: var(--primary-color);"></i>
+          Download Work-Type Specific Template
+        </h3>
+        <p style="font-size: 14px; color: var(--gray-700); margin-bottom: 1.5rem;">
+          Select the work type to download a customized Excel template with relevant columns:
+        </p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <div class="work-type-card" data-work-type="Task">
+            <i class="fas fa-tasks"></i>
+            <span>Task</span>
+            <small>General work items</small>
+          </div>
+          <div class="work-type-card" data-work-type="Bug">
+            <i class="fas fa-bug"></i>
+            <span>Bug</span>
+            <small>Issues & bugs</small>
+          </div>
+          <div class="work-type-card" data-work-type="Story">
+            <i class="fas fa-book"></i>
+            <span>Story</span>
+            <small>User stories</small>
+          </div>
+          <div class="work-type-card" data-work-type="Defect">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Defect</span>
+            <small>Product defects</small>
+          </div>
+          <div class="work-type-card" data-work-type="Subtask">
+            <i class="fas fa-sitemap"></i>
+            <span>Subtask</span>
+            <small>Child tasks</small>
+          </div>
+          <div class="work-type-card" data-work-type="Report">
+            <i class="fas fa-file-alt"></i>
+            <span>Report</span>
+            <small>Reports & docs</small>
+          </div>
+          <div class="work-type-card" data-work-type="Change Request">
+            <i class="fas fa-exchange-alt"></i>
+            <span>Change Request</span>
+            <small>Change requests</small>
+          </div>
+        </div>
+        
+        <div style="text-align: center; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+          <a href="#" id="downloadExcelBtn" class="btn-professional btn-primary-professional" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <i class="fas fa-file-excel"></i> Download Excel Template
+          </a>
+          <a href="{% url 'download_csv_template' %}" class="btn-professional btn-primary-professional" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+            <i class="fas fa-file-csv"></i> Download CSV Template (All Fields)
+          </a>
+        </div>
+        
+        <div id="selectedWorkType" style="margin-top: 1rem; text-align: center; font-size: 14px; color: var(--gray-600);">
+          <i class="fas fa-info-circle"></i> Please select a work type above
+        </div>
       </div>
+
+      <style>
+        .work-type-card {
+          background: var(--white);
+          border: 2px solid var(--gray-300);
+          border-radius: var(--border-radius-sm);
+          padding: 1.25rem;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        
+        .work-type-card:hover {
+          border-color: var(--primary-color);
+          background: var(--primary-light);
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
+        }
+        
+        .work-type-card.selected {
+          border-color: var(--primary-color);
+          background: var(--primary-color);
+          color: var(--white);
+          box-shadow: var(--shadow-lg);
+        }
+        
+        .work-type-card i {
+          font-size: 28px;
+          color: var(--primary-color);
+        }
+        
+        .work-type-card.selected i {
+          color: var(--white);
+        }
+        
+        .work-type-card span {
+          font-weight: 600;
+          font-size: 15px;
+        }
+        
+        .work-type-card small {
+          font-size: 12px;
+          opacity: 0.8;
+        }
+      </style>
     </div>
   </div>
 
@@ -709,6 +864,43 @@
 </div>
 
 <script>
+// Work type selection
+let selectedWorkType = null;
+
+document.querySelectorAll('.work-type-card').forEach(card => {
+  card.addEventListener('click', function() {
+    // Remove selected class from all cards
+    document.querySelectorAll('.work-type-card').forEach(c => c.classList.remove('selected'));
+    
+    // Add selected class to clicked card
+    this.classList.add('selected');
+    
+    // Store selected work type
+    selectedWorkType = this.getAttribute('data-work-type');
+    
+    // Update hidden input for form submission
+    document.getElementById('workTypeInput').value = selectedWorkType;
+    
+    // Update download button
+    const downloadBtn = document.getElementById('downloadExcelBtn');
+    downloadBtn.href = `{% url 'download_excel_template' %}?work_type=${encodeURIComponent(selectedWorkType)}`;
+    
+    // Update selected work type display
+    document.getElementById('selectedWorkType').innerHTML = `
+      <i class="fas fa-check-circle" style="color: var(--success-color);"></i> 
+      Selected: <strong>${selectedWorkType}</strong> template
+    `;
+  });
+});
+
+// Prevent download if no work type selected
+document.getElementById('downloadExcelBtn').addEventListener('click', function(e) {
+  if (!selectedWorkType) {
+    e.preventDefault();
+    alert('Please select a work type first');
+  }
+});
+
 // File validation and preview
 const fileInput = document.getElementById('csv_file');
 const bulkForm = document.getElementById('bulkForm');
@@ -747,6 +939,13 @@ if (bulkForm) {
       ev.preventDefault();
       alert('Please select a CSV or Excel file to upload');
       return;
+    }
+    
+    // Check if work type is selected (for new templates)
+    const workTypeValue = document.getElementById('workTypeInput').value;
+    if (!workTypeValue) {
+      // If no work type selected, default to 'Task'
+      document.getElementById('workTypeInput').value = 'Task';
     }
     
     const btn = ev.target.querySelector('button[type="submit"]');
