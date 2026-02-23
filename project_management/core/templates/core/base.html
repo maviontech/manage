@@ -539,8 +539,8 @@
           </li>
 
           <!-- Settings -->
-          <li class="menu-item has-sub {% if page == 'settings' or page == 'workflows' or page == 'priorities' or page == 'workweek' %}open{% endif %}">
-            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page == 'settings' or page == 'workflows' or page == 'priorities' or page == 'workweek' %}true{% else %}false{% endif %}" aria-controls="submenu-settings">
+          <li class="menu-item has-sub {% if page == 'settings' or page == 'workflows' or page == 'priorities' or page == 'work_week' %}open{% endif %}">
+            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page == 'settings' or page == 'workflows' or page == 'priorities' or page == 'work_week' %}true{% else %}false{% endif %}" aria-controls="submenu-settings">
               <span class="icon" aria-hidden="true"><i class="fa-solid fa-cog"></i></span>
               <span class="label">Settings</span>
               <span class="caret" aria-hidden="true">▸</span>
@@ -548,7 +548,7 @@
             <ul id="submenu-settings" class="submenu" role="menu" aria-label="Settings submenu">
              <li role="none" class="{% if page == 'workflows' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-stream"></i><span>Workflows</span></a></li>
             <li role="none" class="{% if page == 'priorities' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-flag"></i><span>Priorities</span></a></li>
-            <li role="none" class="{% if page == 'workweek' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-calendar-week"></i><span>Work Week</span></a></li>
+            <li role="none" class="{% if page == 'work_week' %}active{% endif %}"><a href="{% url 'work_week' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-calendar-week"></i><span>Work Week</span></a></li>
 
             <li role="none" class="{% if page == 'change_password' %}active{% endif %}"><a href="{% url 'change_password' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-key"></i><span>Change Password</span></a></li>
 

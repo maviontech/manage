@@ -6,7 +6,8 @@ from . import views_passwordreset
 from . import views_projects as projects
 from . import views_teams as people
 from . import views_tasks as views_tasks
-from  .import views_permissions as vp
+from . import views_permissions as vp
+from . import views_workweek as workweek
 
 urlpatterns = [
     # file: `project_management/core/urls.py`
@@ -61,6 +62,8 @@ urlpatterns = [
     path("tasks/bulk-import/download-csv-template/", views_tasks.download_csv_template, name="download_csv_template"),
     path("tasks/board/", views_tasks.task_board_view, name="task_board"),
     path("tasks/analytics/", views_tasks.task_analytics_view, name="task_analytics"),
+    path("tasks/work-week/", workweek.work_week_view, name="work_week"),
+    path("api/work-week/tasks/", workweek.api_work_week_tasks, name="api_work_week_tasks"),
     path("tasks/api/team-list/", views.api_team_list, name="api_team_list"),
     path("tasks/api/team-summary/", views.api_team_summary, name="api_team_summary"),
     path("api/team-members/", views.api_get_team_members, name="api_get_team_members"),
@@ -90,7 +93,6 @@ urlpatterns = [
 
     path('settings/roles/', vp.roles_page, name='roles_page'),
     path('settings/roles/save/', vp.roles_save, name='roles_save'),
-    path('settings/roles/delete/', vp.roles_delete, name='roles_delete'),
 
     path('settings/access-control/', vp.access_control_page, name='access_control_page'),
     path('settings/access-control/assign/', vp.assign_role, name='assign_role'),
