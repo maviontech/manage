@@ -19,30 +19,35 @@
       </div>
       <div class="header-actions">
         <select id="assignedFilter" class="filter-select">
-          <option value="all">All tasks</option>
-          <option value="mine">Only my tasks</option>
-          <option value="others">Only others</option>
+          <option value="all" {% if sel_assigned == '' or sel_assigned == 'all' %}selected{% endif %}>All tasks</option>
+          <option value="mine" {% if sel_assigned == 'mine' %}selected{% endif %}>Only my tasks</option>
+          <option value="others" {% if sel_assigned == 'others' %}selected{% endif %}>Only others</option>
         </select>
         <select id="statusFilter" class="filter-select">
-          <option value="">All statuses</option>
-          <option value="Open">Open</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Review">Review</option>
-          <option value="Blocked">Blocked</option>
-          <option value="Closed">Closed</option>
+          <option value="" {% if not sel_status %}selected{% endif %}>All statuses</option>
+          <option value="Open" {% if sel_status == 'Open' %}selected{% endif %}>Open</option>
+          <option value="In Progress" {% if sel_status == 'In Progress' %}selected{% endif %}>In Progress</option>
+          <option value="Review" {% if sel_status == 'Review' %}selected{% endif %}>Review</option>
+          <option value="Blocked" {% if sel_status == 'Blocked' %}selected{% endif %}>Blocked</option>
+          <option value="Closed" {% if sel_status == 'Closed' %}selected{% endif %}>Closed</option>
         </select>
         <select id="workTypeFilter" class="filter-select">
-          <option value="">All work types</option>
-          <option value="Task">Task</option>
-          <option value="Bug">Bug</option>
-          <option value="Story">Story</option>
-          <option value="Defect">Defect</option>
-          <option value="Sub Task">Sub Task</option>
-          <option value="Report">Report</option>
-          <option value="Change Request">Change Request</option>
+          <option value="" {% if not sel_work_type %}selected{% endif %}>All work types</option>
+          <option value="Task" {% if sel_work_type == 'Task' %}selected{% endif %}>Task</option>
+          <option value="Bug" {% if sel_work_type == 'Bug' %}selected{% endif %}>Bug</option>
+          <option value="Story" {% if sel_work_type == 'Story' %}selected{% endif %}>Story</option>
+          <option value="Defect" {% if sel_work_type == 'Defect' %}selected{% endif %}>Defect</option>
+          <option value="Sub Task" {% if sel_work_type == 'Sub Task' %}selected{% endif %}>Sub Task</option>
+          <option value="Report" {% if sel_work_type == 'Report' %}selected{% endif %}>Report</option>
+          <option value="Change Request" {% if sel_work_type == 'Change Request' %}selected{% endif %}>Change Request</option>
         </select>
         <select id="projectFilter" class="filter-select">
           <option value="">All projects</option>
+          {% if projects %}
+            {% for p in projects %}
+              <option value="{{ p.id }}" {% if sel_project and sel_project == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+            {% endfor %}
+          {% endif %}
         </select>
         <a href="{% url 'create_task' %}" class="btn-modern btn-primary">
           <i class="fa-solid fa-plus"></i>
@@ -1054,77 +1059,26 @@
   const projectFilter = document.getElementById('projectFilter');
   const statusFilter = document.getElementById('statusFilter');
 
-  // Populate project filter with unique projects from tasks
-  function populateProjectFilter() {
-    const rows = document.querySelectorAll('.task-row');
-    const projects = new Map();
-    
-    rows.forEach(function(row) {
-      const projectId = row.dataset.projectId;
-      const projectName = row.dataset.projectName;
-      if (projectId && projectName) {
-        projects.set(projectId, projectName);
-      }
-    });
-    
-    // Sort projects by name
-    const sortedProjects = Array.from(projects.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-    
-    // Add options to filter
-    sortedProjects.forEach(([id, name]) => {
-      const option = document.createElement('option');
-      option.value = id;
-      option.textContent = name;
-      projectFilter.appendChild(option);
-    });
-  }
-
+  // Server-side filtering: update URL query params and reload page
   function applyFilters() {
     const selectedType = workTypeFilter ? workTypeFilter.value : '';
     const assignedMode = assignedFilter ? assignedFilter.value : 'all';
     const selectedProject = projectFilter ? projectFilter.value : '';
     const selectedStatus = statusFilter ? statusFilter.value : '';
-    const rows = document.querySelectorAll('.task-row');
 
-    rows.forEach(function(row) {
-      const taskId = row.getAttribute('data-href');
-      if (!taskId) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    // preserve items per page
+    const per = urlParams.get('per_page') || urlParams.get('per') || '';
+    if (per) urlParams.set('per_page', per);
+    urlParams.set('page', '1'); // reset to first page when filtering
 
-      const workType = row.dataset.workType || '';
-      const assignedTo = row.dataset.assignedTo || '';
-      const projectId = row.dataset.projectId || '';
-      const status = row.dataset.status || '';
+    if (selectedType) urlParams.set('work_type', selectedType); else urlParams.delete('work_type');
+    if (selectedProject) urlParams.set('project', selectedProject); else urlParams.delete('project');
+    if (selectedStatus) urlParams.set('status', selectedStatus); else urlParams.delete('status');
+    if (assignedMode && assignedMode !== 'all') urlParams.set('assigned', assignedMode); else urlParams.delete('assigned');
 
-      let show = true;
-
-      // work type filter
-      if (selectedType && selectedType !== '' && workType !== selectedType) {
-        show = false;
-      }
-
-      // assigned filter
-      if (assignedMode === 'mine') {
-        if (!assignedTo || String(assignedTo) !== String(currentUserId)) show = false;
-      } else if (assignedMode === 'others') {
-        if (!assignedTo || String(assignedTo) === String(currentUserId)) show = false;
-      }
-
-      // project filter
-      if (selectedProject && selectedProject !== '' && projectId !== selectedProject) {
-        show = false;
-      }
-
-      // status filter
-      if (selectedStatus && selectedStatus !== '' && status !== selectedStatus) {
-        show = false;
-      }
-
-      row.style.display = show ? '' : 'none';
-    });
+    window.location.search = urlParams.toString();
   }
-
-  // Initialize project filter on page load
-  if (projectFilter) populateProjectFilter();
 
   if (workTypeFilter) workTypeFilter.addEventListener('change', applyFilters);
   if (assignedFilter) assignedFilter.addEventListener('change', applyFilters);

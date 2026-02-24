@@ -255,6 +255,7 @@
         <th>Status</th>
         <th>Priority</th>
         <th>Assigned To</th>
+        <th>Reporter</th>
         <th>Due Date</th>
         <th>Created</th>
       </tr>
@@ -284,6 +285,7 @@
           <span class="priority-{{ task.priority|lower }}">{{ task.priority }}</span>
         </td>
         <td>{{ task.assigned_name|default:"Unassigned" }}</td>
+        <td>{{ task.reporter_name|default:"—" }}</td>
         <td>{{ task.due_date|date:"M d, Y"|default:"—" }}</td>
         <td>{{ task.created_at|date:"M d, Y" }}</td>
       </tr>

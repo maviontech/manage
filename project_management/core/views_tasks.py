@@ -1,7 +1,7 @@
 
 import csv, io, datetime, os
 from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.views.decorators.http import require_GET, require_POST
 from django.contrib.auth.decorators import login_required
@@ -277,22 +277,57 @@ def my_tasks_view(request):
     
     # Show tasks assigned to visible users (current user's tasks + Alex Carter's tasks, 
     # or all tasks if current user is Alex Carter)
+    # Read filter params from querystring
+    sel_project = request.GET.get('project', '').strip()
+    sel_status = request.GET.get('status', '').strip()
+    sel_work_type = request.GET.get('work_type', '').strip()
+    sel_assigned = request.GET.get('assigned', 'all').strip()  # 'all'|'mine'|'others'
+
+    tasks = []
     if visible_user_ids:
         placeholders = ','.join(['%s'] * len(visible_user_ids))
-        cur.execute(
-            f"""SELECT t.id, t.title, t.status, t.priority, t.due_date, t.closure_date, 
-                       COALESCE(t.work_type, 'Task') AS work_type,
-                       t.assigned_to, t.project_id, p.name AS project_name,
-                       t.created_by, CONCAT(m.first_name, ' ', m.last_name) AS reporter_name
+        base_sql = f"""
+               SELECT t.id, t.title, t.status, t.priority, t.due_date, t.closure_date,
+                      COALESCE(t.work_type, 'Task') AS work_type,
+                      t.assigned_to, t.project_id, p.name AS project_name,
+                      t.created_by, CONCAT(m.first_name, ' ', m.last_name) AS reporter_name
                FROM tasks t
                LEFT JOIN projects p ON p.id = t.project_id
                LEFT JOIN members m ON m.id = t.created_by
                WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
-               ORDER BY FIELD(t.status,'Open','In Progress','Review','Blocked','Closed'),
-                        t.due_date IS NULL, t.due_date ASC""",
-            tuple(visible_user_ids),
-        )
+        """
+
+        params = list(visible_user_ids)
+
+        # Apply server-side filters
+        if sel_project:
+            base_sql += " AND t.project_id = %s"
+            params.append(sel_project)
+        if sel_status:
+            base_sql += " AND t.status = %s"
+            params.append(sel_status)
+        if sel_work_type:
+            base_sql += " AND COALESCE(t.work_type, 'Task') = %s"
+            params.append(sel_work_type)
+        if sel_assigned == 'mine':
+            base_sql += " AND t.assigned_to = %s"
+            params.append(user_id)
+        elif sel_assigned == 'others':
+            base_sql += " AND t.assigned_to != %s"
+            params.append(user_id)
+
+        base_sql += "\n               ORDER BY FIELD(t.status,'Open','In Progress','Review','Blocked','Closed'),\n                        t.due_date IS NULL, t.due_date ASC"
+
+        cur.execute(base_sql, tuple(params))
         tasks = cur.fetchall()
+
+        # Build project list from returned tasks for project filter dropdown
+        projects_set = {}
+        for r in tasks:
+            pid = r.get('project_id') if isinstance(r, dict) else r[8]
+            pname = r.get('project_name') if isinstance(r, dict) else r[8]
+            if pid:
+                projects_set[str(pid)] = pname or ''
     else:
         tasks = []
     
@@ -318,13 +353,26 @@ def my_tasks_view(request):
         page_obj = paginator.get_page(paginator.num_pages)
 
     today = datetime.date.today()
+    # prepare projects list for template (id, name)
+    projects = []
+    try:
+        projects = [{'id': k, 'name': v} for k, v in projects_set.items()]
+        projects.sort(key=lambda x: (x['name'] or '').lower())
+    except Exception:
+        projects = []
+
     return render(request, "core/tasks_my.html", {
         "page_obj": page_obj,
         "tasks": page_obj.object_list,
         "page": "my_tasks",
         "today": today,
         "current_user_id": user_id,
-        "items_per_page": items_per_page
+        "items_per_page": items_per_page,
+        "projects": projects,
+        "sel_project": sel_project,
+        "sel_status": sel_status,
+        "sel_work_type": sel_work_type,
+        "sel_assigned": sel_assigned,
     })
 
 
@@ -2330,11 +2378,14 @@ def api_get_project_work_types(request):
 # ==============================
 #  CREATE BUG
 # ==============================
-@require_permission('tasks.create')
 def create_bug_view(request):
     """
     Creates a new bug with bug-specific fields
     """
+    # Permission: require 'tasks.create'
+    if not has_permission(request, 'tasks.create'):
+        return HttpResponseForbidden("You don't have permission to perform this action.")
+
     # Check if Bug work type is enabled for this tenant
     enabled_work_types = get_tenant_work_types(request)
     if 'Bug' not in enabled_work_types:
@@ -3979,10 +4030,13 @@ def tasks_overview_view(request):
                     p.name AS project_name,
                     m.first_name AS member_first_name,
                     m.last_name AS member_last_name,
-                    tm.name AS assigned_team_name
+                    tm.name AS assigned_team_name,
+                    c.first_name AS reporter_first_name,
+                    c.last_name AS reporter_last_name
                 FROM tasks t
                 LEFT JOIN projects p ON t.project_id = p.id
                 LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
+                LEFT JOIN members c ON t.created_by = c.id
                 LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
                 WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
                 ORDER BY t.created_at DESC
@@ -4009,7 +4063,8 @@ def tasks_overview_view(request):
                     'due_date': row['due_date'],
                     'created_at': row['created_at'],
                     'project_name': row['project_name'],
-                    'assigned_name': assigned_name
+                    'assigned_name': assigned_name,
+                    'reporter_name': (f"{row.get('reporter_first_name','') or ''} {row.get('reporter_last_name','') or ''}").strip() or None
                 })
         
         context = {
@@ -4073,9 +4128,9 @@ def export_tasks_excel(request):
             bottom=Side(style='thin', color='E5E7EB')
         )
         
-        # Headers
+        # Headers (include Task Type, Closure Date and Reporter in Excel only)
         headers = ['ID', 'Task Title', 'Description', 'Project', 'Status', 'Priority', 
-                  'Assigned To', 'Due Date', 'Created At', 'Days Until Due']
+              'Task Type', 'Closure Date', 'Assigned To', 'Reporter', 'Due Date', 'Created At', 'Days Until Due']
         ws.append(headers)
         
         # Style headers
@@ -4091,12 +4146,14 @@ def export_tasks_excel(request):
             placeholders = ','.join(['%s'] * len(visible_user_ids))
             cur.execute(
                 f"""
-                SELECT 
+                SELECT
                     t.id,
                     t.title,
                     t.description,
                     t.status,
                     t.priority,
+                    t.work_type,
+                    t.closure_date,
                     t.due_date,
                     t.created_at,
                     t.assigned_type,
@@ -4104,10 +4161,13 @@ def export_tasks_excel(request):
                     p.name AS project_name,
                     m.first_name AS member_first_name,
                     m.last_name AS member_last_name,
+                    c.first_name AS reporter_first_name,
+                    c.last_name AS reporter_last_name,
                     tm.name AS assigned_team_name
                 FROM tasks t
                 LEFT JOIN projects p ON t.project_id = p.id
                 LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
+                LEFT JOIN members c ON t.created_by = c.id
                 LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
                 WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
                 ORDER BY t.created_at DESC
@@ -4142,6 +4202,11 @@ def export_tasks_excel(request):
                     else:
                         days_until_due = f"{delta} days"
                 
+                # Build reporter display
+                reporter_name = ''
+                if r.get('reporter_first_name'):
+                    reporter_name = f"{r.get('reporter_first_name','') or ''} {r.get('reporter_last_name','') or ''}".strip()
+
                 row_data = [
                     r['id'],
                     r['title'],
@@ -4149,7 +4214,10 @@ def export_tasks_excel(request):
                     r['project_name'] or 'No Project',
                     r['status'],
                     r['priority'] or 'Normal',
+                    r.get('work_type') or '',
+                    r['closure_date'].strftime('%Y-%m-%d') if r.get('closure_date') else '',
                     assigned_name,
+                    reporter_name,
                     r['due_date'].strftime('%Y-%m-%d') if r['due_date'] else '',
                     r['created_at'].strftime('%Y-%m-%d %H:%M') if r['created_at'] else '',
                     days_until_due
