@@ -11,8 +11,18 @@ import math
 
 PAGE_SIZE = 10
 def projects_list(request):
-    page = int(request.GET.get('page', 1))
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+    # Read query params
+    page = request.GET.get('page', 1)
     q = request.GET.get('q', '').strip()
+    per_page = request.GET.get('per_page', PAGE_SIZE)
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 15, 25, 50, 100]:
+            per_page = PAGE_SIZE
+    except (ValueError, TypeError):
+        per_page = PAGE_SIZE
 
     conn, cur = get_tenant_conn_and_cursor(request)
     try:
@@ -22,32 +32,32 @@ def projects_list(request):
             where += " AND (name LIKE %s OR description LIKE %s)"
             params += [f"%{q}%", f"%{q}%"]
 
-        # count
-        cur.execute(f"SELECT COUNT(*) AS c FROM projects {where};", params)
-        total = cur.fetchone()['c']
-        pages = max(1, math.ceil(total / PAGE_SIZE))
-        offset = (page - 1) * PAGE_SIZE
-
+        # Fetch all matching rows (we'll paginate in Python)
         cur.execute(f"""
             SELECT p.*, u.full_name AS created_by_name
             FROM projects p
             LEFT JOIN users u ON p.created_by = u.id
             {where}
             ORDER BY p.created_at DESC
-            LIMIT %s OFFSET %s
-        """, params + [PAGE_SIZE, offset])
-        rows = cur.fetchall()
+        """, params)
+        all_rows = cur.fetchall()
     finally:
         cur.close()
         conn.close()
 
+    paginator = Paginator(all_rows or [], per_page)
+    try:
+        page_obj = paginator.get_page(page)
+    except PageNotAnInteger:
+        page_obj = paginator.get_page(1)
+    except EmptyPage:
+        page_obj = paginator.get_page(paginator.num_pages)
+
     return render(request, "core/projects_list.html", {
-        "projects": rows,
-        "page": page,
-        "pages": pages,
+        "projects": page_obj.object_list,
+        "page_obj": page_obj,
         "q": q,
-        "total": total,
-        "page_range": range(1, pages + 1),
+        "items_per_page": per_page,
     })
 
 
