@@ -1356,6 +1356,15 @@ def profile_view(request):
                     'role_name': role_row[0],
                     'project_name': 'Tenant-wide'
                 })
+        # Deduplicate roles by name so a role shows once on the profile
+        deduped = {}
+        for r in user_roles:
+            rn = (r.get('role_name') or '').strip()
+            if not rn:
+                continue
+            if rn not in deduped:
+                deduped[rn] = r
+        user_roles = list(deduped.values())
                 
     except Exception:
         profile = {}
