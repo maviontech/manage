@@ -1,0 +1,6 @@
+title,description,project_id,subproject_id,status,priority,assigned_to,due_date,work_type
+Fix login bug,Users cannot login with special characters in password,1,,Open,High,member:2,2026-03-15,Bug
+Implement user dashboard,Create a dashboard showing user statistics and recent activity,1,,In Progress,Normal,member:3,2026-03-20,Task
+Update API documentation,Review and update all API endpoint documentation,2,,Open,Normal,team:1,2026-03-25,Task
+Performance optimization,Optimize database queries for better performance,1,1,Review,High,member:2,2026-03-10,Task
+Security audit,Conduct comprehensive security audit of the application,2,,Open,Critical,member:4,2026-03-30,Task

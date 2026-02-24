@@ -72,6 +72,8 @@
         background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
         padding: 0.4em 1em;
         border-radius: 20px;
+        margin-right: 0.5em;
+        margin-top: 0.3em;
     }
     .profile-title::before {
         content: '●';
@@ -289,7 +291,13 @@
         {% endif %}
         <div class="profile-info">
             <div class="profile-name">{{ profile.first_name|default:"N/A" }} {{ profile.last_name|default:"" }}</div>
-            <div class="profile-title">{{ profile.meta|default:"Member" }}</div>
+            {% if user_roles %}
+                {% for role in user_roles %}
+                    <div class="profile-title">{{ role.role_name }}</div>
+                {% endfor %}
+            {% else %}
+                <div class="profile-title">{{ profile.meta|default:"Member" }}</div>
+            {% endif %}
         </div>
         <div class="profile-actions">
             <button class="btn btn-follow">Follow</button>

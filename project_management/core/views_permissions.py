@@ -6,13 +6,13 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.http import HttpResponseForbidden, JsonResponse
 import pymysql
-from . import tenant_permissions as tp
-from .auth import hash_password, check_password  # your existing auth helpers
+from .rbac import has_permission, require_permission
+from .auth import hash_password, check_password
 from django.utils import timezone
 from datetime import timedelta
 
-# Helper: tenant connection (replace with your actual function if different)
-from .db_helpers import get_tenant_conn  # your existing helper (adapt import path)
+# Helper: tenant connection
+from .db_helpers import get_tenant_conn
 
 # --- Change Password (user) ---
 def change_password_page(request):
@@ -238,12 +238,16 @@ def password_reset_confirm(request):
 
 
 # --- Roles & Permissions page (list & edit) ---
+@require_permission('roles.manage')
 def roles_page(request):
-    # require 'roles.manage' permission for tenant-level role editing (we treat project_id None)
+    from .rbac import has_permission
+    import json
+    
+    # Check permission
+    if not has_permission(request, 'roles.view'):
+        return render(request, 'core/Permission_denied.html', status=403)
+    
     member_id = request.session.get('member_id')
-    print("Roles page access by member:", member_id)
-    if not tp.user_has_permission(request, member_id, None, 'roles.manage'):
-        return HttpResponseForbidden("Permission denied")
 
     conn = get_tenant_conn(request)
     cur = conn.cursor()
@@ -261,20 +265,27 @@ def roles_page(request):
 
     rp_map = {}
     for r in rp:
-        rp_map.setdefault(r['role_id'], set()).add(r['permission_id'])
+        rp_map.setdefault(r['role_id'], []).append(r['permission_id'])
+
+    # Convert to JSON for JavaScript
+    rp_map_json = json.dumps(rp_map)
 
     return render(request, 'core/roles_page.html', {
         'roles': roles,
         'permissions': permissions,
-        'rp_map': rp_map
+        'rp_map': rp_map_json
     })
 
 
 @require_POST
+@require_permission('roles.manage')
 def roles_save(request):
     member_id = request.session.get('member_id')
-    if not tp.user_has_permission(request, member_id, None, 'roles.manage'):
-        return HttpResponseForbidden("Permission denied")
+    
+    # Check if this is a delete action
+    action = request.POST.get('action')
+    if action == 'delete':
+        return roles_delete(request)
 
     role_id = request.POST.get('role_id')  # empty for create
     name = request.POST.get('name')
@@ -302,10 +313,9 @@ def roles_save(request):
 
 
 @require_POST
+@require_permission('roles.manage')
 def roles_delete(request):
     member_id = request.session.get('member_id')
-    if not tp.user_has_permission(request, member_id, None, 'roles.manage'):
-        return HttpResponseForbidden("Permission denied")
 
     role_id = request.POST.get('role_id')
     conn = get_tenant_conn(request)
@@ -326,10 +336,15 @@ def roles_delete(request):
 
 
 # --- Access Control page (assign role to project-member) ---
+@require_permission('members.manage_roles')
 def access_control_page(request):
+    from .rbac import has_permission
+    
+    # Check permission
+    if not has_permission(request, 'roles.manage'):
+        return render(request, 'core/Permission_denied.html', status=403)
+    
     member_id = request.session.get('member_id')
-    if not tp.user_has_permission(request, member_id, None, 'members.manage_roles'):
-        return HttpResponseForbidden("Permission denied")
     conn = get_tenant_conn(request)
     cur = conn.cursor()
     # fetch projects & members & roles & current assignments
@@ -365,10 +380,9 @@ def access_control_page(request):
 
 
 @require_POST
+@require_permission('members.manage_roles')
 def assign_role(request):
     member_id = request.session.get('member_id')
-    if not tp.user_has_permission(request, member_id, None, 'members.manage_roles'):
-        return HttpResponseForbidden("Permission denied")
 
     project_id = request.POST.get('project_id')
     target_member_id = request.POST.get('member_id')
@@ -377,24 +391,54 @@ def assign_role(request):
 
     conn = get_tenant_conn(request)
     cur = conn.cursor()
+    
     if action == 'add':
+        # Insert into project_role_assignments
         cur.execute("INSERT IGNORE INTO project_role_assignments (project_id, member_id, role_id, assigned_by) VALUES (%s,%s,%s,%s)",
                     (project_id, target_member_id, role_id, member_id))
+        
+        # Also update users.role column for display purposes
+        cur.execute("SELECT name FROM roles WHERE id=%s", (role_id,))
+        role_row = cur.fetchone()
+        if role_row:
+            role_name = role_row['name']
+            cur.execute("UPDATE users SET role=%s WHERE id=%s", (role_name, target_member_id))
+        
         messages.success(request, "Role assigned.")
     else:
+        # Remove from project_role_assignments
         cur.execute("DELETE FROM project_role_assignments WHERE project_id=%s AND member_id=%s AND role_id=%s",
                     (project_id, target_member_id, role_id))
+        
+        # Check if user has any other roles, if not, set role to NULL
+        cur.execute("SELECT COUNT(*) as count FROM project_role_assignments WHERE member_id=%s", (target_member_id,))
+        count_row = cur.fetchone()
+        if count_row and count_row['count'] == 0:
+            # No more roles, set to NULL
+            cur.execute("UPDATE users SET role=NULL WHERE id=%s", (target_member_id,))
+        else:
+            # User still has other roles, update to the first one found
+            cur.execute("""
+                SELECT r.name FROM project_role_assignments pra
+                JOIN roles r ON pra.role_id = r.id
+                WHERE pra.member_id=%s
+                LIMIT 1
+            """, (target_member_id,))
+            role_row = cur.fetchone()
+            if role_row:
+                cur.execute("UPDATE users SET role=%s WHERE id=%s", (role_row['name'], target_member_id))
+        
         messages.success(request, "Role removed.")
+    
     cur.close()
     conn.close()
     return redirect('access_control_page')
 
 
 # --- Password Policy page (tenant-level edit) ---
+@require_permission('settings.edit')
 def password_policy_page(request):
     member_id = request.session.get('member_id')
-    if not tp.user_has_permission(request, member_id, None, 'settings.edit'):
-        return render(request, 'core/Permission_denied.html')
 
     conn = get_tenant_conn(request)
     cur = conn.cursor()

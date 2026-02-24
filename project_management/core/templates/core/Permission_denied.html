@@ -3,85 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Permission Denied | Project Management</title>
+    <title>Access Denied | Project Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f8fafc;
-            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
-            background-size: 24px 24px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
         }
-        .error-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(8px);
+        
+        /* Animated background particles */
+        .bg-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
         }
-        .fade-in {
-            animation: fadeIn 0.6s ease-out forwards;
+        
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 15s infinite ease-in-out;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        
+        .particle:nth-child(1) { width: 80px; height: 80px; left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 60px; height: 60px; left: 80%; animation-delay: 2s; }
+        .particle:nth-child(3) { width: 100px; height: 100px; left: 50%; animation-delay: 4s; }
+        .particle:nth-child(4) { width: 40px; height: 40px; left: 30%; animation-delay: 6s; }
+        .particle:nth-child(5) { width: 70px; height: 70px; left: 70%; animation-delay: 8s; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
+            50% { transform: translateY(-100px) rotate(180deg); opacity: 0.6; }
+        }
+        
+        .permission-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 550px;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .lock-icon-wrapper {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            position: relative;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .lock-circle {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.3);
+            position: relative;
+        }
+        
+        .lock-circle::before {
+            content: '';
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border: 3px solid rgba(245, 87, 108, 0.2);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.5; }
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .btn-secondary:hover {
+            background: #f7f7ff;
+            transform: translateY(-2px);
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 16px;
+            padding: 20px;
+            border-left: 4px solid #f5576c;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: rgba(245, 87, 108, 0.1);
+            color: #f5576c;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+            margin: 24px 0;
+        }
+        
+        @media (max-width: 640px) {
+            .permission-card {
+                margin: 20px;
+            }
+            
+            .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-6">
+<body>
+    <!-- Animated Background -->
+    <div class="bg-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
 
-    <div class="max-w-xl w-full error-card rounded-3xl p-10 shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-slate-200 fade-in">
-        <!-- Badge -->
-        <div class="flex justify-center mb-6">
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-red-50 text-red-600 border border-red-100">
-                Error 403: Forbidden
-            </span>
-        </div>
+    <!-- Main Card -->
+    <div class="permission-card">
+        <div style="padding: 48px 40px;">
+            <!-- Status Badge -->
+            <div style="text-align: center; margin-bottom: 32px;">
+                <span class="badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    Error 403 - Access Denied
+                </span>
+            </div>
 
-        <!-- Illustration / Icon -->
-        <div class="mb-8 flex justify-center">
-            <div class="relative">
-                <div class="absolute inset-0 bg-red-100 rounded-full blur-2xl opacity-50 scale-150"></div>
-                <div class="relative bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <!-- Lock Icon -->
+            <div class="lock-icon-wrapper">
+                <div class="lock-circle">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
                 </div>
             </div>
-        </div>
 
-        <!-- Main Content -->
-        <div class="text-center space-y-4">
-            <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Permission Denied</h1>
-            <p class="text-slate-600 text-lg max-w-sm mx-auto">
-                You do not have the required permissions to perform this action. 
-                <span class="font-semibold text-slate-900 underline decoration-red-200 decoration-2">Only administrators</span> may create new projects.
-            </p>
-        </div>
+            <!-- Main Message -->
+            <div style="text-align: center; margin-top: 32px;">
+                <h1 style="font-size: 32px; font-weight: 800; color: #1f2937; margin-bottom: 16px; line-height: 1.2;">
+                    Access Restricted
+                </h1>
+                <p style="font-size: 17px; color: #6b7280; line-height: 1.6; max-width: 400px; margin: 0 auto;">
+                    You don't have permission to perform this action. This area is restricted to authorized users only.
+                </p>
+            </div>
 
-        <!-- Info Box -->
-        <div class="mt-10 p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-3 text-left">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p class="text-sm text-slate-500 italic">
-                If you require administrative access to manage projects, please submit a request through the IT Helpdesk or contact your direct supervisor.
-            </p>
-        </div>
+            <div class="divider"></div>
 
-        <!-- Actions -->
-        <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button onclick="window.history.back()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 shadow-md">
-                Go Back
-            </button>
-            <button class="w-full bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3.5 px-6 rounded-xl border border-slate-200 transition-all duration-200">
-                Request Access
-            </button>
-        </div>
+            <!-- Info Box -->
+            <div class="info-box">
+                <div style="display: flex; gap: 12px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5576c" stroke-width="2" style="flex-shrink: 0;">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    <div>
+                        <h3 style="font-size: 15px; font-weight: 700; color: #92400e; margin-bottom: 6px;">
+                            Need Access?
+                        </h3>
+                        <p style="font-size: 14px; color: #92400e; line-height: 1.5;">
+                            Contact your system administrator or team lead to request the necessary permissions for this feature.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Footer -->
-        <p class="mt-8 text-xs text-slate-400 font-medium">
-            Timestamp: 2024-05-20 14:30:15 UTC • Session: AUTH_PRJ_99
-        </p>
+            <!-- Action Buttons -->
+            <div style="margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <button onclick="window.history.back()" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="19" y1="12" x2="5" y2="12"/>
+                        <polyline points="12 19 5 12 12 5"/>
+                    </svg>
+                    Go Back
+                </button>
+                <a href="/" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                    Dashboard
+                </a>
+            </div>
+
+            <!-- Footer Info -->
+            <div style="margin-top: 32px; text-align: center; padding-top: 24px; border-top: 1px solid #f3f4f6;">
+                <p style="font-size: 13px; color: #9ca3af; font-weight: 500;">
+                    If you believe this is an error, please contact support
+                </p>
+            </div>
+        </div>
     </div>
 
+    <script>
+        // Add smooth interactions
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            btn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
 </body>
 </html>

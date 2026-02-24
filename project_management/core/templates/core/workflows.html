@@ -1,0 +1,515 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Workflows - Trackline{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Override base container styles for this page */
+    .main .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+    
+    .page-title {
+        display: none !important;
+    }
+    
+    .workflows-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        background: #f7fafc;
+        min-height: 100vh;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        color: #1a202c;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+        color: #718096;
+        font-size: 1rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-card-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+
+    .stat-card-icon::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: inherit;
+        opacity: 0.2;
+        transform: scale(1.2);
+    }
+
+    .stat-card-icon i {
+        font-size: 1.5rem;
+        color: white;
+        z-index: 1;
+    }
+
+    .stat-card.total .stat-card-icon {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .stat-card.active .stat-card-icon {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .stat-card.draft .stat-card-icon {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .stat-card.archived .stat-card-icon {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+
+    .stat-card-content h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a202c;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-card-content p {
+        color: #718096;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .workflows-section {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1a202c;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        border: none;
+        font-weight: 500;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .workflow-list {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .workflow-item {
+        display: flex;
+        align-items: center;
+        padding: 1.25rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .workflow-item:hover {
+        border-color: #667eea;
+        background: #f7fafc;
+        transform: translateX(4px);
+    }
+
+    .workflow-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 1.25rem;
+        margin-right: 1rem;
+        flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .workflow-avatar::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3), transparent);
+    }
+
+    .workflow-info {
+        flex: 1;
+    }
+
+    .workflow-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1a202c;
+        margin-bottom: 0.25rem;
+    }
+
+    .workflow-description {
+        font-size: 0.875rem;
+        color: #718096;
+    }
+
+    .workflow-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .workflow-status {
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .workflow-status.active {
+        background: #c6f6d5;
+        color: #22543d;
+    }
+
+    .workflow-status.draft {
+        background: #bee3f8;
+        color: #2c5282;
+    }
+
+    .workflow-status.archived {
+        background: #e2e8f0;
+        color: #4a5568;
+    }
+
+    .workflow-date {
+        font-size: 0.875rem;
+        color: #a0aec0;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .empty-state-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        position: relative;
+    }
+
+    .empty-state-icon::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: inherit;
+        opacity: 0.2;
+        transform: scale(1.3);
+    }
+
+    .empty-state-icon i {
+        font-size: 2rem;
+        color: white;
+        z-index: 1;
+    }
+
+    .empty-state h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a202c;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: #718096;
+        margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .workflows-container {
+            padding: 1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .workflow-item {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .workflow-avatar {
+            margin-right: 0;
+            margin-bottom: 1rem;
+        }
+
+        .workflow-meta {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="workflows-container">
+    <div class="page-header">
+        <h1>Workflows</h1>
+        <p>Manage and monitor your workflow processes</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card total">
+            <div class="stat-card-icon">
+                <i class="fas fa-project-diagram"></i>
+            </div>
+            <div class="stat-card-content">
+                <h3>{{ workflow_stats.total_workflows|default:0 }}</h3>
+                <p>Total Workflows</p>
+            </div>
+        </div>
+
+        <div class="stat-card active">
+            <div class="stat-card-icon">
+                <i class="fas fa-play-circle"></i>
+            </div>
+            <div class="stat-card-content">
+                <h3>{{ workflow_stats.active_workflows|default:0 }}</h3>
+                <p>Active Workflows</p>
+            </div>
+        </div>
+
+        <div class="stat-card draft">
+            <div class="stat-card-icon">
+                <i class="fas fa-edit"></i>
+            </div>
+            <div class="stat-card-content">
+                <h3>{{ workflow_stats.draft_workflows|default:0 }}</h3>
+                <p>Draft Workflows</p>
+            </div>
+        </div>
+
+        <div class="stat-card archived">
+            <div class="stat-card-icon">
+                <i class="fas fa-archive"></i>
+            </div>
+            <div class="stat-card-content">
+                <h3>{{ workflow_stats.archived_workflows|default:0 }}</h3>
+                <p>Archived Workflows</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="workflows-section">
+        <div class="section-header">
+            <h2>Recent Workflows</h2>
+            <button class="btn-primary">
+                <i class="fas fa-plus"></i> Create Workflow
+            </button>
+        </div>
+
+        {% if recent_workflows %}
+        <div class="workflow-list">
+            {% for workflow in recent_workflows %}
+            <div class="workflow-item">
+                <div class="workflow-avatar">
+                    {{ workflow.name.0|upper }}
+                </div>
+                <div class="workflow-info">
+                    <div class="workflow-name">{{ workflow.name }}</div>
+                    <div class="workflow-description">{{ workflow.description|default:"No description available" }}</div>
+                </div>
+                <div class="workflow-meta">
+                    <span class="workflow-status {{ workflow.status|lower }}">{{ workflow.status }}</span>
+                    <span class="workflow-date">
+                        <i class="far fa-clock"></i> {{ workflow.updated_at|date:"M d, Y" }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-project-diagram"></i>
+            </div>
+            <h3>No Workflows Yet</h3>
+            <p>Create your first workflow to get started with process automation</p>
+            <button class="btn-primary">
+                <i class="fas fa-plus"></i> Create Your First Workflow
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Workflows page loaded');
+        
+        // Add click handlers for workflow items
+        document.querySelectorAll('.workflow-item').forEach(item => {
+            item.addEventListener('click', function() {
+                console.log('Workflow clicked');
+                // Navigate to workflow details (you can customize this URL)
+                const workflowName = this.querySelector('.workflow-name').textContent;
+                if (confirm('Open workflow: ' + workflowName + '?')) {
+                    // window.location.href = '/workflows/' + workflowId + '/';
+                    alert('This would navigate to workflow details page.');
+                }
+            });
+        });
+
+        // Add click handler for create workflow buttons
+        document.querySelectorAll('.btn-primary').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                console.log('Create workflow button clicked');
+                
+                // Show a better prompt dialog
+                const workflowName = prompt('Enter workflow name:', 'New Workflow');
+                if (workflowName && workflowName.trim() !== '') {
+                    const workflowDescription = prompt('Enter workflow description (optional):', '');
+                    
+                    // Here you would normally send this to the server
+                    console.log('Creating workflow:', {
+                        name: workflowName,
+                        description: workflowDescription
+                    });
+                    
+                    alert('Workflow "' + workflowName + '" would be created!\n\nIn a full implementation, this would:\n1. Send data to the server\n2. Create the workflow in the database\n3. Refresh the page to show the new workflow');
+                    
+                    // Uncomment to actually submit:
+                    // createWorkflow(workflowName, workflowDescription);
+                }
+            });
+        });
+        
+        // Add hover effect to stat cards
+        document.querySelectorAll('.stat-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-4px)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+        
+        // Function to create workflow (placeholder for future implementation)
+        function createWorkflow(name, description) {
+            // This would send a POST request to your Django backend
+            fetch('/api/workflows/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: description,
+                    status: 'Draft'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Workflow created:', data);
+                location.reload(); // Refresh page to show new workflow
+            })
+            .catch(error => {
+                console.error('Error creating workflow:', error);
+                alert('Error creating workflow. Please try again.');
+            });
+        }
+        
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %}

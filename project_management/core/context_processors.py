@@ -4,6 +4,7 @@ Context processors for making data available to all templates
 """
 
 from .db_helpers import get_tenant_work_types
+from .rbac import get_user_permissions, is_admin as check_is_admin
 
 
 def tenant_work_types(request):
@@ -14,15 +15,8 @@ def tenant_work_types(request):
     try:
         if hasattr(request, 'session') and request.session:
             work_types = get_tenant_work_types(request)
-            # determine admin role from session user if present
-            is_admin = False
-            try:
-                user = request.session.get('user')
-                role = user.get('role') if isinstance(user, dict) else getattr(user, 'role', None)
-                if role and 'admin' in str(role).lower():
-                    is_admin = True
-            except Exception:
-                is_admin = False
+            # Use RBAC system to determine admin status
+            admin_status = check_is_admin(request)
 
             return {
                 'tenant_work_types': work_types,
@@ -33,7 +27,7 @@ def tenant_work_types(request):
                 'has_subtask': 'Sub Task' in work_types,
                 'has_change_request': 'Change Request' in work_types,
                 'has_report': 'Report' in work_types,
-                'is_admin': is_admin,
+                'is_admin': admin_status,
             }
     except Exception:
         pass
@@ -50,3 +44,30 @@ def tenant_work_types(request):
         'has_report': True,
         'is_admin': False,
     }
+
+
+def permissions_context(request):
+    """
+    Add user permissions to template context.
+    This makes permissions available in all templates for menu visibility control.
+    """
+    if not request.session.get('member_id'):
+        return {
+            'user_permissions': set(),
+            'user_is_admin': False,
+        }
+    
+    try:
+        permissions = get_user_permissions(request)
+        admin_status = check_is_admin(request)
+        
+        return {
+            'user_permissions': permissions,
+            'user_is_admin': admin_status,
+        }
+    except Exception:
+        return {
+            'user_permissions': set(),
+            'user_is_admin': False,
+        }
+

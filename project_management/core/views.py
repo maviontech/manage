@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from .auth import identify_tenant_by_email, authenticate
 from .db_connector import get_connection_from_config
+from .rbac import require_permission, has_permission
 from math import ceil
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -1260,6 +1261,8 @@ def profile_view(request):
     cur = conn.cursor()
     profile = {}
     social_links = {}
+    user_roles = []
+    
     try:
         cur.execute("SELECT email, first_name, last_name, phone, meta, created_at, city, dob, address, profile_photo FROM members WHERE id=%s LIMIT 1", (member_id,))
         row = cur.fetchone()
@@ -1290,6 +1293,7 @@ def profile_view(request):
                     'address': row[8],
                     'profile_photo': row[9] if len(row) > 9 else None,
                 }
+        
         # Fetch social links
         cur.execute("SELECT github_url, twitter_url, facebook_url, linkedin_url FROM member_social_links WHERE member_id=%s LIMIT 1", (member_id,))
         social_row = cur.fetchone()
@@ -1308,14 +1312,64 @@ def profile_view(request):
                     'facebook_url': social_row[2],
                     'linkedin_url': social_row[3],
                 }
+        
+        # Fetch user's roles from project_role_assignments
+        cur.execute("""
+            SELECT DISTINCT r.name, p.name as project_name, pra.assigned_at
+            FROM project_role_assignments pra
+            JOIN roles r ON pra.role_id = r.id
+            LEFT JOIN projects p ON pra.project_id = p.id
+            WHERE pra.member_id = %s
+            ORDER BY pra.assigned_at DESC
+        """, (member_id,))
+        
+        role_rows = cur.fetchall()
+        for role_row in role_rows:
+            if isinstance(role_row, dict):
+                user_roles.append({
+                    'role_name': role_row.get('name'),
+                    'project_name': role_row.get('project_name')
+                })
+            else:
+                user_roles.append({
+                    'role_name': role_row[0],
+                    'project_name': role_row[1]
+                })
+        
+        # Also check for tenant-wide roles
+        cur.execute("""
+            SELECT DISTINCT r.name
+            FROM tenant_role_assignments tra
+            JOIN roles r ON tra.role_id = r.id
+            WHERE tra.member_id = %s
+        """, (member_id,))
+        
+        tenant_role_rows = cur.fetchall()
+        for role_row in tenant_role_rows:
+            if isinstance(role_row, dict):
+                user_roles.append({
+                    'role_name': role_row.get('name'),
+                    'project_name': 'Tenant-wide'
+                })
+            else:
+                user_roles.append({
+                    'role_name': role_row[0],
+                    'project_name': 'Tenant-wide'
+                })
+                
     except Exception:
         profile = {}
         social_links = {}
+        user_roles = []
     finally:
         cur.close()
         conn.close()
 
-    return render(request, 'core/profile_view.html', {'profile': profile, 'social_links': social_links})
+    return render(request, 'core/profile_view.html', {
+        'profile': profile, 
+        'social_links': social_links,
+        'user_roles': user_roles
+    })
 def profile_edit_view(request):
     """Display the profile edit form and handle profile updates."""
     import os

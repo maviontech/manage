@@ -13,6 +13,7 @@ from django.core.files.storage import default_storage
 # helper: get connection for current tenant
 from .db_helpers import get_tenant_conn, get_visible_task_user_ids, get_tenant_work_types, resolve_tenant_key_from_request
 from .notifications import NotificationManager
+from .rbac import require_permission, has_permission
 import json
 
 # PDF generation
@@ -98,6 +99,7 @@ def save_task_attachments(request, task_id, cur, created_by):
 # ==============================
 #  CREATE TASK  (GET / POST)
 # ==============================
+@require_permission('tasks.create')
 def create_task_view(request):
     """
     Creates a new task and saves to DB. Supports member/team polymorphic assignment.
@@ -244,7 +246,13 @@ def create_task_view(request):
 # ==============================
 #  MY TASKS
 # ==============================
+@require_permission('tasks.view')
 def my_tasks_view(request):
+    from .rbac import has_permission
+    
+    # Check permission
+    if not has_permission(request, 'tasks.view'):
+        return render(request, 'core/Permission_denied.html', status=403)
 
     conn = get_tenant_conn(request)
     cur = conn.cursor()
@@ -294,7 +302,14 @@ def my_tasks_view(request):
 # ==============================
 #  UNASSIGNED TASKS
 # ==============================
+@require_permission('tasks.view')
 def unassigned_tasks_view(request):
+    from .rbac import has_permission
+    
+    # Check permission
+    if not has_permission(request, 'tasks.view_unassigned'):
+        return render(request, 'core/Permission_denied.html', status=403)
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
@@ -349,6 +364,7 @@ from math import ceil
 from .db_helpers import get_tenant_conn
 
 
+@require_permission('tasks.view')
 def board_data_api(request):
     """
     Paginated task data for the Kanban board.
@@ -508,6 +524,7 @@ def board_data_api(request):
 #  ASSIGN TASK (AJAX)
 # ==============================
 @require_POST
+@require_permission('tasks.assign')
 def assign_task_api(request):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
@@ -586,6 +603,7 @@ def assign_task_api(request):
 #  UPDATE STATUS (AJAX)
 # ==============================
 @require_POST
+@require_permission('tasks.edit')
 def api_update_status(request):
     """Called from Kanban drag-drop to update status"""
 
@@ -677,6 +695,7 @@ def api_update_status(request):
 # ==============================
 #  BULK IMPORT CSV
 # ==============================
+@require_permission('tasks.bulk_import')
 def download_excel_template(request):
     """Generate work-type-specific Excel template with dropdowns"""
     # Check authentication
@@ -990,6 +1009,7 @@ def download_excel_template(request):
         cur.close()
 
 
+@require_permission('tasks.bulk_import')
 def download_csv_template(request):
     """Generate CSV template with reference data in comments"""
     # Check authentication
@@ -1073,6 +1093,7 @@ def download_csv_template(request):
 
 
 
+@require_permission('tasks.bulk_import')
 def bulk_import_csv_view(request):
     """Upload & import CSV file of tasks with comprehensive validation"""
     context = {"page": "bulk_import"}
@@ -1813,7 +1834,14 @@ def api_task_update(request):
     finally:
         cur.close()
 
+@require_permission('tasks.view')
 def task_board_view(request):
+    from .rbac import has_permission
+    
+    # Check permission
+    if not has_permission(request, 'tasks.view_board'):
+        return render(request, 'core/Permission_denied.html', status=403)
+    
     status_columns = ["Open", "In Progress", "Review", "Blocked", "Closed"]
     conn = get_tenant_conn(request)
     cur = conn.cursor()
@@ -1860,6 +1888,7 @@ def api_get_subprojects(request):
         cur.close()
     
 
+@require_permission('tasks.view')
 def task_detail_view(request, task_id):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
@@ -1882,6 +1911,7 @@ def task_detail_view(request, task_id):
         return render(request, "core/404.html", status=404)
 
     return render(request, "core/task_detail.html", {"task": task, "timer_history": timer_history})
+@require_permission('tasks.edit')
 def edit_task_view(request, task_id):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
@@ -2007,6 +2037,7 @@ def edit_task_view(request, task_id):
     return render(request, "core/edit_task.html", {"task": task})
 
 @require_POST
+@require_permission('tasks.delete')
 def delete_task_view(request, task_id): 
     """Deletes the specified task."""
     conn = get_tenant_conn(request)
@@ -2027,6 +2058,7 @@ def delete_task_view(request, task_id):
     return redirect("my_tasks")
 
 
+@require_permission('tasks.view')
 def export_task_pdf(request, task_id):
     """
     Export task details to PDF with professional formatting
@@ -2269,6 +2301,7 @@ def api_get_project_work_types(request):
 # ==============================
 #  CREATE BUG
 # ==============================
+@require_permission('tasks.create')
 def create_bug_view(request):
     """
     Creates a new bug with bug-specific fields
@@ -2407,6 +2440,7 @@ def create_bug_view(request):
 # ==============================
 #  CREATE STORY
 # ==============================
+@require_permission('tasks.create')
 def create_story_view(request):
     """
     Creates a new user story with story-specific fields
@@ -2543,6 +2577,7 @@ def create_story_view(request):
 # ==============================
 #  CREATE DEFECT
 # ==============================
+@require_permission('tasks.create')
 def create_defect_view(request):
     """
     Creates a new defect with defect-specific fields
@@ -2676,6 +2711,7 @@ def create_defect_view(request):
 # ==============================
 #  CREATE SUB TASK
 # ==============================
+@require_permission('tasks.create')
 def create_subtask_view(request):
     """
     Creates a new sub task with parent task selection
@@ -2816,6 +2852,7 @@ def create_subtask_view(request):
 # ==============================
 #  CREATE REPORT
 # ==============================
+@require_permission('tasks.create')
 def create_report_view(request):
     """
     Creates a new report task
@@ -2952,6 +2989,7 @@ def create_report_view(request):
 # ==============================
 #  CREATE CHANGE REQUEST
 # ==============================
+@require_permission('tasks.create')
 def create_change_request_view(request):
     """
     Creates a new change request
@@ -3095,6 +3133,7 @@ def create_change_request_view(request):
 # ==============================
 #  TASK PAGE VIEW (Jira-style detail page)
 # ==============================
+@require_permission('tasks.view')
 def task_page_view(request, task_id):
     """
     Display a detailed Jira-style view of a task with:
@@ -3374,6 +3413,7 @@ def task_page_view(request, task_id):
 #  UPDATE TASK STATUS (API)
 # ==============================
 @require_POST
+@require_permission('tasks.edit')
 def update_task_status(request, task_id):
     '''Update task status via AJAX'''
     import json
@@ -3680,11 +3720,18 @@ def assign_member_to_task(request, task_id):
 # ==============================
 #  TASK ANALYTICS - WORK TYPE TRACKING
 # ==============================
+@require_permission('tasks.view')
 def task_analytics_view(request):
     """
     Interactive task analytics page showing tasks grouped by work type (Bug, Story, Defect, etc.)
     with filtering capabilities and totals display.
     """
+    from .rbac import has_permission
+    
+    # Check permission
+    if not has_permission(request, 'tasks.view_analytics'):
+        return render(request, 'core/Permission_denied.html', status=403)
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
     

@@ -8,6 +8,7 @@ from . import views_teams as people
 from . import views_tasks as views_tasks
 from . import views_permissions as vp
 from . import views_workweek as workweek
+from . import views_workflows as workflows
 
 urlpatterns = [
     # file: `project_management/core/urls.py`
@@ -64,6 +65,10 @@ urlpatterns = [
     path("tasks/analytics/", views_tasks.task_analytics_view, name="task_analytics"),
     path("tasks/work-week/", workweek.work_week_view, name="work_week"),
     path("api/work-week/tasks/", workweek.api_work_week_tasks, name="api_work_week_tasks"),
+    
+    # Workflows and Priorities
+    path('workflows/', workflows.workflows_view, name='workflows'),
+    path('priorities/', workflows.priorities_view, name='priorities'),
     path("tasks/api/team-list/", views.api_team_list, name="api_team_list"),
     path("tasks/api/team-summary/", views.api_team_summary, name="api_team_summary"),
     path("api/team-members/", views.api_get_team_members, name="api_get_team_members"),

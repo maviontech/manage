@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Static Files Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-box {
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .test-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Static Files Test Page</h1>
+    
+    <div class="test-box">
+        <h2>Test 1: Inline CSS</h2>
+        <p>If you can see this box with a green background, inline CSS is working.</p>
+        <div class="test-circle">✓</div>
+        <p>If you see a purple gradient circle above, CSS gradients work.</p>
+    </div>
+
+    <div class="test-box">
+        <h2>Test 2: External CSS Link</h2>
+        <p>Open Developer Tools (F12) and check the Console for any errors.</p>
+        <p>Then go to the Network tab and look for:</p>
+        <ul>
+            <li><code>workflows_priorities.css</code> - Should show 200 status</li>
+            <li>If 404, the file path is wrong</li>
+            <li>If not listed, the link tag is not working</li>
+        </ul>
+    </div>
+
+    <div class="test-box">
+        <h2>Test 3: Django Static Files</h2>
+        <p>To test Django static files serving:</p>
+        <ol>
+            <li>Run: <code>python manage.py collectstatic</code></li>
+            <li>Check if file exists: <code>core/static/core/css/workflows_priorities.css</code></li>
+            <li>Try accessing directly: <code>http://localhost:8000/static/core/css/workflows_priorities.css</code></li>
+        </ol>
+    </div>
+
+    <div class="test-box">
+        <h2>Quick Fixes</h2>
+        <ol>
+            <li><strong>Clear Cache:</strong> Press Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)</li>
+            <li><strong>Collect Static:</strong> Run <code>python manage.py collectstatic --noinput</code></li>
+            <li><strong>Restart Server:</strong> Stop and restart Django development server</li>
+            <li><strong>Check Path:</strong> Verify CSS file exists in <code>core/static/core/css/</code></li>
+        </ol>
+    </div>
+
+    <div class="test-box">
+        <h2>Expected URLs</h2>
+        <p>These URLs should work:</p>
+        <ul>
+            <li><a href="/workflows/" target="_blank">/workflows/</a></li>
+            <li><a href="/priorities/" target="_blank">/priorities/</a></li>
+            <li><a href="/static/core/css/workflows_priorities.css" target="_blank">/static/core/css/workflows_priorities.css</a></li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('✓ JavaScript is working');
+        console.log('Testing static file paths...');
+        
+        // Test if CSS file is accessible
+        fetch('/static/core/css/workflows_priorities.css')
+            .then(response => {
+                if (response.ok) {
+                    console.log('✓ CSS file is accessible');
+                    document.body.insertAdjacentHTML('beforeend', 
+                        '<div class="test-box success"><h3>✓ Success!</h3><p>CSS file is accessible at /static/core/css/workflows_priorities.css</p></div>');
+                } else {
+                    console.error('✗ CSS file returned status:', response.status);
+                    document.body.insertAdjacentHTML('beforeend', 
+                        '<div class="test-box error"><h3>✗ Error!</h3><p>CSS file returned status: ' + response.status + '</p><p>Run: python manage.py collectstatic</p></div>');
+                }
+            })
+            .catch(error => {
+                console.error('✗ Error fetching CSS file:', error);
+                document.body.insertAdjacentHTML('beforeend', 
+                    '<div class="test-box error"><h3>✗ Error!</h3><p>Could not fetch CSS file. Check if Django server is running.</p></div>');
+            });
+    </script>
+</body>
+</html>

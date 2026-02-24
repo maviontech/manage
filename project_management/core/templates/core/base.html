@@ -414,6 +414,7 @@
           </li>
 
           <!-- Tasks -->
+          {% load permission_tags %}
           <li class="menu-item has-sub {% if page == 'tasks' or page == 'my_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' or page == 'task_analytics' %}open{% endif %}">
             <button class="menu-link sub-toggle ripple" aria-expanded="{% if page == 'tasks' or page == 'my_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' or page == 'task_analytics' %}true{% else %}false{% endif %}" aria-controls="submenu-tasks">
               <span class="icon" aria-hidden="true"><i class="fa-solid fa-tasks"></i></span>
@@ -421,12 +422,17 @@
               <span class="caret" aria-hidden="true">▸</span>
             </button>
             <ul id="submenu-tasks" class="submenu" role="menu" aria-label="Tasks submenu">
+              {% if 'tasks.view' in user_permissions or user_is_admin %}
               <li role="none" class="{% if page == 'my_tasks' %}active{% endif %}">
                 <a href="{% url 'my_tasks' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-clipboard-list"></i><span>My Tasks</span></a>
               </li>
+              {% endif %}
+              {% if 'tasks.view_unassigned' in user_permissions or user_is_admin %}
               <li role="none" class="{% if page == 'unassigned' %}active{% endif %}">
                 <a href="{% url 'unassigned_tasks' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-user-clock"></i><span>Unassigned Tasks</span></a>
               </li>
+              {% endif %}
+              {% if 'tasks.create' in user_permissions or user_is_admin %}
               <li role="none" class="has-sub {% if page == 'task_create' %}active open{% endif %}">
                 <button class="submenu-link sub-toggle ripple" aria-expanded="{% if page == 'task_create' %}true{% else %}false{% endif %}" aria-controls="submenu-create-task">
                   <i class="fa-solid fa-plus"></i>
@@ -466,15 +472,22 @@
                   {% endif %}
                 </ul>
               </li>
+              {% endif %}
+              {% if 'tasks.bulk_import' in user_permissions or user_is_admin %}
               <li role="none" class="{% if page == 'bulk_import' %}active{% endif %}">
                 <a href="{% url 'bulk_import' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-file-csv"></i><span>Bulk Import (CSV)</span></a>
               </li>
+              {% endif %}
+              {% if 'tasks.view_board' in user_permissions or user_is_admin %}
               <li role="none" class="{% if page == 'task_board' %}active{% endif %}">
                 <a href="{% url 'task_board' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-th-large"></i><span>Task Board</span></a>
               </li>
+              {% endif %}
+              {% if 'tasks.view_analytics' in user_permissions or user_is_admin %}
               <li role="none" class="{% if page == 'task_analytics' %}active{% endif %}">
                 <a href="{% url 'task_analytics' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-chart-line"></i><span>Task Analytics</span></a>
               </li>
+              {% endif %}
             </ul>
           </li>
 
@@ -539,6 +552,8 @@
           </li>
 
           <!-- Settings -->
+          {% load permission_tags %}
+          {% if 'settings.view' in user_permissions or 'roles.manage' in user_permissions or 'members.manage_roles' in user_permissions or user_is_admin %}
           <li class="menu-item has-sub {% if page == 'settings' or page == 'workflows' or page == 'priorities' or page == 'work_week' %}open{% endif %}">
             <button class="menu-link sub-toggle ripple" aria-expanded="{% if page == 'settings' or page == 'workflows' or page == 'priorities' or page == 'work_week' %}true{% else %}false{% endif %}" aria-controls="submenu-settings">
               <span class="icon" aria-hidden="true"><i class="fa-solid fa-cog"></i></span>
@@ -546,38 +561,47 @@
               <span class="caret" aria-hidden="true">▸</span>
             </button>
             <ul id="submenu-settings" class="submenu" role="menu" aria-label="Settings submenu">
-             <li role="none" class="{% if page == 'workflows' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-stream"></i><span>Workflows</span></a></li>
-            <li role="none" class="{% if page == 'priorities' %}active{% endif %}"><a href="#" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-flag"></i><span>Priorities</span></a></li>
+             {% if 'settings.view' in user_permissions or user_is_admin %}
+             <li role="none" class="{% if page == 'workflows' %}active{% endif %}"><a href="{% url 'workflows' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-stream"></i><span>Workflows</span></a></li>
+            <li role="none" class="{% if page == 'priorities' %}active{% endif %}"><a href="{% url 'priorities' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-flag"></i><span>Priorities</span></a></li>
             <li role="none" class="{% if page == 'work_week' %}active{% endif %}"><a href="{% url 'work_week' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-calendar-week"></i><span>Work Week</span></a></li>
+            {% endif %}
 
             <li role="none" class="{% if page == 'change_password' %}active{% endif %}"><a href="{% url 'change_password' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-key"></i><span>Change Password</span></a></li>
 
+            {% if 'roles.manage' in user_permissions or user_is_admin %}
             <li role="none" class="{% if page == 'roles' %}active{% endif %}">
               <a href="{% url 'roles_page' %}" class="submenu-link ripple" role="menuitem">
                 <i class="fa-solid fa-user-shield"></i><span>Roles &amp; Permissions</span>
               </a>
             </li>
+            {% endif %}
 
+            {% if 'members.manage_roles' in user_permissions or user_is_admin %}
             <li role="none" class="{% if page == 'access_control' %}active{% endif %}">
               <a href="{% url 'access_control_page' %}" class="submenu-link ripple" role="menuitem">
                 <i class="fa-solid fa-lock"></i><span>Access Control</span>
               </a>
             </li>
+            {% endif %}
 
+            {% if 'settings.edit' in user_permissions or user_is_admin %}
             <li role="none" class="{% if page == 'password_policy' %}active{% endif %}">
               <a href="{% url 'password_policy_page' %}" class="submenu-link ripple" role="menuitem">
                 <i class="fa-solid fa-shield-alt"></i><span>Password Policy</span>
               </a>
             </li>
+            {% endif %}
 
             </ul>
           </li>
+          {% endif %}
 
-          {% if request.session.role and 'PDL' in request.session.role %}
-          <li class="menu-item {% if page == 'admin' %}active{% endif %}">
+          {% if user_is_admin %}
+          <!-- <li class="menu-item {% if page == 'admin' %}active{% endif %}">
             <a href="#" class="menu-link ripple" role="menuitem">
               <span class="icon" aria-hidden="true"><i class="fa-solid fa-user-shield"></i></span>
-              <span class="label">Admin</span>
+              <span class="label">Admin</span> -->
             </a>
           </li>
           {% endif %}
