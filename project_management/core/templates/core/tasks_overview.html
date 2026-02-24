@@ -1,0 +1,303 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Tasks Overview | Trackline{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/base.css' %}">
+<style>
+  :root {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #dbeafe;
+    --success-color: #10b981;
+    --success-light: #d1fae5;
+    --warning-color: #f59e0b;
+    --warning-light: #fef3c7;
+    --danger-color: #ef4444;
+    --danger-light: #fee2e2;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --white: #ffffff;
+    --border-radius: 12px;
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  .page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .page-header h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .page-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 15px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .stat-card.total { border-left-color: var(--primary-color); }
+  .stat-card.active { border-left-color: var(--success-color); }
+  .stat-card.completed { border-left-color: var(--warning-color); }
+  .stat-card.ending { border-left-color: var(--danger-color); }
+
+  .stat-card .label {
+    font-size: 13px;
+    color: var(--gray-700);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-card .value {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--gray-800);
+  }
+
+  .actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .btn-export {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: var(--white);
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+  }
+
+  .btn-export:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .tasks-table-container {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .tasks-table thead {
+    background: var(--gray-50);
+  }
+
+  .tasks-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--gray-200);
+  }
+
+  .tasks-table tbody tr {
+    border-bottom: 1px solid var(--gray-200);
+    transition: background 0.2s ease;
+  }
+
+  .tasks-table tbody tr:hover {
+    background: var(--gray-50);
+  }
+
+  .tasks-table td {
+    padding: 1rem;
+    font-size: 14px;
+    color: var(--gray-700);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .badge-new { background: var(--primary-light); color: var(--primary-color); }
+  .badge-inprogress { background: var(--warning-light); color: var(--warning-color); }
+  .badge-completed { background: var(--success-light); color: var(--success-color); }
+  .badge-closed { background: var(--gray-200); color: var(--gray-700); }
+
+  .priority-critical { color: var(--danger-color); font-weight: 700; }
+  .priority-high { color: var(--warning-color); font-weight: 600; }
+  .priority-normal { color: var(--gray-700); }
+  .priority-low { color: var(--gray-700); opacity: 0.7; }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray-700);
+  }
+
+  .empty-state svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .tasks-table-container {
+      overflow-x: auto;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block page_title %}Tasks Overview{% endblock %}
+{% block page_subtitle %}Complete view of all tasks and projects{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📊 Tasks Overview</h1>
+  <p>Comprehensive view of all tasks, active projects, and completion metrics</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card total">
+    <div class="label">Total Tasks Assigned</div>
+    <div class="value">{{ total_tasks }}</div>
+  </div>
+  <div class="stat-card active">
+    <div class="label">Active Projects</div>
+    <div class="value">{{ active_projects }}</div>
+  </div>
+  <div class="stat-card completed">
+    <div class="label">Tasks Completed</div>
+    <div class="value">{{ tasks_completed }}</div>
+  </div>
+  <div class="stat-card ending">
+    <div class="label">Tasks Ending Soon</div>
+    <div class="value">{{ tasks_ending_soon }}</div>
+  </div>
+</div>
+
+<div class="actions-bar">
+  <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: var(--gray-800);">All Tasks</h2>
+  <a href="{% url 'export_tasks_excel' %}" class="btn-export">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+    Export to Excel
+  </a>
+</div>
+
+<div class="tasks-table-container">
+  {% if tasks %}
+  <table class="tasks-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Task Title</th>
+        <th>Project</th>
+        <th>Status</th>
+        <th>Priority</th>
+        <th>Assigned To</th>
+        <th>Due Date</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in tasks %}
+      <tr>
+        <td><strong>#{{ task.id }}</strong></td>
+        <td>
+          <a href="{% url 'task_detail' task.id %}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">
+            {{ task.title }}
+          </a>
+        </td>
+        <td>{{ task.project_name|default:"No Project" }}</td>
+        <td>
+          {% if task.status == 'Completed' or task.status == 'Closed' %}
+            <span class="badge badge-completed">{{ task.status }}</span>
+          {% elif task.status == 'In Progress' %}
+            <span class="badge badge-inprogress">{{ task.status }}</span>
+          {% elif task.status == 'New' %}
+            <span class="badge badge-new">{{ task.status }}</span>
+          {% else %}
+            <span class="badge badge-closed">{{ task.status }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="priority-{{ task.priority|lower }}">{{ task.priority }}</span>
+        </td>
+        <td>{{ task.assigned_name|default:"Unassigned" }}</td>
+        <td>{{ task.due_date|date:"M d, Y"|default:"—" }}</td>
+        <td>{{ task.created_at|date:"M d, Y" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M9 11H7V9h2v2zm0 4H7v-2h2v2zm4-4h-2V9h2v2zM5 5h14v2H5V5zm2 14h10v-8H7v8z"/>
+    </svg>
+    <h3>No Tasks Found</h3>
+    <p>There are no tasks to display at the moment.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

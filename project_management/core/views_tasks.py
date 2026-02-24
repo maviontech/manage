@@ -249,6 +249,7 @@ def create_task_view(request):
 @require_permission('tasks.view')
 def my_tasks_view(request):
     from .rbac import has_permission
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
     
     # Check permission
     if not has_permission(request, 'tasks.view'):
@@ -281,9 +282,11 @@ def my_tasks_view(request):
         cur.execute(
             f"""SELECT t.id, t.title, t.status, t.priority, t.due_date, t.closure_date, 
                        COALESCE(t.work_type, 'Task') AS work_type,
-                       t.assigned_to, t.project_id, p.name AS project_name
+                       t.assigned_to, t.project_id, p.name AS project_name,
+                       t.created_by, CONCAT(m.first_name, ' ', m.last_name) AS reporter_name
                FROM tasks t
                LEFT JOIN projects p ON p.id = t.project_id
+               LEFT JOIN members m ON m.id = t.created_by
                WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
                ORDER BY FIELD(t.status,'Open','In Progress','Review','Blocked','Closed'),
                         t.due_date IS NULL, t.due_date ASC""",
@@ -295,8 +298,34 @@ def my_tasks_view(request):
     
     cur.close()
 
+    # Pagination
+    page_number = request.GET.get('page', 1)
+    items_per_page = request.GET.get('per_page', 15)
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 15, 25, 50, 100]:
+            items_per_page = 15
+    except (ValueError, TypeError):
+        items_per_page = 15
+
+    paginator = Paginator(tasks, items_per_page)
+    
+    try:
+        page_obj = paginator.get_page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.get_page(1)
+    except EmptyPage:
+        page_obj = paginator.get_page(paginator.num_pages)
+
     today = datetime.date.today()
-    return render(request, "core/tasks_my.html", {"tasks": tasks, "page": "my_tasks", "today": today, "current_user_id": user_id})
+    return render(request, "core/tasks_my.html", {
+        "page_obj": page_obj,
+        "tasks": page_obj.object_list,
+        "page": "my_tasks",
+        "today": today,
+        "current_user_id": user_id,
+        "items_per_page": items_per_page
+    })
 
 
 # ==============================
@@ -3858,3 +3887,337 @@ def task_analytics_view(request):
             "today": datetime.date.today()
         }
     )
+
+
+# ==============================
+#  TASKS OVERVIEW PAGE
+# ==============================
+def tasks_overview_view(request):
+    """
+    Comprehensive tasks overview page showing:
+    - Total tasks assigned
+    - Active projects
+    - Tasks completed
+    - Tasks ending soon
+    - Complete list of all tasks
+    """
+    if not request.session.get('user'):
+        return redirect('login_password')
+    
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('login_password')
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Get visible task user IDs
+        visible_user_ids = get_visible_task_user_ids(conn, member_id)
+        
+        # Total tasks assigned
+        total_tasks = 0
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(
+                f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders})",
+                tuple(visible_user_ids)
+            )
+            row = cur.fetchone()
+            total_tasks = int(row['c']) if row else 0
+        
+        # Active projects
+        cur.execute("SELECT COUNT(*) AS c FROM projects WHERE status = 'Active'")
+        row = cur.fetchone()
+        active_projects = int(row['c']) if row else 0
+        
+        # Tasks completed
+        tasks_completed = 0
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(
+                f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND status IN ('Completed', 'Closed')",
+                tuple(visible_user_ids)
+            )
+            row = cur.fetchone()
+            tasks_completed = int(row['c']) if row else 0
+        
+        # Tasks ending soon (within 7 days)
+        tasks_ending_soon = 0
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(
+                f"""
+                SELECT COUNT(*) AS c FROM tasks 
+                WHERE assigned_type='member' 
+                AND assigned_to IN ({placeholders})
+                AND due_date IS NOT NULL
+                AND due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+                AND status NOT IN ('Completed', 'Closed')
+                """,
+                tuple(visible_user_ids)
+            )
+            row = cur.fetchone()
+            tasks_ending_soon = int(row['c']) if row else 0
+        
+        # Get all tasks with details
+        tasks = []
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(
+                f"""
+                SELECT 
+                    t.id,
+                    t.title,
+                    t.description,
+                    t.status,
+                    t.priority,
+                    t.due_date,
+                    t.created_at,
+                    t.assigned_type,
+                    t.assigned_to,
+                    p.name AS project_name,
+                    m.first_name AS member_first_name,
+                    m.last_name AS member_last_name,
+                    tm.name AS assigned_team_name
+                FROM tasks t
+                LEFT JOIN projects p ON t.project_id = p.id
+                LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
+                LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
+                WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
+                ORDER BY t.created_at DESC
+                LIMIT 100
+                """,
+                tuple(visible_user_ids)
+            )
+            rows = cur.fetchall()
+            
+            for row in rows:
+                # Determine assigned name
+                assigned_name = 'Unassigned'
+                if row['assigned_type'] == 'member' and row['member_first_name']:
+                    assigned_name = f"{row['member_first_name']} {row['member_last_name'] or ''}".strip()
+                elif row['assigned_type'] == 'team' and row['assigned_team_name']:
+                    assigned_name = f"Team: {row['assigned_team_name']}"
+                
+                tasks.append({
+                    'id': row['id'],
+                    'title': row['title'],
+                    'description': row['description'],
+                    'status': row['status'],
+                    'priority': row['priority'] or 'Normal',
+                    'due_date': row['due_date'],
+                    'created_at': row['created_at'],
+                    'project_name': row['project_name'],
+                    'assigned_name': assigned_name
+                })
+        
+        context = {
+            'total_tasks': total_tasks,
+            'active_projects': active_projects,
+            'tasks_completed': tasks_completed,
+            'tasks_ending_soon': tasks_ending_soon,
+            'tasks': tasks
+        }
+        
+        return render(request, 'core/tasks_overview.html', context)
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('project_management')
+        logger.error(f"Error in tasks_overview_view: {e}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f"Error loading tasks overview: {str(e)}", status=500)
+
+
+# ==============================
+#  EXPORT TASKS TO EXCEL
+# ==============================
+def export_tasks_excel(request):
+    """
+    Export all tasks to Excel with comprehensive details
+    """
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        return HttpResponse("openpyxl library is not installed. Please install it using: pip install openpyxl", status=500)
+    
+    if not request.session.get('user'):
+        return redirect('login_password')
+    
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('login_password')
+    
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    
+    try:
+        # Get visible task user IDs
+        visible_user_ids = get_visible_task_user_ids(conn, member_id)
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Tasks Overview"
+        
+        # Define professional colors
+        header_fill = PatternFill(start_color='2563EB', end_color='2563EB', fill_type='solid')
+        header_font = Font(bold=True, color='FFFFFF', size=11)
+        border = Border(
+            left=Side(style='thin', color='E5E7EB'),
+            right=Side(style='thin', color='E5E7EB'),
+            top=Side(style='thin', color='E5E7EB'),
+            bottom=Side(style='thin', color='E5E7EB')
+        )
+        
+        # Headers
+        headers = ['ID', 'Task Title', 'Description', 'Project', 'Status', 'Priority', 
+                  'Assigned To', 'Due Date', 'Created At', 'Days Until Due']
+        ws.append(headers)
+        
+        # Style headers
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        
+        # Fetch all tasks
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(
+                f"""
+                SELECT 
+                    t.id,
+                    t.title,
+                    t.description,
+                    t.status,
+                    t.priority,
+                    t.due_date,
+                    t.created_at,
+                    t.assigned_type,
+                    t.assigned_to,
+                    p.name AS project_name,
+                    m.first_name AS member_first_name,
+                    m.last_name AS member_last_name,
+                    tm.name AS assigned_team_name
+                FROM tasks t
+                LEFT JOIN projects p ON t.project_id = p.id
+                LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
+                LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
+                WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
+                ORDER BY t.created_at DESC
+                """,
+                tuple(visible_user_ids)
+            )
+            rows = cur.fetchall()
+            
+            # Add data rows
+            for row_num, r in enumerate(rows, 2):
+                # Determine assigned name
+                assigned_name = 'Unassigned'
+                if r['assigned_type'] == 'member' and r['member_first_name']:
+                    assigned_name = f"{r['member_first_name']} {r['member_last_name'] or ''}".strip()
+                elif r['assigned_type'] == 'team' and r['assigned_team_name']:
+                    assigned_name = f"Team: {r['assigned_team_name']}"
+                
+                # Calculate days until due
+                days_until_due = ''
+                if r['due_date']:
+                    from datetime import date
+                    today = date.today()
+                    due_date = r['due_date']
+                    if isinstance(due_date, str):
+                        from datetime import datetime as dt
+                        due_date = dt.strptime(due_date, '%Y-%m-%d').date()
+                    delta = (due_date - today).days
+                    if delta < 0:
+                        days_until_due = f"Overdue by {abs(delta)} days"
+                    elif delta == 0:
+                        days_until_due = "Due today"
+                    else:
+                        days_until_due = f"{delta} days"
+                
+                row_data = [
+                    r['id'],
+                    r['title'],
+                    r['description'] or '',
+                    r['project_name'] or 'No Project',
+                    r['status'],
+                    r['priority'] or 'Normal',
+                    assigned_name,
+                    r['due_date'].strftime('%Y-%m-%d') if r['due_date'] else '',
+                    r['created_at'].strftime('%Y-%m-%d %H:%M') if r['created_at'] else '',
+                    days_until_due
+                ]
+                
+                ws.append(row_data)
+                
+                # Style data rows
+                for col_num in range(1, len(headers) + 1):
+                    cell = ws.cell(row=row_num, column=col_num)
+                    cell.border = border
+                    cell.alignment = Alignment(vertical='top', wrap_text=True)
+                    
+                    # Color code priority
+                    if col_num == 6:  # Priority column
+                        if r['priority'] == 'Critical':
+                            cell.fill = PatternFill(start_color='FEE2E2', end_color='FEE2E2', fill_type='solid')
+                            cell.font = Font(color='991B1B', bold=True)
+                        elif r['priority'] == 'High':
+                            cell.fill = PatternFill(start_color='FEF3C7', end_color='FEF3C7', fill_type='solid')
+                            cell.font = Font(color='92400E', bold=True)
+                    
+                    # Color code status
+                    if col_num == 5:  # Status column
+                        if r['status'] in ('Completed', 'Closed'):
+                            cell.fill = PatternFill(start_color='D1FAE5', end_color='D1FAE5', fill_type='solid')
+                            cell.font = Font(color='065F46', bold=True)
+                        elif r['status'] == 'In Progress':
+                            cell.fill = PatternFill(start_color='DBEAFE', end_color='DBEAFE', fill_type='solid')
+                            cell.font = Font(color='1E40AF', bold=True)
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Set row heights
+        ws.row_dimensions[1].height = 25
+        
+        # Save to BytesIO
+        from io import BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        # Create response
+        from datetime import datetime
+        filename = f"Trackline_Tasks_Overview_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('project_management')
+        logger.error(f"Error exporting tasks to Excel: {e}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f"Error exporting data: {str(e)}", status=500)

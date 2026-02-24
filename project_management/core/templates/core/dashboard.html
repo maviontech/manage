@@ -867,17 +867,22 @@
       <div style="font-size: 13px; opacity: 0.9;">Showing all team tasks and projects</div>
     </div>
   </div>
-  <a href="{% url 'user_dashboard' %}" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+  <!-- <a href="{% url 'user_dashboard' %}" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
     Switch to My View
-  </a>
+  </a> -->
 </div>
 {% endif %}
 
 <div class="dashboard-grid">
-  <div class="metric-card total-tasks">
-    <div class="label">Total Tasks Assigned</div>
-    <div class="value">{{ assigned_count|default:0 }}</div>
-  </div>
+  <a href="{% url 'tasks_overview' %}" style="text-decoration: none; color: inherit;">
+    <div class="metric-card total-tasks" style="cursor: pointer; position: relative;">
+      <svg style="position: absolute; top: 1rem; right: 1rem; width: 20px; height: 20px; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 5l7 7-7 7"/>
+      </svg>
+      <div class="label">Total Tasks Assigned</div>
+      <div class="value">{{ assigned_count|default:0 }}</div>
+    </div>
+  </a>
   <div class="metric-card active-projects">
     <div class="label">Active Projects</div>
     <div class="value">{{ active_projects|default:0 }}</div>
