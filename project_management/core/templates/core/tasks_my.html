@@ -59,6 +59,25 @@
   <!-- TABLE CARD -->
   <div class="tasks-table-card">
     {% if tasks %}
+    <!-- Pagination Info & Controls Top -->
+    <div class="pagination-header">
+      <div class="pagination-info">
+        <span class="info-text">
+          Showing <strong>{{ page_obj.start_index }}</strong> to <strong>{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> tasks
+        </span>
+      </div>
+      <div class="pagination-controls">
+        <label for="perPageSelect" class="per-page-label">Items per page:</label>
+        <select id="perPageSelect" class="per-page-select">
+          <option value="10" {% if items_per_page == 10 %}selected{% endif %}>10</option>
+          <option value="15" {% if items_per_page == 15 %}selected{% endif %}>15</option>
+          <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
+          <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
+          <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+      </div>
+    </div>
+    
     <div class="table-responsive">
       <table class="tasks-table">
         <thead>
@@ -82,6 +101,13 @@
                 <line x1="3" y1="18" x2="3.01" y2="18"></line>
               </svg>
               Title
+            </th>
+            <th style="width: 180px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              Reporter
             </th>
             <th style="width: 130px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
@@ -134,7 +160,19 @@
                 <span class="work-type-mini-badge work-type-{{ t.work_type|default:'Task'|lower|cut:' ' }}">
                   {{ t.work_type|default:'Task' }}
                 </span>
-                {{ t.title }}
+                <span class="task-title-text" title="{{ t.title }}">{{ t.title }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="reporter-info">
+                {% if t.reporter_name %}
+                  <div class="reporter-avatar">
+                    {{ t.reporter_name|slice:":1"|upper }}
+                  </div>
+                  <span class="reporter-name" title="{{ t.reporter_name }}">{{ t.reporter_name }}</span>
+                {% else %}
+                  <span class="reporter-empty">—</span>
+                {% endif %}
               </div>
             </td>
             <td>
@@ -208,6 +246,83 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
+    
+    <!-- Pagination Controls Bottom -->
+    <div class="pagination-footer">
+      <div class="pagination-nav">
+        {% if page_obj.has_previous %}
+          <a href="?page=1&per_page={{ items_per_page }}" class="pagination-btn pagination-btn-first" title="First Page">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="11 17 6 12 11 7"></polyline>
+              <polyline points="18 17 13 12 18 7"></polyline>
+            </svg>
+          </a>
+          <a href="?page={{ page_obj.previous_page_number }}&per_page={{ items_per_page }}" class="pagination-btn pagination-btn-prev" title="Previous Page">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </a>
+        {% else %}
+          <span class="pagination-btn pagination-btn-disabled">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="11 17 6 12 11 7"></polyline>
+              <polyline points="18 17 13 12 18 7"></polyline>
+            </svg>
+          </span>
+          <span class="pagination-btn pagination-btn-disabled">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </span>
+        {% endif %}
+        
+        <div class="pagination-pages">
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <span class="pagination-page pagination-page-active">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <a href="?page={{ num }}&per_page={{ items_per_page }}" class="pagination-page">{{ num }}</a>
+            {% elif num == 1 or num == page_obj.paginator.num_pages %}
+              <a href="?page={{ num }}&per_page={{ items_per_page }}" class="pagination-page">{{ num }}</a>
+            {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+              <span class="pagination-ellipsis">...</span>
+            {% endif %}
+          {% endfor %}
+        </div>
+        
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}&per_page={{ items_per_page }}" class="pagination-btn pagination-btn-next" title="Next Page">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </a>
+          <a href="?page={{ page_obj.paginator.num_pages }}&per_page={{ items_per_page }}" class="pagination-btn pagination-btn-last" title="Last Page">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="13 17 18 12 13 7"></polyline>
+              <polyline points="6 17 11 12 6 7"></polyline>
+            </svg>
+          </a>
+        {% else %}
+          <span class="pagination-btn pagination-btn-disabled">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </span>
+          <span class="pagination-btn pagination-btn-disabled">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="13 17 18 12 13 7"></polyline>
+              <polyline points="6 17 11 12 6 7"></polyline>
+            </svg>
+          </span>
+        {% endif %}
+      </div>
+      
+      <div class="pagination-jump">
+        <label for="pageJump" class="jump-label">Go to page:</label>
+        <input type="number" id="pageJump" class="jump-input" min="1" max="{{ page_obj.paginator.num_pages }}" value="{{ page_obj.number }}" />
+        <button id="jumpBtn" class="jump-btn">Go</button>
+      </div>
     </div>
     {% else %}
     <div class="empty-state">
@@ -390,6 +505,52 @@
   font-weight: 600;
   color: #1e293b;
   font-size: 15px;
+}
+
+.task-title-text {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* === Reporter Info === */
+.reporter-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reporter-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.reporter-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.reporter-empty {
+  color: #cbd5e1;
+  font-style: italic;
 }
 
 /* Work Type Mini Badges */
@@ -601,6 +762,211 @@
   margin: 0;
 }
 
+/* === Pagination Styles === */
+.pagination-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 2px solid #f1f5f9;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-text {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.info-text strong {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.per-page-label {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.per-page-select {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.per-page-select:hover {
+  border-color: #3b82f6;
+}
+
+.per-page-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.pagination-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-top: 2px solid #f1f5f9;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 2px solid #e2e8f0;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.pagination-btn:hover {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #3b82f6;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.pagination-btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 8px;
+}
+
+.pagination-page {
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 2px solid #e2e8f0;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  padding: 0 12px;
+}
+
+.pagination-page:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-color: #3b82f6;
+  color: #1e40af;
+  transform: translateY(-2px);
+}
+
+.pagination-page-active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.pagination-page-active:hover {
+  transform: none;
+}
+
+.pagination-ellipsis {
+  color: #cbd5e1;
+  font-weight: 700;
+  padding: 0 8px;
+  user-select: none;
+}
+
+.pagination-jump {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jump-label {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.jump-input {
+  width: 70px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.jump-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.jump-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jump-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
 /* === Responsive === */
 @media (max-width: 992px) {
   .header-content {
@@ -625,6 +991,44 @@
   .tasks-table th,
   .tasks-table td {
     padding: 12px 10px;
+  }
+  
+  .pagination-header,
+  .pagination-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .pagination-nav {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .pagination-jump {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .pagination-pages {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .pagination-btn,
+  .pagination-page {
+    min-width: 36px;
+    height: 36px;
+    font-size: 13px;
+  }
+  
+  .pagination-pages {
+    gap: 4px;
+  }
+  
+  .pagination-nav {
+    gap: 6px;
   }
 }
 </style>
@@ -726,6 +1130,37 @@
   if (assignedFilter) assignedFilter.addEventListener('change', applyFilters);
   if (projectFilter) projectFilter.addEventListener('change', applyFilters);
   if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+  
+  // Pagination controls
+  const perPageSelect = document.getElementById('perPageSelect');
+  if (perPageSelect) {
+    perPageSelect.addEventListener('change', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      urlParams.set('per_page', this.value);
+      urlParams.set('page', '1'); // Reset to first page when changing items per page
+      window.location.search = urlParams.toString();
+    });
+  }
+  
+  const jumpBtn = document.getElementById('jumpBtn');
+  const pageJump = document.getElementById('pageJump');
+  if (jumpBtn && pageJump) {
+    jumpBtn.addEventListener('click', function() {
+      const pageNum = parseInt(pageJump.value);
+      const maxPages = parseInt(pageJump.getAttribute('max'));
+      if (pageNum >= 1 && pageNum <= maxPages) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('page', pageNum);
+        window.location.search = urlParams.toString();
+      }
+    });
+    
+    pageJump.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        jumpBtn.click();
+      }
+    });
+  }
 });
 </script>
 {% endblock %}
