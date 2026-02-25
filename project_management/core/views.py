@@ -1,6 +1,7 @@
 # views.py
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 from .auth import identify_tenant_by_email, authenticate
 from .db_connector import get_connection_from_config
 from .rbac import require_permission, has_permission
@@ -582,11 +583,30 @@ def dashboard_view(request):
         defects_timeline_from = defects_timeline_to - timedelta(days=29)
 
     # ---------------------- PLANNED TASKS ----------------------
+    # Planned tasks use a separate date window (do not follow the Tasks Over Time filter)
     planned_tasks = []
+    planned_start = date.today()
+    planned_end = planned_start + timedelta(days=7)
     try:
+        # allow explicit planned range params; if not provided default to today..today+7
+        planned_from_param = (request.GET.get('planned_start') or request.GET.get('planned_start_date') or '').strip()
+        planned_to_param = (request.GET.get('planned_end') or request.GET.get('planned_end_date') or '').strip()
+        planned_start = date.today()
+        planned_end = planned_start + timedelta(days=7)
+        try:
+            if planned_from_param:
+                planned_start = datetime.strptime(planned_from_param, '%Y-%m-%d').date()
+            if planned_to_param:
+                planned_end = datetime.strptime(planned_to_param, '%Y-%m-%d').date()
+            if planned_start > planned_end:
+                planned_start, planned_end = planned_end, planned_start
+        except ValueError:
+            planned_start = date.today()
+            planned_end = planned_start + timedelta(days=7)
+
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
-            params = list(visible_user_ids) + [tasks_timeline_from, tasks_timeline_to]
+            params = list(visible_user_ids) + [planned_start, planned_end]
             cur.execute(f"""
                 SELECT id, title, status, due_date, created_at
                 FROM tasks
@@ -740,17 +760,54 @@ def dashboard_view(request):
         'line_chart_labels': json.dumps(line_chart_labels),
         'line_chart_created': json.dumps(line_chart_created),
         'line_chart_completed': json.dumps(line_chart_completed),
-        'planned_start': tasks_timeline_from,
-        'planned_end': tasks_timeline_to,
+        'planned_start': planned_start,
+        'planned_end': planned_end,
         'planned_limit': 10,
         'timeline_from': tasks_timeline_from.strftime('%Y-%m-%d'),
         'timeline_to': tasks_timeline_to.strftime('%Y-%m-%d'),
         'timeline_defect_from': defects_timeline_from.strftime('%Y-%m-%d'),
         'timeline_defect_to': defects_timeline_to.strftime('%Y-%m-%d'),
+        'defect_range_from': defects_timeline_from,
+        'defect_range_to': defects_timeline_to,
         'defect_reporter_summary': defect_reporter_summary,
         'defect_reporter_labels': json.dumps(defect_reporter_labels),
         'defect_reporter_values': json.dumps(defect_reporter_values),
     }
+
+    # If this is an AJAX/JSON request for the defect filter, return JSON payload
+    accept = request.META.get('HTTP_ACCEPT', '')
+    is_xhr = request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
+    if is_xhr or 'application/json' in accept or request.GET.get('ajax') == '1':
+        # Normalize defect_reporter_summary rows to plain dicts
+        rows = []
+        for r in defect_reporter_summary:
+            if isinstance(r, dict):
+                rows.append({
+                    'reporter_name': r.get('reporter_name'),
+                    'reported_count': int(r.get('reported_count') or 0),
+                    'closed_count': int(r.get('closed_count') or 0),
+                    'open_count': int(r.get('open_count') or 0),
+                })
+            else:
+                # tuple / list fallback ordering based on query
+                try:
+                    rows.append({
+                        'reporter_name': r[0] or 'Unknown Reporter',
+                        'reported_count': int(r[1] or 0),
+                        'closed_count': int(r[2] or 0),
+                        'open_count': int(r[3] or 0),
+                    })
+                except Exception:
+                    rows.append({'reporter_name': 'Unknown Reporter', 'reported_count': 0, 'closed_count': 0, 'open_count': 0})
+
+        payload = {
+            'labels': defect_reporter_labels,
+            'values': defect_reporter_values,
+            'summary': rows,
+            'from': str(defects_timeline_from),
+            'to': str(defects_timeline_to),
+        }
+        return JsonResponse(payload)
 
     return render(request, 'core/dashboard.html', ctx)
 
@@ -979,8 +1036,26 @@ def user_dashboard_view(request):
         defects_timeline_to = date.today()
         defects_timeline_from = defects_timeline_to - timedelta(days=29)
 
+    # Planned tasks use a separate date window (do not follow the Tasks Over Time filter)
     planned_tasks = []
+    planned_start = date.today()
+    planned_end = planned_start + timedelta(days=7)
     try:
+        planned_from_param = (request.GET.get('planned_start') or request.GET.get('planned_start_date') or '').strip()
+        planned_to_param = (request.GET.get('planned_end') or request.GET.get('planned_end_date') or '').strip()
+        planned_start = date.today()
+        planned_end = planned_start + timedelta(days=7)
+        try:
+            if planned_from_param:
+                planned_start = datetime.strptime(planned_from_param, '%Y-%m-%d').date()
+            if planned_to_param:
+                planned_end = datetime.strptime(planned_to_param, '%Y-%m-%d').date()
+            if planned_start > planned_end:
+                planned_start, planned_end = planned_end, planned_start
+        except ValueError:
+            planned_start = date.today()
+            planned_end = planned_start + timedelta(days=7)
+
         cur.execute("""
             SELECT id, title, status, due_date, created_at
             FROM tasks
@@ -990,7 +1065,7 @@ def user_dashboard_view(request):
               AND DATE(due_date) BETWEEN %s AND %s
             ORDER BY due_date ASC
             LIMIT 10
-        """, (member_id, tasks_timeline_from, tasks_timeline_to))
+        """, (member_id, planned_start, planned_end))
         rows = cur.fetchall() or []
         for r in rows:
             if isinstance(r, dict):
@@ -1114,8 +1189,8 @@ def user_dashboard_view(request):
         'line_chart_labels': json.dumps(line_chart_labels),
         'line_chart_created': json.dumps(line_chart_created),
         'line_chart_completed': json.dumps(line_chart_completed),
-        'planned_start': tasks_timeline_from,
-        'planned_end': tasks_timeline_to,
+        'planned_start': planned_start,
+        'planned_end': planned_end,
         'planned_limit': 10,
         'timeline_from': tasks_timeline_from.strftime('%Y-%m-%d'),
         'timeline_to': tasks_timeline_to.strftime('%Y-%m-%d'),
