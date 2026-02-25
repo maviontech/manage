@@ -308,6 +308,74 @@
         outline: none;
         box-shadow: 0 0 0 4px rgba(37,99,235,0.08);
     }
+
+    /* Description card improvements */
+    .description-card {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e6eefb;
+        box-shadow: 0 8px 30px rgba(15,23,42,0.04);
+        background: linear-gradient(180deg,#ffffff,#fbfdff);
+    }
+    .description-card .card-header {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        padding: 18px 20px;
+        border-bottom: 1px solid #eef2f7;
+        background: linear-gradient(180deg, rgba(246,250,255,0.6), rgba(255,255,255,0.6));
+        position: relative;
+    }
+    .desc-badge {
+        display:inline-flex;
+        align-items:center;
+        gap:10px;
+        padding:6px 12px;
+        border-radius:999px;
+        font-weight:800;
+        color:#fff;
+        background: linear-gradient(90deg,#2563eb,#0ea5e9);
+        box-shadow: 0 6px 18px rgba(14,165,233,0.12);
+        font-size:13px;
+    }
+    /* a subtle accent stripe on the left of the header */
+    .description-card::before{
+        content:'';
+        position:absolute;
+        left:0; top:0; bottom:0;
+        width:6px;
+        background: linear-gradient(180deg,#2563eb,#0ea5e9);
+        border-top-left-radius:12px;
+        border-bottom-left-radius:12px;
+    }
+    .description-card .card-header h3 {
+        margin:0; font-size:18px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:10px;
+    }
+    .description-card .card-header .desc-meta { color:#64748b; font-size:13px; font-weight:600; }
+    .description-actions { display:flex; gap:8px; align-items:center; }
+    .desc-action-btn { background:transparent; border:1px solid #e6eefb; padding:8px 10px; border-radius:8px; cursor:pointer; color:#2563eb; font-weight:700; display:inline-flex; gap:8px; align-items:center; }
+    .desc-action-btn:hover { background:#f8fafc; transform:translateY(-2px); }
+
+    .description-content { padding: 20px; color:#0f172a; font-size:15px; line-height:1.7; max-height: 320px; overflow: auto; }
+    .description-content.collapsed { max-height: 160px; }
+    .description-content p { margin:0 0 12px 0; }
+    .description-content pre { background:#0f172a; color:#e6eefb; padding:12px; border-radius:8px; overflow:auto; }
+    .description-content code { background:#f1f5f9; padding:2px 6px; border-radius:6px; font-family:monospace; }
+    .description-footer { padding: 12px 20px 20px 20px; display:flex; justify-content:space-between; align-items:center; color:#64748b; font-size:13px; }
+    .show-more { background:none; border:none; color:#2563eb; font-weight:700; cursor:pointer; }
+    /* Styled parsed sections */
+    .desc-section { margin-bottom: 12px; padding: 12px; border-radius: 10px; }
+    .desc-section-title { display:inline-block; padding:6px 12px; border-radius:999px; font-weight:800; color:#fff; font-size:13px; margin-bottom:8px; }
+    .desc-steps { background: linear-gradient(90deg,#f1f8ff,#fbfdff); border:1px solid #dbeafe; }
+    .desc-steps .desc-section-title { background: linear-gradient(90deg,#2563eb,#0ea5e9); box-shadow:0 6px 18px rgba(14,165,233,0.08); }
+    .desc-expected { background: linear-gradient(90deg,#f0fdf4,#f9fffb); border:1px solid #bbf7d0; }
+    .desc-expected .desc-section-title { background: linear-gradient(90deg,#10b981,#34d399); box-shadow:0 6px 18px rgba(16,185,129,0.08); }
+    .desc-actual { background: linear-gradient(90deg,#fff5f6,#fff9f9); border:1px solid #fecaca; }
+    .desc-actual .desc-section-title { background: linear-gradient(90deg,#ef4444,#f97316); box-shadow:0 6px 18px rgba(239,68,68,0.08); }
+    .desc-section-body { padding-top:8px; color:#0f172a; }
+    .desc-section ol { margin:8px 0 0 18px; padding-left:6px; }
+    .desc-paragraph { margin-bottom:10px; }
 </style>
 {% endblock %}
 
@@ -335,6 +403,111 @@
             </button>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+        (function(){
+            function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+            const descEl = document.getElementById('descriptionContent');
+            const btnToggle = document.getElementById('btnToggleDesc');
+            const btnCopy = document.getElementById('btnCopyDesc');
+            const wordCountEl = document.getElementById('descWordCount');
+            const showMoreBtn = document.getElementById('showMoreBtn');
+            if (descEl) {
+                const text = descEl.innerText || descEl.textContent || '';
+                const words = text.trim().split(/\s+/).filter(Boolean).length;
+                wordCountEl.textContent = words + ' words';
+                // toggle collapse
+                function setCollapsed(collapsed){
+                    if (collapsed) {
+                        descEl.classList.add('collapsed');
+                        btnToggle.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                        showMoreBtn.textContent = 'Show more';
+                    } else {
+                        descEl.classList.remove('collapsed');
+                        btnToggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
+                        showMoreBtn.textContent = 'Show less';
+                    }
+                }
+                // initial collapsed if long
+                if (descEl.scrollHeight > 260) setCollapsed(true);
+                btnToggle && btnToggle.addEventListener('click', function(){ setCollapsed(!descEl.classList.contains('collapsed')); });
+                showMoreBtn && showMoreBtn.addEventListener('click', function(){ setCollapsed(!descEl.classList.contains('collapsed')); });
+                btnCopy && btnCopy.addEventListener('click', async function(){
+                    try {
+                        const txt = descEl.innerText || descEl.textContent || '';
+                        await navigator.clipboard.writeText(txt);
+                        btnCopy.textContent = 'Copied';
+                        setTimeout(()=> btnCopy.innerHTML = '<i class="fas fa-copy"></i> Copy', 1500);
+                    } catch (e) {
+                        console.error('copy failed', e);
+                        alert('Copy not supported');
+                    }
+                });
+            }
+            // Parse raw description into colored sections (Steps / Expected / Actual)
+            try {
+                const src = document.getElementById('descriptionSource');
+                if (src && descEl) {
+                    const raw = src.textContent || '';
+                    const lines = raw.split(/\r?\n/).map(l=>l.replace(/\u00a0/g,' ').replace(/\t/g,' ').trimRight());
+                    const sections = [];
+                    let cur = {type:'text', lines:[]};
+                    const headingMap = {
+                        'steps to reproduce': 'steps',
+                        'stepsto reproduce': 'steps',
+                        'steps': 'steps',
+                        'steps to reproduce:': 'steps',
+                        'expected behavior': 'expected',
+                        'expected': 'expected',
+                        'actual behavior': 'actual',
+                        'actual': 'actual'
+                    };
+                    function pushCur(){ if(cur.lines.length>0){ sections.push(cur); cur={type:'text',lines:[]}; }}
+                    for (let i=0;i<lines.length;i++){
+                        const ln = lines[i].trim();
+                        if(!ln) { cur.lines.push(''); continue; }
+                        const low = ln.replace(/\*+/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+                        if (headingMap[low.replace(':','')]){
+                            pushCur(); cur={type: headingMap[low.replace(':','')], lines: []};
+                            continue;
+                        }
+                        // detect headings with trailing colon like "**Expected Behavior:**"
+                        const m = ln.match(/^\*{0,2}\s*([A-Za-z ]{3,40}?)\s*:\s*$/);
+                        if (m){ const key = (m[1]||'').toLowerCase().replace(/\s+/g,' ').trim(); if(headingMap[key]){ pushCur(); cur={type:headingMap[key],lines:[]}; continue; } }
+                        cur.lines.push(ln);
+                    }
+                    pushCur();
+
+                    function wrap(text){ return escapeHtml(text).replace(/\n/g,'<br>'); }
+
+                    const out = sections.map(s=>{
+                        if(s.type==='steps'){
+                            // build ordered list from numbered or dash lines
+                            const items = s.lines.filter(Boolean).map(l=>{
+                                const m = l.match(/^\s*\d+\.\s*(.*)$/); if(m) return m[1];
+                                const m2 = l.match(/^[-\*]\s*(.*)$/); if(m2) return m2[1];
+                                return l;
+                            });
+                            if(items.length===0) return '';
+                            return `<div class="desc-section desc-steps"><div class="desc-section-title">Steps to Reproduce</div><ol>`+items.map(it=>`<li>${wrap(it)}</li>`).join('')+`</ol></div>`;
+                        } else if (s.type==='expected'){
+                            const txt = s.lines.join('\n').trim(); if(!txt) return '';
+                            return `<div class="desc-section desc-expected"><div class="desc-section-title">Expected Behavior</div><div class="desc-section-body">${wrap(txt)}</div></div>`;
+                        } else if (s.type==='actual'){
+                            const txt = s.lines.join('\n').trim(); if(!txt) return '';
+                            return `<div class="desc-section desc-actual"><div class="desc-section-title">Actual Behavior</div><div class="desc-section-body">${wrap(txt)}</div></div>`;
+                        } else {
+                            const txt = s.lines.join('\n').trim(); if(!txt) return '';
+                            return `<div class="desc-paragraph">${wrap(txt)}</div>`;
+                        }
+                    }).filter(Boolean).join('\n');
+
+                    if(out) descEl.innerHTML = out;
+                }
+            } catch (e){ console.error('desc parse failed',e); }
+        })();
+        });
+    </script>
 
     <div class="detail-content">
         <!-- Left Panel: Issue Details -->
@@ -362,11 +535,29 @@
             <!-- Description Section -->
             <div class="card description-card">
                 <div class="card-header">
-                    <h3><i class="fas fa-info-circle"></i> Description</h3>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span class="desc-badge"><i class="fas fa-info-circle"></i> Description</span>
+                        <div style="display:flex;flex-direction:column;">
+                            <div style="font-size:16px;font-weight:800;color:#0f172a;">{{ issue.summary|truncatechars:60 }}</div>
+                            <div class="desc-meta">{{ issue.reporter_name|default:issue.reporter_email }} • Created {{ issue.created_at|date:"d M Y" }}</div>
+                        </div>
+                    </div>
+                    <div class="description-actions">
+                        <button class="desc-action-btn" id="btnCopyDesc" title="Copy description"><i class="fas fa-copy"></i> Copy</button>
+                        {% if user_ldap == issue.reporter_ldap or user_role == 'ADMIN' %}
+                        <a href="{% url 'edit_task' issue.id %}" class="desc-action-btn" title="Edit description"><i class="fas fa-edit"></i> Edit</a>
+                        {% endif %}
+                        <button class="desc-action-btn" id="btnToggleDesc" title="Expand/collapse"><i class="fas fa-chevron-down"></i></button>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div class="description-content">
+                    <div class="description-content collapsed" id="descriptionContent">
                         {{ issue.description|linebreaks|default:"No description provided." }}
+                        </div>
+                        <pre id="descriptionSource" style="display:none">{{ issue.description|default:"" }}</pre>
+                    <div class="description-footer">
+                        <div id="descWordCount">--</div>
+                        <button class="show-more" id="showMoreBtn">Show more</button>
                     </div>
                     
                     <!-- Attachments within Description -->
