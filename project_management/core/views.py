@@ -68,6 +68,56 @@ def calculate_date_based_progress(start_date, end_date, current_date=None):
     return round(progress, 1)
 
 
+def _table_exists(cur, table_name):
+    try:
+        cur.execute("SHOW TABLES LIKE %s", (table_name,))
+        return cur.fetchone() is not None
+    except Exception:
+        return False
+
+
+def _load_defect_contributor_metrics(cur, start_date, end_date):
+    """
+    Build defect creator metrics across the tenant DB for the selected window.
+    Only defect creators are included (tasks.created_by).
+    Returns:
+      summary_rows, labels, values
+    """
+    summary = []
+    labels = []
+    values = []
+    try:
+        cur.execute("""
+            SELECT
+                COALESCE(
+                    NULLIF(TRIM(CONCAT(COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))), ''),
+                    NULLIF(TRIM(COALESCE(u.full_name, '')), ''),
+                    'Unknown Reporter'
+                ) AS reporter_name,
+                COUNT(*) AS reported_count,
+                SUM(CASE WHEN LOWER(TRIM(COALESCE(t.status, ''))) IN ('completed', 'closed') THEN 1 ELSE 0 END) AS closed_count,
+                SUM(CASE WHEN LOWER(TRIM(COALESCE(t.status, ''))) NOT IN ('completed', 'closed') THEN 1 ELSE 0 END) AS open_count
+            FROM tasks t
+            LEFT JOIN members m ON m.id = t.created_by
+            LEFT JOIN users u ON u.id = t.created_by
+            WHERE t.created_by IS NOT NULL
+              AND LOWER(TRIM(COALESCE(t.work_type, ''))) LIKE %s
+              AND DATE(t.created_at) BETWEEN %s AND %s
+            GROUP BY reporter_name
+            ORDER BY reported_count DESC, reporter_name ASC
+        """, ('%defect%', start_date, end_date))
+        summary = cur.fetchall() or []
+        for row in summary[:15]:
+            labels.append(row.get('reporter_name') or 'Unknown Reporter')
+            values.append(int(row.get('reported_count') or 0))
+    except Exception as e:
+        logger.error(f"defect metrics creators query failed: {e}")
+        summary = []
+        labels = []
+        values = []
+    return summary, labels, values
+
+
 def identify_view(request):
     if request.method == 'GET':
         return render(request, 'core/identify.html', {})
