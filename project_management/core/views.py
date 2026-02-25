@@ -547,27 +547,46 @@ def dashboard_view(request):
     # ---------------------- TIMELINE FILTER (default last 30 days) ----------------------
     from datetime import timedelta
     import json
-    timeline_to = date.today()
-    timeline_from = timeline_to - timedelta(days=29)
-    from_param = (request.GET.get('from_date') or '').strip()
-    to_param = (request.GET.get('to_date') or '').strip()
+    # Tasks (line chart & planned tasks) timeline
+    tasks_timeline_to = date.today()
+    tasks_timeline_from = tasks_timeline_to - timedelta(days=29)
+    # Support legacy 'from_date'/'to_date' but prefer explicit params for tasks
+    from_param_tasks = (request.GET.get('tasks_from_date') or request.GET.get('from_date') or '').strip()
+    to_param_tasks = (request.GET.get('tasks_to_date') or request.GET.get('to_date') or '').strip()
     try:
-        if from_param:
-            timeline_from = datetime.strptime(from_param, '%Y-%m-%d').date()
-        if to_param:
-            timeline_to = datetime.strptime(to_param, '%Y-%m-%d').date()
-        if timeline_from > timeline_to:
-            timeline_from, timeline_to = timeline_to, timeline_from
+        if from_param_tasks:
+            tasks_timeline_from = datetime.strptime(from_param_tasks, '%Y-%m-%d').date()
+        if to_param_tasks:
+            tasks_timeline_to = datetime.strptime(to_param_tasks, '%Y-%m-%d').date()
+        if tasks_timeline_from > tasks_timeline_to:
+            tasks_timeline_from, tasks_timeline_to = tasks_timeline_to, tasks_timeline_from
     except ValueError:
-        timeline_to = date.today()
-        timeline_from = timeline_to - timedelta(days=29)
+        tasks_timeline_to = date.today()
+        tasks_timeline_from = tasks_timeline_to - timedelta(days=29)
+
+    # Defect reporter timeline (separate filter)
+    defects_timeline_to = date.today()
+    defects_timeline_from = defects_timeline_to - timedelta(days=29)
+    from_param_def = (request.GET.get('defect_from_date') or request.GET.get('defectFromDate') or '').strip()
+    to_param_def = (request.GET.get('defect_to_date') or request.GET.get('defectToDate') or '').strip()
+    # If no explicit defect params provided, fall back to tasks timeline (so default matches current display)
+    try:
+        if from_param_def:
+            defects_timeline_from = datetime.strptime(from_param_def, '%Y-%m-%d').date()
+        if to_param_def:
+            defects_timeline_to = datetime.strptime(to_param_def, '%Y-%m-%d').date()
+        if defects_timeline_from > defects_timeline_to:
+            defects_timeline_from, defects_timeline_to = defects_timeline_to, defects_timeline_from
+    except ValueError:
+        defects_timeline_to = date.today()
+        defects_timeline_from = defects_timeline_to - timedelta(days=29)
 
     # ---------------------- PLANNED TASKS ----------------------
     planned_tasks = []
     try:
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
-            params = list(visible_user_ids) + [timeline_from, timeline_to]
+            params = list(visible_user_ids) + [tasks_timeline_from, tasks_timeline_to]
             cur.execute(f"""
                 SELECT id, title, status, due_date, created_at
                 FROM tasks
@@ -603,9 +622,9 @@ def dashboard_view(request):
     line_chart_created = []
     line_chart_completed = []
     try:
-        days_count = (timeline_to - timeline_from).days + 1
+        days_count = (tasks_timeline_to - tasks_timeline_from).days + 1
         for i in range(days_count):
-            day = timeline_from + timedelta(days=i)
+            day = tasks_timeline_from + timedelta(days=i)
             line_chart_labels.append(day.strftime('%d %b'))
 
             if visible_user_ids:
@@ -674,7 +693,7 @@ def dashboard_view(request):
                             AND DATE(t.created_at) BETWEEN %s AND %s
                         GROUP BY reporter_name
                         ORDER BY reported_count DESC, reporter_name ASC
-                """, ('%defect%', '%bug%', '%defect%', '%bug%', timeline_from, timeline_to))
+                    """, ('%defect%', '%bug%', '%defect%', '%bug%', defects_timeline_from, defects_timeline_to))
         defect_reporter_summary = cur.fetchall() or []
         logger.debug(f"defect_reporter_summary rows: {len(defect_reporter_summary)}")
         for row in defect_reporter_summary[:10]:
@@ -721,11 +740,13 @@ def dashboard_view(request):
         'line_chart_labels': json.dumps(line_chart_labels),
         'line_chart_created': json.dumps(line_chart_created),
         'line_chart_completed': json.dumps(line_chart_completed),
-        'planned_start': timeline_from,
-        'planned_end': timeline_to,
+        'planned_start': tasks_timeline_from,
+        'planned_end': tasks_timeline_to,
         'planned_limit': 10,
-        'timeline_from': timeline_from.strftime('%Y-%m-%d'),
-        'timeline_to': timeline_to.strftime('%Y-%m-%d'),
+        'timeline_from': tasks_timeline_from.strftime('%Y-%m-%d'),
+        'timeline_to': tasks_timeline_to.strftime('%Y-%m-%d'),
+        'timeline_defect_from': defects_timeline_from.strftime('%Y-%m-%d'),
+        'timeline_defect_to': defects_timeline_to.strftime('%Y-%m-%d'),
         'defect_reporter_summary': defect_reporter_summary,
         'defect_reporter_labels': json.dumps(defect_reporter_labels),
         'defect_reporter_values': json.dumps(defect_reporter_values),
@@ -926,20 +947,37 @@ def user_dashboard_view(request):
     # Timeline filter (default last 30 days)
     from datetime import timedelta
     import json
-    timeline_to = date.today()
-    timeline_from = timeline_to - timedelta(days=29)
-    from_param = (request.GET.get('from_date') or '').strip()
-    to_param = (request.GET.get('to_date') or '').strip()
+    # Tasks (line chart & planned tasks) timeline
+    tasks_timeline_to = date.today()
+    tasks_timeline_from = tasks_timeline_to - timedelta(days=29)
+    from_param_tasks = (request.GET.get('tasks_from_date') or request.GET.get('from_date') or '').strip()
+    to_param_tasks = (request.GET.get('tasks_to_date') or request.GET.get('to_date') or '').strip()
     try:
-        if from_param:
-            timeline_from = datetime.strptime(from_param, '%Y-%m-%d').date()
-        if to_param:
-            timeline_to = datetime.strptime(to_param, '%Y-%m-%d').date()
-        if timeline_from > timeline_to:
-            timeline_from, timeline_to = timeline_to, timeline_from
+        if from_param_tasks:
+            tasks_timeline_from = datetime.strptime(from_param_tasks, '%Y-%m-%d').date()
+        if to_param_tasks:
+            tasks_timeline_to = datetime.strptime(to_param_tasks, '%Y-%m-%d').date()
+        if tasks_timeline_from > tasks_timeline_to:
+            tasks_timeline_from, tasks_timeline_to = tasks_timeline_to, tasks_timeline_from
     except ValueError:
-        timeline_to = date.today()
-        timeline_from = timeline_to - timedelta(days=29)
+        tasks_timeline_to = date.today()
+        tasks_timeline_from = tasks_timeline_to - timedelta(days=29)
+
+    # Defects timeline (separate filter)
+    defects_timeline_to = date.today()
+    defects_timeline_from = defects_timeline_to - timedelta(days=29)
+    from_param_def = (request.GET.get('defect_from_date') or request.GET.get('defectFromDate') or '').strip()
+    to_param_def = (request.GET.get('defect_to_date') or request.GET.get('defectToDate') or '').strip()
+    try:
+        if from_param_def:
+            defects_timeline_from = datetime.strptime(from_param_def, '%Y-%m-%d').date()
+        if to_param_def:
+            defects_timeline_to = datetime.strptime(to_param_def, '%Y-%m-%d').date()
+        if defects_timeline_from > defects_timeline_to:
+            defects_timeline_from, defects_timeline_to = defects_timeline_to, defects_timeline_from
+    except ValueError:
+        defects_timeline_to = date.today()
+        defects_timeline_from = defects_timeline_to - timedelta(days=29)
 
     planned_tasks = []
     try:
@@ -952,7 +990,7 @@ def user_dashboard_view(request):
               AND DATE(due_date) BETWEEN %s AND %s
             ORDER BY due_date ASC
             LIMIT 10
-        """, (member_id, timeline_from, timeline_to))
+        """, (member_id, tasks_timeline_from, tasks_timeline_to))
         rows = cur.fetchall() or []
         for r in rows:
             if isinstance(r, dict):
@@ -977,9 +1015,9 @@ def user_dashboard_view(request):
     line_chart_created = []
     line_chart_completed = []
     try:
-        days_count = (timeline_to - timeline_from).days + 1
+        days_count = (tasks_timeline_to - tasks_timeline_from).days + 1
         for i in range(days_count):
-            day = timeline_from + timedelta(days=i)
+            day = tasks_timeline_from + timedelta(days=i)
             line_chart_labels.append(day.strftime('%d %b'))
 
             cur.execute("""
@@ -1035,7 +1073,7 @@ def user_dashboard_view(request):
               AND DATE(t.created_at) BETWEEN %s AND %s
             GROUP BY reporter_name
             ORDER BY reported_count DESC, reporter_name ASC
-        """, ('%defect%', timeline_from, timeline_to))
+        """, ('%defect%', defects_timeline_from, defects_timeline_to))
         defect_reporter_summary = cur.fetchall() or []
         for row in defect_reporter_summary[:10]:
             defect_reporter_labels.append(row.get('reporter_name') or 'Unknown Reporter')
@@ -1076,11 +1114,13 @@ def user_dashboard_view(request):
         'line_chart_labels': json.dumps(line_chart_labels),
         'line_chart_created': json.dumps(line_chart_created),
         'line_chart_completed': json.dumps(line_chart_completed),
-        'planned_start': timeline_from,
-        'planned_end': timeline_to,
+        'planned_start': tasks_timeline_from,
+        'planned_end': tasks_timeline_to,
         'planned_limit': 10,
-        'timeline_from': timeline_from.strftime('%Y-%m-%d'),
-        'timeline_to': timeline_to.strftime('%Y-%m-%d'),
+        'timeline_from': tasks_timeline_from.strftime('%Y-%m-%d'),
+        'timeline_to': tasks_timeline_to.strftime('%Y-%m-%d'),
+        'timeline_defect_from': defects_timeline_from.strftime('%Y-%m-%d'),
+        'timeline_defect_to': defects_timeline_to.strftime('%Y-%m-%d'),
         'defect_reporter_summary': defect_reporter_summary,
         'defect_reporter_labels': json.dumps(defect_reporter_labels),
         'defect_reporter_values': json.dumps(defect_reporter_values),
