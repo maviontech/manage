@@ -883,18 +883,33 @@
       <div class="value">{{ assigned_count|default:0 }}</div>
     </div>
   </a>
-  <div class="metric-card active-projects">
-    <div class="label">Active Projects</div>
-    <div class="value">{{ active_projects|default:0 }}</div>
-  </div>
-  <div class="metric-card tasks-completed">
-    <div class="label">Tasks Completed</div>
-    <div class="value">{{ tasks_completed|default:0 }}</div>
-  </div>
-  <div class="metric-card tasks-pending">
-    <div class="label">Tasks Pending</div>
-    <div class="value">{{ tasks_pending|default:0 }}</div>
-  </div>
+  <a href="{% url 'metric_drilldown' 'active-projects' %}" style="text-decoration: none; color: inherit;">
+    <div class="metric-card active-projects" style="cursor: pointer; position: relative;">
+      <svg style="position: absolute; top: 1rem; right: 1rem; width: 20px; height: 20px; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 5l7 7-7 7"/>
+      </svg>
+      <div class="label">Active Projects</div>
+      <div class="value">{{ active_projects|default:0 }}</div>
+    </div>
+  </a>
+  <a href="{% url 'metric_drilldown' 'tasks-completed' %}" style="text-decoration: none; color: inherit;">
+    <div class="metric-card tasks-completed" style="cursor: pointer; position: relative;">
+      <svg style="position: absolute; top: 1rem; right: 1rem; width: 20px; height: 20px; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 5l7 7-7 7"/>
+      </svg>
+      <div class="label">Tasks Completed</div>
+      <div class="value">{{ tasks_completed|default:0 }}</div>
+    </div>
+  </a>
+  <a href="{% url 'metric_drilldown' 'tasks-pending' %}" style="text-decoration: none; color: inherit;">
+    <div class="metric-card tasks-pending" style="cursor: pointer; position: relative;">
+      <svg style="position: absolute; top: 1rem; right: 1rem; width: 20px; height: 20px; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 5l7 7-7 7"/>
+      </svg>
+      <div class="label">Tasks Pending</div>
+      <div class="value">{{ tasks_pending|default:0 }}</div>
+    </div>
+  </a>
 </div>
 
 
@@ -968,18 +983,29 @@
 <div class="charts-row">
   <!-- Line Chart Card -->
   <div class="chart-card chart-card-modern">
-    <h3 class="chart-title-modern">📈 Tasks Over Time</h3>
+    <h3 class="chart-title-modern">Tasks Over Time</h3>
+    <form method="get" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px;">
+      <div>
+        <label for="fromDate" style="display:block;font-size:12px;color:var(--gray-700);font-weight:700;">From</label>
+        <input id="fromDate" type="date" name="from_date" value="{{ timeline_from }}" style="padding:8px 10px;border:1px solid var(--gray-300);border-radius:8px;">
+      </div>
+      <div>
+        <label for="toDate" style="display:block;font-size:12px;color:var(--gray-700);font-weight:700;">To</label>
+        <input id="toDate" type="date" name="to_date" value="{{ timeline_to }}" style="padding:8px 10px;border:1px solid var(--gray-300);border-radius:8px;">
+      </div>
+      <button type="submit" style="padding:9px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;">Apply</button>
+    </form>
     <div class="chart-canvas-modern">
       <canvas id="lineChart"></canvas>
     </div>
-    <div class="chart-desc-modern">Line chart showing tasks created and completed over time.</div>
+    <div class="chart-desc-modern">Default range is the last 30 days. Filters apply to line and defect metrics.</div>
   </div>
   <!-- Table Card -->
   <div class="chart-card chart-card-modern">
-    <h3 class="chart-title-modern">� Planned Tasks</h3>
+    <h3 class="chart-title-modern">Planned Tasks</h3>
     <div style="font-size:13px;color:var(--gray-700);margin-bottom:8px;">
       Showing planned tasks for: <strong>{{ planned_start|date:'d M Y' }}</strong> — <strong>{{ planned_end|date:'d M Y' }}</strong>
-      <span style="color:var(--gray-500);font-weight:600;margin-left:8px;">(next {{ planned_limit }} days, max {{ planned_limit }} items)</span>
+      <span style="color:var(--gray-500);font-weight:600;margin-left:8px;">(max {{ planned_limit }} items)</span>
     </div>
     <div class="table-responsive-modern" style="max-height: 400px; overflow-y: auto;">
       <table class="modern-table">
@@ -1008,7 +1034,44 @@
             <td class="modern-td-date">{{ task.due_date|date:'d M Y' }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="3" class="modern-td-empty">No planned tasks in the next 7 days.</td></tr>
+          <tr><td colspan="3" class="modern-td-empty">No planned tasks in the configured window.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card chart-card-modern">
+    <h3 class="chart-title-modern">Defect Reporter Metrics</h3>
+    <div class="chart-canvas-modern">
+      <canvas id="defectReporterChart"></canvas>
+    </div>
+    <div class="chart-desc-modern">Defects reported by each reporter in the selected timeline.</div>
+  </div>
+  <div class="chart-card chart-card-modern">
+    <h3 class="chart-title-modern">Reporter Summary</h3>
+    <div class="table-responsive-modern" style="max-height: 360px; overflow-y: auto;">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Reporter</th>
+            <th>Reported</th>
+            <th>Closed</th>
+            <th>Open</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in defect_reporter_summary %}
+          <tr>
+            <td class="modern-td-title">{{ r.reporter_name }}</td>
+            <td>{{ r.reported_count }}</td>
+            <td>{{ r.closed_count }}</td>
+            <td>{{ r.open_count }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="modern-td-empty">No defects reported in this date range.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -1243,6 +1306,28 @@ document.addEventListener("DOMContentLoaded", function() {
       options: {
         responsive: true,
         plugins: { legend: { position: 'top' } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Defect reporter chart (same timeline filter as line chart)
+  const defectCtx = document.getElementById('defectReporterChart')?.getContext('2d');
+  if (defectCtx) {
+    new Chart(defectCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ defect_reporter_labels|default:'[]'|safe }},
+        datasets: [{
+          label: 'Defects Reported',
+          data: {{ defect_reporter_values|default:'[]'|safe }},
+          backgroundColor: '#0ea5e9',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
         scales: { y: { beginAtZero: true } }
       }
     });

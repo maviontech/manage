@@ -494,18 +494,30 @@ def dashboard_view(request):
         logger.error(f"ERROR: my_new_tasks_count {e}")
         my_new_tasks_count = 0
 
-    # ---------------------- PLANNED TASKS (Show all pending tasks) ----------------------
-    from datetime import datetime, timedelta
+    # ---------------------- TIMELINE FILTER (default last 30 days) ----------------------
+    from datetime import timedelta
     import json
+    timeline_to = date.today()
+    timeline_from = timeline_to - timedelta(days=29)
+    from_param = (request.GET.get('from_date') or '').strip()
+    to_param = (request.GET.get('to_date') or '').strip()
+    try:
+        if from_param:
+            timeline_from = datetime.strptime(from_param, '%Y-%m-%d').date()
+        if to_param:
+            timeline_to = datetime.strptime(to_param, '%Y-%m-%d').date()
+        if timeline_from > timeline_to:
+            timeline_from, timeline_to = timeline_to, timeline_from
+    except ValueError:
+        timeline_to = date.today()
+        timeline_from = timeline_to - timedelta(days=29)
+
+    # ---------------------- PLANNED TASKS ----------------------
     planned_tasks = []
     try:
-        # Show tasks with due dates within the next 7 days (inclusive)
-        from datetime import date, timedelta
-        start_date = date.today()
-        end_date = start_date + timedelta(days=7)
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
-            params = list(visible_user_ids) + [start_date, end_date]
+            params = list(visible_user_ids) + [timeline_from, timeline_to]
             cur.execute(f"""
                 SELECT id, title, status, due_date, created_at
                 FROM tasks
@@ -514,88 +526,106 @@ def dashboard_view(request):
                   AND due_date IS NOT NULL
                   AND DATE(due_date) BETWEEN %s AND %s
                 ORDER BY due_date ASC
-                            LIMIT 10
-                    """, tuple(params))
+                LIMIT 10
+            """, tuple(params))
             rows = cur.fetchall() or []
-            logger.debug(f"DEBUG: planned_tasks found {len(rows)} tasks for visible users between {start_date} and {end_date}")
-
-        for r in rows:
-            if isinstance(r, dict):
-                planned_tasks.append({
-                    'id': r.get('id'),
-                    'title': r.get('title'),
-                    'status': r.get('status'),
-                    'due_date': r.get('due_date'),
-                })
-            else:
-                planned_tasks.append({
-                    'id': r[0],
-                    'title': r[1],
-                    'status': r[2],
-                    'due_date': r[3],
-                })
+            for r in rows:
+                if isinstance(r, dict):
+                    planned_tasks.append({
+                        'id': r.get('id'),
+                        'title': r.get('title'),
+                        'status': r.get('status'),
+                        'due_date': r.get('due_date'),
+                    })
+                else:
+                    planned_tasks.append({
+                        'id': r[0],
+                        'title': r[1],
+                        'status': r[2],
+                        'due_date': r[3],
+                    })
     except Exception as e:
         logger.error(f"ERROR: planned_tasks {e}")
-        import traceback
-        traceback.print_exc()
         planned_tasks = []
 
-    # ---------------------- LINE CHART DATA (Tasks created/completed last 7 days) ----------------------
+    # ---------------------- LINE CHART DATA (selected range) ----------------------
     line_chart_labels = []
     line_chart_created = []
     line_chart_completed = []
     try:
-        today = datetime.now().date()
-        # Get day names for last 7 days
-        day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        for i in range(6, -1, -1):
-            day = today - timedelta(days=i)
-            line_chart_labels.append(day_names[day.weekday()])
-            
-            # Count tasks created on this day for visible users
+        days_count = (timeline_to - timeline_from).days + 1
+        for i in range(days_count):
+            day = timeline_from + timedelta(days=i)
+            line_chart_labels.append(day.strftime('%d %b'))
+
             if visible_user_ids:
                 placeholders = ','.join(['%s'] * len(visible_user_ids))
                 params = list(visible_user_ids) + [day]
                 cur.execute(f"""
-                    SELECT COUNT(*) as cnt FROM tasks 
+                    SELECT COUNT(*) as cnt FROM tasks
                     WHERE assigned_type='member' AND assigned_to IN ({placeholders})
                     AND DATE(created_at) = %s
                 """, tuple(params))
                 created_row = cur.fetchone()
-                if created_row:
-                    if isinstance(created_row, dict):
-                        line_chart_created.append(created_row.get('cnt', 0) or 0)
-                    else:
-                        line_chart_created.append(created_row[0] or 0)
+                if isinstance(created_row, dict):
+                    line_chart_created.append(created_row.get('cnt', 0) or 0)
+                elif created_row:
+                    line_chart_created.append(created_row[0] or 0)
                 else:
                     line_chart_created.append(0)
-            else:
-                line_chart_created.append(0)
-            
-            # Count tasks completed on this day for visible users
-            if visible_user_ids:
-                placeholders = ','.join(['%s'] * len(visible_user_ids))
-                params = list(visible_user_ids) + [day]
+
                 cur.execute(f"""
-                    SELECT COUNT(*) as cnt FROM tasks 
+                    SELECT COUNT(*) as cnt FROM tasks
                     WHERE assigned_type='member' AND assigned_to IN ({placeholders})
-                    AND status='Completed' AND DATE(updated_at) = %s
+                      AND status IN ('Completed','Closed')
+                      AND DATE(updated_at) = %s
                 """, tuple(params))
                 completed_row = cur.fetchone()
-                if completed_row:
-                    if isinstance(completed_row, dict):
-                        line_chart_completed.append(completed_row.get('cnt', 0) or 0)
-                    else:
-                        line_chart_completed.append(completed_row[0] or 0)
+                if isinstance(completed_row, dict):
+                    line_chart_completed.append(completed_row.get('cnt', 0) or 0)
+                elif completed_row:
+                    line_chart_completed.append(completed_row[0] or 0)
                 else:
                     line_chart_completed.append(0)
             else:
+                line_chart_created.append(0)
                 line_chart_completed.append(0)
     except Exception as e:
         logger.error(f"ERROR: line_chart_data {e}", exc_info=True)
-        line_chart_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        line_chart_created = [0, 0, 0, 0, 0, 0, 0]
-        line_chart_completed = [0, 0, 0, 0, 0, 0, 0]
+        line_chart_labels = []
+        line_chart_created = []
+        line_chart_completed = []
+
+    # ---------------------- DEFECT REPORTER METRICS ----------------------
+    defect_reporter_summary = []
+    defect_reporter_labels = []
+    defect_reporter_values = []
+    try:
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            params = list(visible_user_ids) + [timeline_from, timeline_to]
+            cur.execute(f"""
+                SELECT
+                    COALESCE(NULLIF(TRIM(CONCAT(COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))), ''), 'Unknown Reporter') AS reporter_name,
+                    COUNT(*) AS reported_count,
+                    SUM(CASE WHEN t.status IN ('Completed','Closed') THEN 1 ELSE 0 END) AS closed_count,
+                    SUM(CASE WHEN t.status NOT IN ('Completed','Closed') THEN 1 ELSE 0 END) AS open_count
+                FROM tasks t
+                LEFT JOIN members m ON m.id = t.created_by
+                WHERE t.assigned_type='member'
+                  AND t.assigned_to IN ({placeholders})
+                  AND LOWER(COALESCE(t.work_type, '')) = 'defect'
+                  AND DATE(t.created_at) BETWEEN %s AND %s
+                GROUP BY reporter_name
+                ORDER BY reported_count DESC, reporter_name ASC
+            """, tuple(params))
+            defect_reporter_summary = cur.fetchall() or []
+            for row in defect_reporter_summary[:10]:
+                defect_reporter_labels.append(row.get('reporter_name') or 'Unknown Reporter')
+                defect_reporter_values.append(int(row.get('reported_count') or 0))
+    except Exception as e:
+        logger.error(f"ERROR: defect reporter metrics {e}")
+        defect_reporter_summary = []
 
         
     
@@ -634,9 +664,14 @@ def dashboard_view(request):
         'line_chart_labels': json.dumps(line_chart_labels),
         'line_chart_created': json.dumps(line_chart_created),
         'line_chart_completed': json.dumps(line_chart_completed),
-        'planned_start': start_date,
-        'planned_end': end_date,
+        'planned_start': timeline_from,
+        'planned_end': timeline_to,
         'planned_limit': 10,
+        'timeline_from': timeline_from.strftime('%Y-%m-%d'),
+        'timeline_to': timeline_to.strftime('%Y-%m-%d'),
+        'defect_reporter_summary': defect_reporter_summary,
+        'defect_reporter_labels': json.dumps(defect_reporter_labels),
+        'defect_reporter_values': json.dumps(defect_reporter_values),
     }
 
     return render(request, 'core/dashboard.html', ctx)
@@ -831,14 +866,26 @@ def user_dashboard_view(request):
         logger.error(f"ERROR: my_new_tasks_count {e}")
         my_new_tasks_count = 0
 
-    # Planned tasks for this user (next 7 days)
-    from datetime import datetime, timedelta
+    # Timeline filter (default last 30 days)
+    from datetime import timedelta
     import json
+    timeline_to = date.today()
+    timeline_from = timeline_to - timedelta(days=29)
+    from_param = (request.GET.get('from_date') or '').strip()
+    to_param = (request.GET.get('to_date') or '').strip()
+    try:
+        if from_param:
+            timeline_from = datetime.strptime(from_param, '%Y-%m-%d').date()
+        if to_param:
+            timeline_to = datetime.strptime(to_param, '%Y-%m-%d').date()
+        if timeline_from > timeline_to:
+            timeline_from, timeline_to = timeline_to, timeline_from
+    except ValueError:
+        timeline_to = date.today()
+        timeline_from = timeline_to - timedelta(days=29)
+
     planned_tasks = []
     try:
-        from datetime import date, timedelta
-        start_date = date.today()
-        end_date = start_date + timedelta(days=7)
         cur.execute("""
             SELECT id, title, status, due_date, created_at
             FROM tasks
@@ -848,7 +895,7 @@ def user_dashboard_view(request):
               AND DATE(due_date) BETWEEN %s AND %s
             ORDER BY due_date ASC
             LIMIT 10
-        """, (member_id, start_date, end_date))
+        """, (member_id, timeline_from, timeline_to))
         rows = cur.fetchall() or []
         for r in rows:
             if isinstance(r, dict):
@@ -867,55 +914,75 @@ def user_dashboard_view(request):
                 })
     except Exception as e:
         logger.error(f"ERROR: planned_tasks {e}")
-        import traceback
-        traceback.print_exc()
         planned_tasks = []
 
-    # Line chart data (tasks created/completed last 7 days) for this user
     line_chart_labels = []
     line_chart_created = []
     line_chart_completed = []
     try:
-        today = datetime.now().date()
-        day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        for i in range(6, -1, -1):
-            day = today - timedelta(days=i)
-            line_chart_labels.append(day_names[day.weekday()])
-            
-            # Count tasks created on this day
+        days_count = (timeline_to - timeline_from).days + 1
+        for i in range(days_count):
+            day = timeline_from + timedelta(days=i)
+            line_chart_labels.append(day.strftime('%d %b'))
+
             cur.execute("""
-                SELECT COUNT(*) as cnt FROM tasks 
-                WHERE assigned_type='member' AND assigned_to=%s 
+                SELECT COUNT(*) as cnt FROM tasks
+                WHERE assigned_type='member' AND assigned_to=%s
                 AND DATE(created_at) = %s
             """, (member_id, day))
             created_row = cur.fetchone()
-            if created_row:
-                if isinstance(created_row, dict):
-                    line_chart_created.append(created_row.get('cnt', 0) or 0)
-                else:
-                    line_chart_created.append(created_row[0] or 0)
+            if isinstance(created_row, dict):
+                line_chart_created.append(created_row.get('cnt', 0) or 0)
+            elif created_row:
+                line_chart_created.append(created_row[0] or 0)
             else:
                 line_chart_created.append(0)
-            
-            # Count tasks completed on this day
+
             cur.execute("""
-                SELECT COUNT(*) as cnt FROM tasks 
-                WHERE assigned_type='member' AND assigned_to=%s 
-                AND status='Completed' AND DATE(updated_at) = %s
+                SELECT COUNT(*) as cnt FROM tasks
+                WHERE assigned_type='member' AND assigned_to=%s
+                AND status IN ('Completed','Closed')
+                AND DATE(updated_at) = %s
             """, (member_id, day))
             completed_row = cur.fetchone()
-            if completed_row:
-                if isinstance(completed_row, dict):
-                    line_chart_completed.append(completed_row.get('cnt', 0) or 0)
-                else:
-                    line_chart_completed.append(completed_row[0] or 0)
+            if isinstance(completed_row, dict):
+                line_chart_completed.append(completed_row.get('cnt', 0) or 0)
+            elif completed_row:
+                line_chart_completed.append(completed_row[0] or 0)
             else:
                 line_chart_completed.append(0)
     except Exception as e:
         logger.error(f"ERROR: line_chart_data {e}", exc_info=True)
-        line_chart_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        line_chart_created = [0, 0, 0, 0, 0, 0, 0]
-        line_chart_completed = [0, 0, 0, 0, 0, 0, 0]
+        line_chart_labels = []
+        line_chart_created = []
+        line_chart_completed = []
+
+    defect_reporter_summary = []
+    defect_reporter_labels = []
+    defect_reporter_values = []
+    try:
+        cur.execute("""
+            SELECT
+                COALESCE(NULLIF(TRIM(CONCAT(COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))), ''), 'Unknown Reporter') AS reporter_name,
+                COUNT(*) AS reported_count,
+                SUM(CASE WHEN t.status IN ('Completed','Closed') THEN 1 ELSE 0 END) AS closed_count,
+                SUM(CASE WHEN t.status NOT IN ('Completed','Closed') THEN 1 ELSE 0 END) AS open_count
+            FROM tasks t
+            LEFT JOIN members m ON m.id = t.created_by
+            WHERE t.assigned_type='member'
+              AND t.assigned_to=%s
+              AND LOWER(COALESCE(t.work_type, '')) = 'defect'
+              AND DATE(t.created_at) BETWEEN %s AND %s
+            GROUP BY reporter_name
+            ORDER BY reported_count DESC, reporter_name ASC
+        """, (member_id, timeline_from, timeline_to))
+        defect_reporter_summary = cur.fetchall() or []
+        for row in defect_reporter_summary[:10]:
+            defect_reporter_labels.append(row.get('reporter_name') or 'Unknown Reporter')
+            defect_reporter_values.append(int(row.get('reported_count') or 0))
+    except Exception as e:
+        logger.error(f"ERROR: defect reporter metrics user dashboard {e}")
+        defect_reporter_summary = []
 
     cur.close()
     conn.close()
@@ -949,9 +1016,14 @@ def user_dashboard_view(request):
         'line_chart_labels': json.dumps(line_chart_labels),
         'line_chart_created': json.dumps(line_chart_created),
         'line_chart_completed': json.dumps(line_chart_completed),
-        'planned_start': start_date,
-        'planned_end': end_date,
+        'planned_start': timeline_from,
+        'planned_end': timeline_to,
         'planned_limit': 10,
+        'timeline_from': timeline_from.strftime('%Y-%m-%d'),
+        'timeline_to': timeline_to.strftime('%Y-%m-%d'),
+        'defect_reporter_summary': defect_reporter_summary,
+        'defect_reporter_labels': json.dumps(defect_reporter_labels),
+        'defect_reporter_values': json.dumps(defect_reporter_values),
         'is_user_dashboard': True,  # Flag to indicate this is user-specific view
     }
 

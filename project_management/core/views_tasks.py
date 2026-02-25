@@ -3943,6 +3943,305 @@ def task_analytics_view(request):
 # ==============================
 #  TASKS OVERVIEW PAGE
 # ==============================
+def _safe_metric_sort(request, allowed, default_field):
+    sort_field = (request.GET.get('sort') or default_field).strip()
+    sort_dir = (request.GET.get('dir') or 'desc').strip().lower()
+    if sort_field not in allowed:
+        sort_field = default_field
+    if sort_dir not in ('asc', 'desc'):
+        sort_dir = 'desc'
+    return allowed[sort_field], sort_field, sort_dir
+
+
+def _metric_page_context(metric_key):
+    mapping = {
+        'active-projects': {
+            'title': 'Active Projects',
+            'subtitle': 'Currently active projects with task delivery snapshot',
+            'table_type': 'projects',
+            'empty': 'No active projects found.'
+        },
+        'tasks-completed': {
+            'title': 'Tasks Completed',
+            'subtitle': 'Completed/closed tasks in your visibility scope',
+            'table_type': 'tasks',
+            'empty': 'No completed tasks found.'
+        },
+        'tasks-pending': {
+            'title': 'Tasks Pending',
+            'subtitle': 'Pending/open tasks in your visibility scope',
+            'table_type': 'tasks',
+            'empty': 'No pending tasks found.'
+        },
+    }
+    return mapping.get(metric_key)
+
+
+def metric_drilldown_view(request, metric_key):
+    """
+    Dedicated metric drilldown listing with sorting + pagination.
+    Supported metrics:
+      - active-projects
+      - tasks-completed
+      - tasks-pending
+    """
+    if not request.session.get('user'):
+        return redirect('login_password')
+
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('login_password')
+
+    meta = _metric_page_context(metric_key)
+    if not meta:
+        return HttpResponseBadRequest("Invalid metric key")
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    try:
+        visible_user_ids = get_visible_task_user_ids(conn, member_id)
+        rows = []
+
+        if metric_key == 'active-projects':
+            allowed_sorts = {
+                'id': 'p.id',
+                'name': 'p.name',
+                'status': 'p.status',
+                'start_date': 'p.start_date',
+                'tentative_end_date': 'p.tentative_end_date',
+                'created_at': 'p.created_at',
+                'total_tasks': 'total_tasks',
+                'completed_tasks': 'completed_tasks',
+            }
+            sort_sql, sort_field, sort_dir = _safe_metric_sort(request, allowed_sorts, 'created_at')
+            cur.execute(f"""
+                SELECT
+                    p.id,
+                    p.name,
+                    p.description,
+                    p.status,
+                    p.start_date,
+                    p.tentative_end_date,
+                    p.end_date,
+                    p.created_at,
+                    COUNT(t.id) AS total_tasks,
+                    SUM(CASE WHEN t.status IN ('Completed','Closed') THEN 1 ELSE 0 END) AS completed_tasks
+                FROM projects p
+                LEFT JOIN tasks t ON t.project_id = p.id
+                WHERE p.status = 'Active'
+                GROUP BY p.id, p.name, p.description, p.status, p.start_date, p.tentative_end_date, p.end_date, p.created_at
+                ORDER BY {sort_sql} {sort_dir}
+            """)
+            rows = cur.fetchall() or []
+            for r in rows:
+                total_tasks = int(r.get('total_tasks') or 0)
+                completed_tasks = int(r.get('completed_tasks') or 0)
+                r['pending_tasks'] = max(total_tasks - completed_tasks, 0)
+        else:
+            allowed_sorts = {
+                'id': 't.id',
+                'title': 't.title',
+                'status': 't.status',
+                'priority': 't.priority',
+                'project': 'project_name',
+                'assigned_to': 'assigned_name',
+                'reporter': 'reporter_name',
+                'due_date': 't.due_date',
+                'created_at': 't.created_at',
+            }
+            sort_sql, sort_field, sort_dir = _safe_metric_sort(request, allowed_sorts, 'created_at')
+            if visible_user_ids:
+                placeholders = ','.join(['%s'] * len(visible_user_ids))
+                status_clause = "t.status IN ('Completed','Closed')" if metric_key == 'tasks-completed' else "t.status NOT IN ('Completed','Closed')"
+                cur.execute(f"""
+                    SELECT
+                        t.id,
+                        t.title,
+                        t.description,
+                        t.status,
+                        COALESCE(t.priority, 'Normal') AS priority,
+                        t.work_type,
+                        t.due_date,
+                        t.created_at,
+                        p.name AS project_name,
+                        CASE
+                            WHEN t.assigned_type = 'team' THEN CONCAT('Team: ', COALESCE(tm.name, ''))
+                            ELSE TRIM(CONCAT(COALESCE(m.first_name, ''), ' ', COALESCE(m.last_name, '')))
+                        END AS assigned_name,
+                        TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))) AS reporter_name
+                    FROM tasks t
+                    LEFT JOIN projects p ON t.project_id = p.id
+                    LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
+                    LEFT JOIN members c ON t.created_by = c.id
+                    LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
+                    WHERE t.assigned_type = 'member'
+                      AND t.assigned_to IN ({placeholders})
+                      AND {status_clause}
+                    ORDER BY {sort_sql} {sort_dir}
+                """, tuple(visible_user_ids))
+                rows = cur.fetchall() or []
+            else:
+                sort_field = 'created_at'
+                sort_dir = 'desc'
+
+        from django.core.paginator import Paginator
+        paginator = Paginator(rows, 10)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        context = {
+            'metric_key': metric_key,
+            'metric_title': meta['title'],
+            'metric_subtitle': meta['subtitle'],
+            'table_type': meta['table_type'],
+            'empty_message': meta['empty'],
+            'rows': list(page_obj.object_list),
+            'page_obj': page_obj,
+            'sort': sort_field,
+            'dir': sort_dir,
+        }
+        return render(request, 'core/metric_drilldown.html', context)
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            if getattr(conn, "open", False):
+                conn.close()
+        except Exception:
+            pass
+
+
+def export_metric_drilldown_excel(request):
+    """
+    Export metric drilldown with full base-table columns.
+    - active-projects -> projects.*
+    - tasks-completed/tasks-pending -> tasks.*
+    """
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        return HttpResponse("openpyxl library is not installed. Please install it using: pip install openpyxl", status=500)
+
+    if not request.session.get('user'):
+        return redirect('login_password')
+    member_id = request.session.get('member_id')
+    if not member_id:
+        return redirect('login_password')
+
+    metric_key = (request.GET.get('metric') or '').strip()
+    meta = _metric_page_context(metric_key)
+    if not meta:
+        return HttpResponseBadRequest("Invalid metric key")
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    try:
+        visible_user_ids = get_visible_task_user_ids(conn, member_id)
+        headers = []
+        rows = []
+
+        if metric_key == 'active-projects':
+            cur.execute("""
+                SELECT p.*
+                FROM projects p
+                WHERE p.status = 'Active'
+                ORDER BY p.created_at DESC
+            """)
+            rows = cur.fetchall() or []
+        else:
+            if visible_user_ids:
+                placeholders = ','.join(['%s'] * len(visible_user_ids))
+                status_clause = "status IN ('Completed','Closed')" if metric_key == 'tasks-completed' else "status NOT IN ('Completed','Closed')"
+                cur.execute(f"""
+                    SELECT t.*
+                    FROM tasks t
+                    WHERE t.assigned_type = 'member'
+                      AND t.assigned_to IN ({placeholders})
+                      AND {status_clause}
+                    ORDER BY t.created_at DESC
+                """, tuple(visible_user_ids))
+                rows = cur.fetchall() or []
+
+        if rows:
+            headers = list(rows[0].keys())
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = meta['title'][:31]
+
+        header_fill = PatternFill(start_color='2563EB', end_color='2563EB', fill_type='solid')
+        header_font = Font(bold=True, color='FFFFFF', size=11)
+        border = Border(
+            left=Side(style='thin', color='E5E7EB'),
+            right=Side(style='thin', color='E5E7EB'),
+            top=Side(style='thin', color='E5E7EB'),
+            bottom=Side(style='thin', color='E5E7EB')
+        )
+
+        if headers:
+            ws.append(headers)
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col_num)
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = border
+
+            for row_num, item in enumerate(rows, 2):
+                row_vals = []
+                for h in headers:
+                    val = item.get(h)
+                    if hasattr(val, 'strftime'):
+                        if isinstance(val, datetime.datetime):
+                            val = val.strftime('%Y-%m-%d %H:%M:%S')
+                        else:
+                            val = val.strftime('%Y-%m-%d')
+                    row_vals.append(val)
+                ws.append(row_vals)
+                for col_num in range(1, len(headers) + 1):
+                    cell = ws.cell(row=row_num, column=col_num)
+                    cell.border = border
+                    cell.alignment = Alignment(vertical='top', wrap_text=True)
+
+            for column in ws.columns:
+                max_length = 0
+                column_letter = get_column_letter(column[0].column)
+                for cell in column:
+                    try:
+                        if cell.value:
+                            max_length = max(max_length, len(str(cell.value)))
+                    except Exception:
+                        pass
+                ws.column_dimensions[column_letter].width = min(max_length + 2, 60)
+
+        from io import BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        filename = f"Trackline_{metric_key}_{datetime.datetime.now().strftime('%Y-%m-%d')}.xlsx"
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        try:
+            if getattr(conn, "open", False):
+                conn.close()
+        except Exception:
+            pass
+
+
 def tasks_overview_view(request):
     """
     Comprehensive tasks overview page showing:
