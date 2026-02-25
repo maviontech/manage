@@ -651,6 +651,7 @@ def dashboard_view(request):
     defect_reporter_labels = []
     defect_reporter_values = []
     try:
+        # Support both 'defect' and 'bug' work_type values (case-insensitive)
         cur.execute("""
             SELECT
                 COALESCE(
@@ -664,12 +665,18 @@ def dashboard_view(request):
             FROM tasks t
             LEFT JOIN members m ON m.id = t.created_by
             LEFT JOIN users u ON u.id = t.created_by
-            WHERE LOWER(TRIM(COALESCE(t.work_type, ''))) LIKE %s
-              AND DATE(t.created_at) BETWEEN %s AND %s
-            GROUP BY reporter_name
-            ORDER BY reported_count DESC, reporter_name ASC
-        """, ('%defect%', timeline_from, timeline_to))
+                        WHERE (
+                                LOWER(TRIM(COALESCE(t.work_type, ''))) LIKE %s
+                                OR LOWER(TRIM(COALESCE(t.work_type, ''))) LIKE %s
+                                OR LOWER(TRIM(COALESCE(t.title, ''))) LIKE %s
+                                OR LOWER(TRIM(COALESCE(t.description, ''))) LIKE %s
+                        )
+                            AND DATE(t.created_at) BETWEEN %s AND %s
+                        GROUP BY reporter_name
+                        ORDER BY reported_count DESC, reporter_name ASC
+                """, ('%defect%', '%bug%', '%defect%', '%bug%', timeline_from, timeline_to))
         defect_reporter_summary = cur.fetchall() or []
+        logger.debug(f"defect_reporter_summary rows: {len(defect_reporter_summary)}")
         for row in defect_reporter_summary[:10]:
             defect_reporter_labels.append(row.get('reporter_name') or 'Unknown Reporter')
             defect_reporter_values.append(int(row.get('reported_count') or 0))
