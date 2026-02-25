@@ -457,8 +457,18 @@
       <form id="bulkForm" method="post" enctype="multipart/form-data" style="position: relative; z-index: 1;">
         {% csrf_token %}
         <input type="hidden" name="work_type" id="workTypeInput" value="">
-        <div class="form-group-professional" style="max-width: 500px; margin: 0 auto 1.5rem;">
-          <input type="file" name="csv_file" id="csv_file" accept=".csv,.xlsx,.xls" required class="form-control-professional" style="background: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.5);">
+        <div class="form-group-professional" style="max-width: 760px; margin: 0 auto 1.5rem; display:flex; gap:12px; align-items:center; justify-content:center;">
+          <input type="file" name="csv_file" id="csv_file" accept=".csv,.xlsx,.xls" required class="form-control-professional" style="background: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.5); flex:1;">
+          <select id="workTypeSelect" class="form-control-professional" aria-label="Select work type" style="width:220px;">
+            <option value="">Select Work Type</option>
+            <option value="Task">Task</option>
+            <option value="Bug">Bug</option>
+            <option value="Story">Story</option>
+            <option value="Defect">Defect</option>
+            <option value="Subtask">Subtask</option>
+            <option value="Report">Report</option>
+            <option value="Change Request">Change Request</option>
+          </select>
         </div>
         <button type="submit" class="btn-professional btn-primary-professional" style="padding: 14px 32px; font-size: 16px;">
           <i class="fas fa-upload"></i> Upload & Import Tasks
@@ -890,6 +900,40 @@ document.querySelectorAll('.work-type-card').forEach(card => {
       <i class="fas fa-check-circle" style="color: var(--success-color);"></i> 
       Selected: <strong>${selectedWorkType}</strong> template
     `;
+  });
+});
+
+// Dropdown sync: keep select, hidden input and cards in sync
+const workTypeSelect = document.getElementById('workTypeSelect');
+const workTypeInputEl = document.getElementById('workTypeInput');
+if (workTypeSelect) {
+  workTypeSelect.addEventListener('change', function() {
+    const val = this.value;
+    selectedWorkType = val || null;
+    if (workTypeInputEl) workTypeInputEl.value = val;
+
+    // Update cards UI
+    document.querySelectorAll('.work-type-card').forEach(c => c.classList.remove('selected'));
+    if (val) {
+      const matching = document.querySelector(`.work-type-card[data-work-type="${val}"]`);
+      if (matching) matching.classList.add('selected');
+      const downloadBtn = document.getElementById('downloadExcelBtn');
+      if (downloadBtn) downloadBtn.href = `{% url 'download_excel_template' %}?work_type=${encodeURIComponent(val)}`;
+      const selDisplay = document.getElementById('selectedWorkType');
+      if (selDisplay) selDisplay.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-color);"></i> Selected: <strong>${val}</strong> template`;
+    } else {
+      const selDisplay = document.getElementById('selectedWorkType');
+      if (selDisplay) selDisplay.innerHTML = `<i class="fas fa-info-circle"></i> Please select a work type above`;
+    }
+  });
+}
+
+// Keep select updated when a card is clicked
+document.querySelectorAll('.work-type-card').forEach(card => {
+  card.addEventListener('click', function() {
+    const wt = this.getAttribute('data-work-type');
+    if (workTypeSelect) workTypeSelect.value = wt;
+    if (workTypeInputEl) workTypeInputEl.value = wt;
   });
 });
 
