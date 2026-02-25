@@ -1988,8 +1988,10 @@ def task_detail_view(request, task_id):
         return render(request, "core/404.html", status=404)
 
     return render(request, "core/task_detail.html", {"task": task, "timer_history": timer_history})
-@require_permission('tasks.edit')
 def edit_task_view(request, task_id):
+    if not request.session.get('user'):
+        return redirect('login_password')
+
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 

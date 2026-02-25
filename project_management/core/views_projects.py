@@ -162,8 +162,10 @@ def project_create(request):
 
 from datetime import date
 
-@require_permission('projects.edit', project_param='project_id')
 def project_edit(request, project_id):
+    if not request.session.get('user'):
+        return redirect('login_password')
+
     conn, cur = get_tenant_conn_and_cursor(request)
     try:
         cur.execute("SELECT * FROM projects WHERE id=%s", (project_id,))

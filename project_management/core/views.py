@@ -601,28 +601,28 @@ def dashboard_view(request):
     defect_reporter_labels = []
     defect_reporter_values = []
     try:
-        if visible_user_ids:
-            placeholders = ','.join(['%s'] * len(visible_user_ids))
-            params = list(visible_user_ids) + [timeline_from, timeline_to]
-            cur.execute(f"""
-                SELECT
-                    COALESCE(NULLIF(TRIM(CONCAT(COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))), ''), 'Unknown Reporter') AS reporter_name,
-                    COUNT(*) AS reported_count,
-                    SUM(CASE WHEN t.status IN ('Completed','Closed') THEN 1 ELSE 0 END) AS closed_count,
-                    SUM(CASE WHEN t.status NOT IN ('Completed','Closed') THEN 1 ELSE 0 END) AS open_count
-                FROM tasks t
-                LEFT JOIN members m ON m.id = t.created_by
-                WHERE t.assigned_type='member'
-                  AND t.assigned_to IN ({placeholders})
-                  AND LOWER(COALESCE(t.work_type, '')) = 'defect'
-                  AND DATE(t.created_at) BETWEEN %s AND %s
-                GROUP BY reporter_name
-                ORDER BY reported_count DESC, reporter_name ASC
-            """, tuple(params))
-            defect_reporter_summary = cur.fetchall() or []
-            for row in defect_reporter_summary[:10]:
-                defect_reporter_labels.append(row.get('reporter_name') or 'Unknown Reporter')
-                defect_reporter_values.append(int(row.get('reported_count') or 0))
+        cur.execute("""
+            SELECT
+                COALESCE(
+                    NULLIF(TRIM(CONCAT(COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))), ''),
+                    NULLIF(TRIM(COALESCE(u.full_name, '')), ''),
+                    'Unknown Reporter'
+                ) AS reporter_name,
+                COUNT(*) AS reported_count,
+                SUM(CASE WHEN t.status IN ('Completed','Closed') THEN 1 ELSE 0 END) AS closed_count,
+                SUM(CASE WHEN t.status NOT IN ('Completed','Closed') THEN 1 ELSE 0 END) AS open_count
+            FROM tasks t
+            LEFT JOIN members m ON m.id = t.created_by
+            LEFT JOIN users u ON u.id = t.created_by
+            WHERE LOWER(TRIM(COALESCE(t.work_type, ''))) LIKE %s
+              AND DATE(t.created_at) BETWEEN %s AND %s
+            GROUP BY reporter_name
+            ORDER BY reported_count DESC, reporter_name ASC
+        """, ('%defect%', timeline_from, timeline_to))
+        defect_reporter_summary = cur.fetchall() or []
+        for row in defect_reporter_summary[:10]:
+            defect_reporter_labels.append(row.get('reporter_name') or 'Unknown Reporter')
+            defect_reporter_values.append(int(row.get('reported_count') or 0))
     except Exception as e:
         logger.error(f"ERROR: defect reporter metrics {e}")
         defect_reporter_summary = []
@@ -963,19 +963,22 @@ def user_dashboard_view(request):
     try:
         cur.execute("""
             SELECT
-                COALESCE(NULLIF(TRIM(CONCAT(COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))), ''), 'Unknown Reporter') AS reporter_name,
+                COALESCE(
+                    NULLIF(TRIM(CONCAT(COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))), ''),
+                    NULLIF(TRIM(COALESCE(u.full_name, '')), ''),
+                    'Unknown Reporter'
+                ) AS reporter_name,
                 COUNT(*) AS reported_count,
                 SUM(CASE WHEN t.status IN ('Completed','Closed') THEN 1 ELSE 0 END) AS closed_count,
                 SUM(CASE WHEN t.status NOT IN ('Completed','Closed') THEN 1 ELSE 0 END) AS open_count
             FROM tasks t
             LEFT JOIN members m ON m.id = t.created_by
-            WHERE t.assigned_type='member'
-              AND t.assigned_to=%s
-              AND LOWER(COALESCE(t.work_type, '')) = 'defect'
+            LEFT JOIN users u ON u.id = t.created_by
+            WHERE LOWER(TRIM(COALESCE(t.work_type, ''))) LIKE %s
               AND DATE(t.created_at) BETWEEN %s AND %s
             GROUP BY reporter_name
             ORDER BY reported_count DESC, reporter_name ASC
-        """, (member_id, timeline_from, timeline_to))
+        """, ('%defect%', timeline_from, timeline_to))
         defect_reporter_summary = cur.fetchall() or []
         for row in defect_reporter_summary[:10]:
             defect_reporter_labels.append(row.get('reporter_name') or 'Unknown Reporter')

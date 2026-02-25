@@ -1045,6 +1045,17 @@
 <div class="charts-row">
   <div class="chart-card chart-card-modern">
     <h3 class="chart-title-modern">Defect Reporter Metrics</h3>
+    <form method="get" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px;">
+      <div>
+        <label for="defectFromDate" style="display:block;font-size:12px;color:var(--gray-700);font-weight:700;">From</label>
+        <input id="defectFromDate" type="date" name="from_date" value="{{ timeline_from }}" style="padding:8px 10px;border:1px solid var(--gray-300);border-radius:8px;">
+      </div>
+      <div>
+        <label for="defectToDate" style="display:block;font-size:12px;color:var(--gray-700);font-weight:700;">To</label>
+        <input id="defectToDate" type="date" name="to_date" value="{{ timeline_to }}" style="padding:8px 10px;border:1px solid var(--gray-300);border-radius:8px;">
+      </div>
+      <button type="submit" style="padding:9px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;">Apply</button>
+    </form>
     <div class="chart-canvas-modern">
       <canvas id="defectReporterChart"></canvas>
     </div>
@@ -1328,7 +1339,16 @@ document.addEventListener("DOMContentLoaded", function() {
       options: {
         responsive: true,
         plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
+        scales: {
+          x: {
+            title: { display: true, text: 'Defect Reporters / Users' }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            title: { display: true, text: 'Defect Count' }
+          }
+        }
       }
     });
   }
