@@ -1,14 +1,15 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
-  <title>Enter Your Password — Sign in</title>
+  <title>Enter Your Password — Sign in | Trackline by Maviontech</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
-    :root{
+    :root {
       --primary: #3b82f6;
       --primary-dark: #2563eb;
       --accent: #60a5fa;
@@ -16,192 +17,402 @@
       --warning: #f59e0b;
       --danger: #ef4444;
       --radius: 24px;
+      --mavion-orange: #f59e0b;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       margin: 0;
-      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dbeafe 100%);
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 32px;
       color: #1e293b;
-      position: relative;
       overflow-x: hidden;
     }
 
-    /* Animated Background Elements */
-    body::before {
-      content: '';
-      position: fixed;
-      top: -10%;
-      right: -5%;
-      width: 500px;
-      height: 500px;
-      background: linear-gradient(135deg, #3b82f6, #60a5fa);
-      border-radius: 50%;
-      filter: blur(100px);
-      opacity: 0.08;
-      animation: float1 20s infinite ease-in-out;
-    }
-    
-    body::after {
-      content: '';
-      position: fixed;
-      bottom: -10%;
-      left: -5%;
-      width: 400px;
-      height: 400px;
-      background: linear-gradient(135deg, #2563eb, #3b82f6);
-      border-radius: 50%;
-      filter: blur(100px);
-      opacity: 0.08;
-      animation: float2 18s infinite ease-in-out;
+    /* ===== SPLIT LAYOUT ===== */
+    .login-container {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
     }
 
-    @keyframes float1 {
+    /* ===== LEFT PANEL — Marketing ===== */
+    .marketing-panel {
+      width: 50%;
+      background:
+        linear-gradient(135deg, rgba(15,23,42,0.87) 0%, rgba(30,41,59,0.92) 100%),
+        url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80') center/cover no-repeat;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 56px 48px;
+      color: #e2e8f0;
+    }
+
+    /* Animated background orbs */
+    .marketing-panel::before {
+      content: '';
+      position: absolute;
+      top: -10%;
+      right: -10%;
+      width: 400px;
+      height: 400px;
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.15;
+      animation: orbFloat1 20s infinite ease-in-out;
+      pointer-events: none;
+    }
+
+    .marketing-panel::after {
+      content: '';
+      position: absolute;
+      bottom: -10%;
+      left: -10%;
+      width: 350px;
+      height: 350px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.12;
+      animation: orbFloat2 18s infinite ease-in-out;
+      pointer-events: none;
+    }
+
+    @keyframes orbFloat1 {
       0%, 100% { transform: translate(0, 0) scale(1); }
       25% { transform: translate(30px, -30px) scale(1.1); }
       50% { transform: translate(-20px, 20px) scale(0.9); }
       75% { transform: translate(20px, 30px) scale(1.05); }
     }
 
-    @keyframes float2 {
+    @keyframes orbFloat2 {
       0%, 100% { transform: translate(0, 0) scale(1); }
       33% { transform: translate(-30px, 30px) scale(1.1); }
       66% { transform: translate(25px, -25px) scale(0.95); }
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.9; transform: scale(1.05); }
-    }
-
-    .card {
-      width: 100%;
-      max-width: 480px;
-      background: #ffffff;
-      backdrop-filter: blur(20px);
-      border-radius: var(--radius);
-      box-shadow: 0 20px 60px rgba(59, 130, 246, 0.1), 0 0 0 1px rgba(59, 130, 246, 0.05);
-      padding: 48px 40px;
-      border: 1px solid #e2e8f0;
+    .marketing-content {
       position: relative;
-      animation: fadeIn 0.6s ease-out;
+      z-index: 2;
+      max-width: 520px;
     }
 
-    .card::before {
+    /* Brand block */
+    .m-brand {
+      margin-bottom: 44px;
+      animation: fadeSlideUp 0.6s ease-out both;
+    }
+
+    .m-brand-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+    }
+
+    .m-brand-logo svg {
+      width: 32px;
+      height: 32px;
+      color: #ffffff;
+    }
+
+    .m-brand h1 {
+      font-size: 36px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+    }
+
+    .m-brand .tagline {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    /* USP Cards */
+    .usp-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .usp-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 20px;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      transition: all 0.3s ease;
+      animation: fadeSlideUp 0.6s ease-out both;
+    }
+
+    .usp-card:nth-child(1) { animation-delay: 0.15s; }
+    .usp-card:nth-child(2) { animation-delay: 0.3s; }
+    .usp-card:nth-child(3) { animation-delay: 0.45s; }
+
+    .usp-card:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+
+    .usp-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .usp-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .usp-icon.blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .usp-icon.purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .usp-icon.green { background: rgba(16,185,129,0.15); color: #34d399; }
+
+    .usp-text h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .usp-text p {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 0;
+      padding: 20px 0;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 32px;
+      animation: fadeSlideUp 0.6s ease-out 0.6s both;
+    }
+
+    .stat-item {
+      flex: 1;
+      text-align: center;
+    }
+
+    .stat-item + .stat-item {
+      border-left: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .stat-number {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Trust footer with Maviontech branding */
+    .trust-footer {
+      animation: fadeSlideUp 0.6s ease-out 0.75s both;
+    }
+
+    .trust-footer p {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .trust-footer p svg {
+      width: 14px;
+      height: 14px;
+      color: #10b981;
+      flex-shrink: 0;
+    }
+
+    .mavion-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .mavion-badge img {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+
+    .mavion-badge span {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .mavion-badge strong {
+      color: #f59e0b;
+      font-weight: 700;
+    }
+
+    /* ===== RIGHT PANEL — Form ===== */
+    .form-panel {
+      width: 50%;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 40px;
+      position: relative;
+      animation: fadeSlideRight 0.6s ease-out 0.1s both;
+    }
+
+    .form-panel::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, #3b82f6, #60a5fa, #38bdf8);
-      border-radius: var(--radius) var(--radius) 0 0;
+      width: 3px;
+      height: 100%;
+      background: linear-gradient(180deg, #3b82f6, #60a5fa, #2563eb);
     }
 
-    .brand {
+    .form-content {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    /* Form brand */
+    .form-brand {
       text-align: center;
       margin-bottom: 32px;
     }
-    
-    .logo {
-      width: 80px;
-      height: 80px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+
+    .form-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto 20px;
-      position: relative;
-      box-shadow: 0 10px 40px rgba(59, 130, 246, 0.25);
-      animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
     }
-    
-    .logo::before {
-      content: '';
-      position: absolute;
-      inset: -3px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #3b82f6, #60a5fa);
-      opacity: 0.5;
-      filter: blur(15px);
-      z-index: -1;
-    }
-    
-    .logo svg {
-      width: 40px;
-      height: 40px;
+
+    .form-logo svg {
+      width: 28px;
+      height: 28px;
       color: #ffffff;
     }
-    
-    h1 { 
-      margin: 0; 
-      font-size: 28px; 
-      color: #1e293b; 
+
+    .form-brand h2 {
+      font-size: 28px;
       font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 8px;
       letter-spacing: -0.5px;
     }
-    
-    .sub { 
-      margin: 12px 0 0; 
-      color: #64748b; 
+
+    .form-brand .sub {
+      margin: 0;
+      color: #64748b;
       font-size: 15px;
       font-weight: 500;
     }
-    
-    .sub strong {
+
+    .form-brand .sub strong {
       color: #1e293b;
       font-weight: 700;
     }
 
-    form { 
-      margin-top: 32px; 
+    .step-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 20px;
+      padding: 6px 14px;
+      background: #f1f5f9;
+      border-radius: 20px;
     }
-    
-    label { 
-      display: block; 
-      font-size: 13px; 
-      margin-bottom: 12px; 
+
+    .step-indicator .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #3b82f6;
+    }
+
+    /* Form styles */
+    form { margin-top: 28px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 10px;
       font-weight: 700;
       color: #475569;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      padding-left: 4px;
+      padding-left: 2px;
     }
-    
-    .input-row { 
-      display: flex; 
-      align-items: center; 
-      gap: 12px; 
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    
-    .password-wrap { 
-      position: relative; 
-      flex: 1; 
+
+    .password-wrap {
+      position: relative;
+      flex: 1;
     }
-    
-    input[type="password"], 
+
+    input[type="password"],
     input[type="text"] {
       width: 100%;
-      padding: 16px 52px 16px 18px;
+      padding: 15px 52px 15px 18px;
       border-radius: 14px;
-      border: 1px solid #e2e8f0;
+      border: 2px solid #e2e8f0;
       background: #f8fafc;
       font-size: 15px;
       outline: none;
@@ -209,17 +420,15 @@
       color: #1e293b;
       font-weight: 500;
     }
-    
-    input::placeholder {
-      color: #94a3b8;
-    }
-    
+
+    input::placeholder { color: #94a3b8; }
+
     input:focus {
       background: #ffffff;
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), 0 0 20px rgba(59, 130, 246, 0.1);
     }
-    
+
     .toggle-visibility {
       position: absolute;
       right: 14px;
@@ -237,7 +446,7 @@
       letter-spacing: 0.5px;
       transition: all 0.3s ease;
     }
-    
+
     .toggle-visibility:hover {
       background: #cbd5e1;
       color: #1e293b;
@@ -245,11 +454,11 @@
 
     .hint {
       font-size: 13px;
-      color: #94a3b8; 
-      margin-top: 10px; 
+      color: #94a3b8;
+      margin-top: 10px;
       text-align: center;
     }
-    
+
     .error-box {
       background: #fef2f2;
       border: 1px solid #fecaca;
@@ -263,18 +472,18 @@
       gap: 10px;
       animation: fadeIn 0.3s ease-out;
     }
-    
-    .inline-error { 
-      color: #dc2626; 
-      font-size: 13px; 
-      margin-top: 8px; 
-      display: none; 
+
+    .inline-error {
+      color: #dc2626;
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
       text-align: left;
     }
 
-    .strength { 
-      margin-top: 12px; 
-      font-size: 13px; 
+    .strength {
+      margin-top: 12px;
+      font-size: 13px;
       color: #64748b;
       padding: 10px 14px;
       background: #f1f5f9;
@@ -282,35 +491,35 @@
       border: 1px solid #e2e8f0;
       font-weight: 600;
     }
-    
-    .strength.weak { 
-      color: #dc2626; 
+
+    .strength.weak {
+      color: #dc2626;
       background: #fef2f2;
       border-color: #fecaca;
     }
-    
-    .strength.good { 
-      color: #d97706; 
+
+    .strength.good {
+      color: #d97706;
       background: #fffbeb;
       border-color: #fde68a;
     }
-    
-    .strength.strong { 
-      color: #059669; 
+
+    .strength.strong {
+      color: #059669;
       background: #f0fdf4;
       border-color: #86efac;
     }
 
-    .actions { 
-      display: flex; 
+    .actions {
+      display: flex;
       flex-direction: column;
-      gap: 16px; 
-      margin-top: 28px; 
+      gap: 16px;
+      margin-top: 24px;
     }
-    
+
     button.submit {
       width: 100%;
-      padding: 16px 20px;
+      padding: 15px 20px;
       background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
       color: #ffffff;
       border: none;
@@ -326,18 +535,16 @@
       box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
       position: relative;
       overflow: hidden;
-      /* Mobile touch improvements - CRITICAL */
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
       -webkit-appearance: none;
       appearance: none;
-      /* Ensure button is always clickable */
       pointer-events: auto !important;
       z-index: 10;
     }
-    
+
     button.submit::before {
       content: '';
       position: absolute;
@@ -345,28 +552,26 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
       transition: left 0.5s;
-      pointer-events: none; /* Don't block clicks */
+      pointer-events: none;
       z-index: -1;
     }
-    
-    button.submit:hover::before {
-      left: 100%;
-    }
-    
+
+    button.submit:hover::before { left: 100%; }
+
     button.submit:hover {
       transform: translateY(-2px);
-      box-shadow: 0 15px 40px rgba(99, 102, 241, 0.5);
+      box-shadow: 0 15px 40px rgba(59, 130, 246, 0.4);
     }
-    
-    button.submit:active { 
+
+    button.submit:active {
       transform: translateY(0);
-      box-shadow: 0 5px 20px rgba(99, 102, 241, 0.4);
+      box-shadow: 0 5px 20px rgba(59, 130, 246, 0.3);
     }
-    
-    button[disabled] { 
-      opacity: 0.65; 
+
+    button[disabled] {
+      opacity: 0.65;
       cursor: not-allowed;
       transform: none !important;
     }
@@ -379,14 +584,13 @@
       padding-top: 16px;
       border-top: 1px solid #e2e8f0;
     }
-    
-    a.link { 
-      font-size: 14px; 
-      color: #3b82f6; 
+
+    a.link {
+      font-size: 14px;
+      color: #3b82f6;
       text-decoration: none;
       font-weight: 700;
       transition: color 0.3s ease;
-      /* Mobile touch improvements */
       padding: 10px 12px;
       border-radius: 8px;
       min-height: 44px;
@@ -398,73 +602,133 @@
       user-select: none;
       -webkit-user-select: none;
     }
-    
+
     a.link:hover {
       color: #2563eb;
       background: rgba(59, 130, 246, 0.05);
     }
-    
+
     a.link:active {
       background: rgba(59, 130, 246, 0.1);
       transform: scale(0.98);
     }
-    
-    .visually-hidden { 
-      position: absolute !important; 
-      height: 1px; 
-      width: 1px; 
-      overflow: hidden; 
-      clip: rect(1px,1px,1px,1px); 
-      white-space: nowrap; 
-      border: 0; 
-      padding: 0; 
-      margin: -1px; 
+
+    /* Form footer with Maviontech */
+    .form-footer {
+      text-align: center;
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid #f1f5f9;
     }
 
-    @media (max-width:480px) { 
-      body {
-        padding: 16px;
+    .form-footer-mavion {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .form-footer-mavion img {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+    }
+
+    .form-footer-mavion strong {
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .visually-hidden {
+      position: absolute !important;
+      height: 1px;
+      width: 1px;
+      overflow: hidden;
+      clip: rect(1px,1px,1px,1px);
+      white-space: nowrap;
+      border: 0;
+      padding: 0;
+      margin: -1px;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeSlideRight {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1023px) {
+      .marketing-panel { width: 42%; padding: 40px 32px; }
+      .form-panel { width: 58%; }
+      .m-brand h1 { font-size: 30px; }
+      .usp-text p { font-size: 12px; }
+      .stat-number { font-size: 22px; }
+    }
+
+    @media (max-width: 767px) {
+      .login-container { flex-direction: column; }
+
+      .marketing-panel {
+        width: 100%;
+        padding: 28px 24px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: auto;
       }
-      
-      .card { 
-        padding: 32px 24px; 
-        border-radius: 20px; 
+
+      .marketing-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
       }
-      
-      h1 {
-        font-size: 24px;
+
+      .m-brand { margin-bottom: 0; }
+      .m-brand-logo { width: 40px; height: 40px; margin-bottom: 0; border-radius: 12px; }
+      .m-brand-logo svg { width: 20px; height: 20px; }
+      .m-brand h1 { font-size: 20px; margin-bottom: 2px; }
+      .m-brand .tagline { font-size: 10px; letter-spacing: 2px; }
+
+      .usp-cards,
+      .stats-bar,
+      .trust-footer { display: none; }
+
+      .form-panel {
+        width: 100%;
+        padding: 32px 24px;
+        flex: 1;
       }
-      
-      .logo { 
-        width: 70px; 
-        height: 70px; 
-      }
-      
-      .logo svg { 
-        width: 35px; 
-        height: 35px; 
-      }
-      
-      /* Ensure inputs don't zoom on iOS */
+
+      .form-panel::before { width: 100%; height: 3px; top: 0; left: 0; }
+
+      .form-brand h2 { font-size: 24px; }
+
       input[type="password"],
       input[type="text"] {
         font-size: 16px !important;
       }
-      
-      /* Improve button tap target */
-      button.submit {
-        min-height: 48px;
-        font-size: 15px;
-      }
-      
-      /* Stack link actions vertically on mobile */
+
+      button.submit { min-height: 48px; font-size: 15px; }
+
       .link-actions {
         flex-direction: column;
         gap: 8px;
         padding-top: 20px;
       }
-      
-      /* Make links full width and more tappable on mobile */
+
       a.link {
         width: 100%;
         padding: 14px 20px;
@@ -473,67 +737,178 @@
         background: rgba(59, 130, 246, 0.05);
         border: 1px solid rgba(59, 130, 246, 0.2);
       }
-      
+
       a.link:active {
         background: rgba(59, 130, 246, 0.15);
         border-color: rgba(59, 130, 246, 0.3);
       }
     }
+
+    @media (max-width: 479px) {
+      .marketing-panel { padding: 20px 16px; }
+      .form-panel { padding: 24px 16px; }
+    }
   </style>
 </head>
 <body>
-  <main class="card" role="main" aria-labelledby="login-title">
-    <header class="brand" aria-hidden="false">
-      <div class="logo" aria-hidden="true">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      </div>
-      <h1 id="login-title">Enter your password</h1>
-      <p class="sub">Sign in as <strong>{{ email }}</strong> — Domain: <strong>{{ domain }}</strong></p>
-    </header>
+  <div class="login-container">
 
-    {% if error %}
-      <div class="error-box" role="alert">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
-        {{ error }}
-      </div>
-    {% endif %}
+    <!-- ===== LEFT PANEL — Marketing ===== -->
+    <aside class="marketing-panel" aria-hidden="true">
+      <div class="marketing-content">
 
-    <form id="login-form" method="post" novalidate>
-      {% csrf_token %}
-
-      <label for="password">Password</label>
-      <div class="input-row" aria-live="polite">
-        <div class="password-wrap">
-          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required minlength="8" />
-          <button type="button" id="toggle" class="toggle-visibility" aria-label="Show password">Show</button>
+        <div class="m-brand">
+          <div class="m-brand-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+            </svg>
+          </div>
+          <h1>Trackline</h1>
+          <p class="tagline">Clarity. Control. Closure.</p>
         </div>
-      </div>
-      <div id="pw-error" class="inline-error" role="alert"></div>
-      <div id="pw-strength" class="strength">Password must be at least 8 characters.</div>
 
-      <div class="actions">
-        <button type="submit" class="submit" id="submit-btn" aria-label="Sign in">
-          <span id="btn-text">Sign in</span>
-          <svg id="btn-spinner" class="visually-hidden" width="18" height="18" viewBox="0 0 50 50" aria-hidden="true">
-            <circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="31.4 31.4"></circle>
-          </svg>
-        </button>
+        <!-- USP Cards -->
+        <div class="usp-cards">
+          <div class="usp-card">
+            <div class="usp-icon blue">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div class="usp-text">
+              <h3>Real-Time Dashboards</h3>
+              <p>Live project metrics, burndown charts, and team performance at a glance</p>
+            </div>
+          </div>
 
-        <div class="link-actions">
-          <a class="link" href="{% url 'identify' %}">Change email</a>
-          <a class="link" href="{% url 'password_reset_request' %}">Forgot password?</a>
+          <div class="usp-card">
+            <div class="usp-icon purple">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div class="usp-text">
+              <h3>Team Collaboration</h3>
+              <p>Seamless task assignment, real-time chat, and cross-team visibility</p>
+            </div>
+          </div>
+
+          <div class="usp-card">
+            <div class="usp-icon green">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div class="usp-text">
+              <h3>Enterprise Security</h3>
+              <p>Multi-tenant isolation, role-based access, and encrypted data at rest</p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <p class="hint" style="margin-top:20px">Tip: use your corporate account password. Make sure Caps Lock is off.</p>
-    </form>
-  </main>
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+          <div class="stat-item">
+            <div class="stat-number">500+</div>
+            <div class="stat-label">Teams Active</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">99.9%</div>
+            <div class="stat-label">Uptime SLA</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">10K+</div>
+            <div class="stat-label">Tasks Managed</div>
+          </div>
+        </div>
+
+        <!-- Trust footer with Maviontech -->
+        <div class="trust-footer">
+          <p>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            Enterprise-grade security. Trusted by engineering teams worldwide.
+          </p>
+          <div class="mavion-badge">
+            <img src="{% static 'core/logo1.png' %}" alt="Maviontech" />
+            <span>A product by <strong>Maviontech Pvt Ltd</strong></span>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- ===== RIGHT PANEL — Login Form ===== -->
+    <main class="form-panel" role="main" aria-labelledby="login-title">
+      <div class="form-content">
+
+        <div class="form-brand">
+          <div class="form-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <div class="step-indicator">
+            <span class="dot"></span> Step 2 of 2
+          </div>
+          <h2 id="login-title">Enter your password</h2>
+          <p class="sub">Signing in as <strong>{{ email }}</strong> — Domain: <strong>{{ domain }}</strong></p>
+        </div>
+
+        {% if error %}
+          <div class="error-box" role="alert">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            {{ error }}
+          </div>
+        {% endif %}
+
+        <form id="login-form" method="post" novalidate>
+          {% csrf_token %}
+
+          <label for="password">Password</label>
+          <div class="input-row" aria-live="polite">
+            <div class="password-wrap">
+              <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required minlength="8" />
+              <button type="button" id="toggle" class="toggle-visibility" aria-label="Show password">Show</button>
+            </div>
+          </div>
+          <div id="pw-error" class="inline-error" role="alert"></div>
+          <div id="pw-strength" class="strength">Password must be at least 8 characters.</div>
+
+          <div class="actions">
+            <button type="submit" class="submit" id="submit-btn" aria-label="Sign in">
+              <span id="btn-text">Sign in</span>
+              <svg id="btn-spinner" class="visually-hidden" width="18" height="18" viewBox="0 0 50 50" aria-hidden="true">
+                <circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="31.4 31.4"></circle>
+              </svg>
+            </button>
+
+            <div class="link-actions">
+              <a class="link" href="{% url 'identify' %}">Change email</a>
+              <a class="link" href="{% url 'password_reset_request' %}">Forgot password?</a>
+            </div>
+          </div>
+
+          <p class="hint" style="margin-top:20px">Tip: use your corporate account password. Make sure Caps Lock is off.</p>
+        </form>
+
+        <!-- Maviontech footer on form side -->
+        <div class="form-footer">
+          <div class="form-footer-mavion">
+            <img src="{% static 'core/logo1.png' %}" alt="Maviontech" />
+            <span>Powered by <strong>Maviontech Pvt Ltd</strong></span>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
 
   <script>
     (function(){
@@ -610,7 +985,7 @@
       // Handle form submission
       form.addEventListener('submit', (e) => {
         console.log('Form submit triggered');
-        
+
         // Prevent double submission
         if(submitBtn.disabled){
           console.log('Button already disabled, preventing double submit');
@@ -621,7 +996,7 @@
         // client-side validations
         const value = pw.value || '';
         console.log('Password length:', value.length);
-        
+
         if(!value){
           e.preventDefault();
           showError('Password is required.');
@@ -643,12 +1018,12 @@
         }
 
         console.log('Validation passed, submitting form');
-        
+
         // on pass: disable button + show spinner and allow normal POST
         submitBtn.disabled = true;
         btnText.style.display = 'none';
         btnSpinner.classList.remove('visually-hidden');
-        
+
         // Allow form to submit
         return true;
       });

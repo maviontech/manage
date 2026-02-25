@@ -276,49 +276,52 @@
   <style>
     /* Reset submenu spacing and animate height instead of display */
     .menu-root { list-style:none; margin:0; padding:0; }
-    .menu-root > .menu-item { margin: 6px 0; } /* small spacing between main menu items */
+    .menu-root > .menu-item { margin: 2px 0; } /* compact spacing between main menu items */
 
     /* Submenu base: hidden by default (no padding/margin so it takes zero space) */
     .submenu {
       list-style:none;
-      margin: 0;               /* remove default ul margin */
-      padding: 0;              /* remove default ul padding */
-      overflow: hidden;        /* clip children when collapsed */
-      max-height: 0;           /* collapsed */
-      transition: max-height .26s cubic-bezier(.2,.9,.2,1), padding .18s ease;
-      will-change: max-height;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 320ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms ease, padding 200ms ease;
+      will-change: max-height, opacity;
     }
 
     /* Submenu items when collapsed - keep heights zero */
     .submenu > li {
       padding: 0;
-      margin: 0;
+      margin: 1px 0;
     }
 
-    /* When a menu-item is open, allow the submenu to expand */
+    /* When a menu-item is open, allow the submenu to expand with smooth animation */
     .menu-item.open > .submenu {
-      padding-top: 8px;        /* small breathing room when open */
-      padding-bottom: 8px;
-      max-height: 480px;       /* large enough for most submenus; will clip if more */
-      transition: max-height .36s cubic-bezier(.2,.9,.2,1), padding .18s ease;
+      padding-top: 4px;
+      padding-bottom: 4px;
+      max-height: 480px;
+      opacity: 1;
+      transition: max-height 380ms cubic-bezier(0.34, 1.2, 0.64, 1), opacity 250ms ease, padding 200ms ease;
     }
 
-    /* Submenu links styling (kept tight when collapsed) */
+    /* Submenu links styling (compact) */
     .submenu-link {
       display:flex;
       align-items:center;
       gap:10px;
       width:100%;
-      padding:10px 14px;
-      color:var(--muted);
+      padding:7px 10px;
+      color:var(--sidebar-muted);
       text-decoration:none;
-      border-radius:8px;
+      border-radius:7px;
       border: none;
       background: transparent;
       text-align: left;
       cursor: pointer;
+      font-size:12.5px;
     }
-    .submenu-link:hover { background: rgba(255,255,255,0.02); color: var(--text); }
+    .submenu-link:hover { background: rgba(255,255,255,0.04); color: #e2e8f0; }
 
     /* Nested submenu styling */
     .nested-submenu {
@@ -342,20 +345,22 @@
       transform: rotate(90deg);
     }
 
-    /* Caret rotation */
+    /* Caret rotation with bounce */
     .menu-link .caret {
       display:inline-block;
       margin-left:auto;
-      transition: transform .22s ease;
-      color: rgba(255,255,255,0.6);
+      transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      color: rgba(255,255,255,0.4);
+      font-size:11px;
     }
     .menu-item.open > .menu-link .caret {
       transform: rotate(90deg);
+      color: rgba(59,130,246,0.7);
     }
 
     /* When submenu is collapsed ensure no gap is left by list item padding */
-    .menu-item > .menu-link { padding: 12px 14px; display:flex; align-items:center; gap:12px; border-radius:8px; }
-    .menu-item > .menu-link:focus, .menu-item > .menu-link:hover { background: rgba(255,255,255,0.02); }
+    .menu-item > .menu-link { padding: 9px 12px; display:flex; align-items:center; gap:11px; border-radius:9px; }
+    .menu-item > .menu-link:focus, .menu-item > .menu-link:hover { background: rgba(59,130,246,0.08); }
 
     /* small responsive fix: reduce submenu padding on narrow screens */
     @media (max-width:700px){
@@ -378,8 +383,13 @@
           <div class="brand-sub">Clarity. Control. Closure.</div>
         </div>
       </div>
+      <div class="brand-mavion">
+        <img src="{% static 'core/logo1.png' %}" alt="Maviontech" />
+        <span>by <strong>Maviontech Pvt Ltd</strong></span>
+      </div>
 
       <nav class="nav" role="menu" aria-label="Main">
+        <div class="nav-section-label">Main</div>
         <ul class="menu-root">
 
           <!-- Dashboard -->

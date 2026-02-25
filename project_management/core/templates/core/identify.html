@@ -1,212 +1,416 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
-  <title>Welcome Back — Sign in</title>
+  <title>Welcome Back — Sign in | Trackline by Maviontech</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
-    :root{
+    :root {
       --primary: #3b82f6;
       --primary-dark: #2563eb;
       --accent: #60a5fa;
       --success: #10b981;
       --danger: #ef4444;
       --radius: 20px;
+      --mavion-orange: #f59e0b;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       margin: 0;
-      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dbeafe 100%);
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 32px;
       color: #1e293b;
-      position: relative;
       overflow-x: hidden;
     }
 
-    /* Animated Background Elements */
-    body::before {
+    /* ===== SPLIT LAYOUT ===== */
+    .login-container {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* ===== LEFT PANEL — Marketing ===== */
+    .marketing-panel {
+      width: 50%;
+      background:
+        linear-gradient(135deg, rgba(15,23,42,0.87) 0%, rgba(30,41,59,0.92) 100%),
+        url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80') center/cover no-repeat;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 56px 48px;
+      color: #e2e8f0;
+    }
+
+    /* Animated background orbs */
+    .marketing-panel::before {
       content: '';
-      position: fixed;
+      position: absolute;
       top: -10%;
-      right: -5%;
-      width: 500px;
-      height: 500px;
+      right: -10%;
+      width: 400px;
+      height: 400px;
       background: linear-gradient(135deg, #3b82f6, #60a5fa);
       border-radius: 50%;
       filter: blur(120px);
-      opacity: 0.08;
-      animation: float1 20s infinite ease-in-out;
-    }
-    
-    body::after {
-      content: '';
-      position: fixed;
-      bottom: -10%;
-      left: -5%;
-      width: 400px;
-      height: 400px;
-      background: linear-gradient(135deg, #2563eb, #3b82f6);
-      border-radius: 50%;
-      filter: blur(120px);
-      opacity: 0.08;
-      animation: float2 18s infinite ease-in-out;
+      opacity: 0.15;
+      animation: orbFloat1 20s infinite ease-in-out;
+      pointer-events: none;
     }
 
-    @keyframes float1 {
+    .marketing-panel::after {
+      content: '';
+      position: absolute;
+      bottom: -10%;
+      left: -10%;
+      width: 350px;
+      height: 350px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.12;
+      animation: orbFloat2 18s infinite ease-in-out;
+      pointer-events: none;
+    }
+
+    @keyframes orbFloat1 {
       0%, 100% { transform: translate(0, 0) scale(1); }
       25% { transform: translate(30px, -30px) scale(1.1); }
       50% { transform: translate(-20px, 20px) scale(0.9); }
       75% { transform: translate(20px, 30px) scale(1.05); }
     }
 
-    @keyframes float2 {
+    @keyframes orbFloat2 {
       0%, 100% { transform: translate(0, 0) scale(1); }
       33% { transform: translate(-30px, 30px) scale(1.1); }
       66% { transform: translate(25px, -25px) scale(0.95); }
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.9; transform: scale(1.05); }
-    }
-
-    .card {
-      width: 100%;
-      max-width: 480px;
-      background: #ffffff;
-      backdrop-filter: blur(20px);
-      border-radius: var(--radius);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
-      padding: 48px 40px;
-      border: 1px solid rgba(59, 130, 246, 0.1);
+    .marketing-content {
       position: relative;
-      animation: fadeIn 0.6s ease-out;
+      z-index: 2;
+      max-width: 520px;
     }
 
-    .card::before {
+    /* Brand block */
+    .m-brand {
+      margin-bottom: 44px;
+      animation: fadeSlideUp 0.6s ease-out both;
+    }
+
+    .m-brand-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+    }
+
+    .m-brand-logo svg {
+      width: 32px;
+      height: 32px;
+      color: #ffffff;
+    }
+
+    .m-brand h1 {
+      font-size: 36px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+    }
+
+    .m-brand .tagline {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    /* USP Cards */
+    .usp-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .usp-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 20px;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      transition: all 0.3s ease;
+      animation: fadeSlideUp 0.6s ease-out both;
+    }
+
+    .usp-card:nth-child(1) { animation-delay: 0.15s; }
+    .usp-card:nth-child(2) { animation-delay: 0.3s; }
+    .usp-card:nth-child(3) { animation-delay: 0.45s; }
+
+    .usp-card:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+
+    .usp-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .usp-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .usp-icon.blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .usp-icon.purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .usp-icon.green { background: rgba(16,185,129,0.15); color: #34d399; }
+
+    .usp-text h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .usp-text p {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 0;
+      padding: 20px 0;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 32px;
+      animation: fadeSlideUp 0.6s ease-out 0.6s both;
+    }
+
+    .stat-item {
+      flex: 1;
+      text-align: center;
+    }
+
+    .stat-item + .stat-item {
+      border-left: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .stat-number {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Trust footer with Maviontech branding */
+    .trust-footer {
+      animation: fadeSlideUp 0.6s ease-out 0.75s both;
+    }
+
+    .trust-footer p {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .trust-footer p svg {
+      width: 14px;
+      height: 14px;
+      color: #10b981;
+      flex-shrink: 0;
+    }
+
+    .mavion-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .mavion-badge img {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+
+    .mavion-badge span {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .mavion-badge strong {
+      color: #f59e0b;
+      font-weight: 700;
+    }
+
+    /* ===== RIGHT PANEL — Form ===== */
+    .form-panel {
+      width: 50%;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 40px;
+      position: relative;
+      animation: fadeSlideRight 0.6s ease-out 0.1s both;
+    }
+
+    .form-panel::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, #3b82f6, #60a5fa, #2563eb);
-      border-radius: var(--radius) var(--radius) 0 0;
+      width: 3px;
+      height: 100%;
+      background: linear-gradient(180deg, #3b82f6, #60a5fa, #2563eb);
     }
 
-    .brand {
+    .form-content {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    /* Form brand */
+    .form-brand {
       text-align: center;
       margin-bottom: 36px;
     }
-    
-    .logo {
-      width: 80px;
-      height: 80px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+
+    .form-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 24px;
-      position: relative;
-      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.25);
-      animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      margin: 0 auto 20px;
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
     }
-    
-    .logo::before {
-      content: '';
-      position: absolute;
-      inset: -3px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      opacity: 0.3;
-      filter: blur(15px);
-      z-index: -1;
-    }
-    
-    .logo svg {
-      width: 40px;
-      height: 40px;
+
+    .form-logo svg {
+      width: 28px;
+      height: 28px;
       color: #ffffff;
     }
-    
-    .brand h1 {
-      font-size: 32px;
-      margin: 0 0 10px 0;
-      letter-spacing: -0.5px;
-      color: #1e293b;
+
+    .form-brand h2 {
+      font-size: 28px;
       font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
     }
-    
-    .brand p { 
-      margin: 0;
-      font-size: 16px;
+
+    .form-brand p {
+      font-size: 15px;
       color: #64748b;
       font-weight: 500;
     }
 
-    .step {
-      display: none;
+    .step-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 20px;
+      padding: 6px 14px;
+      background: #f1f5f9;
+      border-radius: 20px;
     }
 
-    form { 
-      display: block; 
-      margin-top: 32px; 
+    .step-indicator .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #3b82f6;
     }
-    
-    label { 
-      display: block; 
-      font-size: 13px; 
-      margin-bottom: 12px; 
+
+    /* Form styles */
+    form { margin-top: 28px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 10px;
       font-weight: 700;
       color: #334155;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      padding-left: 4px;
+      padding-left: 2px;
     }
-    
+
     .input-wrapper {
       position: relative;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
-    
+
     .input-icon {
       position: absolute;
-      left: 18px;
+      left: 16px;
       top: 50%;
       transform: translateY(-50%);
       color: #94a3b8;
-      font-size: 18px;
       pointer-events: none;
       transition: color 0.3s ease;
     }
-    
+
     .input-wrapper:focus-within .input-icon {
       color: #3b82f6;
     }
-    
+
     input[type="email"] {
       width: 100%;
-      padding: 16px 18px 16px 52px;
+      padding: 15px 18px 15px 50px;
       border-radius: 14px;
       border: 2px solid #e2e8f0;
       background: #f8fafc;
@@ -216,24 +420,20 @@
       color: #1e293b;
       font-weight: 500;
     }
-    
-    input[type="email"]::placeholder {
-      color: #94a3b8;
-    }
-    
+
+    input[type="email"]::placeholder { color: #94a3b8; }
+
     input[type="email"]:focus {
       background: #ffffff;
       border-color: #3b82f6;
       box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
     }
-    
-    .field {
-      margin-top: 32px;
-    }
-    
+
+    .field { margin-top: 28px; }
+
     button.submit {
       width: 100%;
-      padding: 16px 20px;
+      padding: 15px 20px;
       background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
       color: #ffffff;
       border: none;
@@ -249,14 +449,13 @@
       box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
       position: relative;
       overflow: hidden;
-      /* Mobile touch improvements */
       min-height: 48px;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
       -webkit-user-select: none;
     }
-    
+
     button.submit::before {
       content: '';
       position: absolute;
@@ -264,122 +463,32 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
       transition: left 0.5s;
     }
-    
-    button.submit:hover::before {
-      left: 100%;
-    }
-    
+
+    button.submit:hover::before { left: 100%; }
+
     button.submit:hover {
       transform: translateY(-2px);
       box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4);
     }
-    
-    button.submit:active { 
+
+    button.submit:active {
       transform: translateY(0);
       box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
     }
-    
-    button[disabled] { 
-      opacity: 0.65; 
+
+    button[disabled] {
+      opacity: 0.65;
       cursor: not-allowed;
       transform: none !important;
     }
 
-    .divider {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      margin: 32px 0 28px;
-      color: #94a3b8;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 600;
-    }
-    
-    .divider::before,
-    .divider::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    
-    .divider::before {
-      margin-right: 16px;
-    }
-    
-    .divider::after {
-      margin-left: 16px;
-    }
-
-    .social-login {
-      display: flex;
-      gap: 14px;
-      justify-content: center;
-      margin-bottom: 28px;
-    }
-    
-    .social-btn {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: #f8fafc;
-      border: 2px solid #e2e8f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      color: #64748b;
-      font-size: 22px;
-    }
-    
-    .social-btn:hover {
-      background: #ffffff;
-      border-color: #3b82f6;
-      transform: translateY(-3px);
-      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15);
-      color: #3b82f6;
-    }
-    
-    .social-btn:active {
-      transform: translateY(-1px);
-    }
-
-    .signup-link {
-      text-align: center;
-      font-size: 14px;
-      color: #64748b;
-      margin-top: 28px;
-      padding-top: 24px;
-      border-top: 1px solid #e2e8f0;
-    }
-    
-    .signup-link a {
-      color: #3b82f6;
-      text-decoration: none;
-      font-weight: 700;
-      transition: color 0.3s ease;
-    }
-    
-    .signup-link a:hover {
-      color: #2563eb;
-    }
-
-    .hint {
-      font-size: 13px;
-      color: #94a3b8; 
-      margin-top: 10px; 
-      text-align: center;
-    }
-    
     .error-box {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
       padding: 14px 18px;
       border-radius: 12px;
       margin-bottom: 20px;
@@ -389,26 +498,36 @@
       gap: 10px;
       animation: fadeIn 0.3s ease-out;
     }
-    
-    .inline-error { 
-      color: #fca5a5; 
-      font-size: 13px; 
-      margin-top: 8px; 
-      display: none; 
+
+    .inline-error {
+      color: #dc2626;
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
       text-align: left;
     }
-    
-    .visually-hidden { 
-      position: absolute !important; 
-      height: 1px; 
-      width: 1px; 
-      overflow: hidden; 
-      clip: rect(1px,1px,1px,1px); 
-      white-space: nowrap; 
-      border: 0; 
-      padding: 0; 
-      margin: -1px; 
+
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 28px 0 24px;
+      color: #94a3b8;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
     }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .divider::before { margin-right: 16px; }
+    .divider::after { margin-left: 16px; }
 
     .admin-portal-section {
       text-align: center;
@@ -416,16 +535,16 @@
       padding-top: 24px;
       border-top: 1px solid #e2e8f0;
     }
-    
+
     .admin-portal-section p {
-      font-size: 13px;
+      font-size: 12px;
       color: #64748b;
       margin-bottom: 10px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    
+
     .admin-portal-link {
       display: inline-flex;
       align-items: center;
@@ -433,100 +552,165 @@
       color: #3b82f6;
       text-decoration: none;
       font-weight: 700;
-      font-size: 15px;
+      font-size: 14px;
       padding: 10px 20px;
       border-radius: 10px;
       background: #eff6ff;
       border: 1px solid #dbeafe;
       transition: all 0.3s ease;
-      /* Mobile touch improvements */
       min-height: 44px;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      -webkit-user-select: none;
     }
-    
+
     .admin-portal-link:hover {
       background: #dbeafe;
       border-color: #3b82f6;
       transform: translateX(3px);
       box-shadow: 0 5px 15px rgba(59, 130, 246, 0.2);
     }
-    
-    .admin-portal-link:active {
-      transform: translateX(1px) scale(0.98);
+
+    .signup-link {
+      text-align: center;
+      font-size: 14px;
+      color: #64748b;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
     }
-    
+
     .signup-link a {
       color: #3b82f6;
       text-decoration: none;
       font-weight: 700;
       transition: color 0.3s ease;
-      /* Mobile touch improvements */
-      padding: 8px 12px;
-      display: inline-block;
+      padding: 6px 10px;
       border-radius: 6px;
-      min-height: 44px;
-      line-height: 28px;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
     }
-    
+
     .signup-link a:hover {
       color: #2563eb;
       background: rgba(59, 130, 246, 0.05);
     }
-    
-    .signup-link a:active {
-      background: rgba(59, 130, 246, 0.1);
-      transform: scale(0.98);
+
+    /* Form footer with Maviontech */
+    .form-footer {
+      text-align: center;
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid #f1f5f9;
     }
 
-    @media (max-width:480px) {
-      body {
-        padding: 16px;
+    .form-footer-mavion {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .form-footer-mavion img {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+    }
+
+    .form-footer-mavion strong {
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .visually-hidden {
+      position: absolute !important;
+      height: 1px;
+      width: 1px;
+      overflow: hidden;
+      clip: rect(1px,1px,1px,1px);
+      white-space: nowrap;
+      border: 0;
+      padding: 0;
+      margin: -1px;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeSlideRight {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1023px) {
+      .marketing-panel { width: 42%; padding: 40px 32px; }
+      .form-panel { width: 58%; }
+      .m-brand h1 { font-size: 30px; }
+      .usp-text p { font-size: 12px; }
+      .stat-number { font-size: 22px; }
+    }
+
+    @media (max-width: 767px) {
+      .login-container { flex-direction: column; }
+
+      .marketing-panel {
+        width: 100%;
+        padding: 28px 24px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: auto;
       }
-      
-      .card { 
-        padding: 32px 24px; 
-        border-radius: 20px; 
+
+      .marketing-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
       }
-      
-      .brand h1 { 
-        font-size: 28px;
+
+      .m-brand { margin-bottom: 0; }
+      .m-brand-logo { width: 40px; height: 40px; margin-bottom: 0; border-radius: 12px; }
+      .m-brand-logo svg { width: 20px; height: 20px; }
+      .m-brand h1 { font-size: 20px; margin-bottom: 2px; }
+      .m-brand .tagline { font-size: 10px; letter-spacing: 2px; }
+
+      .usp-cards,
+      .stats-bar,
+      .trust-footer { display: none; }
+
+      .form-panel {
+        width: 100%;
+        padding: 32px 24px;
+        flex: 1;
       }
-      
-      input[type="email"] { 
+
+      .form-panel::before { width: 100%; height: 3px; top: 0; left: 0; }
+
+      .form-brand h2 { font-size: 24px; }
+
+      input[type="email"] {
         font-size: 16px !important;
         padding: 14px 16px 14px 48px;
       }
-      
-      .logo { 
-        width: 70px; 
-        height: 70px; 
-      }
-      
-      .logo svg { 
-        width: 35px; 
-        height: 35px; 
-      }
-      
-      button.submit {
-        min-height: 48px;
-        font-size: 15px;
-      }
-      
+
+      button.submit { min-height: 48px; font-size: 15px; }
+
       .admin-portal-link {
         width: 100%;
         justify-content: center;
         padding: 14px 20px;
       }
-      
-      .signup-link {
-        font-size: 13px;
-      }
-      
+
+      .signup-link { font-size: 13px; }
+
       .signup-link a {
         display: block;
         margin-top: 8px;
@@ -536,104 +720,194 @@
         border-radius: 10px;
       }
     }
+
+    @media (max-width: 479px) {
+      .marketing-panel { padding: 20px 16px; }
+      .form-panel { padding: 24px 16px; }
+    }
   </style>
 </head>
 <body>
-  <main class="card" role="main" aria-labelledby="identify-title">
-    <header class="brand" aria-hidden="false">
-      <div class="logo" aria-hidden="true">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
+  <div class="login-container">
+
+    <!-- ===== LEFT PANEL — Marketing ===== -->
+    <aside class="marketing-panel" aria-hidden="true">
+      <div class="marketing-content">
+
+        <div class="m-brand">
+          <div class="m-brand-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+            </svg>
+          </div>
+          <h1>Trackline</h1>
+          <p class="tagline">Clarity. Control. Closure.</p>
+        </div>
+
+        <!-- USP Cards -->
+        <div class="usp-cards">
+          <div class="usp-card">
+            <div class="usp-icon blue">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div class="usp-text">
+              <h3>Real-Time Dashboards</h3>
+              <p>Live project metrics, burndown charts, and team performance at a glance</p>
+            </div>
+          </div>
+
+          <div class="usp-card">
+            <div class="usp-icon purple">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div class="usp-text">
+              <h3>Team Collaboration</h3>
+              <p>Seamless task assignment, real-time chat, and cross-team visibility</p>
+            </div>
+          </div>
+
+          <div class="usp-card">
+            <div class="usp-icon green">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div class="usp-text">
+              <h3>Enterprise Security</h3>
+              <p>Multi-tenant isolation, role-based access, and encrypted data at rest</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+          <div class="stat-item">
+            <div class="stat-number">500+</div>
+            <div class="stat-label">Teams Active</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">99.9%</div>
+            <div class="stat-label">Uptime SLA</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">10K+</div>
+            <div class="stat-label">Tasks Managed</div>
+          </div>
+        </div>
+
+        <!-- Trust footer with Maviontech -->
+        <div class="trust-footer">
+          <p>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            Enterprise-grade security. Trusted by engineering teams worldwide.
+          </p>
+          <div class="mavion-badge">
+            <img src="{% static 'core/logo1.png' %}" alt="Maviontech" />
+            <span>A product by <strong>Maviontech Pvt Ltd</strong></span>
+          </div>
+        </div>
+
       </div>
-      <h1 id="identify-title">Trackline</h1>
-      <p>Clarity. Control. Closure</p>
-    </header>
+    </aside>
 
-    <div class="step">Step 1 of 2 — Verify identity</div>
+    <!-- ===== RIGHT PANEL — Login Form ===== -->
+    <main class="form-panel" role="main" aria-labelledby="identify-title">
+      <div class="form-content">
 
-    <!-- Server-side error -->
-    {% if error %}
-      <div class="error-box" role="alert">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
-        {{ error }}
+        <div class="form-brand">
+          <div class="form-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <div class="step-indicator">
+            <span class="dot"></span> Step 1 of 2
+          </div>
+          <h2 id="identify-title">Welcome Back</h2>
+          <p>Enter your email to get started</p>
+        </div>
+
+        <!-- Server-side error -->
+        {% if error %}
+          <div class="error-box" role="alert">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            {{ error }}
+          </div>
+        {% endif %}
+
+        <form id="identify-form" method="post" novalidate>
+          {% csrf_token %}
+
+          <label for="email">Email address</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              inputmode="email"
+              placeholder="your.email@company.com"
+              aria-describedby="email-help email-error"
+              value="{{request.POST.email|default:''}}"
+              required
+            />
+          </div>
+
+          <div id="email-error" class="inline-error" role="alert"></div>
+
+          <div class="field" aria-live="polite">
+            <button type="submit" class="submit" id="submit-btn" aria-label="Sign in">
+              <span id="btn-text">Continue</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="btn-arrow">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+              <svg id="btn-spinner" class="visually-hidden" width="18" height="18" viewBox="0 0 50 50" aria-hidden="true">
+                <circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="31.4 31.4"></circle>
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <div class="admin-portal-section">
+          <p>Organization Admin?</p>
+          <a class="admin-portal-link" href="{% url 'multi_tenant_login' %}">
+            Multi-Tenant Login Portal
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </a>
+        </div>
+
+        <div class="signup-link">
+          Don't have an account? <a href="#">Sign up</a>
+        </div>
+
+        <!-- Maviontech footer on form side -->
+        <div class="form-footer">
+          <div class="form-footer-mavion">
+            <img src="{% static 'core/logo1.png' %}" alt="Maviontech" />
+            <span>Powered by <strong>Maviontech Pvt Ltd</strong></span>
+          </div>
+        </div>
+
       </div>
-    {% endif %}
+    </main>
 
-    <form id="identify-form" method="post" novalidate>
-      {% csrf_token %}
-
-      <label for="email">Email address</label>
-      <div class="input-wrapper">
-        <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          inputmode="email"
-          placeholder="your.email@company.com"
-          aria-describedby="email-help email-error"
-          value="{{request.POST.email|default:''}}"
-          required
-        />
-      </div>
-
-      <div id="email-error" class="inline-error" role="alert"></div>
-
-      <div class="field" aria-live="polite">
-        <button type="submit" class="submit" id="submit-btn" aria-label="Sign in">
-          <span id="btn-text">Sign In</span>
-          <svg id="btn-spinner" class="visually-hidden" width="18" height="18" viewBox="0 0 50 50" aria-hidden="true">
-            <circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="31.4 31.4"></circle>
-          </svg>
-        </button>
-      </div>
-    </form>
-
-    <!-- <div class="divider">Or continue with</div> -->
-
-    <!-- <div class="social-login">
-      <button class="social-btn" type="button" aria-label="Sign in with Google">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-        </svg>
-      </button>
-      <button class="social-btn" type="button" aria-label="Sign in with GitHub">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-          <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
-        </svg>
-      </button>
-      <button class="social-btn" type="button" aria-label="Sign in with Twitter">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-          <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-        </svg>
-      </button>
-    </div> -->
-
-    <div class="admin-portal-section">
-      <p>Organization Admin?</p>
-      <a class="admin-portal-link" href="{% url 'multi_tenant_login' %}">
-        Multi-Tenant Login Portal
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-          <polyline points="12 5 19 12 12 19"></polyline>
-        </svg>
-      </a>
-    </div>
-
-    <div class="signup-link">
-      Don't have an account? <a href="#">Sign up</a>
-    </div>
-  </main>
+  </div>
 
   <script>
     (function(){
@@ -679,6 +953,8 @@
         // show spinner
         submitBtn.disabled = true;
         btnText.style.display = 'none';
+        var btnArrow = document.getElementById('btn-arrow');
+        if(btnArrow) btnArrow.style.display = 'none';
         btnSpinner.classList.remove('visually-hidden');
         // let form submit normally (no e.preventDefault)
       });

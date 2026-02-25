@@ -42,9 +42,9 @@
   .welcome-banner {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: var(--white);
-    padding: 2rem 2.5rem;
+    padding: 1rem 1.5rem;
     border-radius: var(--border-radius);
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     box-shadow: var(--shadow-lg);
     position: relative;
     overflow: hidden;
@@ -68,15 +68,15 @@
   }
 
   .welcome-banner h3 {
-    margin: 0 0 0.5rem 0;
-    font-size: 28px;
+    margin: 0 0 0.25rem 0;
+    font-size: 18px;
     font-weight: 700;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
   }
 
   .welcome-banner .user-email-info {
     opacity: 0.95;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 400;
   }
 
@@ -240,15 +240,15 @@
 
   .btn-team {
     background: var(--white);
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
     color: var(--primary-color);
-    padding: 10px 20px;
-    border-radius: var(--border-radius-sm);
+    padding: 6px 14px;
+    border-radius: 6px;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow);
   }
 
   .btn-team:hover {
@@ -261,11 +261,11 @@
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
     color: var(--white);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    padding: 10px 18px;
-    border-radius: var(--border-radius-sm);
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    padding: 6px 12px;
+    border-radius: 6px;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
   }
@@ -281,15 +281,15 @@
      ============================================ */
   .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
   }
 
   .metric-card {
-    border-radius: var(--border-radius);
-    padding: 2rem 1.5rem;
-    box-shadow: var(--shadow-lg);
+    border-radius: 10px;
+    padding: 1rem 1rem;
+    box-shadow: var(--shadow);
     color: var(--white);
     display: flex;
     flex-direction: column;
@@ -313,8 +313,8 @@
   }
 
   .metric-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-xl);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
   }
 
   .metric-card:hover::before {
@@ -323,8 +323,8 @@
 
   .metric-card .label {
     font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 0.75rem;
+    font-size: 11px;
+    margin-bottom: 0.35rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     opacity: 0.95;
@@ -333,7 +333,7 @@
   }
 
   .metric-card .value {
-    font-size: 42px;
+    font-size: 28px;
     font-weight: 800;
     position: relative;
     z-index: 1;
@@ -362,9 +362,9 @@
      ============================================ */
   .charts-row {
     display: grid;
-    grid-template-columns: 1fr 440px;
-    gap: 1.5rem;
-    margin-top: 2rem;
+    grid-template-columns: 1fr 400px;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
   }
 
   @media (max-width: 1100px) {
@@ -375,8 +375,8 @@
 
   .chart-card {
     background: var(--white);
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
+    border-radius: 10px;
+    padding: 1rem;
     box-shadow: var(--shadow);
     border: 1px solid var(--gray-200);
     transition: all 0.3s ease;
@@ -387,13 +387,13 @@
   }
 
   .chart-card h3 {
-    margin: 0 0 1rem 0;
-    font-size: 18px;
+    margin: 0 0 0.6rem 0;
+    font-size: 14px;
     font-weight: 700;
     color: var(--gray-800);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   /* ============================================
@@ -401,7 +401,7 @@
      ============================================ */
   .chart-split {
     display: flex;
-    gap: 2rem;
+    gap: 1rem;
     align-items: stretch;
   }
 
@@ -413,20 +413,20 @@
 
   .shortcuts-area h3,
   .donut-pane h3 {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--gray-800);
-    margin: 0 0 1rem 0;
+    margin: 0 0 0.5rem 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   /* Quick Actions Grid */
   .shortcuts {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    gap: 0.5rem;
     align-content: start;
   }
 
@@ -436,16 +436,16 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
+    gap: 4px;
+    padding: 0.65rem 0.5rem;
+    border-radius: 8px;
     color: var(--white);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow);
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: 700;
-    font-size: 14px;
-    height: 120px;
+    font-size: 12px;
+    height: 72px;
     text-align: center;
     overflow: hidden;
     border: none;
@@ -465,18 +465,18 @@
   }
 
   .shortcut-btn svg {
-    width: 40px;
-    height: 40px;
+    width: 22px;
+    height: 22px;
     color: rgba(255, 255, 255, 0.95);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
   }
 
   .shortcut-btn .lbl {
-    font-size: 14px;
+    font-size: 11px;
     opacity: 0.98;
     color: rgba(255, 255, 255, 0.98);
     font-weight: 600;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
   }
 
   /* Professional gradient palette */
@@ -497,27 +497,27 @@
   }
 
   .shortcut-btn:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-xl);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
   }
 
   /* Badge styling */
   .shortcut-badge {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    min-width: 26px;
-    height: 26px;
-    padding: 0 8px;
-    border-radius: 13px;
+    top: 6px;
+    right: 6px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px;
     background: rgba(255, 255, 255, 0.95);
     color: var(--primary-color);
-    font-size: 13px;
+    font-size: 10px;
     font-weight: 800;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow);
   }
 
   /* ============================================
@@ -528,29 +528,29 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    gap: 1rem;
-    padding-left: 1rem;
+    gap: 0.5rem;
+    padding-left: 0.75rem;
   }
 
   #progressChart {
     max-width: 100%;
     margin: 0 auto;
     display: block;
-    height: 240px !important;
+    height: 190px !important;
   }
 
   #priorityChart {
     width: 100%;
-    height: 280px !important;
+    height: 240px !important;
   }
 
   .donut-legend {
     display: flex;
-    gap: 1.5rem;
-    margin-top: 1rem;
+    gap: 1rem;
+    margin-top: 0.5rem;
     align-items: center;
     flex-wrap: wrap;
-    font-size: 13px;
+    font-size: 11px;
     color: var(--gray-700);
     justify-content: center;
   }
@@ -563,11 +563,11 @@
   }
 
   .dot {
-    width: 16px;
-    height: 12px;
-    border-radius: 4px;
+    width: 12px;
+    height: 10px;
+    border-radius: 3px;
     display: inline-block;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   }
 
   /* ============================================
@@ -581,12 +581,12 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: var(--white);
     border-bottom: none;
-    padding: 1.5rem 2rem;
+    padding: 1rem 1.5rem;
   }
 
   .team-modal .modal-title {
     font-weight: 700;
-    font-size: 22px;
+    font-size: 18px;
   }
 
   .team-modal .btn-close {
@@ -594,7 +594,7 @@
   }
 
   .team-modal .modal-body {
-    padding: 2rem;
+    padding: 1.25rem;
   }
 
   .team-table {
@@ -605,13 +605,13 @@
 
   .team-table thead th {
     background: var(--gray-50);
-    padding: 1rem 1.25rem;
+    padding: 0.6rem 0.85rem;
     text-align: left;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--gray-700);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     border-bottom: 2px solid var(--gray-200);
   }
 
@@ -625,8 +625,8 @@
   }
 
   .team-table tbody td {
-    padding: 1rem 1.25rem;
-    font-size: 14px;
+    padding: 0.6rem 0.85rem;
+    font-size: 13px;
     color: var(--gray-700);
   }
 
@@ -664,7 +664,7 @@
   @media (max-width: 1000px) {
     .chart-split {
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 0.75rem;
     }
 
     .shortcuts {
@@ -672,24 +672,24 @@
     }
 
     .shortcut-btn {
-      height: 100px;
+      height: 64px;
     }
 
     #progressChart {
       max-width: 100%;
-      height: 200px !important;
+      height: 170px !important;
     }
 
     .dashboard-grid {
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     }
 
     .welcome-banner {
-      padding: 1.5rem;
+      padding: 0.85rem 1rem;
     }
 
     .welcome-banner h3 {
-      font-size: 22px;
+      font-size: 16px;
     }
   }
 
@@ -715,33 +715,33 @@
   }
 /* ---------------- MODAL CLOSE BUTTON ---------------- */
 .chart-card-modern {
-  box-shadow: 0 6px 32px 0 rgba(37,99,235,0.07), 0 1.5px 6px 0 rgba(0,0,0,0.04);
-  border: 1.5px solid var(--gray-200);
-  padding: 2.2rem 2rem 1.7rem 2rem;
-  border-radius: 18px;
+  box-shadow: 0 4px 16px 0 rgba(37,99,235,0.06), 0 1px 4px 0 rgba(0,0,0,0.03);
+  border: 1px solid var(--gray-200);
+  padding: 1rem 1rem 0.85rem 1rem;
+  border-radius: 10px;
   background: linear-gradient(120deg, #f8fafc 60%, #e0e7ef 100%);
   margin-bottom: 0;
   min-width: 0;
 }
 .chart-title-modern {
-  font-size: 1.18rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: var(--primary-color);
-  margin-bottom: 1.1em;
+  margin-bottom: 0.6em;
   letter-spacing: 0.2px;
   display: flex;
   align-items: center;
-  gap: 0.5em;
+  gap: 0.4em;
 }
 .chart-canvas-modern {
   width: 100%;
   min-width: 0;
-  margin-bottom: 0.7em;
+  margin-bottom: 0.4em;
 }
 .chart-desc-modern {
-  margin-top: 8px;
+  margin-top: 4px;
   color: var(--gray-500);
-  font-size: 13px;
+  font-size: 11px;
   font-style: italic;
 }
 .table-responsive-modern {
@@ -756,58 +756,59 @@
 }
 .modern-table thead th {
   background: var(--gray-100);
-  padding: 12px 16px;
+  padding: 7px 10px;
   text-align: left;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--gray-700);
   font-weight: 800;
-  border-radius: 10px 0 0 10px;
+  border-radius: 6px 0 0 6px;
 }
 .modern-table thead th:last-child {
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 6px 6px 0;
 }
 .modern-table tbody tr {
   background: var(--white);
-  box-shadow: 0 1.5px 8px rgba(37,99,235,0.04);
-  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(37,99,235,0.04);
+  border-radius: 6px;
   transition: box-shadow 0.2s, background 0.2s;
 }
 .modern-table tbody tr:hover {
   background: var(--primary-light);
-  box-shadow: 0 4px 16px rgba(37,99,235,0.10);
+  box-shadow: 0 2px 8px rgba(37,99,235,0.10);
 }
 .modern-td-title {
-  padding: 12px 16px;
-  font-size: 15px;
+  padding: 7px 10px;
+  font-size: 13px;
   color: var(--gray-800);
   font-weight: 700;
-  border-radius: 10px 0 0 10px;
+  border-radius: 6px 0 0 6px;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .modern-td-date {
-  padding: 12px 16px;
+  padding: 7px 10px;
   color: var(--gray-700);
-  border-radius: 0 10px 10px 0;
-  font-size: 14px;
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
 }
 .modern-td-empty {
-  padding: 12px 16px;
+  padding: 7px 10px;
   color: #888;
   text-align: center;
   font-style: italic;
+  font-size: 12px;
 }
 .modern-table td {
-  padding: 12px 16px;
-  font-size: 14px;
+  padding: 7px 10px;
+  font-size: 12px;
 }
   .badge-status {
     display: inline-block;
-    padding: 3px 12px;
-    border-radius: 12px;
-    font-size: 13px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
     font-weight: 600;
     margin: 0;
     line-height: 1.5;
@@ -838,15 +839,15 @@
 {% block content %}
 <!-- Dashboard View Indicator -->
 {% if is_user_dashboard %}
-<div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 12px 24px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
-  <div style="display: flex; align-items: center; gap: 12px;">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
       <circle cx="12" cy="7" r="4"></circle>
     </svg>
     <div>
-      <div style="font-size: 16px; font-weight: 700;">My Personal Dashboard</div>
-      <div style="font-size: 13px; opacity: 0.9;">Showing only your assigned tasks and projects</div>
+      <div style="font-size: 13px; font-weight: 700;">My Personal Dashboard</div>
+      <div style="font-size: 11px; opacity: 0.9;">Showing only your assigned tasks and projects</div>
     </div>
   </div>
   <!-- <a href="{% url 'dashboard' %}" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
@@ -854,17 +855,17 @@
   </a> -->
 </div>
 {% else %}
-<div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 24px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
-  <div style="display: flex; align-items: center; gap: 12px;">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="7" height="7" rx="1"></rect>
       <rect x="14" y="3" width="7" height="7" rx="1"></rect>
       <rect x="14" y="14" width="7" height="7" rx="1"></rect>
       <rect x="3" y="14" width="7" height="7" rx="1"></rect>
     </svg>
     <div>
-      <div style="font-size: 16px; font-weight: 700;">Admin Dashboard</div>
-      <div style="font-size: 13px; opacity: 0.9;">Showing all team tasks and projects</div>
+      <div style="font-size: 13px; font-weight: 700;">Admin Dashboard</div>
+      <div style="font-size: 11px; opacity: 0.9;">Showing all team tasks and projects</div>
     </div>
   </div>
   <!-- <a href="{% url 'user_dashboard' %}" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
@@ -876,7 +877,7 @@
 <div class="dashboard-grid">
   <a href="{% url 'tasks_overview' %}" style="text-decoration: none; color: inherit;">
     <div class="metric-card total-tasks" style="cursor: pointer; position: relative;">
-      <svg style="position: absolute; top: 1rem; right: 1rem; width: 20px; height: 20px; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7"/>
       </svg>
       <div class="label">Total Tasks Assigned</div>
@@ -885,7 +886,7 @@
   </a>
   <a href="{% url 'metric_drilldown' 'active-projects' %}" style="text-decoration: none; color: inherit;">
     <div class="metric-card active-projects" style="cursor: pointer; position: relative;">
-      <svg style="position: absolute; top: 1rem; right: 1rem; width: 20px; height: 20px; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7"/>
       </svg>
       <div class="label">Active Projects</div>
@@ -894,7 +895,7 @@
   </a>
   <a href="{% url 'metric_drilldown' 'tasks-completed' %}" style="text-decoration: none; color: inherit;">
     <div class="metric-card tasks-completed" style="cursor: pointer; position: relative;">
-      <svg style="position: absolute; top: 1rem; right: 1rem; width: 20px; height: 20px; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7"/>
       </svg>
       <div class="label">Tasks Completed</div>
@@ -903,7 +904,7 @@
   </a>
   <a href="{% url 'metric_drilldown' 'tasks-pending' %}" style="text-decoration: none; color: inherit;">
     <div class="metric-card tasks-pending" style="cursor: pointer; position: relative;">
-      <svg style="position: absolute; top: 1rem; right: 1rem; width: 20px; height: 20px; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7"/>
       </svg>
       <div class="label">Tasks Pending</div>

@@ -5,9 +5,9 @@
 <style>
 /* ========== MODERN PROJECT CREATE/EDIT UI ========== */
 .project-create-page {
-  max-width: 1000px;
+  max-width: 860px;
   margin: 0 auto;
-  padding: 2.5rem 1.5rem;
+  padding: 1.25rem 1rem;
   background: linear-gradient(135deg, #f8fafc 0%, #e8f0fe 100%);
   min-height: 100vh;
 }
@@ -17,13 +17,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-  padding: 2rem 2.5rem;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.5rem;
   background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 2px solid rgba(59, 130, 246, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.03);
+  border: 1.5px solid rgba(59, 130, 246, 0.08);
   position: relative;
   overflow: hidden;
 }
@@ -34,46 +34,46 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 3px;
   background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
 }
 
 .project-header-content .header-title {
-  font-size: 2rem;
+  font-size: 1.3rem;
   font-weight: 800;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.25rem 0;
   background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .project-header-content .header-subtitle {
   color: #64748b;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 500;
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .project-header-actions .btn-back {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: 10px;
-  border: 2px solid #e2e8f0;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 7px;
+  border: 1.5px solid #e2e8f0;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   color: #475569;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   text-decoration: none;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
 .project-header-actions .btn-back:hover {
@@ -87,27 +87,27 @@
 /* Form Card */
 .project-form-card {
   background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 2px solid rgba(59, 130, 246, 0.08);
-  padding: 2.5rem 3rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.03);
+  border: 1.5px solid rgba(59, 130, 246, 0.06);
+  padding: 1.25rem 1.5rem;
 }
 
 /* Form Layout */
 .form-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .form-grid-two {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .form-grid-three {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .form-field-full {
@@ -117,17 +117,17 @@
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .project-label {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #1e293b;
   letter-spacing: -0.1px;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .project-label .required::after {
@@ -140,15 +140,15 @@
 .project-select,
 .project-textarea {
   width: 100%;
-  padding: 0.875rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 0.95rem;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  font-size: 0.85rem;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   color: #1e293b;
   font-weight: 500;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
 }
 
 .project-input:focus,
@@ -156,25 +156,25 @@
 .project-textarea:focus {
   border-color: #3b82f6;
   outline: none;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15), 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12), 0 1px 4px rgba(0, 0, 0, 0.04);
   background: #ffffff;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .project-textarea {
   resize: vertical;
-  min-height: 120px;
+  min-height: 80px;
   font-family: inherit;
 }
 
 .field-hint {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #64748b;
   font-weight: 500;
 }
 
 .field-error {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #ef4444;
   font-weight: 600;
 }
@@ -183,25 +183,25 @@
 .project-form-actions {
   display: flex;
   justify-content: center;
-  gap: 1rem;
-  margin: 2.5rem 0 1rem 0;
-  padding-top: 2rem;
-  border-top: 2px solid #f1f5f9;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0.5rem 0;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
 }
 
 .btn-project {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.875rem 2rem;
-  border-radius: 12px;
+  gap: 0.4rem;
+  padding: 0.55rem 1.5rem;
+  border-radius: 8px;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   text-decoration: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.2px;
-  min-width: 180px;
+  min-width: 140px;
   cursor: pointer;
 }
 
@@ -209,21 +209,21 @@
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
   border: none;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25), 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .btn-project.primary:hover {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35), 0 2px 8px rgba(0, 0, 0, 0.1);
   color: #ffffff;
 }
 
 .btn-project.secondary {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   color: #475569;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
 .btn-project.secondary:hover {
@@ -231,23 +231,23 @@
   border-color: #3b82f6;
   color: #1e40af;
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
 /* Responsive Design */
 @media (max-width: 900px) {
   .project-create-page {
-    padding: 1.5rem 1rem;
+    padding: 0.85rem 0.75rem;
   }
 
   .project-header-card {
     flex-direction: column;
     align-items: flex-start;
-    padding: 1.5rem;
+    padding: 0.85rem 1rem;
   }
 
   .project-header-content .header-title {
-    font-size: 1.5rem;
+    font-size: 1.15rem;
   }
 
   .project-header-actions {
@@ -260,13 +260,13 @@
   }
 
   .project-form-card {
-    padding: 1.5rem 1.25rem;
+    padding: 1rem 0.85rem;
   }
 
   .form-grid-two,
   .form-grid-three {
     grid-template-columns: 1fr;
-    gap: 1.25rem;
+    gap: 0.85rem;
   }
 
   .project-form-actions {
