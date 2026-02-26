@@ -55,19 +55,26 @@ def permissions_context(request):
         return {
             'user_permissions': set(),
             'user_is_admin': False,
+            'user_role': None,
         }
     
     try:
         permissions = get_user_permissions(request)
         admin_status = check_is_admin(request)
         
+        # Get user role from session
+        user_data = request.session.get('user', {})
+        user_role = user_data.get('role') if isinstance(user_data, dict) else None
+        
         return {
             'user_permissions': permissions,
             'user_is_admin': admin_status,
+            'user_role': user_role,
         }
     except Exception:
         return {
             'user_permissions': set(),
             'user_is_admin': False,
+            'user_role': None,
         }
 
