@@ -92,6 +92,66 @@ body.theme-gray .description-content {
     color: var(--text-primary);
 }
 
+/* Dark mode description sections - FIX FOR VISIBILITY */
+body.theme-gray .desc-section {
+    border-color: var(--border-color) !important;
+}
+
+body.theme-gray .desc-steps {
+    background: rgba(37, 99, 235, 0.1) !important;
+    border-color: rgba(37, 99, 235, 0.3) !important;
+}
+
+body.theme-gray .desc-expected {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+body.theme-gray .desc-actual {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+body.theme-gray .desc-section-body,
+body.theme-gray .desc-section ol,
+body.theme-gray .desc-section ol li,
+body.theme-gray .desc-paragraph {
+    color: var(--text-primary) !important;
+}
+
+body.theme-gray .description-card {
+    background: var(--panel-bg, #1e2532) !important;
+    border-color: var(--border-color) !important;
+}
+
+body.theme-gray .description-card .card-header {
+    background: var(--content-bg, #0f1419) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+body.theme-gray .description-card .card-header h3,
+body.theme-gray .description-card .card-header .desc-meta {
+    color: var(--text-primary) !important;
+}
+
+body.theme-gray .desc-action-btn {
+    background: var(--bg-light) !important;
+    border-color: var(--border-color) !important;
+    color: var(--primary-color) !important;
+}
+
+body.theme-gray .desc-action-btn:hover {
+    background: var(--panel-bg, #1e2532) !important;
+}
+
+body.theme-gray .description-footer {
+    color: var(--text-secondary) !important;
+}
+
+body.theme-gray .show-more {
+    color: var(--primary-color) !important;
+}
+
 /* Dark mode attachments */
 body.theme-gray .attachment-item {
     background: var(--bg-light);
