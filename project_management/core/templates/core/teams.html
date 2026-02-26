@@ -1,466 +1,416 @@
 {% extends "core/base.html" %}
 {% block content %}
 <style>
-/* ========== Modern Teams & Collaboration UI ========== */
-.teams-page { 
-  max-width: 1400px; 
-  margin: 0 auto; 
-  padding: 2.5rem 1.5rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #e8f0fe 100%);
-  min-height: 100vh;
+/* ============================================
+   TEAMS & COLLABORATION - COMPACT PROFESSIONAL
+   ============================================ */
+.teams-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px;
 }
 
-.page-hero { 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
-  gap: 1.5rem; 
-  margin-bottom: 2rem;
-  padding: 2rem 2.5rem;
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 2px solid rgba(59, 130, 246, 0.1);
+/* --- Hero Header --- */
+.teams-hero {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #0ea5e9 100%);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 16px rgba(30,64,175,0.18);
+  color: #fff;
   position: relative;
   overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
-
-.page-hero::before {
+.teams-hero::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  top: -30px; right: -30px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
 }
-
-.page-title { 
-  font-size: 2rem; 
-  font-weight: 800; 
-  margin: 0 0 0.5rem 0;
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.5px;
-}
-
-.page-sub { 
-  color: #64748b; 
-  font-size: 0.95rem;
-  font-weight: 500;
-  margin: 0;
-}
-
-.container { 
-  display: flex; 
-  gap: 1.5rem; 
-  align-items: flex-start; 
-  flex-wrap: wrap; 
-}
-
-/* ========== Cards ========== */
-.card { 
-  background: #ffffff;
-  border-radius: 20px; 
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  padding: 2rem; 
-  border: 2px solid rgba(59, 130, 246, 0.08);
-  transition: all 0.3s ease;
-}
-
-.left-card { 
-  flex: 1 600px; 
-  min-width: 320px; 
-}
-
-.right-card { 
-  flex: 1 1 780px; 
-  min-width: 400px; 
-}
-
-/* ========== Team List Items ========== */
-.team-item { 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
-  padding: 1rem 1.25rem; 
-  border-radius: 12px; 
-  cursor: pointer; 
+.teams-hero-left {
+  display: flex;
+  align-items: center;
   gap: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 2px solid transparent;
   position: relative;
-  margin-bottom: 0.75rem;
+  z-index: 1;
+}
+.teams-icon {
+  background: rgba(255,255,255,0.18);
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.teams-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
+.teams-subtitle { font-size: 0.8rem; margin: 2px 0 0 0; opacity: 0.9; }
+.btn-new-team {
+  background: rgba(255,255,255,0.95);
+  color: #1e40af;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  position: relative;
+  z-index: 1;
+}
+.btn-new-team:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+/* --- Layout --- */
+.teams-container {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
+/* --- Cards --- */
+.t-card {
+  background: var(--theme-surface, #fff);
+  border-radius: 12px;
+  box-shadow: var(--theme-shadow, 0 1px 3px rgba(0,0,0,0.08));
+  padding: 1.25rem;
+  border: 1px solid var(--theme-border, #e2e8f0);
+  transition: box-shadow 0.2s ease;
+}
+.left-card { flex: 1 1 360px; min-width: 300px; }
+.right-card { flex: 2 1 680px; min-width: 380px; }
+.t-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.t-card-header strong {
+  font-size: 0.85rem;
+  color: var(--theme-text, #1f2937);
+}
+
+/* --- Team List Items --- */
+.team-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  gap: 8px;
+  transition: all 0.2s ease;
+  border: 1.5px solid transparent;
+  margin-bottom: 4px;
+  position: relative;
+}
 .team-item::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border-radius: 4px 0 0 4px;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-radius: 3px 0 0 3px;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
 }
-
-.team-item:hover { 
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: rgba(59, 130, 246, 0.2);
-  transform: translateX(4px);
+.team-item:hover {
+  background: var(--theme-surface-hover, #f0f9ff);
+  border-color: rgba(59,130,246,0.15);
+  transform: translateX(3px);
 }
-
-.team-item:hover::before {
-  opacity: 1;
-}
-
-.team-item.active { 
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+.team-item:hover::before { opacity: 1; }
+.team-item.active {
+  background: rgba(59,130,246,0.08);
   border-color: #3b82f6;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-  transform: translateX(4px);
+  transform: translateX(3px);
 }
-
-.team-item.active::before {
-  opacity: 1;
+.team-item.active::before { opacity: 1; }
+.team-name {
+  font-weight: 700;
+  color: var(--theme-text, #1e293b);
+  font-size: 13px;
 }
-
-.team-name { 
-  font-weight: 700; 
-  color: #1e293b;
-  font-size: 1.05rem;
-  letter-spacing: -0.2px;
-}
-
-.team-meta { 
-  color: #64748b; 
-  font-size: 0.875rem;
+.team-meta {
+  color: var(--theme-text-secondary, #64748b);
+  font-size: 11px;
   font-weight: 500;
-  margin-top: 0.25rem;
+  margin-top: 1px;
+}
+.team-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: #1976d2;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
-/* ========== Form Elements ========== */
-.form-row { 
-  display: flex; 
-  gap: 1rem; 
-  flex-wrap: wrap; 
-  align-items: center; 
-  margin-bottom: 1.25rem; 
-}
-
-.field { 
-  flex: 1 1 220px; 
-  min-width: 180px; 
-}
-
-.label { 
-  font-size: 0.9rem; 
-  color: #1e293b; 
-  margin-bottom: 0.5rem; 
-  display: block;
-  font-weight: 600;
-  letter-spacing: -0.1px;
-}
-
-.input, .select { 
-  width: 100%; 
-  padding: 0.875rem 1rem; 
-  border: 2px solid #e2e8f0; 
-  border-radius: 10px; 
-  font-size: 0.95rem; 
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  color: #1e293b;
+/* --- Form Elements --- */
+.t-input, .t-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid var(--theme-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 13px;
+  background: var(--theme-input-bg, #f8fafc);
+  color: var(--theme-text, #1e293b);
   font-weight: 500;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
 }
-
-.input:focus, .select:focus { 
+.t-input:focus, .t-select:focus {
   border-color: #3b82f6;
   outline: none;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15), 0 2px 8px rgba(0, 0, 0, 0.05);
-  background: #ffffff;
-  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+.t-label {
+  font-size: 12px;
+  color: var(--theme-text-secondary, #475569);
+  margin-bottom: 4px;
+  display: block;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-/* ========== Buttons ========== */
-.btn { 
-  padding: 0.75rem 1.5rem; 
-  border-radius: 10px; 
-  border: none; 
-  cursor: pointer; 
-  font-weight: 700;
-  font-size: 0.95rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* --- Buttons --- */
+.t-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  letter-spacing: 0.2px;
+  gap: 5px;
 }
-
-.btn.primary { 
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: none;
+.t-btn.primary { background: #3b82f6; color: #fff; }
+.t-btn.primary:hover { background: #2563eb; }
+.t-btn.ghost {
+  background: var(--theme-surface, #fff);
+  border: 1.5px solid var(--theme-border, #e2e8f0);
+  color: var(--theme-text-secondary, #475569);
 }
+.t-btn.ghost:hover { background: var(--theme-bg-secondary, #f1f5f9); }
+.t-btn.small { padding: 4px 10px; font-size: 11px; }
 
-.btn.primary:hover { 
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.btn.ghost { 
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 2px solid #e2e8f0; 
-  color: #475569;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.btn.ghost:hover { 
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #3b82f6;
-  color: #1e40af;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-}
-
-.btn.small { 
-  padding: 0.5rem 1rem; 
-  font-size: 0.85rem;
-}
-
-/* ========== Table ========== */
-.table { 
-  width: 100%; 
+/* --- Table --- */
+.t-table {
+  width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.95rem; 
+  font-size: 13px;
 }
-
-.table th, .table td { 
-  padding: 1rem 1.25rem; 
-  text-align: left; 
-  border-bottom: 2px solid #f1f5f9; 
-  vertical-align: middle; 
+.t-table th, .t-table td {
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid var(--theme-border-light, #f1f5f9);
+  vertical-align: middle;
 }
-
-.table th { 
-  color: #64748b; 
-  font-weight: 700; 
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-.table th:first-child {
-  border-radius: 10px 0 0 0;
-}
-
-.table th:last-child {
-  border-radius: 0 10px 0 0;
-}
-
-.table tbody tr {
-  transition: all 0.3s ease;
-}
-
-.table tbody tr:hover {
-  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
-}
-
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* ========== Avatar ========== */
-.avatar { 
-  width: 44px; 
-  height: 44px; 
-  border-radius: 50%; 
-  display: inline-flex; 
-  align-items: center; 
-  justify-content: center; 
-  font-weight: 700; 
-  color: #ffffff; 
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  font-size: 1.05rem;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-  border: 3px solid #ffffff;
-}
-
-/* ========== Pagination ========== */
-.pager { 
-  display: flex; 
-  gap: 0.5rem; 
-  align-items: center; 
-  justify-content: flex-end;
-  margin-top: 1.5rem; 
-}
-
-.page-num { 
-  padding: 0.5rem 0.875rem; 
-  border-radius: 8px; 
-  cursor: pointer; 
-  border: 2px solid #e2e8f0;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  color: #475569;
+.t-table th {
+  color: var(--theme-text-secondary, #64748b);
   font-weight: 600;
-  transition: all 0.3s ease;
-  font-size: 0.9rem;
+  background: var(--theme-bg-secondary, #f8fafc);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1.5px solid var(--theme-border, #e2e8f0);
+}
+.t-table tbody tr { transition: background 0.15s ease; }
+.t-table tbody tr:hover { background: var(--theme-surface-hover, #f8fafc); }
+.t-table tbody tr:last-child td { border-bottom: none; }
+
+/* --- Avatar --- */
+.t-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgba(59,130,246,0.2);
 }
 
-.page-num:hover:not(:disabled) {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #3b82f6;
-  color: #1e40af;
-  transform: translateY(-2px);
-}
-
-.page-num.active { 
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff; 
-  border-color: #3b82f6;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-}
-
-.page-num:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.empty { 
-  color: #94a3b8; 
-  padding: 2.5rem 0; 
-  text-align: center;
-  font-weight: 500;
-  font-size: 1rem;
-}
-
-/* ========== Autocomplete Dropdown ========== */
-.autocomplete-wrapper { 
-  position: relative; 
-}
-
-.autocomplete-list { 
-  position: absolute; 
-  left: 0; 
-  right: 0; 
-  top: 100%; 
-  background: #ffffff; 
-  border: 2px solid #e2e8f0; 
-  max-height: 280px; 
-  overflow: auto; 
-  z-index: 1400; 
-  border-radius: 12px; 
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
-  margin-top: 0.5rem;
-}
-
-.autocomplete-item { 
-  padding: 1rem 1.25rem; 
-  cursor: pointer; 
-  display: flex; 
-  justify-content: space-between; 
-  gap: 1rem;
+/* --- Pagination --- */
+.t-pager { display: flex; gap: 4px; align-items: center; justify-content: flex-end; margin-top: 0.75rem; }
+.t-page-num {
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1.5px solid var(--theme-border, #e2e8f0);
+  background: var(--theme-surface, #fff);
+  color: var(--theme-text-secondary, #475569);
+  font-weight: 600;
+  font-size: 12px;
   transition: all 0.2s ease;
-  border-bottom: 1px solid #f1f5f9;
+}
+.t-page-num:hover:not(:disabled) { border-color: #3b82f6; color: #1e40af; }
+.t-page-num.active { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border-color: #3b82f6; }
+.t-page-num:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* --- Empty / Misc --- */
+.t-empty { color: var(--theme-text-muted, #94a3b8); padding: 2rem 0; text-align: center; font-size: 13px; }
+
+/* --- Autocomplete --- */
+.autocomplete-wrapper { position: relative; }
+.autocomplete-list {
+  position: absolute;
+  left: 0; right: 0; top: 100%;
+  background: var(--theme-surface, #fff);
+  border: 1.5px solid var(--theme-border, #e2e8f0);
+  max-height: 220px;
+  overflow: auto;
+  z-index: 1400;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  margin-top: 4px;
+}
+.autocomplete-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid var(--theme-border-light, #f1f5f9);
+  font-size: 13px;
+}
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover { background: var(--theme-surface-hover, #f0f9ff); }
+.autocomplete-muted { color: var(--theme-text-muted, #94a3b8); font-size: 11px; }
+
+/* --- Modal --- */
+.t-modal {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; top: 0; bottom: 0;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(3px);
+  z-index: 1200;
+}
+.t-modal-card {
+  width: 480px;
+  max-width: 95%;
+  margin: auto;
+}
+.t-modal-card .t-card {
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
 }
 
-.autocomplete-item:last-child {
-  border-bottom: none;
+/* ============================================
+   DARK MODE OVERRIDES
+   ============================================ */
+[data-theme="dark"] .teams-hero {
+  background: linear-gradient(135deg, #0f2d5e 0%, #1e3a5f 50%, #164e63 100%) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
 }
-
-.autocomplete-item:hover { 
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+[data-theme="dark"] .t-card {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
 }
-
-.autocomplete-muted { 
-  color: #94a3b8; 
-  font-size: 0.85rem;
-  font-weight: 500;
+[data-theme="dark"] .t-card-header strong { color: var(--theme-text) !important; }
+[data-theme="dark"] .team-name { color: var(--theme-text) !important; }
+[data-theme="dark"] .team-meta { color: var(--theme-text-secondary) !important; }
+[data-theme="dark"] .team-item:hover { background: var(--theme-surface-hover) !important; }
+[data-theme="dark"] .team-item.active {
+  background: rgba(59,130,246,0.12) !important;
+  border-color: rgba(59,130,246,0.4) !important;
 }
+[data-theme="dark"] .t-input, [data-theme="dark"] .t-select {
+  background: var(--theme-input-bg) !important;
+  border-color: var(--theme-input-border) !important;
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .t-label { color: var(--theme-text-secondary) !important; }
+[data-theme="dark"] .t-btn.ghost {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] .t-table th {
+  background: var(--theme-bg-secondary) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] .t-table td {
+  color: var(--theme-text) !important;
+  border-color: var(--theme-border) !important;
+}
+[data-theme="dark"] .t-table tbody tr:hover { background: var(--theme-surface-hover) !important; }
+[data-theme="dark"] .t-page-num {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] .t-page-num.active { background: linear-gradient(135deg, #3b82f6, #2563eb) !important; color: #fff !important; }
+[data-theme="dark"] .t-empty { color: var(--theme-text-muted) !important; }
+[data-theme="dark"] .autocomplete-list {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+}
+[data-theme="dark"] .autocomplete-item { border-color: var(--theme-border) !important; }
+[data-theme="dark"] .autocomplete-item:hover { background: var(--theme-surface-hover) !important; }
+[data-theme="dark"] .t-modal { background: rgba(0,0,0,0.7) !important; }
+[data-theme="dark"] #team-title { color: var(--theme-text) !important; }
+[data-theme="dark"] #team-desc { color: var(--theme-text-secondary) !important; }
+[data-theme="dark"] #team-meta { color: var(--theme-text-secondary) !important; }
 
-/* ========== Responsive ========== */
+/* --- Responsive --- */
 @media (max-width:900px) {
-  .teams-page {
-    padding: 1.5rem 1rem;
-  }
-  
-  .page-hero { 
-    flex-direction: column; 
-    align-items: flex-start; 
-    gap: 1rem;
-    padding: 1.5rem;
-  }
-  
-  .page-title {
-    font-size: 1.5rem;
-  }
-  
-  .container {
-    flex-direction: column;
-  }
-  
-  .left-card, .right-card {
-    flex: 1 1 100%;
-    min-width: 100%;
-  }
-  
-  .card {
-    padding: 1.5rem;
-  }
-}
-
-/* Sidebar and menu color fix for Teams page */
-/* .sidebar, .sidebar .menu-root, .sidebar .menu-item.open, .sidebar .submenu {
-  background: #0b2341 !important;
-} */
-.sidebar .menu-link, .sidebar .submenu-link, .sidebar .menu-link .icon, .sidebar .submenu-link .icon {
-  color: #fff !important;
-}
-.sidebar .menu-link .label, .sidebar .submenu-link .label {
-  color: #fff !important;
-}
-.sidebar .menu-item.active > .menu-link, .sidebar .menu-item.open > .menu-link {
-  color: #fff !important;
-}
-.sidebar .submenu-link:hover {
-  background: rgba(255,255,255,0.02) !important;
-  color: #fff !important;
-}
-.sidebar .menu-header, .sidebar .menu-header * {
-  background: #0b2341 !important;
-  color: #fff !important;
+  .teams-hero { flex-direction: column; align-items: stretch; }
+  .teams-container { flex-direction: column; }
+  .left-card, .right-card { flex: 1 1 100%; min-width: 100%; }
 }
 </style>
 
 <div class="teams-page">
-  <div class="page-hero">
-    <div>
-      <div class="page-title">Teams &amp; Collaboration</div>
-      <div class="page-sub">Create teams, assign members, and manage team leads.</div>
+  <!-- Hero Header -->
+  <div class="teams-hero">
+    <div class="teams-hero-left">
+      <div class="teams-icon">
+        <i class="fa-solid fa-people-group"></i>
+      </div>
+      <div>
+        <div class="teams-title">Teams & Collaboration</div>
+        <div class="teams-subtitle">Create teams, assign members, manage leads</div>
+      </div>
     </div>
-    <div>
-      <button id="btn-new-team" class="btn primary">New Team</button>
-    </div>
+    <button id="btn-new-team" class="btn-new-team">
+      <i class="fa-solid fa-plus"></i> New Team
+    </button>
   </div>
 
-  <div class="container">
-    <!-- left: teams list -->
-    <div class="card left-card" id="teams-list-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <strong style="font-size:15px">Teams</strong>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <input id="team-search" class="input" placeholder="Search teams" style="width:150px; padding:6px 8px;" />
-          <select id="teams-page-size" class="select" style="padding:6px 8px; border-radius:6px;">
+  <div class="teams-container">
+    <!-- Left: Teams List -->
+    <div class="t-card left-card" id="teams-list-card">
+      <div class="t-card-header">
+        <strong>Teams</strong>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input id="team-search" class="t-input" placeholder="Search" style="width:120px; padding:5px 8px;" />
+          <select id="teams-page-size" class="t-select" style="width:60px; padding:5px 6px;">
             <option value="10">10</option>
             <option value="25">25</option>
             <option value="50">50</option>
@@ -468,112 +418,103 @@
         </div>
       </div>
 
-      <div id="teams-list" style="display:flex; flex-direction:column; gap:6px; max-height:520px; overflow:auto;">
-        <!-- dynamic items -->
-      </div>
+      <div id="teams-list" style="display:flex; flex-direction:column; gap:3px; max-height:460px; overflow:auto;"></div>
 
-      <div style="display:flex; justify-content:center; margin-top:12px;">
-        <div class="pager" id="teams-pager"></div>
+      <div style="display:flex; justify-content:center; margin-top:8px;">
+        <div class="t-pager" id="teams-pager"></div>
       </div>
     </div>
 
-    <!-- right: team details -->
-    <div class="card right-card" id="team-details-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+    <!-- Right: Team Details -->
+    <div class="t-card right-card" id="team-details-card">
+      <div class="t-card-header">
         <div>
-          <h3 id="team-title" style="margin:0">Select a team</h3>
-          <div id="team-desc" style="color:#6b7280; font-size:13px; margin-top:4px"></div>
+          <h3 id="team-title" style="margin:0;font-size:1rem;font-weight:700;color:var(--theme-text,#1f2937);">Select a team</h3>
+          <div id="team-desc" style="color:var(--theme-text-secondary,#6b7280);font-size:12px;margin-top:2px"></div>
         </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <button id="btn-add-member" class="btn ghost">Add Member</button>
-          <button id="btn-set-lead" class="btn ghost" style="display:none">Set Lead</button>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button id="btn-add-member" class="t-btn ghost">Add Member</button>
+          <button id="btn-set-lead" class="t-btn ghost" style="display:none">Set Lead</button>
         </div>
       </div>
 
-      <div id="team-meta" style="margin-bottom:12px; color:#4b5563; font-size:14px;"></div>
+      <div id="team-meta" style="margin-bottom:8px; color:var(--theme-text-secondary,#4b5563); font-size:12px;"></div>
 
       <div style="overflow:auto;">
-        <table class="table" id="team-members-table">
-          <thead><tr><th style="width:64px">Avatar</th><th>Name</th><th>Email</th><th>Role</th><th style="width:120px">Actions</th></tr></thead>
+        <table class="t-table" id="team-members-table">
+          <thead><tr><th style="width:48px">Avatar</th><th>Name</th><th>Email</th><th>Role</th><th style="width:100px">Actions</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
-        <div id="team-member-count" class="page-sub">0 members</div>
-        <div class="pager" id="members-pager"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+        <div id="team-member-count" style="font-size:12px;color:var(--theme-text-secondary,#64748b);">0 members</div>
+        <div class="t-pager" id="members-pager"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Create team modal (inline but hidden) -->
-<div id="modal-create-team" style="display:none; position:fixed; left:0; right:0; top:0; bottom:0; align-items:center; justify-content:center; background:rgba(8,12,20,0.45); z-index:1200;">
-  <div style="width:520px; max-width:95%; margin:auto;">
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <h4 style="margin:0">Create Team</h4>
-        <button id="modal-create-team-close" class="btn ghost">Close</button>
+<!-- Create Team Modal -->
+<div id="modal-create-team" class="t-modal">
+  <div class="t-modal-card">
+    <div class="t-card">
+      <div class="t-card-header">
+        <h4 style="margin:0;font-size:0.9rem;font-weight:700;color:var(--theme-text,#1f2937);">Create Team</h4>
+        <button id="modal-create-team-close" class="t-btn ghost small">Close</button>
       </div>
-      <form id="form-create-team">
-        <div class="form-row">
-          <div class="field">
-            <label class="label">Team name</label>
-            <input class="input" name="name" placeholder="e.g., Platform Team" required />
+      <form id="form-create-team" style="margin-top:8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label class="t-label">Team name</label>
+            <input class="t-input" name="name" placeholder="e.g., Platform Team" required />
           </div>
-          <div class="field">
-            <label class="label">Team lead email (optional)</label>
-            <input class="input" name="lead_email" placeholder="lead@company.com" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="field" style="flex:1 1 100%;">
-            <label class="label">Description</label>
-            <input class="input" name="description" placeholder="Short description" />
+          <div>
+            <label class="t-label">Team lead email (optional)</label>
+            <input class="t-input" name="lead_email" placeholder="lead@company.com" />
           </div>
         </div>
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-          <button type="submit" class="btn primary">Create</button>
-          <button type="button" id="btn-create-cancel" class="btn ghost">Cancel</button>
+        <div style="margin-bottom:10px;">
+          <label class="t-label">Description</label>
+          <input class="t-input" name="description" placeholder="Short description" />
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="submit" class="t-btn primary">Create</button>
+          <button type="button" id="btn-create-cancel" class="t-btn ghost">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Add member modal (updated: autocomplete + dropdown) -->
-<div id="modal-add-member" style="display:none; position:fixed; left:0; right:0; top:0; bottom:0; align-items:center; justify-content:center; background:rgba(8,12,20,0.45); z-index:1200;">
-  <div style="width:520px; max-width:95%; margin:auto;">
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <h4 style="margin:0">Add Member to Team</h4>
-        <button id="modal-add-member-close" class="btn ghost">Close</button>
+<!-- Add Member Modal -->
+<div id="modal-add-member" class="t-modal">
+  <div class="t-modal-card">
+    <div class="t-card">
+      <div class="t-card-header">
+        <h4 style="margin:0;font-size:0.9rem;font-weight:700;color:var(--theme-text,#1f2937);">Add Member to Team</h4>
+        <button id="modal-add-member-close" class="t-btn ghost small">Close</button>
       </div>
-      <form id="form-add-member" autocomplete="off">
-        <div class="form-row">
-          <div class="field autocomplete-wrapper" style="position:relative">
-            <label class="label">Select member (search email or name)</label>
-            <!-- visible input used for search & selection -->
-            <input class="input" id="member-picker" name="member_picker" placeholder="Type to search existing members or type email to create" />
-            <!-- hidden input keeps selected member id if chosen -->
+      <form id="form-add-member" autocomplete="off" style="margin-top:8px;">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:10px;">
+          <div class="autocomplete-wrapper">
+            <label class="t-label">Search member</label>
+            <input class="t-input" id="member-picker" name="member_picker" placeholder="Type email or name" />
             <input type="hidden" id="member-id" name="member_id" />
-            <!-- dropdown list will be populated dynamically -->
             <div id="member-autocomplete" class="autocomplete-list" style="display:none"></div>
-            <div class="autocomplete-muted" style="margin-top:6px; font-size:13px;">Tip: pick from the list or type a new email to create a member.</div>
+            <div class="autocomplete-muted" style="margin-top:4px;">Pick from list or type email to create</div>
           </div>
-
-          <div class="field">
-            <label class="label">Role in team</label>
-            <select class="select" name="team_role">
+          <div>
+            <label class="t-label">Role</label>
+            <select class="t-select" name="team_role">
               <option>Member</option>
               <option>Lead</option>
             </select>
           </div>
         </div>
-
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-          <button type="submit" class="btn primary">Add</button>
-          <button type="button" id="btn-add-cancel" class="btn ghost">Cancel</button>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="submit" class="t-btn primary">Add</button>
+          <button type="button" id="btn-add-cancel" class="t-btn ghost">Cancel</button>
         </div>
       </form>
     </div>
@@ -581,17 +522,6 @@
 </div>
 
 <script>
-/* Teams page JS - updated to support member autocomplete for add-member modal
-   Keeps existing APIs intact:
-    - GET /api/teams/list
-    - POST /api/teams/create
-    - GET /api/teams/<id>/members
-    - POST /api/teams/<id>/add_member
-    - POST /api/teams/<id>/remove_member
-    - POST /api/people/create
-    - GET /api/people/list
-*/
-
 const API = {
   teams_list: '/api/teams/list',
   create_team: '/api/teams/create',
@@ -610,126 +540,73 @@ async function apiFetch(path, opts={}) {
   return fetch(path, opts).then(r => r.json());
 }
 
-/* State for people used by autocomplete */
-let PEOPLE_CACHE = []; // full list of members {id, email, first_name, last_name, phone}
-
-/* load people once (used for autocomplete); called on init */
+let PEOPLE_CACHE = [];
 async function loadPeopleCache() {
   try {
     const res = await apiFetch(API.people_list);
-    if (!res.ok) {
-      PEOPLE_CACHE = [];
-      return;
-    }
+    if (!res.ok) { PEOPLE_CACHE = []; return; }
     PEOPLE_CACHE = (res.members || []).map(m => ({
-      id: m.id,
-      email: m.email || '',
-      first_name: m.first_name || '',
-      last_name: m.last_name || '',
+      id: m.id, email: m.email || '',
+      first_name: m.first_name || '', last_name: m.last_name || '',
       display: ((m.first_name || '') + ' ' + (m.last_name || '')).trim() || m.email || ''
     }));
-  } catch (err) {
-    console.error('Failed to load people cache', err);
-    PEOPLE_CACHE = [];
-  }
+  } catch (err) { PEOPLE_CACHE = []; }
 }
 
-/* Helper: search people by query (email or name) */
 function searchPeople(q) {
   q = (q || '').toLowerCase();
   if (!q) return PEOPLE_CACHE.slice(0, 25);
   return PEOPLE_CACHE.filter(p =>
-    (p.email || '').toLowerCase().includes(q) ||
-    (p.display || '').toLowerCase().includes(q)
+    (p.email || '').toLowerCase().includes(q) || (p.display || '').toLowerCase().includes(q)
   ).slice(0, 50);
 }
 
-/* UI: autocomplete for member-picker */
 const picker = document.getElementById('member-picker');
 const pickerHidden = document.getElementById('member-id');
 const acList = document.getElementById('member-autocomplete');
-
 let acTimeout = null;
+
 function showAutocomplete(items) {
-  if (!items || items.length === 0) {
-    acList.style.display = 'none';
-    acList.innerHTML = '';
-    return;
-  }
+  if (!items || items.length === 0) { acList.style.display = 'none'; return; }
   acList.innerHTML = '';
   items.forEach(it => {
     const el = document.createElement('div');
     el.className = 'autocomplete-item';
-    el.innerHTML = `<div>
-                      <div style="font-weight:600">${it.display}</div>
-                      <div class="autocomplete-muted">${it.email}</div>
-                    </div>`;
-    el.onclick = () => {
-      // select this item
-      picker.value = `${it.display} <${it.email}>`;
-      pickerHidden.value = it.id;
-      acList.style.display = 'none';
-    };
+    el.innerHTML = `<div><div style="font-weight:600;font-size:13px">${it.display}</div><div class="autocomplete-muted">${it.email}</div></div>`;
+    el.onclick = () => { picker.value = `${it.display} <${it.email}>`; pickerHidden.value = it.id; acList.style.display = 'none'; };
     acList.appendChild(el);
   });
   acList.style.display = 'block';
 }
 
-/* type handler for picker: debounce and show matches */
 picker.addEventListener('input', (ev) => {
-  pickerHidden.value = ''; // clear selected id when user types
+  pickerHidden.value = '';
   const q = ev.target.value.trim();
   if (acTimeout) clearTimeout(acTimeout);
-  acTimeout = setTimeout(() => {
-    const items = searchPeople(q);
-    showAutocomplete(items);
-  }, 180);
+  acTimeout = setTimeout(() => showAutocomplete(searchPeople(q)), 180);
 });
 
-/* hide autocomplete when clicking outside */
 document.addEventListener('click', (ev) => {
-  if (!ev.target.closest('.autocomplete-wrapper')) {
-    acList.style.display = 'none';
-  }
+  if (!ev.target.closest('.autocomplete-wrapper')) acList.style.display = 'none';
 });
 
-/* Teams logic (unchanged) */
-let TEAMS = [];
-let FILTERED_TEAMS = [];
-let CURRENT_TEAMS_PAGE = 1;
-let TEAMS_PAGE_SIZE = 10;
-let SELECTED_TEAM_ID = null;
-let SELECTED_TEAM = null;
-let TEAM_MEMBERS = [];
-let MEMBERS_PAGE = 1;
-let MEMBERS_PAGE_SIZE = 10;
+let TEAMS = [], FILTERED_TEAMS = [], CURRENT_TEAMS_PAGE = 1, TEAMS_PAGE_SIZE = 10;
+let SELECTED_TEAM_ID = null, SELECTED_TEAM = null, TEAM_MEMBERS = [], MEMBERS_PAGE = 1, MEMBERS_PAGE_SIZE = 10;
 
 async function loadTeams() {
   try {
     const res = await apiFetch(API.teams_list);
-    if (!res.ok) {
-      console.error('Failed to load teams', res);
-      TEAMS = [];
-      renderTeamsList();
-      return;
-    }
-    TEAMS = res.teams || [];
-    TEAMS = TEAMS.map(t => ({
+    if (!res.ok) { TEAMS = []; renderTeamsList(); return; }
+    TEAMS = (res.teams || []).map(t => ({
       id: t.id, name: t.name, description: t.description || '', member_count: t.member_count || 0, lead_email: t.lead_email || ''
     }));
     applyTeamFilter();
-  } catch (err) {
-    console.error('loadTeams error', err);
-    TEAMS = [];
-    renderTeamsList();
-  }
+  } catch (err) { TEAMS = []; renderTeamsList(); }
 }
 
 function applyTeamFilter() {
   const q = document.getElementById('team-search').value.trim().toLowerCase();
-  if (q) {
-    FILTERED_TEAMS = TEAMS.filter(t => (t.name||'').toLowerCase().includes(q) || (t.description||'').toLowerCase().includes(q));
-  } else FILTERED_TEAMS = TEAMS.slice();
+  FILTERED_TEAMS = q ? TEAMS.filter(t => (t.name||'').toLowerCase().includes(q) || (t.description||'').toLowerCase().includes(q)) : TEAMS.slice();
   TEAMS_PAGE_SIZE = parseInt(document.getElementById('teams-page-size').value, 10) || 10;
   CURRENT_TEAMS_PAGE = 1;
   renderTeamsList();
@@ -739,11 +616,7 @@ function renderTeamsList() {
   const container = document.getElementById('teams-list');
   container.innerHTML = '';
   const total = FILTERED_TEAMS.length;
-  if (total === 0) {
-    container.innerHTML = '<div class="empty">No teams found</div>';
-    document.getElementById('teams-pager').innerHTML = '';
-    return;
-  }
+  if (total === 0) { container.innerHTML = '<div class="t-empty">No teams found</div>'; document.getElementById('teams-pager').innerHTML = ''; return; }
   const pages = Math.max(1, Math.ceil(total / TEAMS_PAGE_SIZE));
   const page = Math.min(Math.max(1, CURRENT_TEAMS_PAGE), pages);
   const start = (page - 1) * TEAMS_PAGE_SIZE;
@@ -751,28 +624,22 @@ function renderTeamsList() {
   chunk.forEach(t => {
     const el = document.createElement('div');
     el.className = 'team-item' + (SELECTED_TEAM_ID === t.id ? ' active' : '');
-    el.innerHTML = `<div style="display:flex;gap:10px;align-items:center">
-                      <div style="width:40px;height:40px;border-radius:999px;background:#1976d2;color:white;display:flex;align-items:center;justify-content:center;font-weight:700">${(t.name||'?').charAt(0).toUpperCase()}</div>
-                      <div>
-                        <div class="team-name">${t.name}</div>
-                        <div class="team-meta">${t.member_count} member${t.member_count !== 1 ? 's' : ''}</div>
-                      </div>
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center">
-                      <button class="btn small ghost" onclick="selectTeam(${t.id})">Open</button>
-                    </div>`;
+    el.innerHTML = `<div style="display:flex;gap:8px;align-items:center">
+      <div class="team-avatar">${(t.name||'?').charAt(0).toUpperCase()}</div>
+      <div><div class="team-name">${t.name}</div><div class="team-meta">${t.member_count} member${t.member_count !== 1 ? 's' : ''}</div></div>
+    </div>
+    <button class="t-btn small ghost" onclick="selectTeam(${t.id})">Open</button>`;
     container.appendChild(el);
   });
   renderPager('teams-pager', pages, page, (p)=> { CURRENT_TEAMS_PAGE = p; renderTeamsList(); });
 }
 
-/* Select team and load members */
 async function selectTeam(id) {
   SELECTED_TEAM_ID = id;
   renderTeamsList();
   try {
     const r = await apiFetch(`/api/teams/${id}/members`);
-    if (!r.ok) { console.error('Failed to load team members', r); return; }
+    if (!r.ok) return;
     SELECTED_TEAM = r.team || { name: 'Unknown', description: '' };
     TEAM_MEMBERS = r.members || [];
     MEMBERS_PAGE = 1;
@@ -780,22 +647,15 @@ async function selectTeam(id) {
     document.getElementById('team-desc').textContent = SELECTED_TEAM.description || '';
     document.getElementById('team-meta').textContent = `Lead: ${SELECTED_TEAM.lead_email || '-'}`;
     renderTeamMembers();
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) { console.error(err); }
 }
 
-/* Render members table (client-side paging) */
 function renderTeamMembers() {
   const tbody = document.querySelector('#team-members-table tbody');
   tbody.innerHTML = '';
   const total = TEAM_MEMBERS.length;
   document.getElementById('team-member-count').textContent = `${total} member${total !== 1 ? 's' : ''}`;
-  if (total === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty">No members in this team</td></tr>`;
-    document.getElementById('members-pager').innerHTML = '';
-    return;
-  }
+  if (total === 0) { tbody.innerHTML = `<tr><td colspan="5" class="t-empty">No members in this team</td></tr>`; document.getElementById('members-pager').innerHTML = ''; return; }
   const pages = Math.max(1, Math.ceil(total / MEMBERS_PAGE_SIZE));
   const page = Math.min(Math.max(1, MEMBERS_PAGE), pages);
   const start = (page - 1) * MEMBERS_PAGE_SIZE;
@@ -804,51 +664,36 @@ function renderTeamMembers() {
     const name = `${m.first_name||''} ${m.last_name||''}`.trim() || '-';
     const avatar = (m.first_name||m.email||'?').charAt(0).toUpperCase();
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><div class="avatar">${avatar}</div></td>
+    tr.innerHTML = `<td><div class="t-avatar">${avatar}</div></td>
       <td style="font-weight:600">${name}</td>
       <td>${m.email}</td>
       <td>${m.team_role || 'Member'}</td>
-      <td>
-        <button class="btn small ghost" onclick="removeMember(${m.member_id})">Remove</button>
-      </td>`;
+      <td><button class="t-btn small ghost" onclick="removeMember(${m.member_id})">Remove</button></td>`;
     tbody.appendChild(tr);
   }
   renderPager('members-pager', pages, page, (p)=> { MEMBERS_PAGE = p; renderTeamMembers(); });
 }
 
-/* Pager helper */
 function renderPager(elementId, totalPages, current, onChange) {
   const pager = document.getElementById(elementId);
   pager.innerHTML = '';
   const prev = document.createElement('button');
-  prev.className = 'page-num';
-  prev.textContent = 'Prev';
-  prev.disabled = current <= 1;
-  prev.onclick = () => onChange(current - 1);
-  pager.appendChild(prev);
-
+  prev.className = 't-page-num'; prev.textContent = 'Prev'; prev.disabled = current <= 1;
+  prev.onclick = () => onChange(current - 1); pager.appendChild(prev);
   const windowSize = 5;
   let start = Math.max(1, current - Math.floor(windowSize/2));
   let end = Math.min(totalPages, start + windowSize - 1);
   if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
-
   for (let i = start; i <= end; i++) {
     const b = document.createElement('button');
-    b.className = 'page-num' + (i === current ? ' active' : '');
-    b.textContent = i;
-    b.onclick = () => onChange(i);
-    pager.appendChild(b);
+    b.className = 't-page-num' + (i === current ? ' active' : '');
+    b.textContent = i; b.onclick = () => onChange(i); pager.appendChild(b);
   }
-
   const next = document.createElement('button');
-  next.className = 'page-num';
-  next.textContent = 'Next';
-  next.disabled = current >= totalPages;
-  next.onclick = () => onChange(current + 1);
-  pager.appendChild(next);
+  next.className = 't-page-num'; next.textContent = 'Next'; next.disabled = current >= totalPages;
+  next.onclick = () => onChange(current + 1); pager.appendChild(next);
 }
 
-/* Create team flow */
 document.getElementById('btn-new-team').addEventListener('click', ()=> document.getElementById('modal-create-team').style.display = 'flex');
 document.getElementById('modal-create-team-close').addEventListener('click', ()=> document.getElementById('modal-create-team').style.display = 'none');
 document.getElementById('btn-create-cancel').addEventListener('click', ()=> document.getElementById('modal-create-team').style.display = 'none');
@@ -859,25 +704,17 @@ document.getElementById('form-create-team').addEventListener('submit', async fun
   const payload = { name: f.name.value.trim(), description: f.description.value.trim() };
   const leadEmail = f.lead_email.value.trim();
   if (leadEmail) {
-    await apiFetch(API.people_create, { method: 'POST', body: JSON.stringify({ email: leadEmail, create_user:false }), });
+    await apiFetch(API.people_create, { method: 'POST', body: JSON.stringify({ email: leadEmail, create_user:false }) });
     payload.team_lead_id = null;
   }
   const r = await apiFetch(API.create_team, { method: 'POST', body: JSON.stringify(payload) });
-  if (r && r.ok) {
-    document.getElementById('modal-create-team').style.display = 'none';
-    loadTeams();
-    showToast('Team created');
-  } else {
-    showToast('Failed to create team');
-    console.error('create team failed', r);
-  }
+  if (r && r.ok) { document.getElementById('modal-create-team').style.display = 'none'; loadTeams(); showToast('Team created'); }
+  else { showToast('Failed to create team'); }
 });
 
-/* Open add member modal */
 document.getElementById('btn-add-member').addEventListener('click', ()=> {
   if (!SELECTED_TEAM_ID) return alert('Select a team first');
   document.getElementById('modal-add-member').style.display = 'flex';
-  // refresh people cache to ensure latest members are searchable
   loadPeopleCache();
 });
 document.getElementById('modal-add-member-close').addEventListener('click', ()=> document.getElementById('modal-add-member').style.display = 'none');
@@ -886,15 +723,11 @@ document.getElementById('btn-add-cancel').addEventListener('click', ()=> documen
 document.getElementById('form-add-member').addEventListener('submit', async function(ev){
   ev.preventDefault();
   if (!SELECTED_TEAM_ID) return alert('Select a team first');
-  const f = ev.target;
   const typed = document.getElementById('member-picker').value.trim();
   let memberId = document.getElementById('member-id').value || null;
-  const team_role = f.team_role.value;
-
+  const team_role = ev.target.team_role.value;
   try {
-    // If a memberId was selected via autocomplete, use it directly
     if (!memberId) {
-      // try find by email or by display text in PEOPLE_CACHE
       const found = PEOPLE_CACHE.find(p =>
         p.email.toLowerCase() === typed.toLowerCase() ||
         (p.display || '').toLowerCase() === typed.toLowerCase() ||
@@ -902,84 +735,52 @@ document.getElementById('form-add-member').addEventListener('submit', async func
       );
       if (found) memberId = found.id;
     }
-
-    // If still not found and typed looks like an email, create member record
     const looksLikeEmail = /\S+@\S+\.\S+/.test(typed);
     if (!memberId && looksLikeEmail) {
-      // Create member (preserve existing behavior)
-      const createResp = await apiFetch(API.people_create, { method: 'POST', body: JSON.stringify({ email: typed, create_user:false }), });
+      const createResp = await apiFetch(API.people_create, { method: 'POST', body: JSON.stringify({ email: typed, create_user:false }) });
       if (!createResp.ok) throw new Error(createResp.error || 'create-member-failed');
-      // refresh cache and get new id
       await loadPeopleCache();
       const f2 = PEOPLE_CACHE.find(p => p.email.toLowerCase() === typed.toLowerCase());
       if (f2) memberId = f2.id;
     }
-
-    if (!memberId) {
-      return showToast('Please choose an existing member or type a valid email to create one.');
-    }
-
-    // add to team using memberId
-    const r = await apiFetch(`/api/teams/${SELECTED_TEAM_ID}/add_member`, {
-      method: 'POST',
-      body: JSON.stringify({ member_id: memberId, team_role }),
-    });
+    if (!memberId) return showToast('Choose a member or type a valid email');
+    const r = await apiFetch(`/api/teams/${SELECTED_TEAM_ID}/add_member`, { method: 'POST', body: JSON.stringify({ member_id: memberId, team_role }) });
     if (r && r.ok) {
       document.getElementById('modal-add-member').style.display = 'none';
-      // clear inputs
       document.getElementById('member-picker').value = '';
       document.getElementById('member-id').value = '';
       selectTeam(SELECTED_TEAM_ID);
-      showToast('Member added to team');
-    } else {
-      console.error('add member failed', r);
-      showToast('Failed to add member');
-    }
-  } catch (err) {
-    console.error('error adding member', err);
-    showToast('Error while adding member');
-  }
+      showToast('Member added');
+    } else { showToast('Failed to add member'); }
+  } catch (err) { showToast('Error adding member'); }
 });
 
-/* Remove member */
 async function removeMember(member_id) {
   if (!confirm('Remove this member from the team?')) return;
-  const r = await apiFetch(`/api/teams/${SELECTED_TEAM_ID}/remove_member`, { method: 'POST', body: JSON.stringify({ member_id }), });
-  if (r && r.ok) {
-    selectTeam(SELECTED_TEAM_ID);
-    showToast('Member removed');
-  } else {
-    console.error('remove failed', r);
-    showToast('Failed to remove member');
-  }
+  const r = await apiFetch(`/api/teams/${SELECTED_TEAM_ID}/remove_member`, { method: 'POST', body: JSON.stringify({ member_id }) });
+  if (r && r.ok) { selectTeam(SELECTED_TEAM_ID); showToast('Member removed'); }
+  else { showToast('Failed to remove member'); }
 }
 
-/* Search and paging handlers */
 document.getElementById('team-search').addEventListener('input', applyTeamFilter);
-document.getElementById('teams-page-size').addEventListener('change', ()=>{ TEAMS_PAGE_SIZE = parseInt(document.getElementById('teams-page-size').value,10); applyTeamFilter(); });
+document.getElementById('teams-page-size').addEventListener('change', ()=> { TEAMS_PAGE_SIZE = parseInt(document.getElementById('teams-page-size').value,10); applyTeamFilter(); });
 
-/* Small toast */
 function showToast(msg) {
   const d = document.createElement('div');
   d.textContent = msg;
-  d.style.position = 'fixed';
-  d.style.right = '18px';
-  d.style.bottom = '18px';
-  d.style.background = '#111827';
-  d.style.color = '#fff';
-  d.style.padding = '10px 14px';
-  d.style.borderRadius = '8px';
-  d.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+  Object.assign(d.style, {
+    position: 'fixed', right: '18px', bottom: '18px',
+    background: '#1e293b', color: '#fff', padding: '8px 14px',
+    borderRadius: '8px', fontSize: '13px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: '9999'
+  });
   document.body.appendChild(d);
   setTimeout(() => d.remove(), 2600);
 }
 
-/* Init */
 document.addEventListener('DOMContentLoaded', ()=> {
   TEAMS_PAGE_SIZE = parseInt(document.getElementById('teams-page-size').value, 10) || 10;
   MEMBERS_PAGE_SIZE = 10;
   loadTeams();
-  // preload people cache lightly (optional)
   loadPeopleCache();
 });
 </script>

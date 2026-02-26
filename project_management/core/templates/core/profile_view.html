@@ -2,9 +2,9 @@
 {% block title %}Profile{% endblock %}
 {% block content %}
 <style>
-    body { 
-        background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%); 
-        font-family: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+    body {
+        background: var(--theme-bg);
+        font-family: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         min-height: 100vh;
     }
     .profile-main-wrap {
@@ -13,12 +13,12 @@
         padding: 0 20px;
     }
     .profile-card {
-        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+        background: var(--theme-surface);
         border-radius: 24px;
-        box-shadow: 0 10px 40px rgba(37, 99, 235, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+        box-shadow: var(--theme-shadow-md);
         padding: 2.5rem 3rem;
         margin-bottom: 2rem;
-        border: 1px solid rgba(255, 255, 255, 0.8);
+        border: 1px solid var(--theme-border);
         display: flex;
         align-items: center;
         gap: 2.5rem;
@@ -56,7 +56,7 @@
     .profile-name {
         font-size: 2.2rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--theme-text);
         margin-bottom: 0.3em;
         letter-spacing: -0.5px;
         line-height: 1.2;
@@ -107,13 +107,13 @@
         box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
     }
     .btn-message {
-        background: #fff;
+        background: var(--theme-surface);
         color: #2563eb;
-        border: 2px solid #e0e7ff;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        border: 2px solid var(--theme-border);
+        box-shadow: var(--theme-shadow);
     }
     .btn-message:hover {
-        background: #eff6ff;
+        background: var(--theme-surface-hover);
         border-color: #2563eb;
         transform: translateY(-2px);
     }
@@ -125,10 +125,10 @@
     }
     .social-card {
         flex: 1 1 100%;
-        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+        background: var(--theme-surface);
         border-radius: 20px;
-        border: 1px solid rgba(226, 232, 240, 0.8);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid var(--theme-border);
+        box-shadow: var(--theme-shadow);
         padding: 1.5rem 2rem;
         display: flex;
         flex-wrap: wrap;
@@ -137,18 +137,18 @@
     }
     .social-item {
         font-size: 1rem;
-        color: #475569;
+        color: var(--theme-text-secondary);
         display: flex;
         align-items: center;
         gap: 0.8em;
         font-weight: 500;
         padding: 0.6em 1em;
-        background: #f8fafc;
+        background: var(--theme-input-bg);
         border-radius: 10px;
         transition: all 0.2s ease;
     }
     .social-item:hover {
-        background: #eff6ff;
+        background: var(--theme-surface-hover);
         transform: translateX(4px);
     }
     .social-item a {
@@ -175,17 +175,17 @@
     .icon.facebook { background-image: url('https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg'); }
     .icon.linkedin { background-image: url('https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg'); }
     .profile-contact-card {
-        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+        background: var(--theme-surface);
         border-radius: 24px;
-        border: 1px solid rgba(226, 232, 240, 0.8);
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+        border: 1px solid var(--theme-border);
+        box-shadow: var(--theme-shadow-md);
         padding: 2.5rem 3rem;
         margin-bottom: 2rem;
     }
     .card-title {
         font-size: 1.4rem;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--theme-text);
         margin-bottom: 1.8rem;
         letter-spacing: -0.3px;
         display: flex;
@@ -206,19 +206,19 @@
     }
     .info-group {
         padding: 1rem 1.2rem;
-        background: #f8fafc;
+        background: var(--theme-input-bg);
         border-radius: 14px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--theme-border);
         transition: all 0.2s ease;
     }
     .info-group:hover {
-        background: #eff6ff;
+        background: var(--theme-surface-hover);
         border-color: #c7d2fe;
         transform: translateY(-2px);
     }
     .info-group label {
         font-size: 0.85rem;
-        color: #64748b;
+        color: var(--theme-text-secondary);
         font-weight: 600;
         margin-bottom: 0.4em;
         display: block;
@@ -227,7 +227,7 @@
     }
     .data-value {
         font-size: 1.1rem;
-        color: #1e293b;
+        color: var(--theme-text);
         font-weight: 600;
         margin-top: 0.2em;
         letter-spacing: 0.1px;

@@ -3,152 +3,282 @@
 
 {% block content %}
 <style>
-/* ========== MODERN PROJECT CREATE/EDIT UI ========== */
+/* ========== REVAMPED PROJECT CREATE/EDIT PAGE ========== */
+
+/* --- Page Container --- */
 .project-create-page {
-  max-width: 860px;
+  max-width: 780px;
   margin: 0 auto;
-  padding: 1.25rem 1rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #e8f0fe 100%);
+  padding: 2rem 1.25rem 3rem;
+  background: var(--theme-bg);
   min-height: 100vh;
 }
 
-/* Page Header */
-.project-header-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 1rem 1.5rem;
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.03);
-  border: 1.5px solid rgba(59, 130, 246, 0.08);
+/* --- Hero Header --- */
+.project-hero {
   position: relative;
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #0ea5e9 100%);
+  border-radius: 16px;
+  padding: 2rem 2rem 1.75rem;
+  margin-bottom: 1.5rem;
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(59,130,246,0.25), 0 2px 8px rgba(0,0,0,0.08);
 }
 
-.project-header-card::before {
+.project-hero::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  top: -40%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  pointer-events: none;
 }
 
-.project-header-content .header-title {
-  font-size: 1.3rem;
-  font-weight: 800;
-  margin: 0 0 0.25rem 0;
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.3px;
+.project-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: 10%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+
+.hero-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
-.project-header-content .header-subtitle {
-  color: #64748b;
-  font-size: 0.8rem;
-  font-weight: 500;
+.hero-icon svg {
+  width: 26px;
+  height: 26px;
+  color: #fff;
+}
+
+.hero-text {
+  flex: 1;
+  margin-left: 1rem;
+}
+
+.hero-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.35rem 0;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.8);
   margin: 0;
-  line-height: 1.4;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
-.project-header-actions .btn-back {
+.btn-back-hero {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem 0.9rem;
-  border-radius: 7px;
-  border: 1.5px solid #e2e8f0;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  color: #475569;
-  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-weight: 600;
   font-size: 0.8rem;
   text-decoration: none;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.project-header-actions .btn-back:hover {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #3b82f6;
-  color: #1e40af;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+.btn-back-hero:hover {
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  color: #ffffff;
 }
 
-/* Form Card */
+/* --- Form Card --- */
 .project-form-card {
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.03);
-  border: 1.5px solid rgba(59, 130, 246, 0.06);
-  padding: 1.25rem 1.5rem;
+  background: var(--theme-surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04);
+  border: 1px solid var(--theme-border);
+  padding: 0;
+  overflow: hidden;
 }
 
-/* Form Layout */
-.form-section {
-  margin-bottom: 1rem;
+/* --- Form Section --- */
+.form-section-group {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--theme-border-light);
 }
 
+.form-section-group:last-of-type {
+  border-bottom: none;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--theme-text-muted);
+  margin-bottom: 1.25rem;
+}
+
+.section-label-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.section-label-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.section-label-icon.blue {
+  background: rgba(59,130,246,0.1);
+  color: #3b82f6;
+}
+
+.section-label-icon.purple {
+  background: rgba(139,92,246,0.1);
+  color: #8b5cf6;
+}
+
+.section-label-icon.green {
+  background: rgba(16,185,129,0.1);
+  color: #10b981;
+}
+
+.section-label-icon.amber {
+  background: rgba(245,158,11,0.1);
+  color: #f59e0b;
+}
+
+/* --- Form Grid --- */
 .form-grid-two {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .form-grid-three {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
-.form-field-full {
-  grid-column: 1 / -1;
-}
-
+/* --- Form Field --- */
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.4rem;
 }
 
 .project-label {
   font-size: 0.8rem;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 650;
+  color: var(--theme-text);
   letter-spacing: -0.1px;
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
-.project-label .required::after {
-  content: ' *';
+.required-star {
   color: #ef4444;
   font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
+/* --- Input Wrapper with Icon --- */
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon-left {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--theme-text-muted);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  transition: color 0.25s ease;
+  z-index: 1;
+}
+
+.input-icon-left svg {
+  width: 16px;
+  height: 16px;
+}
+
+.input-wrap .project-input,
+.input-wrap .project-select {
+  padding-left: 2.5rem;
+}
+
+/* --- Inputs --- */
 .project-input,
 .project-select,
 .project-textarea {
   width: 100%;
-  padding: 0.55rem 0.75rem;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 7px;
+  padding: 0.65rem 0.85rem;
+  border: 1.5px solid var(--theme-input-border);
+  border-radius: 10px;
   font-size: 0.85rem;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  color: #1e293b;
+  background: var(--theme-input-bg);
+  color: var(--theme-text);
   font-weight: 500;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s ease;
+  font-family: inherit;
+}
+
+.project-input:hover,
+.project-select:hover,
+.project-textarea:hover {
+  border-color: #94a3b8;
 }
 
 .project-input:focus,
@@ -156,146 +286,362 @@
 .project-textarea:focus {
   border-color: #3b82f6;
   outline: none;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12), 0 1px 4px rgba(0, 0, 0, 0.04);
-  background: #ffffff;
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1), 0 2px 8px rgba(59,130,246,0.08);
+  background: var(--theme-surface);
+}
+
+.project-input:focus ~ .input-icon-left,
+.project-select:focus ~ .input-icon-left {
+  /* icon sibling approach won't work; handled via JS or kept static */
+}
+
+.input-wrap:focus-within .input-icon-left {
+  color: #3b82f6;
 }
 
 .project-textarea {
   resize: vertical;
-  min-height: 80px;
-  font-family: inherit;
+  min-height: 100px;
+  line-height: 1.6;
 }
 
+.project-select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  padding-right: 2.5rem;
+}
+
+/* --- Field Hint & Error --- */
 .field-hint {
-  font-size: 0.75rem;
-  color: #64748b;
+  font-size: 0.72rem;
+  color: var(--theme-text-muted);
   font-weight: 500;
+  line-height: 1.4;
+  padding-left: 2px;
 }
 
 .field-error {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #ef4444;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-/* Action Buttons */
+.field-error::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+}
+
+/* --- Action Buttons --- */
 .project-form-actions {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.75rem;
-  margin: 1.25rem 0 0.5rem 0;
-  padding-top: 1rem;
-  border-top: 1px solid #f1f5f9;
+  padding: 1.25rem 2rem;
+  background: var(--theme-bg-secondary);
+  border-top: 1px solid var(--theme-border-light);
 }
 
 .btn-project {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.55rem 1.5rem;
-  border-radius: 8px;
+  gap: 0.45rem;
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: 0.2px;
-  min-width: 140px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.1px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .btn-project.primary {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
   border: none;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25), 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(59,130,246,0.3), 0 1px 3px rgba(0,0,0,0.08);
+  min-width: 160px;
 }
 
 .btn-project.primary:hover {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35), 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.35), 0 2px 6px rgba(0,0,0,0.1);
   color: #ffffff;
 }
 
+.btn-project.primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(59,130,246,0.25);
+}
+
 .btn-project.secondary {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  color: #475569;
-  border: 1.5px solid #e2e8f0;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
+  border: 1.5px solid var(--theme-border);
 }
 
 .btn-project.secondary:hover {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #3b82f6;
-  color: #1e40af;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  background: var(--theme-surface-hover);
+  border-color: #94a3b8;
+  color: var(--theme-text);
+  transform: translateY(-1px);
 }
 
-/* Responsive Design */
-@media (max-width: 900px) {
+/* --- Character Count --- */
+.char-count {
+  font-size: 0.7rem;
+  color: var(--theme-text-muted);
+  text-align: right;
+  margin-top: -0.1rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Dark Mode Overrides --- */
+[data-theme="dark"] .project-hero {
+  background: linear-gradient(135deg, #0f2d5e 0%, #1e3a5f 50%, #164e63 100%) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+[data-theme="dark"] .project-form-card {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.15) !important;
+}
+
+[data-theme="dark"] .form-section-group {
+  border-color: var(--theme-border) !important;
+}
+
+[data-theme="dark"] .section-label {
+  color: var(--theme-text-muted) !important;
+}
+
+[data-theme="dark"] .section-label-icon.blue {
+  background: rgba(59,130,246,0.15) !important;
+  color: #60a5fa !important;
+}
+
+[data-theme="dark"] .section-label-icon.purple {
+  background: rgba(139,92,246,0.15) !important;
+  color: #a78bfa !important;
+}
+
+[data-theme="dark"] .section-label-icon.green {
+  background: rgba(16,185,129,0.15) !important;
+  color: #34d399 !important;
+}
+
+[data-theme="dark"] .section-label-icon.amber {
+  background: rgba(245,158,11,0.15) !important;
+  color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .project-input,
+[data-theme="dark"] .project-select,
+[data-theme="dark"] .project-textarea {
+  background: var(--theme-input-bg) !important;
+  border-color: var(--theme-input-border) !important;
+  color: var(--theme-text) !important;
+}
+
+[data-theme="dark"] .project-input:hover,
+[data-theme="dark"] .project-select:hover,
+[data-theme="dark"] .project-textarea:hover {
+  border-color: #475569 !important;
+}
+
+[data-theme="dark"] .project-input:focus,
+[data-theme="dark"] .project-select:focus,
+[data-theme="dark"] .project-textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15), 0 2px 8px rgba(59,130,246,0.1) !important;
+  background: var(--theme-surface) !important;
+}
+
+[data-theme="dark"] .project-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.85rem center !important;
+}
+
+[data-theme="dark"] .input-icon-left {
+  color: var(--theme-text-muted) !important;
+}
+
+[data-theme="dark"] .input-wrap:focus-within .input-icon-left {
+  color: #60a5fa !important;
+}
+
+[data-theme="dark"] .project-label {
+  color: var(--theme-text) !important;
+}
+
+[data-theme="dark"] .field-hint {
+  color: var(--theme-text-muted) !important;
+}
+
+[data-theme="dark"] .char-count {
+  color: var(--theme-text-muted) !important;
+}
+
+[data-theme="dark"] .project-form-actions {
+  background: var(--theme-bg-secondary) !important;
+  border-color: var(--theme-border) !important;
+}
+
+[data-theme="dark"] .btn-project.primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.35), 0 1px 3px rgba(0,0,0,0.2) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-project.primary:hover {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.4) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-project.secondary {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
+
+[data-theme="dark"] .btn-project.secondary:hover {
+  background: var(--theme-surface-hover) !important;
+  border-color: #475569 !important;
+  color: var(--theme-text) !important;
+}
+
+[data-theme="dark"] input[type="date"] {
+  color-scheme: dark;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
   .project-create-page {
-    padding: 0.85rem 0.75rem;
+    padding: 1rem 0.75rem 2rem;
   }
 
-  .project-header-card {
+  .project-hero {
+    padding: 1.5rem 1.25rem;
+    border-radius: 12px;
+  }
+
+  .hero-top-row {
     flex-direction: column;
-    align-items: flex-start;
-    padding: 0.85rem 1rem;
+    gap: 1rem;
   }
 
-  .project-header-content .header-title {
-    font-size: 1.15rem;
+  .hero-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
   }
 
-  .project-header-actions {
-    width: 100%;
+  .hero-text {
+    margin-left: 0;
   }
 
-  .project-header-actions .btn-back {
-    width: 100%;
-    justify-content: center;
+  .hero-title {
+    font-size: 1.25rem;
+  }
+
+  .btn-back-hero {
+    align-self: flex-start;
   }
 
   .project-form-card {
-    padding: 1rem 0.85rem;
+    border-radius: 12px;
+  }
+
+  .form-section-group {
+    padding: 1.25rem 1.25rem;
   }
 
   .form-grid-two,
   .form-grid-three {
     grid-template-columns: 1fr;
-    gap: 0.85rem;
+    gap: 1rem;
   }
 
   .project-form-actions {
-    flex-direction: column;
+    flex-direction: column-reverse;
+    padding: 1.25rem;
   }
 
   .btn-project {
     width: 100%;
   }
+
+  .btn-project.primary {
+    min-width: unset;
+  }
+}
+
+@media (max-width: 480px) {
+  .project-hero {
+    padding: 1.25rem 1rem;
+  }
+
+  .hero-title {
+    font-size: 1.15rem;
+  }
+
+  .form-section-group {
+    padding: 1rem;
+  }
 }
 </style>
 
 <div class="project-create-page">
-  <!-- Page Header -->
-  <div class="project-header-card">
-    <div class="project-header-content">
-      <h2 class="header-title">
-        {% if editing %}
-          <i class="fa-solid fa-pen-to-square"></i> Edit Project
-        {% else %}
-          <i class="fa-solid fa-folder-plus"></i> Create New Project
-        {% endif %}
-      </h2>
-      <p class="header-subtitle">Provide the essential project details. Fields marked with * are required.</p>
-    </div>
-    <div class="project-header-actions">
-      <a href="{% url 'projects_list' %}" class="btn-back">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Hero Header -->
+  <div class="project-hero">
+    <div class="hero-top-row">
+      <div style="display:flex;align-items:flex-start;">
+        <div class="hero-icon">
+          {% if editing %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          {% else %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              <line x1="12" y1="11" x2="12" y2="17"/>
+              <line x1="9" y1="14" x2="15" y2="14"/>
+            </svg>
+          {% endif %}
+        </div>
+        <div class="hero-text">
+          <h2 class="hero-title">
+            {% if editing %}Edit Project{% else %}Create New Project{% endif %}
+          </h2>
+          <p class="hero-subtitle">
+            {% if editing %}Update your project details and settings below.{% else %}Set up a new project with the essential details. Fields marked with <strong style="color:#fff;">*</strong> are required.{% endif %}
+          </p>
+        </div>
+      </div>
+      <a href="{% url 'projects_list' %}" class="btn-back-hero">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5"/>
+          <path d="M12 19l-7-7 7-7"/>
         </svg>
         Back to Projects
       </a>
@@ -307,70 +653,120 @@
     <form method="post" novalidate autocomplete="off">
       {% csrf_token %}
 
-      <!-- Project Name (Full Width) -->
-      <div class="form-section">
-        <div class="form-field">
+      <!-- Section: Basic Information -->
+      <div class="form-section-group">
+        <div class="section-label">
+          <span class="section-label-icon blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </span>
+          Basic Information
+        </div>
+
+        <div class="form-field" style="margin-bottom:1.25rem;">
           <label class="project-label">
-            <span class="required">{{ form.name.label }}</span>
+            {{ form.name.label }} <span class="required-star">*</span>
           </label>
-          <input type="text" name="{{ form.name.name }}" class="project-input" 
-                 value="{{ form.name.value|default:'' }}" 
-                 placeholder="e.g., Q3 Website Redesign" required>
+          <div class="input-wrap">
+            <input type="text" name="{{ form.name.name }}" class="project-input"
+                   value="{{ form.name.value|default:'' }}"
+                   placeholder="e.g., Q3 Website Redesign" required>
+            <span class="input-icon-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </span>
+          </div>
           {% if form.name.errors %}
             <span class="field-error">{{ form.name.errors.as_text }}</span>
           {% else %}
-            <span class="field-hint">Give a short descriptive project name</span>
+            <span class="field-hint">Choose a clear, descriptive name for easy identification</span>
           {% endif %}
         </div>
-      </div>
 
-      <!-- Description (Full Width) -->
-      <div class="form-section">
         <div class="form-field">
           <label class="project-label">{{ form.description.label }}</label>
-          <textarea name="{{ form.description.name }}" class="project-textarea" 
-                    placeholder="Brief summary about project scope...">{{ form.description.value|default:'' }}</textarea>
-          {% if form.description.errors %}
-            <span class="field-error">{{ form.description.errors.as_text }}</span>
-          {% else %}
-            <span class="field-hint">Optional — a short summary about project scope (will be shown in lists)</span>
-          {% endif %}
+          <textarea name="{{ form.description.name }}" class="project-textarea" id="desc-textarea"
+                    placeholder="Brief summary about project scope, goals, and key deliverables..." maxlength="500">{{ form.description.value|default:'' }}</textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            {% if form.description.errors %}
+              <span class="field-error">{{ form.description.errors.as_text }}</span>
+            {% else %}
+              <span class="field-hint">Optional — helps your team understand the project at a glance</span>
+            {% endif %}
+            <span class="char-count" id="desc-char-count">0 / 500</span>
+          </div>
         </div>
       </div>
 
-      <!-- Dates and Status (Three Columns) -->
-      <div class="form-section">
+      <!-- Section: Timeline & Status -->
+      <div class="form-section-group">
+        <div class="section-label">
+          <span class="section-label-icon purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </span>
+          Timeline & Status
+        </div>
+
         <div class="form-grid-three">
-          <!-- Start Date -->
           <div class="form-field">
             <label class="project-label">{{ form.start_date.label }}</label>
-            <input type="date" name="{{ form.start_date.name }}" class="project-input" 
-                   value="{{ form.start_date.value|default:'' }}">
+            <div class="input-wrap">
+              <input type="date" name="{{ form.start_date.name }}" class="project-input"
+                     value="{{ form.start_date.value|default:'' }}">
+              <span class="input-icon-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </span>
+            </div>
             {% if form.start_date.errors %}
               <span class="field-error">{{ form.start_date.errors.as_text }}</span>
             {% endif %}
           </div>
 
-          <!-- End Date -->
           <div class="form-field">
             <label class="project-label">{{ form.tentative_end_date.label }}</label>
-            <input type="date" name="{{ form.tentative_end_date.name }}" class="project-input" 
-                   value="{{ form.tentative_end_date.value|default:'' }}">
+            <div class="input-wrap">
+              <input type="date" name="{{ form.tentative_end_date.name }}" class="project-input"
+                     value="{{ form.tentative_end_date.value|default:'' }}">
+              <span class="input-icon-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+              </span>
+            </div>
             {% if form.tentative_end_date.errors %}
               <span class="field-error">{{ form.tentative_end_date.errors.as_text }}</span>
             {% endif %}
           </div>
 
-          <!-- Status -->
           <div class="form-field">
             <label class="project-label">
-              <span class="required">{{ form.status.label }}</span>
+              {{ form.status.label }} <span class="required-star">*</span>
             </label>
-            <select name="{{ form.status.name }}" class="project-select" required>
-              {% for value, label in form.status.field.choices %}
-                <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
+            <div class="input-wrap">
+              <select name="{{ form.status.name }}" class="project-select" required>
+                {% for value, label in form.status.field.choices %}
+                  <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <span class="input-icon-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+              </span>
+            </div>
             {% if form.status.errors %}
               <span class="field-error">{{ form.status.errors.as_text }}</span>
             {% endif %}
@@ -378,39 +774,86 @@
         </div>
       </div>
 
-      <!-- Employee Assignment (Full Width) -->
-      <div class="form-section">
+      <!-- Section: Assignment -->
+      <div class="form-section-group">
+        <div class="section-label">
+          <span class="section-label-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </span>
+          Assignment
+        </div>
+
         <div class="form-field">
           <label class="project-label">{{ form.employee_id.label }}</label>
-          <select name="{{ form.employee_id.name }}" class="project-select">
-            <option value="">-- Select Employee (Optional) --</option>
-            {% for value, label in form.employee_id.field.choices %}
-              {% if value %}
-                <option value="{{ value }}" {% if form.employee_id.value == value %}selected{% endif %}>{{ label }}</option>
-              {% endif %}
-            {% endfor %}
-          </select>
+          <div class="input-wrap">
+            <select name="{{ form.employee_id.name }}" class="project-select">
+              <option value="">-- Select Employee (Optional) --</option>
+              {% for value, label in form.employee_id.field.choices %}
+                {% if value %}
+                  <option value="{{ value }}" {% if form.employee_id.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            <span class="input-icon-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+                <line x1="20" y1="8" x2="20" y2="14"/>
+                <line x1="23" y1="11" x2="17" y2="11"/>
+              </svg>
+            </span>
+          </div>
           {% if form.employee_id.errors %}
             <span class="field-error">{{ form.employee_id.errors.as_text }}</span>
           {% else %}
-            <span class="field-hint">Optional — assign an employee to this project</span>
+            <span class="field-hint">Optionally assign a team member to lead this project</span>
           {% endif %}
         </div>
       </div>
 
       <!-- Action Buttons -->
       <div class="project-form-actions">
-        <a href="{% url 'projects_list' %}" class="btn-project secondary">Cancel</a>
+        <a href="{% url 'projects_list' %}" class="btn-project secondary">
+          Cancel
+        </a>
         <button type="submit" class="btn-project primary">
           {% if editing %}
-            <i class="fa-solid fa-check"></i> Update Project
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Update Project
           {% else %}
-            <i class="fa-solid fa-check"></i> Create Project
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Create Project
           {% endif %}
         </button>
       </div>
     </form>
   </div>
 </div>
+
+<script>
+(function(){
+  // Character count for description textarea
+  var textarea = document.getElementById('desc-textarea');
+  var counter = document.getElementById('desc-char-count');
+  if (textarea && counter) {
+    function updateCount() {
+      var len = textarea.value.length;
+      counter.textContent = len + ' / 500';
+      counter.style.color = len > 450 ? '#f59e0b' : '';
+      if (len >= 500) counter.style.color = '#ef4444';
+    }
+    textarea.addEventListener('input', updateCount);
+    updateCount();
+  }
+})();
+</script>
 
 {% endblock %}

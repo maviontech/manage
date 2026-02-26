@@ -178,5 +178,42 @@
   .right { flex-direction:row; justify-content:space-between; align-items:center; width:100%; }
   .btn-create { width:100%; }
 }
+
+/* ===== DARK MODE ===== */
+[data-theme="dark"] .mavion-container { background: var(--theme-bg) !important; color: var(--theme-text) !important; }
+[data-theme="dark"] .page-title { color: var(--theme-text) !important; }
+[data-theme="dark"] .title-block p { color: var(--theme-text-secondary) !important; }
+[data-theme="dark"] .search-group {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+}
+[data-theme="dark"] .search-input { color: var(--theme-text) !important; }
+[data-theme="dark"] .input-icon { color: var(--theme-text-muted) !important; }
+[data-theme="dark"] .list-item {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  box-shadow: var(--theme-shadow-md) !important;
+}
+[data-theme="dark"] .item-title { color: var(--theme-text) !important; }
+[data-theme="dark"] .item-meta { color: var(--theme-text-secondary) !important; }
+[data-theme="dark"] .subproject-icon { background: rgba(59,130,246,0.15) !important; color: #60a5fa !important; }
+[data-theme="dark"] .code-tag { background: var(--theme-bg-secondary) !important; border-color: var(--theme-border) !important; color: var(--theme-text-secondary) !important; }
+[data-theme="dark"] .code-tag-mdm { background: rgba(59,130,246,0.12) !important; border-color: rgba(59,130,246,0.25) !important; color: #60a5fa !important; }
+[data-theme="dark"] .code-tag-bg { background: rgba(16,185,129,0.12) !important; border-color: rgba(16,185,129,0.25) !important; color: #34d399 !important; }
+[data-theme="dark"] .code-tag-empty { background: rgba(245,158,11,0.12) !important; border-color: rgba(245,158,11,0.25) !important; color: #fbbf24 !important; }
+[data-theme="dark"] .date-badge { background: var(--theme-bg-secondary) !important; border-color: var(--theme-border) !important; color: var(--theme-text-muted) !important; }
+[data-theme="dark"] .action-edit { background: rgba(59,130,246,0.12) !important; border-color: rgba(59,130,246,0.25) !important; color: #60a5fa !important; }
+[data-theme="dark"] .action-nav { background: rgba(16,185,129,0.12) !important; border-color: rgba(16,185,129,0.25) !important; color: #34d399 !important; }
+[data-theme="dark"] .list-empty {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+}
+[data-theme="dark"] .list-empty .fw-semibold { color: var(--theme-text) !important; }
+[data-theme="dark"] .empty-icon { background: rgba(59,130,246,0.15) !important; color: #60a5fa !important; }
+[data-theme="dark"] .mavion-pagination .page-link {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
 </style>
 {% endblock %}

@@ -132,5 +132,33 @@
   word-break: break-word;
   margin: 0;
 }
+
+/* ===== DARK MODE ===== */
+[data-theme="dark"] .bulk-import-results-pro { color: var(--theme-text); }
+[data-theme="dark"] .import-title { color: #60a5fa !important; }
+[data-theme="dark"] .import-subtitle { color: var(--theme-text-secondary) !important; }
+[data-theme="dark"] .card {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+}
+[data-theme="dark"] .card-header {
+  background: var(--theme-bg-secondary) !important;
+  border-color: var(--theme-border) !important;
+}
+[data-theme="dark"] .professional-table th {
+  background: var(--theme-bg-secondary) !important;
+  color: var(--theme-text-secondary) !important;
+  border-color: var(--theme-border) !important;
+}
+[data-theme="dark"] .professional-table td {
+  color: var(--theme-text) !important;
+  border-color: var(--theme-border) !important;
+}
+[data-theme="dark"] .badge-warning { background: rgba(245,158,11,0.2) !important; color: #fbbf24 !important; }
+[data-theme="dark"] .badge-danger { background: rgba(239,68,68,0.2) !important; color: #f87171 !important; }
+[data-theme="dark"] .row-data-json {
+  background: var(--theme-bg-secondary) !important;
+  color: var(--theme-text) !important;
+}
 </style>
 {% endblock %}

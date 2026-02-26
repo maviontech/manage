@@ -1131,6 +1131,7 @@ def user_dashboard_view(request):
     defect_reporter_labels = []
     defect_reporter_values = []
     try:
+        # Filter defects to only those created by or assigned to the current user
         cur.execute("""
             SELECT
                 COALESCE(
@@ -1144,11 +1145,19 @@ def user_dashboard_view(request):
             FROM tasks t
             LEFT JOIN members m ON m.id = t.created_by
             LEFT JOIN users u ON u.id = t.created_by
-            WHERE LOWER(TRIM(COALESCE(t.work_type, ''))) LIKE %s
+            WHERE (
+                    LOWER(TRIM(COALESCE(t.work_type, ''))) LIKE %s
+                    OR LOWER(TRIM(COALESCE(t.work_type, ''))) LIKE %s
+                    OR LOWER(TRIM(COALESCE(t.title, ''))) LIKE %s
+                    OR LOWER(TRIM(COALESCE(t.description, ''))) LIKE %s
+                  )
               AND DATE(t.created_at) BETWEEN %s AND %s
+              AND (t.created_by = %s OR (t.assigned_type = 'member' AND t.assigned_to = %s))
             GROUP BY reporter_name
             ORDER BY reported_count DESC, reporter_name ASC
-        """, ('%defect%', defects_timeline_from, defects_timeline_to))
+        """, ('%defect%', '%bug%', '%defect%', '%bug%',
+              defects_timeline_from, defects_timeline_to,
+              member_id, member_id))
         defect_reporter_summary = cur.fetchall() or []
         for row in defect_reporter_summary[:10]:
             defect_reporter_labels.append(row.get('reporter_name') or 'Unknown Reporter')
@@ -1196,6 +1205,8 @@ def user_dashboard_view(request):
         'timeline_to': tasks_timeline_to.strftime('%Y-%m-%d'),
         'timeline_defect_from': defects_timeline_from.strftime('%Y-%m-%d'),
         'timeline_defect_to': defects_timeline_to.strftime('%Y-%m-%d'),
+        'defect_range_from': defects_timeline_from,
+        'defect_range_to': defects_timeline_to,
         'defect_reporter_summary': defect_reporter_summary,
         'defect_reporter_labels': json.dumps(defect_reporter_labels),
         'defect_reporter_values': json.dumps(defect_reporter_values),

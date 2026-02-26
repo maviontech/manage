@@ -220,7 +220,106 @@
 .loading-state {
   text-align: center;
   padding: 40px;
-  color: #6b7280;
+  color: var(--theme-text-secondary, #6b7280);
+}
+
+/* ===== DARK MODE OVERRIDES ===== */
+[data-theme="dark"] .notifications-container {
+  background: transparent !important;
+}
+[data-theme="dark"] .notifications-header {
+  border-color: var(--theme-border) !important;
+}
+[data-theme="dark"] .notifications-header h1 {
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .notifications-header p {
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] .btn-action {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] .btn-action:hover {
+  background: var(--theme-surface-hover) !important;
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .btn-action.primary {
+  background: linear-gradient(135deg, #1e3a5f, #1e40af) !important;
+  color: #fff !important;
+  border: none !important;
+}
+[data-theme="dark"] .notifications-list {
+  background: var(--theme-surface) !important;
+  box-shadow: var(--theme-shadow-md) !important;
+  border: 1px solid var(--theme-border) !important;
+}
+[data-theme="dark"] .notification-item {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+}
+[data-theme="dark"] .notification-item:hover {
+  background: var(--theme-surface-hover) !important;
+}
+[data-theme="dark"] .notification-item.unread {
+  background: rgba(59, 130, 246, 0.08) !important;
+}
+[data-theme="dark"] .notification-item.unread:hover {
+  background: rgba(59, 130, 246, 0.15) !important;
+}
+[data-theme="dark"] .notification-icon.info {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+}
+[data-theme="dark"] .notification-icon.success {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+}
+[data-theme="dark"] .notification-icon.warning {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+}
+[data-theme="dark"] .notification-icon.error {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+}
+[data-theme="dark"] .notification-icon.task {
+  background: rgba(99, 102, 241, 0.15) !important;
+  color: #818cf8 !important;
+}
+[data-theme="dark"] .notification-icon.project {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+}
+[data-theme="dark"] .notification-icon.team {
+  background: rgba(236, 72, 153, 0.15) !important;
+  color: #f472b6 !important;
+}
+[data-theme="dark"] .notification-title {
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .notification-message {
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] .notification-time {
+  color: var(--theme-text-muted) !important;
+}
+[data-theme="dark"] .notification-btn {
+  color: var(--theme-text-muted) !important;
+}
+[data-theme="dark"] .notification-btn:hover {
+  background: var(--theme-surface-hover) !important;
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .empty-state {
+  color: var(--theme-text-muted) !important;
+}
+[data-theme="dark"] .empty-state h3 {
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] .loading-state {
+  color: var(--theme-text-secondary) !important;
 }
 </style>
 {% endblock %}

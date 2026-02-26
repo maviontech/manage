@@ -21,6 +21,36 @@
 .btn-ghost { padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; background:transparent; cursor:pointer; }
 .header-row { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
 .help { font-size:13px; color:#64748b; }
+
+/* ===== DARK MODE ===== */
+[data-theme="dark"] .layout .card {
+  background: var(--theme-surface) !important;
+  box-shadow: var(--theme-shadow-md) !important;
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .layout h3, [data-theme="dark"] .layout h4 { color: var(--theme-text) !important; }
+[data-theme="dark"] .layout label { color: var(--theme-text) !important; }
+[data-theme="dark"] .layout label span { color: var(--theme-text) !important; }
+[data-theme="dark"] .small-muted { color: var(--theme-text-secondary) !important; }
+[data-theme="dark"] .help { color: var(--theme-text-muted) !important; }
+[data-theme="dark"] .role-item { background: var(--theme-bg-secondary) !important; }
+[data-theme="dark"] .role-item:hover { box-shadow: var(--theme-shadow-md) !important; }
+[data-theme="dark"] .role-item.active {
+  border-color: rgba(59,130,246,0.4) !important;
+  background: rgba(59,130,246,0.1) !important;
+}
+[data-theme="dark"] .role-item strong { color: var(--theme-text) !important; }
+[data-theme="dark"] .input, [data-theme="dark"] .select {
+  background: var(--theme-input-bg) !important;
+  border-color: var(--theme-input-border) !important;
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .btn-ghost {
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text) !important;
+  background: var(--theme-surface) !important;
+}
+[data-theme="dark"] .perm-grid label { color: var(--theme-text) !important; }
 </style>
 
 <div class="layout">

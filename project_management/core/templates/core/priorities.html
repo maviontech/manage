@@ -430,6 +430,84 @@
             flex-wrap: wrap;
         }
     }
+
+    /* ===== DARK MODE ===== */
+    [data-theme="dark"] .priorities-container {
+      background: var(--theme-bg) !important;
+    }
+    [data-theme="dark"] .page-header h1 {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .page-header p {
+      color: var(--theme-text-secondary) !important;
+    }
+    [data-theme="dark"] .priority-card {
+      background: var(--theme-surface) !important;
+      box-shadow: var(--theme-shadow-md) !important;
+    }
+    [data-theme="dark"] .priority-info h3 {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .priority-info p,
+    [data-theme="dark"] .stat-label,
+    [data-theme="dark"] .progress-label {
+      color: var(--theme-text-secondary) !important;
+    }
+    [data-theme="dark"] .stat-value {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .progress-bar {
+      background: var(--theme-border) !important;
+    }
+    [data-theme="dark"] .tasks-section {
+      background: var(--theme-surface) !important;
+      box-shadow: var(--theme-shadow-md) !important;
+    }
+    [data-theme="dark"] .section-header h2 {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .filter-btn {
+      background: var(--theme-surface) !important;
+      border-color: var(--theme-border) !important;
+      color: var(--theme-text-secondary) !important;
+    }
+    [data-theme="dark"] .filter-btn:hover,
+    [data-theme="dark"] .filter-btn.active {
+      background: #3b82f6 !important;
+      color: #fff !important;
+      border-color: #3b82f6 !important;
+    }
+    [data-theme="dark"] .task-item {
+      border-color: var(--theme-border) !important;
+    }
+    [data-theme="dark"] .task-item:hover {
+      background: var(--theme-surface-hover) !important;
+      border-color: #3b82f6 !important;
+    }
+    [data-theme="dark"] .task-title {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .task-meta {
+      color: var(--theme-text-secondary) !important;
+    }
+    [data-theme="dark"] .task-status.open {
+      background: rgba(59, 130, 246, 0.15) !important;
+      color: #60a5fa !important;
+    }
+    [data-theme="dark"] .task-status.in-progress {
+      background: rgba(245, 158, 11, 0.15) !important;
+      color: #fbbf24 !important;
+    }
+    [data-theme="dark"] .task-status.review {
+      background: rgba(99, 102, 241, 0.15) !important;
+      color: #818cf8 !important;
+    }
+    [data-theme="dark"] .empty-state h3 {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .empty-state p {
+      color: var(--theme-text-secondary) !important;
+    }
 </style>
 {% endblock %}
 

@@ -320,6 +320,68 @@
             gap: 0.5rem;
         }
     }
+
+    /* ===== DARK MODE ===== */
+    [data-theme="dark"] .workflows-container {
+      background: var(--theme-bg) !important;
+    }
+    [data-theme="dark"] .page-header h1 {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .page-header p {
+      color: var(--theme-text-secondary) !important;
+    }
+    [data-theme="dark"] .stat-card {
+      background: var(--theme-surface) !important;
+      box-shadow: var(--theme-shadow-md) !important;
+    }
+    [data-theme="dark"] .stat-card-content h3 {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .stat-card-content p {
+      color: var(--theme-text-secondary) !important;
+    }
+    [data-theme="dark"] .workflows-section {
+      background: var(--theme-surface) !important;
+      box-shadow: var(--theme-shadow-md) !important;
+    }
+    [data-theme="dark"] .section-header h2 {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .workflow-item {
+      border-color: var(--theme-border) !important;
+    }
+    [data-theme="dark"] .workflow-item:hover {
+      background: var(--theme-surface-hover) !important;
+      border-color: #3b82f6 !important;
+    }
+    [data-theme="dark"] .workflow-name {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .workflow-description {
+      color: var(--theme-text-secondary) !important;
+    }
+    [data-theme="dark"] .workflow-date {
+      color: var(--theme-text-muted) !important;
+    }
+    [data-theme="dark"] .workflow-status.active {
+      background: rgba(16, 185, 129, 0.15) !important;
+      color: #34d399 !important;
+    }
+    [data-theme="dark"] .workflow-status.draft {
+      background: rgba(59, 130, 246, 0.15) !important;
+      color: #60a5fa !important;
+    }
+    [data-theme="dark"] .workflow-status.archived {
+      background: rgba(100, 116, 139, 0.15) !important;
+      color: #94a3b8 !important;
+    }
+    [data-theme="dark"] .empty-state h3 {
+      color: var(--theme-text) !important;
+    }
+    [data-theme="dark"] .empty-state p {
+      color: var(--theme-text-secondary) !important;
+    }
 </style>
 {% endblock %}
 

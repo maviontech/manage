@@ -196,11 +196,39 @@
     .stats-grid {
       grid-template-columns: 1fr;
     }
-    
+
     .tasks-table-container {
       overflow-x: auto;
     }
   }
+
+  /* ===== DARK MODE ===== */
+  [data-theme="dark"] .stat-card {
+    background: var(--theme-surface) !important;
+    box-shadow: var(--theme-shadow-md) !important;
+  }
+  [data-theme="dark"] .stat-card .label { color: var(--theme-text-secondary) !important; }
+  [data-theme="dark"] .stat-card .value { color: var(--theme-text) !important; }
+  [data-theme="dark"] .tasks-table-container {
+    background: var(--theme-surface) !important;
+    box-shadow: var(--theme-shadow-md) !important;
+  }
+  [data-theme="dark"] .tasks-table thead { background: var(--theme-bg-secondary) !important; }
+  [data-theme="dark"] .tasks-table th {
+    color: var(--theme-text-secondary) !important;
+    border-color: var(--theme-border) !important;
+  }
+  [data-theme="dark"] .tasks-table tbody tr { border-color: var(--theme-border) !important; }
+  [data-theme="dark"] .tasks-table tbody tr:hover { background: var(--theme-surface-hover) !important; }
+  [data-theme="dark"] .tasks-table td { color: var(--theme-text) !important; }
+  [data-theme="dark"] .tasks-table td a { color: #60a5fa !important; }
+  [data-theme="dark"] .actions-bar h2 { color: var(--theme-text) !important; }
+  [data-theme="dark"] .badge-new { background: rgba(59,130,246,0.15) !important; color: #60a5fa !important; }
+  [data-theme="dark"] .badge-inprogress { background: rgba(245,158,11,0.2) !important; color: #fbbf24 !important; }
+  [data-theme="dark"] .badge-completed { background: rgba(16,185,129,0.2) !important; color: #34d399 !important; }
+  [data-theme="dark"] .badge-closed { background: var(--theme-bg-secondary) !important; color: var(--theme-text-secondary) !important; }
+  [data-theme="dark"] .empty-state { color: var(--theme-text-secondary) !important; }
+  [data-theme="dark"] .empty-state h3 { color: var(--theme-text) !important; }
 </style>
 {% endblock %}
 

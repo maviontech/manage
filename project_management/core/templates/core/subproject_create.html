@@ -425,5 +425,42 @@
   .mt-5 .btn + .btn { margin-top:.5rem; }
   .form-header { flex-direction: column; gap: 1rem; align-items: flex-start !important; }
 }
+
+/* ===== DARK MODE ===== */
+[data-theme="dark"] .mavion-container { background: var(--theme-bg) !important; }
+[data-theme="dark"] .form-shell {
+  background: var(--theme-surface) !important;
+  box-shadow: var(--theme-shadow-md) !important;
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .form-title {
+  color: var(--theme-text) !important;
+  -webkit-text-fill-color: var(--theme-text) !important;
+  background: none !important;
+}
+[data-theme="dark"] .form-sub { color: var(--theme-text-secondary) !important; }
+[data-theme="dark"] .form-icon { background: rgba(59,130,246,0.15) !important; }
+[data-theme="dark"] .back-link {
+  background: var(--theme-bg-secondary) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] .subproject-form .form-label { color: var(--theme-text) !important; }
+[data-theme="dark"] .subproject-form .form-control,
+[data-theme="dark"] .subproject-form textarea,
+[data-theme="dark"] .subproject-form select,
+[data-theme="dark"] .subproject-form input[type="text"],
+[data-theme="dark"] .subproject-form input[type="date"] {
+  background: var(--theme-input-bg) !important;
+  border-color: var(--theme-input-border) !important;
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .form-text { color: var(--theme-text-muted) !important; }
+[data-theme="dark"] .button-group { border-top-color: var(--theme-border) !important; }
+[data-theme="dark"] .btn-cancel {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
 </style>
 {% endblock %}

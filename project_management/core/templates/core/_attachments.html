@@ -89,13 +89,52 @@
     background: #fee2e2;
     color: #dc2626;
   }
-  .attachments-meta { 
+  .attachments-meta {
     font-size: 0.8125rem;
     color: #94a3b8;
     padding: 12px 16px;
     background: #ffffff;
     border-top: 1px solid #e2e8f0;
     margin: 0;
+  }
+
+  /* ===== DARK MODE ===== */
+  [data-theme="dark"] .attachments-card {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-border) !important;
+    box-shadow: var(--theme-shadow-md) !important;
+  }
+  [data-theme="dark"] .attachments-dropzone {
+    background: var(--theme-bg-secondary) !important;
+    border-color: var(--theme-border) !important;
+  }
+  [data-theme="dark"] .attachments-dropzone:hover {
+    background: rgba(59, 130, 246, 0.1) !important;
+    border-color: #3b82f6 !important;
+  }
+  [data-theme="dark"] .attachments-dropzone.dragover {
+    background: rgba(59, 130, 246, 0.15) !important;
+    border-color: #3b82f6 !important;
+  }
+  [data-theme="dark"] .attachments-title {
+    color: var(--theme-text) !important;
+  }
+  [data-theme="dark"] .attachments-hint {
+    color: var(--theme-text-secondary) !important;
+  }
+  [data-theme="dark"] .attachments-list {
+    background: var(--theme-bg-secondary) !important;
+    border-top-color: var(--theme-border) !important;
+  }
+  [data-theme="dark"] .attachments-list li {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+  }
+  [data-theme="dark"] .attachments-meta {
+    background: var(--theme-surface) !important;
+    border-top-color: var(--theme-border) !important;
+    color: var(--theme-text-muted) !important;
   }
 </style>
 

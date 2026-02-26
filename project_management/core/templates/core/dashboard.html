@@ -36,12 +36,234 @@
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   }
 
+  /* Dark mode overrides for dashboard-specific variables */
+  [data-theme="dark"] {
+    --white: #1e2532;
+    --gray-50: #1a2030;
+    --gray-100: #232b3b;
+    --gray-200: #334155;
+    --gray-300: #475569;
+    --gray-500: #94a3b8;
+    --gray-700: #cbd5e1;
+    --gray-800: #e2e8f0;
+    --primary-light: rgba(59,130,246,0.2);
+    --success-light: rgba(16,185,129,0.2);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 30px rgba(0, 0, 0, 0.45);
+  }
+
+  /* ---- Dashboard dark mode direct overrides ---- */
+  [data-theme="dark"] .chart-card {
+    background: #1e2532 !important;
+    border-color: rgba(59,130,246,0.12) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04) !important;
+  }
+  [data-theme="dark"] .chart-card-modern {
+    background: #1e2532 !important;
+    border-color: rgba(59,130,246,0.12) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04) !important;
+  }
+  [data-theme="dark"] .chart-card h3,
+  [data-theme="dark"] .chart-title-modern,
+  [data-theme="dark"] .shortcuts-area h3,
+  [data-theme="dark"] .donut-pane h3 {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+    background: none !important;
+  }
+  [data-theme="dark"] .chart-desc-modern {
+    color: #94a3b8 !important;
+  }
+  [data-theme="dark"] .donut-legend {
+    color: #94a3b8 !important;
+  }
+  [data-theme="dark"] .donut-legend .item {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #94a3b8 !important;
+  }
+  [data-theme="dark"] .modern-table thead th {
+    background: rgba(59,130,246,0.12) !important;
+    color: #e2e8f0 !important;
+  }
+  [data-theme="dark"] .modern-table tbody tr {
+    background: #1e2532 !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+  }
+  [data-theme="dark"] .modern-table tbody tr:hover {
+    background: #263040 !important;
+  }
+  [data-theme="dark"] .modern-td-title {
+    color: #e2e8f0 !important;
+  }
+  [data-theme="dark"] .modern-td-date {
+    color: #94a3b8 !important;
+  }
+  [data-theme="dark"] .modern-td-empty {
+    color: #64748b !important;
+  }
+  [data-theme="dark"] .modern-table td {
+    color: #e2e8f0 !important;
+  }
+  [data-theme="dark"] .badge-completed {
+    background: rgba(16,185,129,0.18) !important;
+    color: #34d399 !important;
+  }
+  [data-theme="dark"] .badge-inprogress {
+    background: rgba(59,130,246,0.18) !important;
+    color: #60a5fa !important;
+  }
+  [data-theme="dark"] .badge-pending {
+    background: rgba(245,158,11,0.6) !important;
+    color: #fff !important;
+  }
+  [data-theme="dark"] .badge-default {
+    background: #263040 !important;
+    color: #94a3b8 !important;
+  }
+  /* -- Stat / Metric Cards — dark-adapted muted gradients -- */
+  [data-theme="dark"] .metric-card {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+  }
+  [data-theme="dark"] .metric-card.total-tasks {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%) !important;
+  }
+  [data-theme="dark"] .metric-card.active-projects {
+    background: linear-gradient(135deg, #064e3b 0%, #047857 100%) !important;
+  }
+  [data-theme="dark"] .metric-card.tasks-completed {
+    background: linear-gradient(135deg, #78350f 0%, #b45309 100%) !important;
+  }
+  [data-theme="dark"] .metric-card.tasks-pending {
+    background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%) !important;
+  }
+  [data-theme="dark"] .metric-card .label {
+    color: rgba(255,255,255,0.85) !important;
+    -webkit-text-fill-color: rgba(255,255,255,0.85) !important;
+  }
+  [data-theme="dark"] .metric-card .value {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+  [data-theme="dark"] .metric-card svg {
+    color: rgba(255,255,255,0.6) !important;
+  }
+  [data-theme="dark"] a .metric-card,
+  [data-theme="dark"] .dashboard-grid a {
+    color: #ffffff !important;
+  }
+  /* -- Quick Action Buttons — dark-adapted muted gradients -- */
+  [data-theme="dark"] .shortcut-btn {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+  }
+  [data-theme="dark"] .shortcut-btn.shortcut-blue {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%) !important;
+  }
+  [data-theme="dark"] .shortcut-btn.shortcut-green {
+    background: linear-gradient(135deg, #064e3b 0%, #059669 100%) !important;
+  }
+  [data-theme="dark"] .shortcut-btn.shortcut-violet {
+    background: linear-gradient(135deg, #3b0764 0%, #6d28d9 100%) !important;
+  }
+  [data-theme="dark"] .shortcut-btn.shortcut-orange {
+    background: linear-gradient(135deg, #7c2d12 0%, #c2410c 100%) !important;
+  }
+  [data-theme="dark"] .shortcut-btn svg {
+    color: rgba(255,255,255,0.9) !important;
+  }
+  [data-theme="dark"] .shortcut-btn .lbl {
+    color: rgba(255,255,255,0.9) !important;
+  }
+  [data-theme="dark"] .shortcut-badge {
+    background: rgba(255,255,255,0.15) !important;
+    color: rgba(255,255,255,0.9) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
+  }
+  /* -- Welcome / Admin Banner — dark-adapted -- */
+  [data-theme="dark"] .welcome-banner {
+    background: linear-gradient(135deg, #312e81 0%, #4c1d95 100%) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+  }
+  [data-theme="dark"] .welcome-banner h3 {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background: none !important;
+  }
+  [data-theme="dark"] .welcome-banner .user-email-info {
+    color: rgba(255,255,255,0.85) !important;
+  }
+  /* -- Dashboard View Banner (Admin/Personal indicator) -- */
+  [data-theme="dark"] .dashboard-view-banner.admin-banner {
+    background: linear-gradient(135deg, #064e3b 0%, #047857 100%) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+  }
+  [data-theme="dark"] .dashboard-view-banner.personal-banner {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+  }
+  [data-theme="dark"] .table-responsive-modern {
+    background: transparent !important;
+  }
+  /* Date inputs */
+  [data-theme="dark"] input[type="date"] {
+    background: #151b23 !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+    color-scheme: dark;
+  }
+  [data-theme="dark"] label {
+    color: #94a3b8 !important;
+  }
+  /* Team modal */
+  [data-theme="dark"] .team-modal .modal-content {
+    background: #1e2532 !important;
+    border-color: #334155 !important;
+  }
+  [data-theme="dark"] .team-modal .modal-body {
+    color: #e2e8f0 !important;
+  }
+  [data-theme="dark"] .team-table thead th {
+    background: #151b23 !important;
+    color: #94a3b8 !important;
+    border-color: #334155 !important;
+  }
+  [data-theme="dark"] .team-table tbody td {
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+  }
+  [data-theme="dark"] .team-table tbody tr:hover {
+    background: #263040 !important;
+  }
+  /* Search dropdown */
+  [data-theme="dark"] .search-dropdown {
+    background: #1e2532 !important;
+    border-color: #334155 !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+  }
+  [data-theme="dark"] .search-result-item {
+    border-color: #334155 !important;
+  }
+  [data-theme="dark"] .search-result-item:hover {
+    background: #263040 !important;
+  }
+
   /* ============================================
      PROFESSIONAL WELCOME BANNER
      ============================================ */
   .welcome-banner {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: var(--white);
+    color: #ffffff;
     padding: 1rem 1.5rem;
     border-radius: var(--border-radius);
     margin-bottom: 1rem;
@@ -239,7 +461,7 @@
   }
 
   .btn-team {
-    background: var(--white);
+    background: #ffffff;
     border: 1.5px solid rgba(255, 255, 255, 0.3);
     color: var(--primary-color);
     padding: 6px 14px;
@@ -260,7 +482,7 @@
   .btn-logout {
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
-    color: var(--white);
+    color: #ffffff;
     border: 1.5px solid rgba(255, 255, 255, 0.3);
     padding: 6px 12px;
     border-radius: 6px;
@@ -290,7 +512,7 @@
     border-radius: 10px;
     padding: 1rem 1rem;
     box-shadow: var(--shadow);
-    color: var(--white);
+    color: #ffffff;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -374,11 +596,11 @@
   }
 
   .chart-card {
-    background: var(--white);
+    background: var(--theme-surface);
     border-radius: 10px;
     padding: 1rem;
     box-shadow: var(--shadow);
-    border: 1px solid var(--gray-200);
+    border: 1px solid var(--theme-border);
     transition: all 0.3s ease;
   }
 
@@ -390,7 +612,7 @@
     margin: 0 0 0.6rem 0;
     font-size: 14px;
     font-weight: 700;
-    color: var(--gray-800);
+    color: var(--theme-text);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -415,7 +637,7 @@
   .donut-pane h3 {
     font-size: 13px;
     font-weight: 700;
-    color: var(--gray-800);
+    color: var(--theme-text);
     margin: 0 0 0.5rem 0;
     display: flex;
     align-items: center;
@@ -439,7 +661,7 @@
     gap: 4px;
     padding: 0.65rem 0.5rem;
     border-radius: 8px;
-    color: var(--white);
+    color: #ffffff;
     box-shadow: var(--shadow);
     cursor: pointer;
     transition: all 0.3s ease;
@@ -511,7 +733,7 @@
     padding: 0 5px;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.95);
-    color: var(--primary-color);
+    color: #2563eb;
     font-size: 10px;
     font-weight: 800;
     display: inline-flex;
@@ -551,7 +773,7 @@
     align-items: center;
     flex-wrap: wrap;
     font-size: 11px;
-    color: var(--gray-700);
+    color: var(--theme-text-secondary);
     justify-content: center;
   }
 
@@ -579,7 +801,7 @@
 
   .team-modal .modal-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: var(--white);
+    color: #ffffff;
     border-bottom: none;
     padding: 1rem 1.5rem;
   }
@@ -604,30 +826,30 @@
   }
 
   .team-table thead th {
-    background: var(--gray-50);
+    background: var(--theme-bg-secondary);
     padding: 0.6rem 0.85rem;
     text-align: left;
     font-weight: 600;
     font-size: 12px;
-    color: var(--gray-700);
+    color: var(--theme-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.4px;
-    border-bottom: 2px solid var(--gray-200);
+    border-bottom: 2px solid var(--theme-border);
   }
 
   .team-table tbody tr {
     transition: all 0.2s ease;
-    border-bottom: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--theme-border);
   }
 
   .team-table tbody tr:hover {
-    background: var(--gray-50);
+    background: var(--theme-surface-hover);
   }
 
   .team-table tbody td {
     padding: 0.6rem 0.85rem;
     font-size: 13px;
-    color: var(--gray-700);
+    color: var(--theme-text);
   }
 
   .team-chart {
@@ -645,7 +867,7 @@
 
   .search-result-item {
     transition: background 0.2s ease;
-    border-bottom: 1px solid var(--gray-100);
+    border-bottom: 1px solid var(--theme-border-light);
   }
 
   .search-result-item:last-child {
@@ -654,7 +876,7 @@
 
   .search-result-item:hover,
   .search-result-item:focus {
-    background: var(--gray-50);
+    background: var(--theme-surface-hover);
     outline: none;
   }
 
@@ -715,18 +937,18 @@
   }
 /* ---------------- MODAL CLOSE BUTTON ---------------- */
 .chart-card-modern {
-  box-shadow: 0 4px 16px 0 rgba(37,99,235,0.06), 0 1px 4px 0 rgba(0,0,0,0.03);
-  border: 1px solid var(--gray-200);
+  box-shadow: var(--theme-shadow-md);
+  border: 1px solid var(--theme-border);
   padding: 1rem 1rem 0.85rem 1rem;
   border-radius: 10px;
-  background: linear-gradient(120deg, #f8fafc 60%, #e0e7ef 100%);
+  background: var(--theme-surface);
   margin-bottom: 0;
   min-width: 0;
 }
 .chart-title-modern {
   font-size: 0.9rem;
   font-weight: 800;
-  color: var(--primary-color);
+  color: var(--theme-text);
   margin-bottom: 0.6em;
   letter-spacing: 0.2px;
   display: flex;
@@ -740,7 +962,7 @@
 }
 .chart-desc-modern {
   margin-top: 4px;
-  color: var(--gray-500);
+  color: var(--theme-text-secondary);
   font-size: 11px;
   font-style: italic;
 }
@@ -755,11 +977,11 @@
   background: transparent;
 }
 .modern-table thead th {
-  background: var(--gray-100);
+  background: var(--theme-border);
   padding: 7px 10px;
   text-align: left;
   font-size: 11px;
-  color: var(--gray-700);
+  color: var(--theme-text);
   font-weight: 800;
   border-radius: 6px 0 0 6px;
 }
@@ -767,19 +989,19 @@
   border-radius: 0 6px 6px 0;
 }
 .modern-table tbody tr {
-  background: var(--white);
+  background: var(--theme-surface);
   box-shadow: 0 1px 4px rgba(37,99,235,0.04);
   border-radius: 6px;
   transition: box-shadow 0.2s, background 0.2s;
 }
 .modern-table tbody tr:hover {
-  background: var(--primary-light);
+  background: var(--theme-surface-hover);
   box-shadow: 0 2px 8px rgba(37,99,235,0.10);
 }
 .modern-td-title {
   padding: 7px 10px;
   font-size: 13px;
-  color: var(--gray-800);
+  color: var(--theme-text);
   font-weight: 700;
   border-radius: 6px 0 0 6px;
   max-width: 200px;
@@ -789,13 +1011,13 @@
 }
 .modern-td-date {
   padding: 7px 10px;
-  color: var(--gray-700);
+  color: var(--theme-text-secondary);
   border-radius: 0 6px 6px 0;
   font-size: 12px;
 }
 .modern-td-empty {
   padding: 7px 10px;
-  color: #888;
+  color: var(--theme-text-muted);
   text-align: center;
   font-style: italic;
   font-size: 12px;
@@ -827,8 +1049,365 @@
     color: var(--primary-color);
   }
   .badge-default {
-    background: var(--gray-200);
-    color: var(--gray-700);
+    background: var(--theme-surface-hover);
+    color: var(--theme-text-secondary);
+  }
+
+  /* ============================================
+     TABLET RESPONSIVE (max-width: 768px)
+     ============================================ */
+  @media (max-width: 768px) {
+    /* Metric cards: 2 columns on tablet */
+    .dashboard-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    .metric-card {
+      padding: 0.75rem 0.65rem;
+    }
+
+    .metric-card .value {
+      font-size: 22px;
+    }
+
+    .metric-card .label {
+      font-size: 10px;
+    }
+
+    /* Chart cards: reduce padding */
+    .chart-card,
+    .chart-card-modern {
+      padding: 0.75rem;
+    }
+
+    .chart-card h3 {
+      font-size: 13px;
+    }
+
+    /* Welcome banner: tighter on tablet */
+    .welcome-banner {
+      padding: 0.75rem 1rem;
+    }
+
+    .welcome-banner h3 {
+      font-size: 15px;
+    }
+
+    .welcome-banner .user-email-info {
+      font-size: 12px;
+    }
+
+    /* Dashboard view banners: stack contents */
+    .dashboard-view-banner {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 8px !important;
+      padding: 10px 14px !important;
+    }
+
+    /* Defect filter form: wrap on tablet */
+    #defectFilterForm {
+      flex-wrap: wrap !important;
+    }
+
+    #defectFilterForm input[type="date"] {
+      width: 120px !important;
+    }
+
+    /* Date filter in Tasks Over Time: wrap */
+    .chart-card-modern form {
+      flex-wrap: wrap;
+    }
+
+    /* Tables: ensure horizontal scroll and smaller text */
+    .table-responsive-modern {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .modern-table thead th {
+      font-size: 10px;
+      padding: 6px 8px;
+      white-space: nowrap;
+    }
+
+    .modern-table td,
+    .modern-td-title,
+    .modern-td-date {
+      font-size: 11px;
+      padding: 6px 8px;
+    }
+
+    .modern-td-title {
+      max-width: 140px;
+    }
+
+    /* Donut pane: reduce left padding */
+    .donut-pane {
+      padding-left: 0.25rem;
+    }
+
+    .donut-legend {
+      font-size: 10px;
+      gap: 0.5rem;
+    }
+
+    /* Popup notifications: narrower */
+    .popup-notification {
+      width: 300px;
+    }
+
+    .popup-notification-message {
+      padding-left: 42px;
+      font-size: 13px;
+    }
+
+    .popup-notification-footer {
+      padding-left: 42px;
+    }
+  }
+
+  /* ============================================
+     MOBILE RESPONSIVE (max-width: 480px)
+     ============================================ */
+  @media (max-width: 480px) {
+    /* Metric cards: single column on mobile */
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+      gap: 0.4rem;
+    }
+
+    .metric-card {
+      padding: 0.6rem 0.5rem;
+      flex-direction: row;
+      justify-content: space-between;
+      text-align: left;
+      gap: 0.25rem;
+    }
+
+    .metric-card .value {
+      font-size: 20px;
+    }
+
+    .metric-card .label {
+      font-size: 10px;
+    }
+
+    /* Welcome banner: compact */
+    .welcome-banner {
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .welcome-banner h3 {
+      font-size: 14px;
+    }
+
+    .welcome-banner .user-email-info {
+      font-size: 11px;
+    }
+
+    .welcome-banner .user-email-info strong {
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+
+    /* Charts row: reduce gap and margin */
+    .charts-row {
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .chart-card,
+    .chart-card-modern {
+      padding: 0.6rem;
+      border-radius: 8px;
+    }
+
+    .chart-card h3 {
+      font-size: 12px;
+      gap: 5px;
+    }
+
+    .chart-title-modern {
+      font-size: 0.8rem;
+    }
+
+    .chart-desc-modern {
+      font-size: 10px;
+    }
+
+    /* Chart split: ensure single column */
+    .chart-split {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    /* Shortcuts: single column on small mobile */
+    .shortcuts {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.35rem;
+    }
+
+    .shortcut-btn {
+      height: 56px;
+      padding: 0.5rem 0.35rem;
+      font-size: 11px;
+    }
+
+    .shortcut-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .shortcut-btn .lbl {
+      font-size: 10px;
+    }
+
+    .shortcut-badge {
+      min-width: 16px;
+      height: 16px;
+      font-size: 9px;
+      top: 4px;
+      right: 4px;
+    }
+
+    /* Progress / donut chart */
+    #progressChart {
+      height: 140px !important;
+    }
+
+    #priorityChart {
+      height: 200px !important;
+    }
+
+    .donut-pane {
+      padding-left: 0;
+    }
+
+    .donut-legend {
+      font-size: 10px;
+      gap: 0.4rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 8px;
+    }
+
+    /* Defect filter form: stack vertically on mobile */
+    #defectFilterForm {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 6px !important;
+    }
+
+    #defectFilterForm input[type="date"] {
+      width: 100% !important;
+    }
+
+    #defectFilterForm button[type="submit"] {
+      width: 100%;
+      margin-top: 0 !important;
+    }
+
+    /* Defect metrics header: stack */
+    .chart-card-modern > div:first-child {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+
+    /* Date filter form in line chart: stack on mobile */
+    .chart-card-modern form[method="get"] {
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 6px !important;
+    }
+
+    .chart-card-modern form[method="get"] input[type="date"] {
+      width: 100% !important;
+    }
+
+    .chart-card-modern form[method="get"] button[type="submit"] {
+      width: 100%;
+    }
+
+    /* Tables: compact mobile view */
+    .modern-table thead th {
+      font-size: 9px;
+      padding: 5px 6px;
+    }
+
+    .modern-table td,
+    .modern-td-title,
+    .modern-td-date {
+      font-size: 10px;
+      padding: 5px 6px;
+    }
+
+    .modern-td-title {
+      max-width: 100px;
+    }
+
+    .badge-status {
+      font-size: 9px;
+      padding: 1px 6px;
+    }
+
+    /* Table max-height reduced for mobile */
+    .table-responsive-modern {
+      max-height: 280px !important;
+    }
+
+    /* Popup notifications: full-width on mobile */
+    .popup-notification-container {
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+    }
+
+    .popup-notification {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .popup-notification-message {
+      padding-left: 36px;
+      font-size: 12px;
+    }
+
+    .popup-notification-footer {
+      padding-left: 36px;
+      font-size: 11px;
+    }
+
+    .popup-notification-avatar {
+      width: 32px;
+      height: 32px;
+      font-size: 12px;
+    }
+
+    /* Top actions: compact */
+    .top-actions {
+      gap: 8px;
+    }
+
+    .btn-team,
+    .btn-logout {
+      padding: 5px 10px;
+      font-size: 11px;
+    }
+
+    /* Team modal: full-width on mobile */
+    .team-modal .modal-dialog {
+      margin: 0.5rem;
+    }
+
+    .team-table thead th,
+    .team-table tbody td {
+      font-size: 11px;
+      padding: 6px 8px;
+    }
   }
 </style>
 {% endblock %}
@@ -839,7 +1418,7 @@
 {% block content %}
 <!-- Dashboard View Indicator -->
 {% if is_user_dashboard %}
-<div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);">
+<div class="dashboard-view-banner personal-banner" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);">
   <div style="display: flex; align-items: center; gap: 8px;">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -855,7 +1434,7 @@
   </a> -->
 </div>
 {% else %}
-<div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);">
+<div class="dashboard-view-banner admin-banner" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);">
   <div style="display: flex; align-items: center; gap: 8px;">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="7" height="7" rx="1"></rect>
@@ -974,8 +1553,8 @@
   <div class="chart-card">
     <h3>Tasks by Priority (Open vs Closed)</h3>
     <canvas id="priorityChart"></canvas>
-    <div style="margin-top:10px;color:var(--muted);font-size:13px;">
-      Bars are stacked: <strong>Open</strong> (not closed) + <strong>Closed</strong>.
+    <div style="margin-top:10px;color:var(--theme-text-muted);font-size:13px;">
+      Bars are stacked: <strong style="color:var(--theme-text);">Open</strong> (not closed) + <strong style="color:var(--theme-text);">Closed</strong>.
     </div>
   </div>
 </div>
@@ -987,12 +1566,12 @@
     <h3 class="chart-title-modern">Tasks Over Time</h3>
     <form method="get" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px;">
       <div>
-        <label for="fromDate" style="display:block;font-size:12px;color:var(--gray-700);font-weight:700;">From</label>
-        <input id="fromDate" type="date" name="tasks_from_date" value="{{ timeline_from }}" style="padding:8px 10px;border:1px solid var(--gray-300);border-radius:8px;">
+        <label for="fromDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">From</label>
+        <input id="fromDate" type="date" name="tasks_from_date" value="{{ timeline_from }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text);">
       </div>
       <div>
-        <label for="toDate" style="display:block;font-size:12px;color:var(--gray-700);font-weight:700;">To</label>
-        <input id="toDate" type="date" name="tasks_to_date" value="{{ timeline_to }}" style="padding:8px 10px;border:1px solid var(--gray-300);border-radius:8px;">
+        <label for="toDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">To</label>
+        <input id="toDate" type="date" name="tasks_to_date" value="{{ timeline_to }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text);">
       </div>
       <button type="submit" style="padding:9px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;">Apply</button>
     </form>
@@ -1004,9 +1583,9 @@
   <!-- Table Card -->
   <div class="chart-card chart-card-modern">
     <h3 class="chart-title-modern">Planned Tasks</h3>
-    <div style="font-size:13px;color:var(--gray-700);margin-bottom:8px;">
+    <div style="font-size:13px;color:var(--theme-text-secondary);margin-bottom:8px;">
       Showing planned tasks for: <strong>{{ planned_start|date:'d M Y' }}</strong> — <strong>{{ planned_end|date:'d M Y' }}</strong>
-      <span style="color:var(--gray-500);font-weight:600;margin-left:8px;">(max {{ planned_limit }} items)</span>
+      <span style="color:var(--theme-text-muted);font-weight:600;margin-left:8px;">(max {{ planned_limit }} items)</span>
     </div>
     <div class="table-responsive-modern" style="max-height: 400px; overflow-y: auto;">
       <table class="modern-table">
@@ -1048,16 +1627,16 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
       <div>
         <h3 class="chart-title-modern" style="margin:0;padding:0;">Defect Reporter Metrics</h3>
-        <div id="defectRangeLabel" style="color:var(--gray-500);font-size:13px;margin-top:6px;">Bug/Defect reports by reporter from {{ defect_range_from|date:'d M Y' }} to {{ defect_range_to|date:'d M Y' }}.</div>
+        <div id="defectRangeLabel" style="color:var(--theme-text-secondary);font-size:13px;margin-top:6px;">Bug/Defect reports by reporter from {{ defect_range_from|date:'d M Y' }} to {{ defect_range_to|date:'d M Y' }}.</div>
       </div>
       <form id="defectFilterForm" method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;margin:0;">
         <div style="display:flex;flex-direction:column;">
-          <label for="defectFromDate" style="display:block;font-size:12px;color:var(--gray-700);font-weight:700;">From</label>
-          <input id="defectFromDate" type="date" name="defect_from_date" value="{{ timeline_defect_from }}" style="padding:8px 10px;border:1px solid var(--gray-300);border-radius:8px;width:140px;">
+          <label for="defectFromDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">From</label>
+          <input id="defectFromDate" type="date" name="defect_from_date" value="{{ timeline_defect_from }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;width:140px;background:var(--theme-input-bg);color:var(--theme-text);">
         </div>
         <div style="display:flex;flex-direction:column;">
-          <label for="defectToDate" style="display:block;font-size:12px;color:var(--gray-700);font-weight:700;">To</label>
-          <input id="defectToDate" type="date" name="defect_to_date" value="{{ timeline_defect_to }}" style="padding:8px 10px;border:1px solid var(--gray-300);border-radius:8px;width:140px;">
+          <label for="defectToDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">To</label>
+          <input id="defectToDate" type="date" name="defect_to_date" value="{{ timeline_defect_to }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;width:140px;background:var(--theme-input-bg);color:var(--theme-text);">
         </div>
         <div style="margin-top:20px;">
           <button type="submit" style="padding:8px 12px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;">Apply</button>
@@ -1159,6 +1738,15 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+  // --- Theme-aware Chart.js defaults ---
+  var isDark = document.getElementById('app')?.getAttribute('data-theme') === 'dark';
+  var chartTextColor = isDark ? '#94a3b8' : '#374151';
+  var chartGridColor = isDark ? 'rgba(51,65,85,0.5)' : 'rgba(0,0,0,0.08)';
+  Chart.defaults.color = chartTextColor;
+  Chart.defaults.borderColor = chartGridColor;
+  Chart.defaults.scale.grid = Chart.defaults.scale.grid || {};
+  Chart.defaults.scale.grid.color = chartGridColor;
+
   // Attach handlers to shortcut buttons
   document.querySelectorAll('.shortcut-btn').forEach(btn => {
     btn.addEventListener('click', function(e){
@@ -1181,25 +1769,26 @@ document.addEventListener("DOMContentLoaded", function() {
     let dropdown = document.createElement('div');
     dropdown.className = 'search-dropdown';
     dropdown.style.position = 'absolute';
-    dropdown.style.background = '#fff';
-    dropdown.style.border = '1px solid #e0e0e0';
-    dropdown.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)';
+    dropdown.style.background = 'var(--theme-surface, #fff)';
+    dropdown.style.border = '1px solid var(--theme-border, #e0e0e0)';
+    dropdown.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
     dropdown.style.zIndex = 1000;
     dropdown.style.minWidth = '320px';
     dropdown.style.display = 'none';
     dropdown.style.maxHeight = '320px';
+    dropdown.style.borderRadius = '8px';
     dropdown.style.overflowY = 'auto';
     searchInput.parentNode.appendChild(dropdown);
 
     function showDropdown(items) {
       if (!items.length) {
-        dropdown.innerHTML = '<div style="padding:12px;color:#888;">No results found</div>';
+        dropdown.innerHTML = '<div style="padding:12px;color:var(--theme-text-muted,#888);">No results found</div>';
       } else {
         dropdown.innerHTML = items.map(item =>
-          `<div class="search-result-item" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;" tabindex="0" data-url="${item.url}">
-            <span style="font-weight:600;color:#0b57a4;">${item.type}</span>
-            <span style="flex:1;">${item.label}</span>
-            <span style="color:#888;font-size:12px;">${item.extra||''}</span>
+          `<div class="search-result-item" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--theme-text,inherit);" tabindex="0" data-url="${item.url}">
+            <span style="font-weight:600;color:#60a5fa;">${item.type}</span>
+            <span style="flex:1;color:var(--theme-text,inherit);">${item.label}</span>
+            <span style="color:var(--theme-text-muted,#888);font-size:12px;">${item.extra||''}</span>
           </div>`
         ).join('');
       }
@@ -1518,5 +2107,28 @@ document.addEventListener("DOMContentLoaded", function() {
       }
 
       }});
+
+  // Listen for theme toggle and update Chart.js colors
+  window.addEventListener('themechange', function(e) {
+    var dark = e.detail.theme === 'dark';
+    var textColor = dark ? '#94a3b8' : '#374151';
+    var gridColor = dark ? 'rgba(51,65,85,0.5)' : 'rgba(0,0,0,0.08)';
+    Chart.defaults.color = textColor;
+    Chart.defaults.borderColor = gridColor;
+    // Update all existing chart instances
+    Chart.helpers.each(Chart.instances, function(chart) {
+      if (chart.options.scales) {
+        Object.values(chart.options.scales).forEach(function(scale) {
+          if (scale.ticks) scale.ticks.color = textColor;
+          if (scale.grid) scale.grid.color = gridColor;
+          if (scale.title) scale.title.color = textColor;
+        });
+      }
+      if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+        chart.options.plugins.legend.labels.color = textColor;
+      }
+      chart.update();
+    });
+  });
 </script>
 {% endblock %}

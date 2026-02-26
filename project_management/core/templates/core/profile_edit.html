@@ -8,11 +8,11 @@
 /* --- Base Variables (from previous response) --- */
 :root {
     --primary-color: #337ab7;
-    --background-light: #f7f7f7;
-    --card-background: #ffffff;
-    --text-dark: #333;
-    --text-label: #888;
-    --border-light: #e0e0e0;
+    --background-light: var(--theme-bg);
+    --card-background: var(--theme-surface);
+    --text-dark: var(--theme-text);
+    --text-label: var(--theme-text-secondary);
+    --border-light: var(--theme-border);
     --input-focus-color: #5cb85c; /* A green for focus state */
 }
 
@@ -118,6 +118,7 @@ body {
     border-radius: 4px;
     font-size: 1em;
     color: var(--text-dark);
+    background: var(--theme-input-bg);
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -147,7 +148,7 @@ body {
 }
 
 .btn-cancel {
-    background-color: transparent;
+    background-color: var(--theme-input-bg);
     border: 1px solid var(--text-label);
     color: var(--text-dark);
 }

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -l \"style=\" \"c:\\\\projects\\\\defectmanage\\\\manage\\\\project_management\\\\core\\\\templates\\\\core\"/*.html)",
+      "Bash(xargs wc -l)",
+      "Bash(find \"c:\\\\projects\\\\defectmanage\\\\manage\\\\project_management\\\\core\\\\static\\\\core\\\\css\" -name \"*.css\" -exec wc -l {} ;)",
+      "Bash(grep -c \"extends\" \"c:\\\\projects\\\\defectmanage\\\\manage\\\\project_management\\\\core\\\\templates\\\\core\"/*.html)",
+      "Bash(for file in \"task_board.html\" \"tasks_my.html\" \"teams.html\" \"people.html\" \"task_page_view.html\" \"team_chat.html\" \"task_detail.html\" \"login.html\" \"create_change_request.html\")",
+      "Bash(do echo \"========== $file ==========\" grep -n \"#fff\\\\|#ffffff\\\\|#e2e8f0\\\\|#f1f5f9\\\\|#f8fafc\\\\|#f9fafb\\\\|#f3f4f6\\\\|#1f2937\\\\|#374151\\\\|#1e293b\\\\|#334155\" \"c:/projects/defectmanage/manage/project_management/core/templates/core/$file\")",
+      "Bash(done)",
+      "Bash(for file in \"create_bug.html\" \"create_defect.html\" \"create_story.html\" \"create_subtask.html\" \"create_report.html\")",
+      "Bash(for file in \"project_configure.html\" \"projects_report.html\" \"create_task.html\" \"_attachments.html\" \"_system_info.html\")",
+      "Bash(for file in \"profile_view.html\" \"edit_task.html\" \"identify.html\" \"metric_drilldown.html\" \"tasks_bulk_import.html\")",
+      "Bash(wc -l *.html)",
+      "Bash(ls -1 *.html)",
+      "Bash(for file in Multi_tenant_login.html Permission_denied.html _attachments.html _system_info.html add_tenant_admin.html create_bug.html create_change_request.html create_defect.html create_report.html create_story.html create_subtask.html create_task.html edit_task.html identify.html login.html metric_drilldown.html new_tenant.html password_policy.html password_reset_confirm.html password_reset_request.html profile_edit.html profile_view.html project_configure.html projects_list.html roles_page.html subproject_create.html subprojects_list.html task_detail.html task_page_view.html tasks_bulk_import.html tasks_bulk_import_result.html tasks_overview.html team_chat.html tenant_dashboard_v2.html test_notifications.html)",
+      "Bash(do)",
+      "Bash(if ! grep -q '\\\\[data-theme=\"\"dark\"\"\\\\]' \"$file\")",
+      "Bash(then)",
+      "Bash(echo \"$file\")",
+      "Bash(fi)"
+    ]
+  }
+}
