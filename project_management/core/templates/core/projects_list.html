@@ -63,11 +63,11 @@
       <table class="projects-table">
         <thead>
           <tr>
-            <th style="width: 15%;">
+            <th id="col-project-id" style="width: 15%;" class="sortable">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
               </svg>
-              Project
+              Project <span id="proj-id-sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span>
             </th>
             <th style="width: 20%;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
@@ -1339,4 +1339,33 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var th = document.getElementById('col-project-id');
+  var tbody = document.querySelector('.projects-table tbody');
+  var indicator = document.getElementById('proj-id-sort-indicator');
+  if(!th || !tbody) return;
+  th.style.cursor = 'pointer';
+  var asc = false; // default to newest first (desc)
+  function getRowId(row){
+    var meta = row.querySelector('.project-meta');
+    if(!meta) return 0;
+    var txt = meta.innerText || meta.textContent || '';
+    return parseInt(txt.replace(/[^0-9]/g,''),10) || 0;
+  }
+  function sortRows(){
+    var rows = Array.from(tbody.querySelectorAll('tr.project-row'));
+    rows.sort(function(a,b){
+      var A = getRowId(a);
+      var B = getRowId(b);
+      return asc ? (A - B) : (B - A);
+    });
+    rows.forEach(function(r){ tbody.appendChild(r); });
+    if(indicator) indicator.textContent = asc ? '↑' : '↓';
+  }
+  th.addEventListener('click', function(){ asc = !asc; sortRows(); });
+  // initialize indicator
+  if(indicator) indicator.textContent = asc ? '↑' : '↓';
+});
+</script>
 {% endblock %}
