@@ -29,6 +29,7 @@
           <option value="In Progress" {% if sel_status == 'In Progress' %}selected{% endif %}>In Progress</option>
           <option value="Review" {% if sel_status == 'Review' %}selected{% endif %}>Review</option>
           <option value="Blocked" {% if sel_status == 'Blocked' %}selected{% endif %}>Blocked</option>
+          <option value="Finished" {% if sel_status == 'Finished' %}selected{% endif %}>Finished</option>
           <option value="Closed" {% if sel_status == 'Closed' %}selected{% endif %}>Closed</option>
         </select>
         <select id="workTypeFilter" class="filter-select">
@@ -685,6 +686,11 @@
   color: #6b21a8;
 }
 
+.status-finished {
+  background: linear-gradient(135deg, #a7f3d0, #6ee7b7);
+  color: #065f46;
+}
+
 .status-closed {
   background: linear-gradient(135deg, #dbeafe, #bfdbfe);
   color: #1e40af;
@@ -1327,6 +1333,10 @@
 [data-theme="dark"] .status-review {
   background: rgba(168, 85, 247, 0.2) !important;
   color: #c084fc !important;
+}
+[data-theme="dark"] .status-finished {
+  background: rgba(16, 185, 129, 0.25) !important;
+  color: #6ee7b7 !important;
 }
 [data-theme="dark"] .status-closed {
   background: rgba(59, 130, 246, 0.2) !important;
