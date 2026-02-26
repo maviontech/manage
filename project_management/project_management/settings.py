@@ -48,15 +48,24 @@ INSTALLED_APPS = [
 # Channels: route to ASGI application
 ASGI_APPLICATION = "project_management.asgi.application"   # adjust module path to your project package
 
-# Use Redis channel layer (local redis on default port)
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+# Channel layer configuration
+# - Use an in-memory channel layer when DEBUG is True (development)
+# - Use Redis in production (default Redis host/port)
+if DEBUG:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
         },
-    },
-}
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [("127.0.0.1", 6379)],
+            },
+        },
+    }
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -83,6 +92,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
                 'core.context_processors.tenant_work_types',
+                'core.context_processors.permissions_context',
             ],
         },
     },
@@ -150,6 +160,7 @@ MYSQL_ADMIN_PWD = 'root'
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (User uploads)
 MEDIA_URL = '/media/'
