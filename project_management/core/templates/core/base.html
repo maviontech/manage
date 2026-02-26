@@ -2171,5 +2171,23 @@
   })();
   </script>
 
+  <script>
+  // Restore task filter state when navigating back to tasks page
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add click handler to Tasks menu link to restore filters
+    const myTasksUrl = "{% url 'my_tasks' %}";
+    const tasksMenuLink = document.querySelector('a[href="' + myTasksUrl + '"]');
+    if (tasksMenuLink) {
+      tasksMenuLink.addEventListener('click', function(e) {
+        const filterState = sessionStorage.getItem('tasksFilterState');
+        if (filterState && window.location.pathname !== myTasksUrl) {
+          e.preventDefault();
+          window.location.href = this.getAttribute('href') + filterState;
+        }
+      });
+    }
+  });
+  </script>
+
 </body>
 </html>

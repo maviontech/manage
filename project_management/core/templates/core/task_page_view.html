@@ -404,6 +404,20 @@
         </div>
     </div>
     <script>
+        // Restore filter state when going back to tasks
+        document.addEventListener('DOMContentLoaded', function() {
+            const backBtn = document.querySelector('.btn-back');
+            if (backBtn) {
+                backBtn.addEventListener('click', function(e) {
+                    const filterState = sessionStorage.getItem('tasksFilterState');
+                    if (filterState) {
+                        e.preventDefault();
+                        window.location.href = this.getAttribute('href') + filterState;
+                    }
+                });
+            }
+        });
+        
         document.addEventListener('DOMContentLoaded', function(){
         (function(){
             function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }

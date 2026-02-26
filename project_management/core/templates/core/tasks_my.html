@@ -1360,13 +1360,29 @@
 <script>
 // Make table rows clickable to open task detail (except when clicking action buttons)
   document.addEventListener('DOMContentLoaded', function() {
+  // Store current filter state in sessionStorage before navigating
+  function storeFilterState() {
+    const currentUrl = window.location.search;
+    if (currentUrl) {
+      sessionStorage.setItem('tasksFilterState', currentUrl);
+    }
+  }
+  
   document.querySelectorAll('.task-row').forEach(function(row) {
     row.style.cursor = 'pointer';
     row.addEventListener('click', function() {
       var href = this.getAttribute('data-href');
       if (href) {
+        storeFilterState();
         window.location.href = href;
       }
+    });
+  });
+  
+  // Also store filter state when clicking action buttons
+  document.querySelectorAll('.btn-action').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      storeFilterState();
     });
   });
   
@@ -1438,6 +1454,9 @@
     if (per) {
       urlParams.set('per_page', per);
     }
+    
+    // Clear stored filter state
+    sessionStorage.removeItem('tasksFilterState');
     
     window.location.search = urlParams.toString();
   }
