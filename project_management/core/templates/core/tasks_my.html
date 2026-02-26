@@ -13,7 +13,7 @@
             <path d="M9 11l3 3L22 4"></path>
             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
           </svg>
-          My Tasks
+          Tasks
         </h1>
         <!-- <p class="page-subtitle">View, track and manage your assigned work items</p> -->
       </div>
@@ -49,6 +49,10 @@
             {% endfor %}
           {% endif %}
         </select>
+        <button id="resetFiltersBtn" class="btn-modern btn-reset" style="{% if not sel_status and not sel_work_type and not sel_project and sel_assigned == 'all' or not sel_assigned %}display: none;{% endif %}">
+          <i class="fa-solid fa-rotate-left"></i>
+          Reset
+        </button>
         <a href="{% url 'create_task' %}" class="btn-modern btn-primary">
           <i class="fa-solid fa-plus"></i>
           New Task
@@ -257,13 +261,13 @@
     <div class="pagination-footer">
       <div class="pagination-nav">
         {% if page_obj.has_previous %}
-          <a href="?page=1&per_page={{ items_per_page }}" class="pagination-btn pagination-btn-first" title="First Page">
+          <a href="?page=1&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-btn pagination-btn-first" title="First Page">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="11 17 6 12 11 7"></polyline>
               <polyline points="18 17 13 12 18 7"></polyline>
             </svg>
           </a>
-          <a href="?page={{ page_obj.previous_page_number }}&per_page={{ items_per_page }}" class="pagination-btn pagination-btn-prev" title="Previous Page">
+          <a href="?page={{ page_obj.previous_page_number }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-btn pagination-btn-prev" title="Previous Page">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
@@ -287,9 +291,9 @@
             {% if page_obj.number == num %}
               <span class="pagination-page pagination-page-active">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-              <a href="?page={{ num }}&per_page={{ items_per_page }}" class="pagination-page">{{ num }}</a>
+              <a href="?page={{ num }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-page">{{ num }}</a>
             {% elif num == 1 or num == page_obj.paginator.num_pages %}
-              <a href="?page={{ num }}&per_page={{ items_per_page }}" class="pagination-page">{{ num }}</a>
+              <a href="?page={{ num }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-page">{{ num }}</a>
             {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
               <span class="pagination-ellipsis">...</span>
             {% endif %}
@@ -297,12 +301,12 @@
         </div>
         
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}&per_page={{ items_per_page }}" class="pagination-btn pagination-btn-next" title="Next Page">
+          <a href="?page={{ page_obj.next_page_number }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-btn pagination-btn-next" title="Next Page">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </a>
-          <a href="?page={{ page_obj.paginator.num_pages }}&per_page={{ items_per_page }}" class="pagination-btn pagination-btn-last" title="Last Page">
+          <a href="?page={{ page_obj.paginator.num_pages }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-btn pagination-btn-last" title="Last Page">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="13 17 18 12 13 7"></polyline>
               <polyline points="6 17 11 12 6 7"></polyline>
@@ -431,6 +435,18 @@
 .btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  color: white;
+}
+
+.btn-reset {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-reset:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
   color: white;
 }
 
@@ -1362,6 +1378,28 @@
   const assignedFilter = document.getElementById('assignedFilter');
   const projectFilter = document.getElementById('projectFilter');
   const statusFilter = document.getElementById('statusFilter');
+  const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+
+  // Function to check if any filters are active
+  function hasActiveFilters() {
+    const selectedType = workTypeFilter ? workTypeFilter.value : '';
+    const assignedMode = assignedFilter ? assignedFilter.value : 'all';
+    const selectedProject = projectFilter ? projectFilter.value : '';
+    const selectedStatus = statusFilter ? statusFilter.value : '';
+    
+    return selectedType || selectedProject || selectedStatus || (assignedMode && assignedMode !== 'all');
+  }
+
+  // Function to toggle reset button visibility
+  function toggleResetButton() {
+    if (resetFiltersBtn) {
+      if (hasActiveFilters()) {
+        resetFiltersBtn.style.display = 'inline-flex';
+      } else {
+        resetFiltersBtn.style.display = 'none';
+      }
+    }
+  }
 
   // Server-side filtering: update URL query params and reload page
   function applyFilters() {
@@ -1384,10 +1422,34 @@
     window.location.search = urlParams.toString();
   }
 
+  // Reset all filters
+  function resetFilters() {
+    const urlParams = new URLSearchParams(window.location.search);
+    // preserve items per page
+    const per = urlParams.get('per_page') || urlParams.get('per') || '';
+    
+    // Clear all filter parameters
+    urlParams.delete('work_type');
+    urlParams.delete('project');
+    urlParams.delete('status');
+    urlParams.delete('assigned');
+    urlParams.set('page', '1');
+    
+    if (per) {
+      urlParams.set('per_page', per);
+    }
+    
+    window.location.search = urlParams.toString();
+  }
+
   if (workTypeFilter) workTypeFilter.addEventListener('change', applyFilters);
   if (assignedFilter) assignedFilter.addEventListener('change', applyFilters);
   if (projectFilter) projectFilter.addEventListener('change', applyFilters);
   if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+  if (resetFiltersBtn) resetFiltersBtn.addEventListener('click', resetFilters);
+  
+  // Initial check for reset button visibility
+  toggleResetButton();
   
   // Pagination controls
   const perPageSelect = document.getElementById('perPageSelect');
@@ -1396,6 +1458,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       urlParams.set('per_page', this.value);
       urlParams.set('page', '1'); // Reset to first page when changing items per page
+      // Preserve all existing filter parameters
       window.location.search = urlParams.toString();
     });
   }
@@ -1409,6 +1472,7 @@
       if (pageNum >= 1 && pageNum <= maxPages) {
         const urlParams = new URLSearchParams(window.location.search);
         urlParams.set('page', pageNum);
+        // Preserve all existing filter parameters
         window.location.search = urlParams.toString();
       }
     });
