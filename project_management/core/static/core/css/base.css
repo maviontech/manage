@@ -496,7 +496,7 @@ body.sidebar-collapsed .search-wrapper{min-width:220px}
 .user-name{margin-left:8px;font-weight:700;display:inline-block}
 
 /* main content */
-.main{flex:1 1 auto;padding:24px;background:var(--theme-bg)}
+.main{flex:1 1 auto;padding:15px;background:var(--theme-bg)}
 .container{max-width:calc(100vw - 300px);margin:0 auto;padding:0 20px}
 .page-title{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 
