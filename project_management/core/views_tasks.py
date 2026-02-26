@@ -1717,10 +1717,10 @@ def api_tasks_search(request):
                 END AS assigned_to_display,
                 (SELECT p.name FROM projects p WHERE p.id = t.project_id) AS project_name
             FROM tasks t
-            WHERE (t.title LIKE %s OR t.description LIKE %s)
+            WHERE (CAST(t.id AS CHAR) LIKE %s OR t.title LIKE %s OR t.description LIKE %s)
             ORDER BY t.id DESC
             LIMIT 20
-        """, (like, like))
+        """, (like, like, like))
 
         rows = cur.fetchall() or []
         tasks = []
@@ -1747,8 +1747,14 @@ def api_tasks_search(request):
                     })
 
         return JsonResponse({'tasks': tasks})
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('project_management')
+        logger.error(f"Error in api_tasks_search: {e}")
+        return JsonResponse({'tasks': [], 'error': str(e)})
     finally:
         cur.close()
+        conn.close()
 
 
 @require_POST

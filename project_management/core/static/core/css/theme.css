@@ -189,7 +189,7 @@
 [data-theme="dark"] .input-field,
 [data-theme="dark"] .per-page-select,
 [data-theme="dark"] .jump-input {
-  background: var(--theme-input-bg) !important;
+  /* background: var(--theme-input-bg) !important; */
   border-color: var(--theme-input-border) !important;
   color: var(--theme-text) !important;
 }

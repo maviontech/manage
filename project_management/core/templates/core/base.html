@@ -1560,7 +1560,7 @@
         
         clearTimeout(searchTimeout);
         
-        if (query.length < 2) {
+        if (query.length < 1) {
           resultsDropdown.classList.remove('show');
           return;
         }
@@ -1681,18 +1681,46 @@
       }
       
       function fetchProjects(query) {
+        console.log('Fetching projects for query:', query);
         return fetch(`/projects/ajax/search/?q=${encodeURIComponent(query)}`)
-          .then(res => res.json())
-          .then(data => data.results || [])
-          .catch(() => []);
+          .then(res => {
+            console.log('Projects API response status:', res.status);
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+          })
+          .then(data => {
+            console.log('Projects API data:', data);
+            return data.results || [];
+          })
+          .catch(error => {
+            console.error('Error fetching projects:', error);
+            return [];
+          });
       }
       
       function fetchTasks(query) {
         // Search tasks if API is available
+        console.log('Fetching tasks for query:', query);
         return fetch(`/tasks/api/search/?q=${encodeURIComponent(query)}`)
-          .then(res => res.json())
-          .then(data => (data.tasks || []).slice(0, 5))
-          .catch(() => []);
+          .then(res => {
+            console.log('Tasks API response status:', res.status);
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+          })
+          .then(data => {
+            console.log('Tasks API data:', data);
+            const tasks = (data.tasks || []).slice(0, 5);
+            console.log('Processed tasks:', tasks);
+            return tasks;
+          })
+          .catch(error => {
+            console.error('Error fetching tasks:', error);
+            return [];
+          });
       }
       
       function fetchPeople(query) {
@@ -1723,6 +1751,7 @@
       }
       
       function displayResults(results) {
+        console.log('Displaying results:', results);
         let html = '';
         let hasResults = false;
         
