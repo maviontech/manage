@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -212,18 +213,16 @@
     <div class="bg-decoration bg-decoration-3"></div>
 
     <div class="sm:mx-auto sm:w-full sm:max-w-md animate-fade-in">
-        <!-- Logo/Icon with Animation -->
+        <!-- Trackline Logo -->
         <div class="flex justify-center mb-8">
             <div class="relative">
                 <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl blur-xl opacity-50 logo-pulse"></div>
-                <div class="relative h-20 w-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300">
-                    <i data-lucide="shield-check" class="h-11 w-11 text-white"></i>
-                </div>
+                <img src="{% static 'core/trackline-logo.svg' %}" alt="Trackline" class="relative h-20 w-20 rounded-3xl shadow-2xl transform hover:scale-110 transition-transform duration-300" />
             </div>
         </div>
         
         <h2 id="portal-title" class="text-center text-4xl font-black text-white tracking-tight mb-3">
-            Multi-Tenant Admin
+            <span style="background: linear-gradient(135deg, #93c5fd, #c4b5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Trackline</span> Admin
         </h2>
         <p id="portal-subtitle" class="text-center text-base text-slate-400 font-medium">
             Sign in to manage tenant organizations securely
