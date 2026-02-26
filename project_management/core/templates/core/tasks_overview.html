@@ -277,28 +277,28 @@
   <table class="tasks-table">
     <thead>
       <tr>
-        <th id="col-id" class="sortable">ID <span id="id-sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
-        <th>Task Title</th>
-        <th>Project</th>
-        <th>Status</th>
-        <th>Priority</th>
-        <th>Assigned To</th>
-        <th>Reporter</th>
-        <th>Due Date</th>
-        <th>Created</th>
+        <th class="sortable" data-type="number">ID <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
+        <th class="sortable" data-type="string">Task Title <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
+        <th class="sortable" data-type="string">Project <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
+        <th class="sortable" data-type="string">Status <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
+        <th class="sortable" data-type="string">Priority <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
+        <th class="sortable" data-type="string">Assigned To <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
+        <th class="sortable" data-type="string">Reporter <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
+        <th class="sortable" data-type="date">Due Date <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
+        <th class="sortable" data-type="date">Created <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
       </tr>
     </thead>
     <tbody>
       {% for task in tasks %}
       <tr>
-        <td><strong>#{{ task.id }}</strong></td>
-        <td>
+        <td data-sort-value="{{ task.id }}"><strong>#{{ task.id }}</strong></td>
+        <td data-sort-value="{{ task.title|default:''|lower }}">
           <a href="{% url 'task_detail' task.id %}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">
             {{ task.title }}
           </a>
         </td>
-        <td>{{ task.project_name|default:"No Project" }}</td>
-        <td>
+        <td data-sort-value="{{ task.project_name|default:''|lower }}">{{ task.project_name|default:"No Project" }}</td>
+        <td data-sort-value="{{ task.status|default:''|lower }}">
           {% if task.status == 'Completed' or task.status == 'Closed' %}
             <span class="badge badge-completed">{{ task.status }}</span>
           {% elif task.status == 'In Progress' %}
@@ -309,13 +309,13 @@
             <span class="badge badge-closed">{{ task.status }}</span>
           {% endif %}
         </td>
-        <td>
+        <td data-sort-value="{{ task.priority|default:''|lower }}">
           <span class="priority-{{ task.priority|lower }}">{{ task.priority }}</span>
         </td>
-        <td>{{ task.assigned_name|default:"Unassigned" }}</td>
-        <td>{{ task.reporter_name|default:"—" }}</td>
-        <td>{{ task.due_date|date:"M d, Y"|default:"—" }}</td>
-        <td>{{ task.created_at|date:"M d, Y" }}</td>
+        <td data-sort-value="{{ task.assigned_name|default:''|lower }}">{{ task.assigned_name|default:"Unassigned" }}</td>
+        <td data-sort-value="{{ task.reporter_name|default:''|lower }}">{{ task.reporter_name|default:"—" }}</td>
+        <td data-sort-value="{{ task.due_date|date:'Y-m-d' }}">{{ task.due_date|date:"M d, Y"|default:"—" }}</td>
+        <td data-sort-value="{{ task.created_at|date:'Y-m-d' }}">{{ task.created_at|date:"M d, Y" }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -334,36 +334,67 @@
 
 <script>
   (function(){
-    function qs(sel){ return document.querySelector(sel); }
-    function qsa(sel){ return Array.from(document.querySelectorAll(sel)); }
-    var th = qs('#col-id');
-    var tbody = qs('.tasks-table tbody');
-    if(!th || !tbody) return;
-    th.style.cursor = 'pointer';
-    var asc = true;
-    var indicator = qs('#id-sort-indicator');
-    function getRowId(row){
-      var cell = row.querySelector('td');
-      if(!cell) return 0;
-      var txt = cell.innerText || cell.textContent || '';
-      return parseInt(txt.replace(/[^0-9]/g,''),10) || 0;
+    var table = document.querySelector('.tasks-table');
+    if(!table) return;
+    var thead = table.tHead || table.querySelector('thead');
+    var tbody = table.tBodies[0];
+    if(!thead || !tbody) return;
+
+    function parseValue(cell, type){
+      if(!cell) return '';
+      var v = cell.getAttribute('data-sort-value');
+      if(v === null || v === undefined) v = (cell.textContent || '').trim();
+      if(type === 'number'){
+        return parseFloat(v) || 0;
+      }
+      if(type === 'date'){
+        // if ISO-like (YYYY-MM-DD) parse directly, else fallback to Date
+        if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(v)){
+          return new Date(v).getTime() || 0;
+        }
+        var d = Date.parse(v);
+        return isNaN(d) ? 0 : d;
+      }
+      return (v || '').toString().toLowerCase();
     }
-    function sortRows(){
-      var rows = qsa('.tasks-table tbody tr');
-      rows.sort(function(a,b){
-        var A = getRowId(a);
-        var B = getRowId(b);
-        return asc ? (A - B) : (B - A);
+
+    function clearIndicators(){
+      thead.querySelectorAll('.sort-indicator').forEach(function(s){ s.textContent = '↕'; });
+    }
+
+    Array.from(thead.querySelectorAll('th.sortable')).forEach(function(th, colIndex){
+      th.style.cursor = 'pointer';
+      th.dataset.asc = 'false';
+      th.addEventListener('click', function(){
+        var type = th.getAttribute('data-type') || 'string';
+        var asc = th.dataset.asc === 'true';
+        // toggle
+        asc = !asc;
+        // reset others
+        thead.querySelectorAll('th.sortable').forEach(function(other){ if(other !== th) other.dataset.asc = 'false'; });
+        th.dataset.asc = asc.toString();
+        // collect rows
+        var rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort(function(a,b){
+          var aCell = a.children[colIndex];
+          var bCell = b.children[colIndex];
+          var A = parseValue(aCell, type);
+          var B = parseValue(bCell, type);
+          if(type === 'number' || type === 'date'){
+            return asc ? (A - B) : (B - A);
+          }
+          // string compare
+          if(A < B) return asc ? -1 : 1;
+          if(A > B) return asc ? 1 : -1;
+          return 0;
+        });
+        // append in new order
+        rows.forEach(function(r){ tbody.appendChild(r); });
+        clearIndicators();
+        var indicator = th.querySelector('.sort-indicator');
+        if(indicator) indicator.textContent = asc ? '↑' : '↓';
       });
-      rows.forEach(function(r){ tbody.appendChild(r); });
-      if(indicator) indicator.textContent = asc ? '↑' : '↓';
-    }
-    th.addEventListener('click', function(e){
-      asc = !asc; // toggle then sort
-      sortRows();
     });
-    // initialize: show current order indicator (assume descending list by id is typical)
-    if(indicator) indicator.textContent = '↕';
   })();
 </script>
 
