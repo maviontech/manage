@@ -1908,7 +1908,9 @@
 
   <!-- Notifications System -->
   <script>
-  let notificationsDropdownOpen = false;
+  // Make dropdown state globally accessible
+  window.notificationsDropdownOpen = false;
+  let notificationsDropdownOpen = window.notificationsDropdownOpen;
 
   // Load notification count on page load
   document.addEventListener('DOMContentLoaded', function() {
@@ -1923,6 +1925,7 @@
       const notifBtn = document.getElementById('notifications');
       if (dropdown && !dropdown.contains(e.target) && !notifBtn.contains(e.target)) {
         dropdown.style.display = 'none';
+        window.notificationsDropdownOpen = false;
         notificationsDropdownOpen = false;
       }
     });
@@ -1950,7 +1953,8 @@
     const dropdown = document.getElementById('notifications-dropdown');
     if (!dropdown) return;
     
-    notificationsDropdownOpen = !notificationsDropdownOpen;
+    window.notificationsDropdownOpen = !window.notificationsDropdownOpen;
+    notificationsDropdownOpen = window.notificationsDropdownOpen;
     
     if (notificationsDropdownOpen) {
       dropdown.style.display = 'block';
@@ -1960,7 +1964,8 @@
     }
   }
 
-  function loadNotificationsPreview() {
+  // Make loadNotificationsPreview globally accessible
+  window.loadNotificationsPreview = function loadNotificationsPreview() {
     const container = document.getElementById('notifications-list');
     if (!container) return;
     

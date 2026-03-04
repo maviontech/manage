@@ -6,6 +6,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.http import HttpResponseForbidden, JsonResponse
 import pymysql
+import secrets
 from .rbac import has_permission, require_permission
 from .auth import hash_password, check_password
 from django.utils import timezone
@@ -183,20 +184,40 @@ def password_reset_request(request):
         if not row:
             # Don't reveal whether user exists
             messages.success(request, "If that email exists, we sent a reset link.")
+            cur.close()
+            conn.close()
             return redirect('password_reset_request')
         user_id = row['id']
 
         # create token
-        token = tp.generate_token()
+        token = secrets.token_urlsafe(32)
         expires_at = timezone.now() + timedelta(hours=1)
         cur.execute("INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (%s,%s,%s)", (user_id, token, expires_at))
-        # TODO: send email with link - put tenant's domain/url
+        conn.commit()
+        
+        # Build reset link
         reset_link = request.build_absolute_uri(reverse('password_reset_confirm') + f"?token={token}")
-        # Use your email send function, for now print/log
-        print("[reset] Password reset link for", email, reset_link)
+        
+        # Send email
+        try:
+            from django.core.mail import send_mail
+            from django.conf import settings
+            
+            send_mail(
+                subject='Password Reset Request - Trackline',
+                message=f'Click the link below to reset your password:\n\n{reset_link}\n\nThis link will expire in 1 hour.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            print(f"[reset] Password reset email sent to {email}")
+        except Exception as e:
+            print(f"[reset] Failed to send email: {e}")
+            print(f"[reset] Password reset link for {email}: {reset_link}")
+        
         cur.close()
         conn.close()
-        messages.success(request, "If that email exists, we sent a reset link (check logs).")
+        messages.success(request, "If that email exists, we sent a reset link.")
         return redirect('password_reset_request')
     return render(request, 'core/password_reset_request.html', {})
 
@@ -216,18 +237,25 @@ def password_reset_confirm(request):
         row = cur.fetchone()
         if not row:
             messages.error(request, "Invalid token.")
+            cur.close()
+            conn.close()
             return redirect('password_reset_request')
         if row['used']:
             messages.error(request, "Token already used.")
+            cur.close()
+            conn.close()
             return redirect('password_reset_request')
         if row['expires_at'] < timezone.now():
             messages.error(request, "Token expired.")
+            cur.close()
+            conn.close()
             return redirect('password_reset_request')
 
         # update password
         new_hash = hash_password(new_pw)
         cur.execute("UPDATE users SET password_hash=%s WHERE id=%s", (new_hash, row['user_id']))
         cur.execute("UPDATE password_reset_tokens SET used=1 WHERE id=%s", (row['id'],))
+        conn.commit()
         cur.close()
         conn.close()
         messages.success(request, "Password reset successful. Please login.")

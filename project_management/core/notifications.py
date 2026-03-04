@@ -15,7 +15,7 @@ class NotificationManager:
     """Manages sending and storing notifications."""
 
     @staticmethod
-    def send_notification(tenant_id, user_id, title, message, notification_type='info', link=None, created_by_id=None):
+    def send_notification(tenant_id, user_id, title, message, notification_type='info', link=None, created_by_id=None, request=None, conn=None):
         """
         Send a real-time notification to a specific user and save to database.
         
@@ -27,6 +27,8 @@ class NotificationManager:
             notification_type (str): Type of notification (info, success, warning, error, task, project, team)
             link (str): Optional URL link for the notification
             created_by_id (int): ID of user who triggered the notification
+            request: Optional Django request object (preferred for database connection)
+            conn: Optional existing database connection
             
         Returns:
             dict: Notification data with ID
@@ -41,21 +43,28 @@ class NotificationManager:
 
             # Try to save notification to tenant DB; if this fails, log and continue to broadcast
             try:
-                conn = get_tenant_conn(tenant_key=tenant_id)
+                # Use provided connection, or get from request, or try tenant_key
                 if conn:
+                    db_conn = conn
+                elif request:
+                    db_conn = get_tenant_conn(request)
+                else:
+                    db_
+                if db_conn:
                     # Save notification to database
                     exec_sql(
-                        conn,
+                        db_conn,
                         """
                         INSERT INTO notifications (user_id, title, message, type, link, is_read, created_at)
                         VALUES (%s, %s, %s, %s, %s, 0, %s)
                         """,
                         [user_id, title, message, notification_type, link, now],
-                        fetch=False
+                        fetch=False,
+                        commit=True
                     )
                     # Attempt to fetch last inserted id (works on some connectors)
                     try:
-                        notification_id_result = exec_sql(conn, "SELECT LAST_INSERT_ID() as id", [])
+                        notification_id_result = exec_sql(db_conn, "SELECT LAST_INSERT_ID() as id", [])
                         notification_id = notification_id_result[0]['id'] if notification_id_result else None
                     except Exception:
                         notification_id = None
@@ -103,7 +112,7 @@ class NotificationManager:
             return None
 
     @staticmethod
-    def send_bulk_notification(tenant_id, user_ids, title, message, notification_type='info', link=None, created_by_id=None):
+    def send_bulk_notification(tenant_id, user_ids, title, message, notification_type='info', link=None, created_by_id=None, request=None, conn=None):
         """
         Send notification to multiple users.
         
@@ -115,6 +124,8 @@ class NotificationManager:
             notification_type (str): Type of notification
             link (str): Optional URL link
             created_by_id (int): ID of user who triggered the notification
+            request: Optional Django request object
+            conn: Optional existing database connection
             
         Returns:
             list: List of notification data
@@ -128,7 +139,9 @@ class NotificationManager:
                 message=message,
                 notification_type=notification_type,
                 link=link,
-                created_by_id=created_by_id
+                created_by_id=created_by_id,
+                request=request,
+                conn=conn
             )
             if result:
                 results.append(result)

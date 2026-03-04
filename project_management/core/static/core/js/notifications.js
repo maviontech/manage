@@ -211,6 +211,14 @@
             // 5. Show in-page popup notification (only if user is on the website)
             showToastNotification(data);
             
+            // 6. Refresh the notification dropdown if it's currently open
+            if (window.notificationsDropdownOpen && typeof window.loadNotificationsPreview === 'function') {
+                console.log('🔄 Refreshing notification dropdown...');
+                setTimeout(() => {
+                    window.loadNotificationsPreview();
+                }, 500); // Small delay to ensure DB has been updated
+            }
+            
             console.log('✅ All notification handlers triggered');
         } catch (error) {
             console.error('❌ Error in handleSystemNotification:', error);
@@ -317,11 +325,16 @@
             
             // Handle notification click - focus window and navigate
             notification.onclick = function(event) {
+                console.log('Desktop notification clicked, link:', link);
                 event.preventDefault(); // Prevent default browser behavior
                 window.focus(); // Focus the browser window
                 
                 if (link && link !== 'null' && link !== '' && link !== 'undefined') {
+                    console.log('Navigating to:', link);
                     window.location.href = link;
+                } else {
+                    // If no link, go to notifications page
+                    window.location.href = '/notifications/';
                 }
                 
                 notification.close();
@@ -408,7 +421,15 @@
         if (data.link && data.link !== 'null' && data.link !== '') {
             notification.style.cursor = 'pointer';
             notification.addEventListener('click', function(e) {
+                // Don't redirect if clicking the close button
                 if (e.target.closest('.popup-notification-close')) return;
+                
+                // Prevent default and stop propagation
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Navigate to the link
+                console.log('Navigating to:', data.link);
                 window.location.href = data.link;
             });
         }

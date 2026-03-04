@@ -143,13 +143,18 @@ USE_I18N = True
 USE_TZ = True
 
 # EMAIL CONFIG
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.example.com"
-EMAIL_PORT = 587
-EMAIL_HOST_USER = "smtp-user"
-EMAIL_HOST_PASSWORD = "smtp-pass"
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = "no-reply@example.com"
+# For development: prints emails to console
+# For production: configure SMTP settings below
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# SMTP Configuration (uncomment and configure for production)
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_HOST = "smtp.gmail.com"  # or your SMTP server
+# EMAIL_PORT = 587
+# EMAIL_HOST_USER = "your-email@example.com"
+# EMAIL_HOST_PASSWORD = "your-app-password"
+# EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = "no-reply@trackline.com"
 
 MYSQL_ADMIN_HOST = '127.0.0.1'
 MYSQL_ADMIN_PORT = 3306

@@ -419,11 +419,8 @@ function renderNotifications() {
     container.innerHTML = `
       <div class="empty-state">
         <i class="fa fa-bell-slash"></i>
-        <h3>No unread notifications</h3>
+        <h3>No notifications</h3>
         <p>You're all caught up! When you receive new notifications, they will appear here.</p>
-        <p style="font-size: 12px; color: #9ca3af; margin-top: 12px;">
-          <i class="fa fa-info-circle"></i> Read notifications are automatically hidden
-        </p>
       </div>
     `;
     return;
@@ -488,13 +485,6 @@ function getTimeAgo(dateString) {
 }
 
 function handleNotificationClick(id, link) {
-  // Immediately remove notification from UI for instant feedback
-  const notifElement = document.querySelector(`[onclick*="handleNotificationClick(${id}"]`);
-  if (notifElement) {
-    notifElement.style.opacity = '0.5';
-    notifElement.style.pointerEvents = 'none';
-  }
-  
   markAsRead(id);
   if (link && link !== 'null' && link !== '') {
     setTimeout(() => {
@@ -515,18 +505,17 @@ function markAsRead(id) {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      // Remove the notification from the list with animation
+      // Update the notification in the list (mark as read visually)
       const notifElement = document.querySelector(`[onclick*="handleNotificationClick(${id}"]`);
       if (notifElement) {
-        notifElement.style.transition = 'all 0.3s ease';
-        notifElement.style.opacity = '0';
-        notifElement.style.transform = 'translateX(20px)';
-        setTimeout(() => {
-          loadNotifications();
-        }, 300);
-      } else {
-        loadNotifications();
+        notifElement.classList.remove('unread');
+        const badge = notifElement.querySelector('.unread-badge');
+        if (badge) badge.remove();
+        const markReadBtn = notifElement.querySelector('.notification-btn[title="Mark as read"]');
+        if (markReadBtn) markReadBtn.remove();
       }
+      // Reload to update badge count
+      loadNotifications();
     }
   })
   .catch(error => console.error('Error:', error));

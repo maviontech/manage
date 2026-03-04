@@ -105,6 +105,8 @@ def create_task_view(request):
     Creates a new task and saves to DB. Supports member/team polymorphic assignment.
     Requires `assigned_type` column in `tasks` table (ENUM('member','team')).
     """
+    from .notifications import NotificationManager
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
 
@@ -120,6 +122,7 @@ def create_task_view(request):
         status = data.get("status") or "Open"
         work_type = data.get("work_type") or "Task"  # NEW: Get work type from form
         created_by = request.session.get("user_id")
+        tenant_id = request.session.get("tenant_id")
         
         # Capture system information
         si_browser = data.get("si_browser") or None
@@ -171,22 +174,22 @@ def create_task_view(request):
         )
 
         # Create notification if task is assigned to a member
-        if assigned_type == "member" and assigned_to:
+        if assigned_type == "member" and assigned_to and str(assigned_to) != str(created_by):
             # Get creator name
             cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (created_by,))
             creator = cur.fetchone()
             creator_name = creator['name'] if creator else 'Someone'
             
-            cur.execute("""
-                INSERT INTO notifications (user_id, title, message, type, link)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (
-                assigned_to,
-                "New Task Assigned",
-                f"{creator_name} assigned you to '{title}'",
-                "task",
-                f"/tasks/{task_id}/view/"
-            ))
+            NotificationManager.send_notification(
+                tenant_id=tenant_id,
+                user_id=int(assigned_to),
+                title="New Task Assigned",
+                message=f"{creator_name} assigned you to '{title}'",
+                notification_type="task",
+                link=f"/tasks/{task_id}/view/",
+                created_by_id=created_by,
+                request=request
+            )
         
         # Create notification for team members if assigned to a team
         elif assigned_type == "team" and assigned_to:
@@ -199,16 +202,17 @@ def create_task_view(request):
             team_members = cur.fetchall()
             
             for member in team_members:
-                cur.execute("""
-                    INSERT INTO notifications (user_id, title, message, type, link)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (
-                    member['member_id'],
-                    "New Team Task Assigned",
-                    f"{creator_name} assigned a task to your team: '{title}'",
-                    "task",
-                    f"/tasks/{task_id}/view/"
-                ))
+                if str(member['member_id']) != str(created_by):
+                    NotificationManager.send_notification(
+                        tenant_id=tenant_id,
+                        user_id=member['member_id'],
+                        title="New Team Task Assigned",
+                        message=f"{creator_name} assigned a task to your team: '{title}'",
+                        notification_type="task",
+                        link=f"/tasks/{task_id}/view/",
+                        created_by_id=created_by,
+                        request=request
+                    )
 
         # Handle file attachments using helper function
         save_task_attachments(request, task_id, cur, created_by)
@@ -603,11 +607,14 @@ def board_data_api(request):
 @require_POST
 @require_permission('tasks.assign')
 def assign_task_api(request):
+    from .notifications import NotificationManager
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
     task_id = request.POST.get("task_id")
     assignee = request.POST.get("assignee")  # "member:23" or "team:5"
     assigned_by = request.session.get("user_id")
+    tenant_id = request.session.get("tenant_id")
 
     if not task_id or not assignee:
         return HttpResponseBadRequest("Missing parameters")
@@ -633,22 +640,22 @@ def assign_task_api(request):
     )
     
     # Create notification for assigned member/team
-    if assigned_type == "member":
+    if assigned_type == "member" and str(assigned_to) != str(assigned_by):
         # Get assigner name
         cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (assigned_by,))
         assigner = cur.fetchone()
         assigner_name = assigner['name'] if assigner else 'Someone'
         
-        cur.execute("""
-            INSERT INTO notifications (user_id, title, message, type, link)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (
-            assigned_to,
-            "Task Assigned to You",
-            f"{assigner_name} assigned you to '{task_title}'",
-            "task",
-            f"/tasks/{task_id}/view/"
-        ))
+        NotificationManager.send_notification(
+            tenant_id=tenant_id,
+            user_id=int(assigned_to),
+            title="Task Assigned to You",
+            message=f"{assigner_name} assigned you to '{task_title}'",
+            notification_type="task",
+            link=f"/tasks/{task_id}/view/",
+            created_by_id=assigned_by,
+            request=request
+        )
     
     elif assigned_type == "team":
         cur.execute("SELECT CONCAT(first_name, ' ', last_name) as name FROM members WHERE id=%s", (assigned_by,))
@@ -660,16 +667,17 @@ def assign_task_api(request):
         team_members = cur.fetchall()
         
         for member in team_members:
-            cur.execute("""
-                INSERT INTO notifications (user_id, title, message, type, link)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (
-                member['member_id'],
-                "Team Task Assignment",
-                f"{assigner_name} assigned a task to your team: '{task_title}'",
-                "task",
-                f"/tasks/{task_id}/view/"
-            ))
+            if str(member['member_id']) != str(assigned_by):
+                NotificationManager.send_notification(
+                    tenant_id=tenant_id,
+                    user_id=member['member_id'],
+                    title="Team Task Assignment",
+                    message=f"{assigner_name} assigned a task to your team: '{task_title}'",
+                    notification_type="task",
+                    link=f"/tasks/{task_id}/view/",
+                    created_by_id=assigned_by,
+                    request=request
+                )
     
     conn.commit()
     cur.close()
@@ -683,6 +691,7 @@ def assign_task_api(request):
 @require_permission('tasks.edit')
 def api_update_status(request):
     """Called from Kanban drag-drop to update status"""
+    from .notifications import NotificationManager
 
     conn = get_tenant_conn(request)
     cur = conn.cursor()
@@ -690,13 +699,14 @@ def api_update_status(request):
     task_id = request.POST.get("task_id")
     new_status = request.POST.get("status")
     user_id = request.session.get("user_id")
+    tenant_id = request.session.get("tenant_id")
 
     # 1. CHECK REQUIRED PARAMS
     if not task_id or not new_status:
         return HttpResponseBadRequest("Missing parameters")
 
-    # 2. SET CLOSURE DATE ONLY WHEN STATUS BECOMES 'Closed'
-    if new_status == "Closed":
+    # 2. SET CLOSURE DATE ONLY WHEN STATUS BECOMES 'Closed' or 'Finished'
+    if new_status in ["Closed", "Finished"]:
         cur.execute("""
             UPDATE tasks
             SET status=%s,
@@ -721,7 +731,7 @@ def api_update_status(request):
     """, ("task", task_id, f"status_changed:{new_status}", user_id))
 
     # 5. CREATE NOTIFICATION WHEN TASK IS COMPLETED
-    if new_status == "Closed" or new_status == "Completed":
+    if new_status in ["Closed", "Completed", "Finished"]:
         # Get task details and creator
         cur.execute("""
             SELECT t.title, t.created_by, t.assigned_to, t.assigned_type,
@@ -738,29 +748,29 @@ def api_update_status(request):
             
             # Notify task creator if they're not the one who completed it
             if task_info['created_by'] and str(task_info['created_by']) != str(user_id):
-                cur.execute("""
-                    INSERT INTO notifications (user_id, title, message, type, link)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (
-                    task_info['created_by'],
-                    "Task Completed",
-                    f"{updater_name} completed task '{task_title}'",
-                    "success",
-                    f"/tasks/{task_id}/view/"
-                ))
+                NotificationManager.send_notification(
+                    tenant_id=tenant_id,
+                    user_id=task_info['created_by'],
+                    title="Task Completed",
+                    message=f"{updater_name} completed task '{task_title}'",
+                    notification_type="success",
+                    link=f"/tasks/{task_id}/view/",
+                    created_by_id=user_id,
+                    request=request
+                )
             
             # Notify assigned member if they're not the one who completed it
             if task_info['assigned_type'] == 'member' and task_info['assigned_to'] and str(task_info['assigned_to']) != str(user_id):
-                cur.execute("""
-                    INSERT INTO notifications (user_id, title, message, type, link)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (
-                    task_info['assigned_to'],
-                    "Task Completed",
-                    f"{updater_name} marked '{task_title}' as complete",
-                    "success",
-                    f"/tasks/{task_id}/view/"
-                ))
+                NotificationManager.send_notification(
+                    tenant_id=tenant_id,
+                    user_id=task_info['assigned_to'],
+                    title="Task Completed",
+                    message=f"{updater_name} marked '{task_title}' as complete",
+                    notification_type="success",
+                    link=f"/tasks/{task_id}/view/",
+                    created_by_id=user_id,
+                    request=request
+                )
 
     # 6. SAVE CHANGES
     conn.commit()
@@ -1904,6 +1914,7 @@ def api_task_update(request):
                         notification_type='task',
                         link=f"/tasks/{tid}/view/",
                         created_by_id=cur_user,
+                        request=request
                     )
         except Exception:
             # don't block API response if notification fails
@@ -2088,6 +2099,7 @@ def edit_task_view(request, task_id):
                             notification_type='task',
                             link=f"/tasks/{task_id}/view/",
                             created_by_id=cur_user,
+                            request=request
                         )
         except Exception:
             pass
@@ -3505,6 +3517,7 @@ def task_page_view(request, task_id):
 def update_task_status(request, task_id):
     '''Update task status via AJAX'''
     import json
+    from .notifications import NotificationManager
     
     try:
         data = json.loads(request.body)
@@ -3516,8 +3529,14 @@ def update_task_status(request, task_id):
         conn = get_tenant_conn(request)
         cur = conn.cursor()
         
-        # Get old status
-        cur.execute('SELECT status FROM tasks WHERE id = %s', (task_id,))
+        # Get old status and task details
+        cur.execute('''
+            SELECT t.status, t.title, t.created_by, t.assigned_to, t.assigned_type,
+                   CONCAT(m.first_name, ' ', m.last_name) as updater_name
+            FROM tasks t
+            LEFT JOIN members m ON m.id = %s
+            WHERE t.id = %s
+        ''', (request.session.get('user_id'), task_id))
         task = cur.fetchone()
         old_status = task['status'] if task else None
         
@@ -3530,11 +3549,43 @@ def update_task_status(request, task_id):
         
         # Log activity
         user_id = request.session.get('user_id')
+        tenant_id = request.session.get('tenant_id')
         cur.execute('''
             INSERT INTO activity_log 
             (entity_type, entity_id, action, performed_by, timestamp)
             VALUES ('task', %s, %s, %s, NOW())
         ''', (task_id, f'Changed status from {old_status} to {new_status}', user_id))
+        
+        # Send notification when task is completed
+        if (new_status in ["Closed", "Completed", "Finished"]) and task:
+            updater_name = task['updater_name'] or 'Someone'
+            task_title = task['title'] or 'A task'
+            
+            # Notify task creator if they're not the one who completed it
+            if task['created_by'] and str(task['created_by']) != str(user_id):
+                NotificationManager.send_notification(
+                    tenant_id=tenant_id,
+                    user_id=task['created_by'],
+                    title="Task Completed",
+                    message=f"{updater_name} completed task '{task_title}'",
+                    notification_type="success",
+                    link=f"/tasks/{task_id}/view/",
+                    created_by_id=user_id,
+                    request=request
+                )
+            
+            # Notify assigned member if they're not the one who completed it
+            if task['assigned_type'] == 'member' and task['assigned_to'] and str(task['assigned_to']) != str(user_id):
+                NotificationManager.send_notification(
+                    tenant_id=tenant_id,
+                    user_id=task['assigned_to'],
+                    title="Task Completed",
+                    message=f"{updater_name} marked '{task_title}' as complete",
+                    notification_type="success",
+                    link=f"/tasks/{task_id}/view/",
+                    created_by_id=user_id,
+                    request=request
+                )
         
         conn.commit()
         cur.close()
@@ -3767,6 +3818,7 @@ def upload_task_attachment(request, task_id):
 def assign_member_to_task(request, task_id):
     '''Assign a member to task via AJAX'''
     import json
+    from .notifications import NotificationManager
     
     try:
         data = json.loads(request.body)
@@ -3778,6 +3830,18 @@ def assign_member_to_task(request, task_id):
         conn = get_tenant_conn(request)
         cur = conn.cursor()
         
+        # Get task details and assigner name
+        user_id = request.session.get('user_id')
+        tenant_id = request.session.get('tenant_id')
+        
+        cur.execute('''
+            SELECT t.title, CONCAT(m.first_name, ' ', m.last_name) as assigner_name
+            FROM tasks t
+            LEFT JOIN members m ON m.id = %s
+            WHERE t.id = %s
+        ''', (user_id, task_id))
+        task_info = cur.fetchone()
+        
         # Update task with member assignment
         cur.execute('''
             UPDATE tasks 
@@ -3786,6 +3850,7 @@ def assign_member_to_task(request, task_id):
                 updated_at = NOW()
             WHERE id = %s
         ''', (member_id, task_id))
+        
         # Log activity: assignment
         try:
             performed_by = request.session.get('user_id')
@@ -3795,6 +3860,22 @@ def assign_member_to_task(request, task_id):
             )
         except Exception:
             pass
+        
+        # Send notification to assigned member
+        if task_info and str(member_id) != str(user_id):
+            assigner_name = task_info['assigner_name'] or 'Someone'
+            task_title = task_info['title'] or 'A task'
+            
+            NotificationManager.send_notification(
+                tenant_id=tenant_id,
+                user_id=member_id,
+                title="Task Assigned",
+                message=f"{assigner_name} assigned you to task '{task_title}'",
+                notification_type="info",
+                link=f"/tasks/{task_id}/view/",
+                created_by_id=user_id,
+                request=request
+            )
         
         conn.commit()
         cur.close()
