@@ -730,8 +730,8 @@ def api_update_status(request):
         VALUES (%s, %s, %s, %s)
     """, ("task", task_id, f"status_changed:{new_status}", user_id))
 
-    # 5. CREATE NOTIFICATION WHEN TASK IS COMPLETED
-    if new_status in ["Closed", "Completed", "Finished"]:
+    # 5. CREATE NOTIFICATION WHEN TASK IS COMPLETED (NOT for "Closed" - only for "Finished" or "Completed")
+    if new_status in ["Completed", "Finished"]:
         # Get task details and creator
         cur.execute("""
             SELECT t.title, t.created_by, t.assigned_to, t.assigned_type,
@@ -1887,10 +1887,11 @@ def api_task_update(request):
 
         conn.commit()
 
-        # If status changed to a closed/finished state and the closer is the assignee,
+        # If status changed to finished/completed state and the closer is the assignee,
         # send a real-time pop notification to the assigner (created_by) only.
+        # NOTE: "Closed" status does NOT trigger notifications (for tester verification)
         try:
-            closed_states = ('Closed', 'Finished', 'Completed')
+            finished_states = ('Finished', 'Completed')
             new_status = status
             # determine current user id (member or user session)
             cur_user = request.session.get('user_id') or request.session.get('member_id')
@@ -1900,7 +1901,7 @@ def api_task_update(request):
             creator_id = existing.get('created_by') if isinstance(existing, dict) else None
             task_title = existing.get('title') if isinstance(existing, dict) else None
 
-            if new_status and new_status in closed_states and assigned_type == 'member' and assigned_to and cur_user and int(assigned_to) == int(cur_user):
+            if new_status and new_status in finished_states and assigned_type == 'member' and assigned_to and cur_user and int(assigned_to) == int(cur_user):
                 # Only notify if creator exists and is different from the closer
                 if creator_id and int(creator_id) != int(cur_user):
                     tenant_key = request.session.get('tenant_id') or resolve_tenant_key_from_request(request)
@@ -2078,11 +2079,12 @@ def edit_task_view(request, task_id):
 
         conn.commit()
 
-        # If status moved to closed and the closer is the assignee, notify the creator
+        # If status moved to finished/completed and the closer is the assignee, notify the creator
+        # NOTE: "Closed" status does NOT trigger notifications (for tester verification)
         try:
-            closed_states = ('Closed', 'Finished', 'Completed')
+            finished_states = ('Finished', 'Completed')
             cur_user = request.session.get('user_id') or request.session.get('member_id')
-            if status in closed_states and _existing:
+            if status in finished_states and _existing:
                 assigned_type = _existing.get('assigned_type') if isinstance(_existing, dict) else None
                 assigned_to = _existing.get('assigned_to') if isinstance(_existing, dict) else None
                 creator_id = _existing.get('created_by') if isinstance(_existing, dict) else None
@@ -3556,8 +3558,8 @@ def update_task_status(request, task_id):
             VALUES ('task', %s, %s, %s, NOW())
         ''', (task_id, f'Changed status from {old_status} to {new_status}', user_id))
         
-        # Send notification when task is completed
-        if (new_status in ["Closed", "Completed", "Finished"]) and task:
+        # Send notification when task is completed (NOT for "Closed" - only for "Finished" or "Completed")
+        if (new_status in ["Completed", "Finished"]) and task:
             updater_name = task['updater_name'] or 'Someone'
             task_title = task['title'] or 'A task'
             
