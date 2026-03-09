@@ -177,6 +177,119 @@
     font-weight: 500;
 }
 
+/* Enhanced Description Styling */
+.description-item {
+    background: linear-gradient(135deg, #fefcff 0%, #f8fafc 100%);
+    border-left: 4px solid #3b82f6;
+}
+
+.description-content {
+    position: relative;
+}
+
+.formatted-description {
+    line-height: 1.8;
+    color: var(--theme-text);
+    max-height: 250px;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.formatted-description.expanded {
+    max-height: none;
+}
+
+.formatted-description p {
+    margin-bottom: 1rem;
+}
+
+.formatted-description strong,
+.formatted-description b {
+    color: #1e40af;
+    font-weight: 700;
+    font-size: 1.05em;
+    display: inline-block;
+    margin-top: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.formatted-description ul,
+.formatted-description ol {
+    margin: 0.75rem 0 1rem 1.5rem;
+    padding-left: 0.5rem;
+}
+
+.formatted-description li {
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+    padding-left: 0.25rem;
+}
+
+.formatted-description ul li::marker {
+    color: #3b82f6;
+    font-size: 1.2em;
+}
+
+.formatted-description ol li::marker {
+    color: #3b82f6;
+    font-weight: 700;
+}
+
+.formatted-description code {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #dc2626;
+}
+
+.read-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.read-more-btn:hover {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.chevron-icon {
+    transition: transform 0.3s ease;
+}
+
+.read-more-btn.expanded .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.description-fade {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, transparent, var(--theme-input-bg));
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.description-fade.hidden {
+    opacity: 0;
+}
+
 /* Edit Button - Enhanced */
 .edit-btn {
     display: inline-flex;
@@ -361,11 +474,26 @@ hr {
 
         <div class="detail-section">
 
-            <div class="detail-item">
-                <div class="detail-label">Description</div>
-                <div class="detail-value">
+            <div class="detail-item description-item">
+                <div class="detail-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    Description
+                </div>
+                <div class="detail-value description-content" id="taskDescription">
                     {% if task.description %}
-                        {{ task.description }}
+                        <div class="formatted-description" id="descriptionText">{{ task.description }}</div>
+                        <button class="read-more-btn" id="readMoreBtn" style="display: none;">
+                            <span class="read-more-text">Read More</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron-icon">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
                     {% else %}
                         <span class="text-muted">No description provided.</span>
                     {% endif %}
@@ -373,10 +501,18 @@ hr {
             </div>
 
             <div class="detail-item">
-                <div class="detail-label">Due Date</div>
+                <div class="detail-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Due Date
+                </div>
                 <div class="detail-value">
                     {% if task.due_date %}
-                        {{ task.due_date }}
+                        <span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 6px; font-weight: 600;">{{ task.due_date }}</span>
                     {% else %}
                         <span class="text-muted">Not set</span>
                     {% endif %}
@@ -384,8 +520,16 @@ hr {
             </div>
 
             <div class="detail-item">
-                <div class="detail-label">Created At</div>
-                <div class="detail-value">{{ task.created_at }}</div>
+                <div class="detail-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Created At
+                </div>
+                <div class="detail-value">
+                    <span style="color: #64748b; font-weight: 500;">{{ task.created_at }}</span>
+                </div>
             </div>
 
         </div>
@@ -439,12 +583,110 @@ hr {
 
 <script>
 function closeTaskModal() {
-    window.location.href = '/tasks/my/';
+    // Go back to previous page with filters intact
+    window.history.back();
+}
+
+// Format description with markdown-like styling
+function formatDescription() {
+    const descElement = document.getElementById('descriptionText');
+    if (!descElement) return;
+    
+    let text = descElement.textContent;
+    
+    // Split by lines and process
+    let lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    let formattedHTML = '';
+    let inList = false;
+    
+    lines.forEach((line, index) => {
+        // Handle ** markers for headers/sections
+        if (line.includes('**') && line.includes(':**')) {
+            if (inList) {
+                formattedHTML += '</ul>';
+                inList = false;
+            }
+            // Extract text between ** markers
+            line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            formattedHTML += `<p>${line}</p>`;
+        }
+        // Handle bullet-like patterns (lines starting with keywords or dashes)
+        else if (line.match(/^[-•*]\s/) || (line.length < 100 && index > 0 && lines[index-1].includes(':**'))) {
+            if (!inList) {
+                formattedHTML += '<ul>';
+                inList = true;
+            }
+            line = line.replace(/^[-•*]\s/, '');
+            formattedHTML += `<li>${line}</li>`;
+        }
+        // Regular paragraphs
+        else {
+            if (inList) {
+                formattedHTML += '</ul>';
+                inList = false;
+            }
+            // Convert **text** to bold
+            line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // Convert `code` to code blocks
+            line = line.replace(/`(.+?)`/g, '<code>$1</code>');
+            formattedHTML += `<p>${line}</p>`;
+        }
+    });
+    
+    if (inList) {
+        formattedHTML += '</ul>';
+    }
+    
+    descElement.innerHTML = formattedHTML;
+    
+    // Check if read more button is needed
+    const readMoreBtn = document.getElementById('readMoreBtn');
+    if (readMoreBtn && descElement.scrollHeight > 250) {
+        readMoreBtn.style.display = 'inline-flex';
+        
+        // Add fade effect
+        const fade = document.createElement('div');
+        fade.className = 'description-fade';
+        fade.id = 'descriptionFade';
+        descElement.parentElement.style.position = 'relative';
+        descElement.parentElement.appendChild(fade);
+    }
+}
+
+// Toggle read more/less
+function toggleReadMore() {
+    const descElement = document.getElementById('descriptionText');
+    const readMoreBtn = document.getElementById('readMoreBtn');
+    const fade = document.getElementById('descriptionFade');
+    const readMoreText = readMoreBtn.querySelector('.read-more-text');
+    
+    if (descElement.classList.contains('expanded')) {
+        descElement.classList.remove('expanded');
+        readMoreBtn.classList.remove('expanded');
+        readMoreText.textContent = 'Read More';
+        if (fade) fade.classList.remove('hidden');
+        // Scroll back to description
+        descElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        descElement.classList.add('expanded');
+        readMoreBtn.classList.add('expanded');
+        readMoreText.textContent = 'Read Less';
+        if (fade) fade.classList.add('hidden');
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('taskDetailModal').style.display = 'flex';
     document.getElementById('modalBg').style.display = 'block';
+    
+    // Format the description
+    formatDescription();
+    
+    // Attach read more button handler
+    const readMoreBtn = document.getElementById('readMoreBtn');
+    if (readMoreBtn) {
+        readMoreBtn.addEventListener('click', toggleReadMore);
+    }
 });
 </script>
 

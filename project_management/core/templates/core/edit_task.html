@@ -371,8 +371,11 @@ select.form-control {
                     </svg>
                     Description
                 </label>
-                <textarea name="description" class="form-control" 
+                <textarea name="description" class="form-control" rows="8"
                           placeholder="Enter task description">{{ task.description }}</textarea>
+                <small class="form-text" style="color: #64748b; margin-top: 8px; display: block;">
+                    💡 <strong>Tip:</strong> Use <code>**text**</code> for bold sections, start lines with <code>-</code> for bullet points
+                </small>
             </div>
 
             <!-- Due Date -->
