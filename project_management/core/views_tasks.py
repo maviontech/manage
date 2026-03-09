@@ -406,11 +406,14 @@ def unassigned_tasks_view(request):
             t.assigned_type, 
             t.assigned_to,
             t.project_id,
+            t.created_by,
             p.name AS project_name,
-            sp.name AS subproject_name
+            sp.name AS subproject_name,
+            CONCAT(m.first_name, ' ', m.last_name) AS reporter_name
         FROM tasks t
         LEFT JOIN projects p ON p.id = t.project_id
         LEFT JOIN subprojects sp ON sp.id = t.subproject_id
+        LEFT JOIN members m ON t.created_by = m.id
         WHERE (t.assigned_to IS NULL OR t.assigned_to = '')
           AND t.status NOT IN ('Blocked', 'Closed')
           AND t.status IN ('Open', 'In Progress', 'Review', 'Pending', 'New')

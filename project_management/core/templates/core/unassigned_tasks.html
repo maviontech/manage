@@ -84,6 +84,7 @@
         <div class="col id-col">#</div>
         <div class="col title-col">Title</div>
         <div class="col project-col">Project / Subproject</div>
+        <div class="col reporter-col">Reported By</div>
         <div class="col priority-col">Priority</div>
         <div class="col due-col">Due</div>
         <div class="col action-col text-end">Action</div>
@@ -92,7 +93,7 @@
       <div id="unassignedList" class="tasks-list">
         {% comment %} rows will be present server-side too for SEO / noscript - JS will paginate/filter {% endcomment %}
         {% for t in tasks %}
-        <div class="task-row d-flex align-items-center mb-2" data-task-id="{{ t.id }}" data-title="{{ t.title|escapejs }}" data-desc="{{ t.description|default:''|escapejs }}" data-priority="{{ t.priority|default:'Normal' }}" data-project-id="{{ t.project_id|default:'' }}" data-project-name="{{ t.project_name|default:'' }}" data-status="{{ t.status|default:'Open' }}" data-due-date="{{ t.due_date|default:'' }}">
+        <div class="task-row d-flex align-items-center mb-2" data-task-id="{{ t.id }}" data-title="{{ t.title|escapejs }}" data-desc="{{ t.description|default:''|escapejs }}" data-priority="{{ t.priority|default:'Normal' }}" data-project-id="{{ t.project_id|default:'' }}" data-project-name="{{ t.project_name|default:'' }}" data-status="{{ t.status|default:'Open' }}" data-due-date="{{ t.due_date|default:'' }}" data-reporter="{{ t.reporter_name|default:''|escapejs }}">
           <div class="col id-col d-flex align-items-center">
             <input type="checkbox" class="task-select form-check-input me-2" data-task="{{ t.id }}">
             <span class="small text-muted">#{{ t.id }}</span>
@@ -109,6 +110,12 @@
             <div class="small text-muted">
               {% if t.project_name %}{{ t.project_name }}{% else %}<em>No project</em>{% endif %}
               {% if t.subproject_name %} &nbsp;•&nbsp; {{ t.subproject_name }}{% endif %}
+            </div>
+          </div>
+
+          <div class="col reporter-col">
+            <div class="small text-muted">
+              {% if t.reporter_name %}{{ t.reporter_name }}{% else %}<em>Unknown</em>{% endif %}
             </div>
           </div>
 
@@ -470,13 +477,18 @@
 }
 
 .tasks-table-header .title-col {
-  flex: 1 1 40%;
+  flex: 1 1 35%;
   min-width: 220px;
 }
 
 .tasks-table-header .project-col {
-  flex: 1 1 28%;
-  min-width: 180px;
+  flex: 1 1 22%;
+  min-width: 160px;
+}
+
+.tasks-table-header .reporter-col {
+  flex: 0 0 140px;
+  min-width: 140px;
 }
 
 .tasks-table-header .priority-col {
@@ -562,8 +574,15 @@
 }
 
 .task-row .project-col {
-  flex: 1 1 28%;
-  min-width: 180px;
+  flex: 1 1 22%;
+  min-width: 160px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.task-row .reporter-col {
+  flex: 0 0 140px;
+  min-width: 140px;
   color: #64748b;
   font-size: 0.9rem;
 }
@@ -953,6 +972,7 @@
   .task-row .id-col,
   .task-row .title-col,
   .task-row .project-col,
+  .task-row .reporter-col,
   .task-row .priority-col,
   .task-row .due-col,
   .task-row .action-col {
@@ -1038,6 +1058,7 @@
 }
 [data-theme="dark"] .task-row .title-col .small,
 [data-theme="dark"] .task-row .project-col,
+[data-theme="dark"] .task-row .reporter-col,
 [data-theme="dark"] .task-row .due-col .small,
 [data-theme="dark"] .task-row .id-col .text-muted {
   color: var(--theme-text-secondary) !important;
@@ -1177,6 +1198,7 @@ document.addEventListener('DOMContentLoaded', () => {
       projectName: el.getAttribute('data-project-name') || '',
       status: el.getAttribute('data-status') || 'Open',
       dueDate: el.getAttribute('data-due-date') || '',
+      reporter: el.getAttribute('data-reporter') || '',
       project: (el.querySelector('.project-col')?.textContent || '').trim(),
       due: (el.querySelector('.due-col')?.textContent || '').trim(),
       el: el
