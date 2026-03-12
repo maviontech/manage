@@ -145,6 +145,8 @@ urlpatterns = [
     path('api/time-entries/approve', views.api_time_entries_approve, name='api_time_entries_approve'),
     path('api/time-entries/reject', views.api_time_entries_reject, name='api_time_entries_reject'),
 
+    # User Manual
+    path('user-manual/', views.user_manual_view, name='user_manual'),
     
 ]
 

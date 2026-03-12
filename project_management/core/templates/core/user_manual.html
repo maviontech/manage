@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trackline User Manual | Complete Guide</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #1a202c;
+        }
+
+        .manual-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #1a202c 0%, #2d3748 100%);
+            color: #fff;
+            padding: 30px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .sidebar-header {
+            padding: 0 25px 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 25px;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .sidebar-logo i {
+            font-size: 42px;
+            color: #667eea;
+        }
+
+        .sidebar-logo-text h1 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 3px;
+        }
+
+        .sidebar-logo-text p {
+            font-size: 12px;
+            color: #a0aec0;
+            font-weight: 500;
+        }
+
+        .sidebar-subtitle {
+            font-size: 14px;
+            color: #cbd5e0;
+            line-height: 1.6;
+        }
+
+        .sidebar-nav {
+            padding: 0 15px;
+        }
+
+        .nav-section {
+            margin-bottom: 30px;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #718096;
+            margin-bottom: 12px;
+            padding: 0 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: #cbd5e0;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: rgba(102, 126, 234, 0.15);
+            color: #fff;
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-item i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 0;
+            background: #f7fafc;
+            position: relative;
+            overflow-y: auto;
+            height: 100vh;
+        }
+
+        .manual-header {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            padding: 20px 60px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 100;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .content-wrapper {
+            padding: 40px 60px;
+        }
+
+        .content-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            border-radius: 20px;
+            color: #fff;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .content-header h1 {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        .content-header p {
+            font-size: 18px;
+            opacity: 0.95;
+            line-height: 1.7;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            font-size: 14px;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .section {
+            background: #fff;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section-content {
+            color: #4a5568;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .section-content p {
+            margin-bottom: 20px;
+        }
+
+        .section-content ul, .section-content ol {
+            margin-left: 25px;
+            margin-bottom: 20px;
+        }
+
+        .section-content li {
+            margin-bottom: 10px;
+        }
+
+        /* Feature Cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            color: #fff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .feature-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .feature-description {
+            font-size: 14px;
+            opacity: 0.95;
+            line-height: 1.6;
+        }
+
+        /* Workflow Steps */
+        .workflow-steps {
+            margin-top: 30px;
+        }
+
+        .workflow-step {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 35px;
+            padding: 25px;
+            background: #f7fafc;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .workflow-step:hover {
+            background: #edf2f7;
+            transform: translateX(10px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .step-content p {
+            color: #4a5568;
+            line-height: 1.7;
+        }
+
+        /* Tips & Notes */
+        .tip-box {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: #fff;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+
+        .tip-box i {
+            font-size: 24px;
+            margin-top: 2px;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+            color: #fff;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+
+        .warning-box i {
+            font-size: 24px;
+            margin-top: 2px;
+        }
+
+        /* Screenshots/Images */
+        .screenshot {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            margin: 25px 0;
+        }
+
+        /* Footer */
+        .manual-footer {
+            text-align: center;
+            padding: 40px;
+            background: #fff;
+            border-radius: 20px;
+            margin-top: 30px;
+        }
+
+        .manual-footer-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .manual-footer-logo img {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+        }
+
+        .manual-footer-logo h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .manual-footer p {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .manual-footer strong {
+            color: #667eea;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+
+            .main-content {
+                margin-left: 240px;
+            }
+
+            .manual-header {
+                padding: 20px 40px;
+            }
+
+            .content-wrapper {
+                padding: 30px 40px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .manual-header {
+                padding: 15px 20px;
+            }
+
+            .content-wrapper {
+                padding: 20px;
+            }
+
+            .back-btn {
+                padding: 10px 18px;
+                font-size: 13px;
+            }
+
+            .content-header h1 {
+                font-size: 32px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section {
+                padding: 25px;
+            }
+        }
+
+        /* Smooth Scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Hide sections by default, show active one */
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="manual-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <i class="fas fa-rocket"></i>
+                    <div class="sidebar-logo-text">
+                        <h1>Trackline</h1>
+                        <p>User Manual</p>
+                    </div>
+                </div>
+                <p class="sidebar-subtitle">Everything you need to know about Trackline Project Management System</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">General</div>
+                    <a class="nav-item active" data-section="getting-started">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Getting Started</span>
+                    </a>
+                    <a class="nav-item" data-section="logging-in">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Logging In</span>
+                    </a>
+                    <a class="nav-item" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a class="nav-item" data-section="navigation">
+                        <i class="fas fa-compass"></i>
+                        <span>Navigating the Sidebar</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Management</div>
+                    <a class="nav-item" data-section="projects">
+                        <i class="fas fa-folder-open"></i>
+                        <span>Project Management</span>
+                    </a>
+                    <a class="nav-item" data-section="tasks">
+                        <i class="fas fa-tasks"></i>
+                        <span>Task Management</span>
+                    </a>
+                    <a class="nav-item" data-section="teams">
+                        <i class="fas fa-users"></i>
+                        <span>Teams & People</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Operations</div>
+                    <a class="nav-item" data-section="time-tracking">
+                        <i class="fas fa-clock"></i>
+                        <span>Time Tracking</span>
+                    </a>
+                    <a class="nav-item" data-section="approvals">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Approvals</span>
+                    </a>
+                    <a class="nav-item" data-section="reports">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Reports & Analytics</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <a class="nav-item" data-section="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                    <a class="nav-item" data-section="notifications">
+                        <i class="fas fa-bell"></i>
+                        <span>Notifications</span>
+                    </a>
+                    <a class="nav-item" data-section="support">
+                        <i class="fas fa-life-ring"></i>
+                        <span>Support & Help</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header Bar -->
+            <div class="manual-header">
+                <a href="{% url 'dashboard' %}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Dashboard</span>
+                </a>
+            </div>
+
+            <!-- Content Wrapper -->
+            <div class="content-wrapper">
+                <!-- Getting Started Section -->
+                <section id="getting-started" class="section active">
+                <div class="content-header">
+                    <h1>Getting Started</h1>
+                    <p>Welcome to the Trackline Project Management System. This comprehensive guide will walk you through everything you need to know to use the platform effectively.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">What is Trackline?</h2>
+                    <p>Trackline is a comprehensive project management system designed to help teams track work, manage tasks, monitor time, and collaborate effectively. The system provides complete solutions for project planning, task assignment, time tracking, team collaboration, and performance analytics.</p>
+
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-project-diagram"></i>
+                            </div>
+                            <div class="feature-title">Manage Projects</div>
+                            <div class="feature-description">Create and organize projects with detailed tracking, assign managers, and link resources efficiently.</div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                            <div class="feature-title">Track Tasks</div>
+                            <div class="feature-description">Create, assign, and monitor tasks with multiple work types including bugs, stories, defects, and change requests.</div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="feature-title">Build Teams</div>
+                            <div class="feature-description">Organize people into teams, manage roles and permissions, and collaborate seamlessly.</div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-stopwatch"></i>
+                            </div>
+                            <div class="feature-title">Log Time</div>
+                            <div class="feature-description">Track time spent on tasks with built-in timer functionality and generate accurate time reports.</div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-check-double"></i>
+                            </div>
+                            <div class="feature-title">Approve Work</div>
+                            <div class="feature-card">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="feature-description">Managers and admins can review and approve submitted timesheets and work logs.</div>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="feature-title">Generate Reports</div>
+                            <div class="feature-description">Create comprehensive reports, export to Excel, and gain insights with visual analytics.</div>
+                        </div>
+                    </div>
+
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Pro Tip:</strong> Take time to explore each section of the system. Trackline is designed to be intuitive, but understanding all features will help you maximize productivity.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logging In Section -->
+            <section id="logging-in" class="section">
+                <div class="content-header">
+                    <h1>Logging In</h1>
+                    <p>Access your Trackline account securely with our multi-tenant authentication system.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">How to Access Trackline</h2>
+                    
+                    <div class="workflow-steps">
+                        <div class="workflow-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h3>Navigate to Login Page</h3>
+                                <p>Open your web browser and navigate to your company's Trackline URL. You'll be presented with the login interface.</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h3>Enter Your Email</h3>
+                                <p>Type in your registered email address. The system will automatically identify your organization (tenant) based on your email.</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h3>Enter Your Password</h3>
+                                <p>Provide your secure password. Trackline enforces strong password policies to keep your account safe.</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h3>Access Dashboard</h3>
+                                <p>Once authenticated, you'll be directed to your personalized dashboard with an overview of your tasks and projects.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="warning-box">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Security Notice:</strong> If you've forgotten your password, use the "Forgot Password" link on the login page to reset it securely. For account access issues, contact your system administrator.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section">
+                <div class="content-header">
+                    <h1>Dashboard</h1>
+                    <p>Your command center for project and task management.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Understanding Your Dashboard</h2>
+                    <p>The dashboard is the first screen you see after logging in. It provides a comprehensive overview of your work and projects.</p>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Dashboard Components:</h3>
+                    <ul>
+                        <li><strong>Total Tasks Assigned:</strong> Shows the total number of tasks assigned to you</li>
+                        <li><strong>Active Projects:</strong> Number of projects currently in progress</li>
+                        <li><strong>Tasks Completed:</strong> Count of tasks you've successfully completed</li>
+                        <li><strong>Tasks Pending:</strong> Number of tasks awaiting your action</li>
+                        <li><strong>Quick Actions:</strong> Fast access buttons for My Tasks, Create Task, Board View, and Projects</li>
+                        <li><strong>Task Breakdown:</strong> Visual donut chart showing completed vs in-progress vs pending tasks</li>
+                        <li><strong>Tasks by Priority:</strong> Stacked bar chart displaying open and closed tasks by priority level (Critical, High, Normal, Low)</li>
+                        <li><strong>Tasks Over Time:</strong> Line chart showing task creation and completion trends</li>
+                        <li><strong>Planned Tasks:</strong> Calendar view of upcoming tasks within the configured window</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Dashboard Tip:</strong> Use the Quick Actions section to jump directly to frequently used features. The dashboard updates in real-time as tasks and projects change.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Navigation Section -->
+            <section id="navigation" class="section">
+                <div class="content-header">
+                    <h1>Navigating the Sidebar</h1>
+                    <p>Master the navigation system to access all features efficiently.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Sidebar Menu Structure</h2>
+                    <p>The left sidebar is your primary navigation tool, providing access to all system features.</p>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Main Menu Items:</h3>
+                    <ul>
+                        <li><strong>Dashboard:</strong> Returns you to the main overview screen</li>
+                        <li><strong>Projects:</strong> Access all projects, create new projects, view subprojects</li>
+                        <li><strong>Tasks:</strong> View your tasks, unassigned tasks, create tasks (Task, Bug, Story, Defect, Subtask, Change Request), bulk import, task board, and analytics</li>
+                        <li><strong>Time Tracking:</strong> Start/stop timer for tasks, view and approve time entries</li>
+                        <li><strong>Teams & People:</strong> Manage people, teams, and team memberships</li>
+                        <li><strong>Employees:</strong> (Admin only) View and manage employee records</li>
+                        <li><strong>Reports:</strong> Generate comprehensive project and task reports</li>
+                        <li><strong>Notifications:</strong> View system notifications and updates</li>
+                        <li><strong>Settings:</strong> Configure workflows, priorities, work week, change password, manage roles & permissions, access control, and password policies</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Navigation Tip:</strong> Click the menu items with arrows (▸) to expand submenus. The system remembers your expanded menus for convenience.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Project Management Section -->
+            <section id="projects" class="section">
+                <div class="content-header">
+                    <h1>Project Management</h1>
+                    <p>Organize projects, assign managers, and track progress effectively.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Working with Projects</h2>
+                    
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Creating a New Project:</h3>
+                    <div class="workflow-steps">
+                        <div class="workflow-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h3>Navigate to Projects</h3>
+                                <p>Click "Projects" in the sidebar, then select "Create Project"</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h3>Fill in Project Details</h3>
+                                <p>Enter project name, description, start date, tentative due date, and select a project manager</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h3>Configure Project Settings</h3>
+                                <p>Set up workflows, work types, priorities, and team assignments specific to this project</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h3>Save and Launch</h3>
+                                <p>Review all details and save. Your project is now ready for task creation and team collaboration</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Project Features:</h3>
+                    <ul>
+                        <li><strong>Subprojects:</strong> Break down large projects into manageable subprojects</li>
+                        <li><strong>Project Configuration:</strong> Customize workflows, priorities, and work types per project</li>
+                        <li><strong>Progress Tracking:</strong> Monitor project completion based on timeline and task completion</li>
+                        <li><strong>Resource Assignment:</strong> Link teams and people to projects</li>
+                        <li><strong>Project Reports:</strong> Export detailed reports with task breakdown and time tracking</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Task Management Section -->
+            <section id="tasks" class="section">
+                <div class="content-header">
+                    <h1>Task Management</h1>
+                    <p>Create, assign, track, and complete tasks efficiently.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Comprehensive Task Management</h2>
+                    
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Task Work Types:</h3>
+                    <ul>
+                        <li><strong>Task:</strong> Standard work item for regular activities</li>
+                        <li><strong>Bug:</strong> Software defects that need fixing</li>
+                        <li><strong>Story:</strong> User stories for Agile development</li>
+                        <li><strong>Defect:</strong> Quality issues requiring resolution</li>
+                        <li><strong>Subtask:</strong> Breakdown of larger tasks into smaller units</li>
+                        <li><strong>Change Request:</strong> Proposed changes to project scope or features</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Creating a Task:</h3>
+                    <div class="workflow-steps">
+                        <div class="workflow-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h3>Select Task Type</h3>
+                                <p>Navigate to Tasks → Create → Choose your work type (Task, Bug, Story, etc.)</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h3>Enter Task Details</h3>
+                                <p>Fill in title, description, project, subproject (if any), priority, and estimated hours</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h3>Assign Resources</h3>
+                                <p>Select team and assign task to specific team member(s)</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h3>Set Timeline</h3>
+                                <p>Define start date, due date, and workflow status</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <h3>Add Attachments</h3>
+                                <p>Upload relevant files, documents, or screenshots</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Task Views:</h3>
+                    <ul>
+                        <li><strong>My Tasks:</strong> View all tasks assigned to you with filtering options</li>
+                        <li><strong>Task Board:</strong> Kanban-style board view for visual workflow management</li>
+                        <li><strong>Unassigned Tasks:</strong> See tasks awaiting assignment</li>
+                        <li><strong>Task Analytics:</strong> Detailed analytics and insights on task performance</li>
+                        <li><strong>Bulk Import:</strong> Import multiple tasks via CSV/Excel templates</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Task Actions:</h3>
+                    <ul>
+                        <li>Update task status through workflow stages</li>
+                        <li>Change priority levels</li>
+                        <li>Add comments and collaborate with team members</li>
+                        <li>Attach files and documents</li>
+                        <li>Log time spent on tasks</li>
+                        <li>Export task details to PDF</li>
+                        <li>Edit or delete tasks (with appropriate permissions)</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Task Management Tip:</strong> Use the Task Board for visual workflow management. Drag and drop tasks between workflow stages to update their status quickly.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Teams & People Section -->
+            <section id="teams" class="section">
+                <div class="content-header">
+                    <h1>Teams & People</h1>
+                    <p>Organize your workforce into effective teams.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Managing Teams and People</h2>
+                    
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">People Management:</h3>
+                    <ul>
+                        <li>View all organization members</li>
+                        <li>Add new team members with detailed profiles</li>
+                        <li>Assign roles and permissions</li>
+                        <li>Track member availability and workload</li>
+                        <li>Manage contact information and profiles</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Team Management:</h3>
+                    <ul>
+                        <li>Create new teams for different projects or departments</li>
+                        <li>Assign team leads</li>
+                        <li>Add or remove team members</li>
+                        <li>View team capacity and workload</li>
+                        <li>Track team performance metrics</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Team Tip:</strong> Organize teams by project, department, or skill set for better resource allocation and collaboration.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Time Tracking Section -->
+            <section id="time-tracking" class="section">
+                <div class="content-header">
+                    <h1>Time Tracking</h1>
+                    <p>Accurately track time spent on tasks and generate timesheets.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Tracking Your Time</h2>
+                    
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Using the Timer:</h3>
+                    <div class="workflow-steps">
+                        <div class="workflow-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h3>Start Timer</h3>
+                                <p>Navigate to Time Tracking → Start/Stop Timer, select a task, and click Start</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h3>Work on Task</h3>
+                                <p>The timer runs in the background, even if you navigate to other pages. You'll see the timer in the header.</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h3>Pause or Stop</h3>
+                                <p>Click the header timer to pause/resume or stop when task work is complete</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h3>Review Time Entries</h3>
+                                <p>View your logged time in Time Entries section for accuracy</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Time Entry Management:</h3>
+                    <ul>
+                        <li>View all time entries with filtering by date, project, and team member</li>
+                        <li>Manual time entry for backdated work</li>
+                        <li>Edit or delete time entries (with permissions)</li>
+                        <li>Export timesheet reports to Excel</li>
+                        <li>Approve time entries (managers and admins)</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Time Tracking Tip:</strong> Start the timer as soon as you begin working on a task. This ensures accurate time logging and better project cost estimation.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Approvals Section -->
+            <section id="approvals" class="section">
+                <div class="content-header">
+                    <h1>Approvals</h1>
+                    <p>Review and approve work submitted by team members.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Approval Workflows</h2>
+                    <p>Managers and admins can review and approve timesheets, time entries, and task completions.</p>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Approving Time Entries:</h3>
+                    <ul>
+                        <li>Navigate to Time Tracking → Time Entries / Approve</li>
+                        <li>Filter entries by team, project, or date range</li>
+                        <li>Review logged time for accuracy</li>
+                        <li>Approve or reject entries with comments</li>
+                        <li>Track approval history and audit trail</li>
+                    </ul>
+
+                    <div class="warning-box">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Important:</strong> Approved time entries are typically locked and cannot be edited. Review carefully before approving.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reports" class="section">
+                <div class="content-header">
+                    <h1>Reports & Analytics</h1>
+                    <p>Generate insights and export comprehensive reports.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Powerful Reporting</h2>
+                    
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Available Reports:</h3>
+                    <ul>
+                        <li><strong>Project Reports:</strong> Comprehensive project overview with task breakdown, time tracking, and progress metrics</li>
+                        <li><strong>Task Overview Reports:</strong> Detailed task analytics with filtering and export options</li>
+                        <li><strong>Time Entry Reports:</strong> Timesheet exports for payroll and billing</li>
+                        <li><strong>Team Performance:</strong> Team productivity and workload analytics</li>
+                        <li><strong>Resource Utilization:</strong> Track how resources are allocated across projects</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Export Options:</h3>
+                    <ul>
+                        <li>Export to Excel (.xlsx) for further analysis</li>
+                        <li>Export to CSV for data import to other systems</li>
+                        <li>Export task details to PDF for documentation</li>
+                        <li>Customizable report templates</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Task Analytics Dashboard:</h3>
+                    <ul>
+                        <li>Visual charts and graphs for task metrics</li>
+                        <li>Task breakdown by status, priority, and work type</li>
+                        <li>Trend analysis over time</li>
+                        <li>Defect and bug tracking metrics</li>
+                        <li>Team velocity and completion rates</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Reporting Tip:</strong> Schedule regular report generation (weekly/monthly) to track project health and identify bottlenecks early.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="section">
+                <div class="content-header">
+                    <h1>Settings</h1>
+                    <p>Configure system settings and customize workflows.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">System Configuration</h2>
+                    
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Available Settings:</h3>
+                    <ul>
+                        <li><strong>Workflows:</strong> Define custom workflow stages for your projects (e.g., New, In Progress, Review, Completed)</li>
+                        <li><strong>Priorities:</strong> Configure priority levels for tasks (Critical, High, Normal, Low)</li>
+                        <li><strong>Work Week:</strong> Set working days and hours for accurate timeline calculations</li>
+                        <li><strong>Change Password:</strong> Update your account password securely</li>
+                        <li><strong>Roles & Permissions:</strong> (Admin) Define user roles and access levels</li>
+                        <li><strong>Access Control:</strong> (Admin) Manage project-level and resource-level permissions</li>
+                        <li><strong>Password Policy:</strong> (Admin) Configure password strength requirements and expiry settings</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Customizing Workflows:</h3>
+                    <p>Workflows can be customized globally or per-project. Navigate to Settings → Workflows to:</p>
+                    <ul>
+                        <li>Add new workflow stages</li>
+                        <li>Reorder stages</li>
+                        <li>Set default workflows</li>
+                        <li>Configure which roles can transition between stages</li>
+                    </ul>
+
+                    <div class="warning-box">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Admin Notice:</strong> Changes to workflows and permissions affect all users. Test changes carefully in a development environment before applying to production.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notifications Section -->
+            <section id="notifications" class="section">
+                <div class="content-header">
+                    <h1>Notifications</h1>
+                    <p>Stay updated with real-time system notifications.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Notification System</h2>
+                    <p>Trackline keeps you informed with real-time notifications for important events.</p>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Notification Types:</h3>
+                    <ul>
+                        <li><strong>Task Assignments:</strong> Get notified when tasks are assigned to you</li>
+                        <li><strong>Task Updates:</strong> Receive notifications when task status or priority changes</li>
+                        <li><strong>Comments & Mentions:</strong> Be alerted when someone comments on your tasks or mentions you</li>
+                        <li><strong>Approvals:</strong> Get notified about approval requests and decisions</li>
+                        <li><strong>Deadlines:</strong> Receive reminders for upcoming task due dates</li>
+                        <li><strong>Team Updates:</strong> Stay informed about team roster changes</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Managing Notifications:</h3>
+                    <ul>
+                        <li>Click the bell icon in the header to view recent notifications</li>
+                        <li>Navigate to Notifications page for full notification history</li>
+                        <li>Mark notifications as read/unread</li>
+                        <li>Configure notification preferences (email, in-app)</li>
+                        <li>Filter notifications by type, project, or date</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Notification Tip:</strong> Regularly check your notifications to stay on top of task updates and team communication. Enable email notifications for critical events.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Support Section -->
+            <section id="support" class="section">
+                <div class="content-header">
+                    <h1>Support & Help</h1>
+                    <p>Get assistance and find answers to common questions.</p>
+                </div>
+
+                <div class="section-content">
+                    <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Getting Help</h2>
+                    
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Support Channels:</h3>
+                    <ul>
+                        <li><strong>Team Chat:</strong> Use the chat widget (bottom right corner) to communicate with your team in real-time</li>
+                        <li><strong>System Administrator:</strong> Contact your organization's Trackline admin for account and permission issues</li>
+                        <li><strong>User Manual:</strong> Refer to this comprehensive guide for detailed feature explanations</li>
+                        <li><strong>Technical Support:</strong> For system bugs or technical issues, reach out to your IT department</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Common Questions:</h3>
+                    <ul>
+                        <li><strong>Q: I forgot my password. What should I do?</strong><br>A: Use the "Forgot Password" link on the login page to reset your password via email.</li>
+                        <li><strong>Q: How do I request access to a project?</strong><br>A: Contact your project manager or system administrator to be added to the project team.</li>
+                        <li><strong>Q: Can I work offline?</strong><br>A: Trackline requires an internet connection for real-time updates and collaboration.</li>
+                        <li><strong>Q: How do I export my timesheet?</strong><br>A: Navigate to Time Tracking → Time Entries and use the Export to Excel button.</li>
+                        <li><strong>Q: Who can see my tasks?</strong><br>A: Tasks are visible to project team members, managers, and administrators based on access control settings.</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Best Practices:</h3>
+                    <ul>
+                        <li>Keep your profile information up to date</li>
+                        <li>Log time regularly for accurate project tracking</li>
+                        <li>Use descriptive task titles and detailed descriptions</li>
+                        <li>Add comments to tasks to maintain communication history</li>
+                        <li>Update task status as you progress through work</li>
+                        <li>Set realistic deadlines and time estimates</li>
+                        <li>Use appropriate work types (Bug, Task, Story, etc.) for better reporting</li>
+                        <li>Regularly check notifications and respond to team communications</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Success Tip:</strong> Take advantage of the Task Board view for visual project management. It's perfect for Agile/Scrum workflows and quick status updates.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <div class="manual-footer">
+                <div class="manual-footer-logo">
+                    <i class="fas fa-rocket" style="font-size: 40px; color: #667eea;"></i>
+                    <h3>Trackline Project Management</h3>
+                </div>
+                <p>Clarity. Control. Closure.</p>
+                <p style="margin-top: 20px;">© {{ now|date:"Y" }} <strong>Maviontech Pvt Ltd</strong></p>
+                <p>Enterprise-grade project management. Precision engineered for modern teams.</p>
+            </div>
+            </div><!-- End content-wrapper -->
+        </main>
+    </div>
+
+    <script>
+        // Navigation functionality
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all nav items
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.remove('active');
+                });
+                
+                // Add active class to clicked item
+                this.classList.add('active');
+                
+                // Hide all sections
+                document.querySelectorAll('.section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Show selected section
+                const sectionId = this.getAttribute('data-section');
+                const section = document.getElementById(sectionId);
+                if (section) {
+                    section.classList.add('active');
+                    // Scroll to top of main content
+                    document.querySelector('.main-content').scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

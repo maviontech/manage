@@ -632,19 +632,32 @@
             </a>
           </li>
           {% endif %}
+
+          <!-- User Manual -->
+          <li class="menu-item {% if page == 'user_manual' %}active{% endif %}">
+            <a href="{% url 'user_manual' %}" class="menu-link ripple" role="menuitem">
+              <!-- <span class="icon" aria-hidden="true"><i class="fa-solid fa-book-open"></i></span> -->
+              <!-- <span class="label">User Manual</span> -->
+            </a>
+          </li>
         </ul>
       </nav>
 
-      <!-- Sidebar signed-in area -->
       <!-- <div class="sidebar-footer" role="region" aria-label="Signed in user">
         <div class="profile-actions" role="toolbar" aria-label="Profile actions">
           <a class="btn-ghost" href="{% url 'profile' %}" title="View profile">Profile</a>
           <a class="btn-ghost" href="{% url 'logout' %}" title="Log out">Log out</a>
         </div>
       </div> -->
-      <div class="brand-mavion">
-        <img src="{% static 'core/logo1.png' %}" alt="Maviontech" />
-        <span>Powered by <strong>Maviontech Pvt Ltd</strong></span>
+      <div class="brand-mavion" style="display: flex; flex-direction: column; align-items: center; margin: 15px 10px 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px; width: 100%;">
+          <img src="{% static 'core/logo1.png' %}" alt="Maviontech" style="width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0;"/>
+          <span style="display: block; font-size: 12px; color: #a0aec0; line-height: 1.4; text-align: left;">Powered by<br><strong style="color: #fff; font-size: 13px;">Maviontech Pvt Ltd</strong></span>
+        </div>
+        <a href="{% url 'user_manual' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; text-decoration: none; border-radius: 10px; font-size: 13px; font-weight: 600; transition: all 0.3s ease; width: 100%; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.35)';">
+          <i class="fas fa-book-open" style="font-size: 15px;"></i>
+          <span>User Manual</span>
+        </a>
       </div>
     </aside>
 

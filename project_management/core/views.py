@@ -3396,3 +3396,17 @@ def api_time_entries_reject(request):
     finally:
         cur.close()
         conn.close()
+
+
+def user_manual_view(request):
+    """
+    Display the comprehensive user manual for Trackline.
+    Accessible to all authenticated users.
+    """
+    user = request.session.get('user')
+    if not user:
+        return redirect('identify')
+    
+    return render(request, 'core/user_manual.html', {
+        'page': 'user_manual'
+    })
