@@ -1454,7 +1454,7 @@
 {% endif %}
 
 <div class="dashboard-grid">
-  <a href="{% url 'tasks_overview' %}" style="text-decoration: none; color: inherit;">
+  <a href="{% url 'tasks_overview' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
     <div class="metric-card total-tasks" style="cursor: pointer; position: relative;">
       <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7"/>
@@ -1463,7 +1463,7 @@
       <div class="value">{{ assigned_count|default:0 }}</div>
     </div>
   </a>
-  <a href="{% url 'metric_drilldown' 'active-projects' %}" style="text-decoration: none; color: inherit;">
+  <a href="{% url 'metric_drilldown' 'active-projects' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
     <div class="metric-card active-projects" style="cursor: pointer; position: relative;">
       <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7"/>
@@ -1472,7 +1472,7 @@
       <div class="value">{{ active_projects|default:0 }}</div>
     </div>
   </a>
-  <a href="{% url 'metric_drilldown' 'tasks-completed' %}" style="text-decoration: none; color: inherit;">
+  <a href="{% url 'metric_drilldown' 'tasks-completed' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
     <div class="metric-card tasks-completed" style="cursor: pointer; position: relative;">
       <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7"/>
@@ -1481,7 +1481,7 @@
       <div class="value">{{ tasks_completed|default:0 }}</div>
     </div>
   </a>
-  <a href="{% url 'metric_drilldown' 'tasks-pending' %}" style="text-decoration: none; color: inherit;">
+  <a href="{% url 'metric_drilldown' 'tasks-pending' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
     <div class="metric-card tasks-pending" style="cursor: pointer; position: relative;">
       <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7"/>
