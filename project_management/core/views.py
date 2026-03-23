@@ -836,6 +836,45 @@ def user_dashboard_view(request):
         'db_password': tenant.get('db_password')
     })
     cur = conn.cursor()
+    
+    # ========== DETECT USER ROLE ==========
+    user_role = None
+    user_role_name = None
+    try:
+        # Check tenant_role_assignments first
+        cur.execute("""
+            SELECT r.name 
+            FROM tenant_role_assignments tra
+            JOIN roles r ON tra.role_id = r.id
+            WHERE tra.member_id = %s
+            LIMIT 1
+        """, (member_id,))
+        role_row = cur.fetchone()
+        if role_row:
+            user_role_name = role_row.get('name') if isinstance(role_row, dict) else role_row[0]
+        
+        # If no tenant role, check project_role_assignments
+        if not user_role_name:
+            cur.execute("""
+                SELECT r.name 
+                FROM project_role_assignments pra
+                JOIN roles r ON pra.role_id = r.id
+                WHERE pra.member_id = %s
+                LIMIT 1
+            """, (member_id,))
+            role_row = cur.fetchone()
+            if role_row:
+                user_role_name = role_row.get('name') if isinstance(role_row, dict) else role_row[0]
+        
+        # Normalize role name
+        if user_role_name:
+            user_role = user_role_name.lower().strip()
+    except Exception as e:
+        logger.error(f"ERROR detecting user role: {e}")
+        user_role = None
+    
+    # Check if user is a Tester/QA
+    is_tester = user_role and ('tester' in user_role or 'qa' in user_role or 'test' in user_role)
 
     def scalar_from_row(row, key_alias='c'):
         if row is None:
@@ -1166,6 +1205,86 @@ def user_dashboard_view(request):
         logger.error(f"ERROR: defect reporter metrics user dashboard {e}")
         defect_reporter_summary = []
 
+    # ========== TESTER-SPECIFIC METRICS ==========
+    bugs_assigned = 0
+    defects_assigned = 0
+    tests_assigned = 0
+    bugs_closed = 0
+    defects_closed = 0
+    work_type_breakdown = {}
+    
+    if is_tester:
+        try:
+            # Count bugs assigned to this tester
+            cur.execute("""
+                SELECT COUNT(*) AS c 
+                FROM tasks 
+                WHERE assigned_type='member' 
+                AND assigned_to=%s 
+                AND LOWER(TRIM(COALESCE(work_type, ''))) = 'bug'
+            """, (member_id,))
+            bugs_assigned = scalar_from_row(cur.fetchone(), 'c')
+            
+            # Count defects assigned to this tester
+            cur.execute("""
+                SELECT COUNT(*) AS c 
+                FROM tasks 
+                WHERE assigned_type='member' 
+                AND assigned_to=%s 
+                AND LOWER(TRIM(COALESCE(work_type, ''))) = 'defect'
+            """, (member_id,))
+            defects_assigned = scalar_from_row(cur.fetchone(), 'c')
+            
+            # Count test-related tasks
+            cur.execute("""
+                SELECT COUNT(*) AS c 
+                FROM tasks 
+                WHERE assigned_type='member' 
+                AND assigned_to=%s 
+                AND (LOWER(TRIM(COALESCE(work_type, ''))) LIKE '%test%' 
+                     OR LOWER(TRIM(COALESCE(title, ''))) LIKE '%test%')
+            """, (member_id,))
+            tests_assigned = scalar_from_row(cur.fetchone(), 'c')
+            
+            # Count closed bugs
+            cur.execute("""
+                SELECT COUNT(*) AS c 
+                FROM tasks 
+                WHERE assigned_type='member' 
+                AND assigned_to=%s 
+                AND LOWER(TRIM(COALESCE(work_type, ''))) = 'bug'
+                AND status = 'Closed'
+            """, (member_id,))
+            bugs_closed = scalar_from_row(cur.fetchone(), 'c')
+            
+            # Count closed defects
+            cur.execute("""
+                SELECT COUNT(*) AS c 
+                FROM tasks 
+                WHERE assigned_type='member' 
+                AND assigned_to=%s 
+                AND LOWER(TRIM(COALESCE(work_type, ''))) = 'defect'
+                AND status = 'Closed'
+            """, (member_id,))
+            defects_closed = scalar_from_row(cur.fetchone(), 'c')
+            
+            # Work type breakdown for tester
+            cur.execute("""
+                SELECT COALESCE(work_type, 'Task') AS wtype, COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member' AND assigned_to=%s
+                GROUP BY wtype
+            """, (member_id,))
+            wt_rows = cur.fetchall() or []
+            for wt_row in wt_rows:
+                if isinstance(wt_row, dict):
+                    work_type_breakdown[wt_row.get('wtype', 'Task')] = int(wt_row.get('c', 0))
+                else:
+                    work_type_breakdown[wt_row[0] or 'Task'] = int(wt_row[1] or 0)
+                    
+        except Exception as e:
+            logger.error(f"ERROR: tester-specific metrics {e}")
+
     cur.close()
     conn.close()
 
@@ -1211,6 +1330,15 @@ def user_dashboard_view(request):
         'defect_reporter_labels': json.dumps(defect_reporter_labels),
         'defect_reporter_values': json.dumps(defect_reporter_values),
         'is_user_dashboard': True,  # Flag to indicate this is user-specific view
+        # Tester-specific metrics
+        'is_tester': is_tester,
+        'user_role': user_role_name,
+        'bugs_assigned': bugs_assigned,
+        'defects_assigned': defects_assigned,
+        'tests_assigned': tests_assigned,
+        'bugs_closed': bugs_closed,
+        'defects_closed': defects_closed,
+        'work_type_breakdown': work_type_breakdown,
     }
 
     return render(request, 'core/dashboard.html', ctx)

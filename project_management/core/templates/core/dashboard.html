@@ -1454,42 +1454,83 @@
 {% endif %}
 
 <div class="dashboard-grid">
-  <a href="{% url 'tasks_overview' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-    <div class="metric-card total-tasks" style="cursor: pointer; position: relative;">
-      <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 5l7 7-7 7"/>
-      </svg>
-      <div class="label">Total Tasks Assigned</div>
-      <div class="value">{{ assigned_count|default:0 }}</div>
-    </div>
-  </a>
-  <a href="{% url 'metric_drilldown' 'active-projects' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-    <div class="metric-card active-projects" style="cursor: pointer; position: relative;">
-      <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 5l7 7-7 7"/>
-      </svg>
-      <div class="label">Active Projects</div>
-      <div class="value">{{ active_projects|default:0 }}</div>
-    </div>
-  </a>
-  <a href="{% url 'metric_drilldown' 'tasks-completed' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-    <div class="metric-card tasks-completed" style="cursor: pointer; position: relative;">
-      <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 5l7 7-7 7"/>
-      </svg>
-      <div class="label">Tasks Completed</div>
-      <div class="value">{{ tasks_completed|default:0 }}</div>
-    </div>
-  </a>
-  <a href="{% url 'metric_drilldown' 'tasks-pending' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-    <div class="metric-card tasks-pending" style="cursor: pointer; position: relative;">
-      <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 5l7 7-7 7"/>
-      </svg>
-      <div class="label">Tasks Pending</div>
-      <div class="value">{{ tasks_pending|default:0 }}</div>
-    </div>
-  </a>
+  {% if is_tester %}
+    <!-- TESTER-SPECIFIC DASHBOARD CARDS -->
+    <a href="{% url 'tasks_overview' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card total-tasks" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Bugs Assigned</div>
+        <div class="value">{{ bugs_assigned|default:0 }}</div>
+      </div>
+    </a>
+    <a href="{% url 'metric_drilldown' 'active-projects' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card active-projects" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Defects Assigned</div>
+        <div class="value">{{ defects_assigned|default:0 }}</div>
+      </div>
+    </a>
+    <a href="{% url 'metric_drilldown' 'tasks-completed' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card tasks-completed" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Bugs Closed</div>
+        <div class="value">{{ bugs_closed|default:0 }}</div>
+      </div>
+    </a>
+    <a href="{% url 'metric_drilldown' 'tasks-pending' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card tasks-pending" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Tests Assigned</div>
+        <div class="value">{{ tests_assigned|default:0 }}</div>
+      </div>
+    </a>
+  {% else %}
+    <!-- DEFAULT DASHBOARD CARDS (for Developers, Admin, etc.) -->
+    <a href="{% url 'tasks_overview' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card total-tasks" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Total Tasks Assigned</div>
+        <div class="value">{{ assigned_count|default:0 }}</div>
+      </div>
+    </a>
+    <a href="{% url 'metric_drilldown' 'active-projects' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card active-projects" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Active Projects</div>
+        <div class="value">{{ active_projects|default:0 }}</div>
+      </div>
+    </a>
+    <a href="{% url 'metric_drilldown' 'tasks-completed' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card tasks-completed" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Tasks Completed</div>
+        <div class="value">{{ tasks_completed|default:0 }}</div>
+      </div>
+    </a>
+    <a href="{% url 'metric_drilldown' 'tasks-pending' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card tasks-pending" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Tasks Pending</div>
+        <div class="value">{{ tasks_pending|default:0 }}</div>
+      </div>
+    </a>
+  {% endif %}
 </div>
 
 
