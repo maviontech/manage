@@ -18,6 +18,21 @@
         <!-- <p class="page-subtitle">View, track and manage your assigned work items</p> -->
       </div>
       <div class="header-actions">
+        <!-- Search Box -->
+        <div class="task-search-container">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="taskSearchInput" class="task-search-input" placeholder="Search tasks by ID, title..." />
+            <svg class="clear-search-icon" id="clearSearchBtn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none; cursor: pointer;">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </div>
+          <div id="searchResults" class="search-results-dropdown" style="display: none;"></div>
+        </div>
         <select id="assignedFilter" class="filter-select">
           <option value="all" {% if sel_assigned == '' or sel_assigned == 'all' %}selected{% endif %}>All tasks</option>
           <option value="mine" {% if sel_assigned == 'mine' %}selected{% endif %}>Only my tasks</option>
@@ -411,6 +426,187 @@
   border-color: #3b82f6;
   outline: none;
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+}
+
+/* === Search Box Styles === */
+.task-search-container {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+  min-width: 250px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--theme-text-secondary);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.clear-search-icon {
+  position: absolute;
+  right: 14px;
+  color: var(--theme-text-secondary);
+  transition: color 0.2s ease;
+  z-index: 1;
+}
+
+.clear-search-icon:hover {
+  color: #ef4444;
+}
+
+.task-search-input {
+  width: 100%;
+  padding: 12px 40px 12px 44px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 2px solid var(--theme-input-border);
+  background: var(--theme-input-bg);
+  color: var(--theme-text);
+  transition: all 0.3s ease;
+}
+
+.task-search-input:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+}
+
+.task-search-input::placeholder {
+  color: var(--theme-text-muted);
+}
+
+.search-results-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--theme-surface);
+  border: 2px solid var(--theme-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.search-result-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--theme-border-light);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background: var(--theme-surface-hover);
+  padding-left: 20px;
+}
+
+.search-result-id {
+  font-weight: 700;
+  color: #3b82f6;
+  font-size: 13px;
+  min-width: 50px;
+}
+
+.search-result-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-result-title {
+  font-weight: 600;
+  color: var(--theme-text);
+  font-size: 14px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.search-result-status {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.search-result-project {
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+}
+
+.search-result-assigned {
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  font-style: italic;
+}
+
+.search-no-results {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--theme-text-secondary);
+  font-size: 14px;
+}
+
+.search-loading {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--theme-text-secondary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.search-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--theme-border);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .btn-modern {
@@ -820,6 +1016,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: auto;
 }
 
 .per-page-label {
@@ -852,13 +1049,12 @@
 
 .pagination-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   padding: 20px 24px;
   border-top: 2px solid var(--theme-border-light);
   background: var(--theme-bg-secondary);
   gap: 20px;
-  flex-wrap: wrap;
 }
 
 .pagination-nav {
@@ -950,6 +1146,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: auto;
 }
 
 .jump-label {
@@ -1003,6 +1200,16 @@
   
   .header-actions {
     width: 100%;
+  }
+  
+  .task-search-container {
+    max-width: 100%;
+    flex: 1 1 100%;
+    order: -1;
+    margin-bottom: 8px;
+  }
+
+    width: 100%;
     flex-wrap: wrap;
   }
   
@@ -1022,19 +1229,20 @@
   
   .pagination-header,
   .pagination-footer {
-    flex-direction: column;
+    /* flex-direction: column; */
     align-items: flex-start;
-    gap: 16px;
+    /* gap: 16px; */
   }
   
   .pagination-nav {
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
   }
   
   .pagination-jump {
     width: 100%;
-    justify-content: center;
+    justify-content: flex-end;
+    margin-left: 0;
   }
   
   .pagination-pages {
@@ -1366,6 +1574,29 @@
   border-color: var(--theme-input-border) !important;
   color: var(--theme-text) !important;
 }
+[data-theme="dark"] .task-search-input {
+  background: var(--theme-input-bg) !important;
+  border-color: var(--theme-input-border) !important;
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .search-results-dropdown {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+[data-theme="dark"] .search-result-item {
+  border-color: var(--theme-border-light) !important;
+}
+[data-theme="dark"] .search-result-item:hover {
+  background: var(--theme-surface-hover) !important;
+}
+[data-theme="dark"] .search-result-title {
+  color: var(--theme-text) !important;
+}
+[data-theme="dark"] .search-icon,
+[data-theme="dark"] .clear-search-icon {
+  color: var(--theme-text-secondary) !important;
+}
 </style>
 <script>
 // Make table rows clickable to open task detail (except when clicking action buttons)
@@ -1512,6 +1743,160 @@
       }
     });
   }
+  
+  // ==================== TASK SEARCH FUNCTIONALITY ====================
+  const taskSearchInput = document.getElementById('taskSearchInput');
+  const searchResults = document.getElementById('searchResults');
+  const clearSearchBtn = document.getElementById('clearSearchBtn');
+  let searchTimeout = null;
+  let currentSearchXHR = null;
+
+  // Function to perform search
+  function searchTasks(query) {
+    // Cancel previous request if any
+    if (currentSearchXHR) {
+      currentSearchXHR.abort();
+    }
+
+    if (!query || query.trim().length < 1) {
+      searchResults.style.display = 'none';
+      clearSearchBtn.style.display = 'none';
+      return;
+    }
+
+    clearSearchBtn.style.display = 'block';
+
+    // Show loading state
+    searchResults.innerHTML = '<div class="search-loading"><div class="search-spinner"></div><span>Searching...</span></div>';
+    searchResults.style.display = 'block';
+
+    // Make API call
+    currentSearchXHR = new XMLHttpRequest();
+    currentSearchXHR.open('GET', '/tasks/api/search/?q=' + encodeURIComponent(query), true);
+    
+    currentSearchXHR.onload = function() {
+      if (this.status === 200) {
+        try {
+          const data = JSON.parse(this.responseText);
+          displaySearchResults(data.tasks || []);
+        } catch (e) {
+          console.error('Error parsing search results:', e);
+          searchResults.innerHTML = '<div class="search-no-results">Error loading results</div>';
+        }
+      } else {
+        searchResults.innerHTML = '<div class="search-no-results">Error searching tasks</div>';
+      }
+    };
+
+    currentSearchXHR.onerror = function() {
+      if (this.statusText !== 'abort') {
+        searchResults.innerHTML = '<div class="search-no-results">Network error</div>';
+      }
+    };
+
+    currentSearchXHR.send();
+  }
+
+  // Function to display search results
+  function displaySearchResults(tasks) {
+    if (tasks.length === 0) {
+      searchResults.innerHTML = '<div class="search-no-results">No tasks found</div>';
+      return;
+    }
+
+    let html = '';
+    tasks.forEach(function(task) {
+      // Determine status badge color
+      let statusClass = 'search-result-status ';
+      const status = (task.status || '').toLowerCase().replace(/\s+/g, '-');
+      statusClass += 'status-' + status;
+
+      html += '<div class="search-result-item" data-task-id="' + task.id + '">';
+      html += '<span class="search-result-id">#' + task.id + '</span>';
+      html += '<div class="search-result-content">';
+      html += '<div class="search-result-title">' + escapeHtml(task.title || 'Untitled') + '</div>';
+      html += '<div class="search-result-meta">';
+      html += '<span class="' + statusClass + '">' + escapeHtml(task.status || '') + '</span>';
+      if (task.project_name) {
+        html += '<span class="search-result-project">📁 ' + escapeHtml(task.project_name) + '</span>';
+      }
+      if (task.assigned_to_display) {
+        html += '<span class="search-result-assigned">👤 ' + escapeHtml(task.assigned_to_display) + '</span>';
+      }
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+    });
+
+    searchResults.innerHTML = html;
+
+    // Add click handlers
+    document.querySelectorAll('.search-result-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        const taskId = this.getAttribute('data-task-id');
+        if (taskId) {
+          storeFilterState();
+          window.location.href = '/tasks/' + taskId + '/view/';
+        }
+      });
+    });
+  }
+
+  // Helper function to escape HTML
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Search input event handler
+  if (taskSearchInput) {
+    taskSearchInput.addEventListener('input', function() {
+      const query = this.value;
+      
+      // Clear previous timeout
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      // Debounce search - wait 300ms after user stops typing
+      searchTimeout = setTimeout(function() {
+        searchTasks(query);
+      }, 300);
+    });
+
+    // Close search results when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!taskSearchInput.contains(e.target) && !searchResults.contains(e.target)) {
+        searchResults.style.display = 'none';
+      }
+    });
+
+    // Show results again when focusing on input with text
+    taskSearchInput.addEventListener('focus', function() {
+      if (this.value.trim().length >= 1 && searchResults.innerHTML) {
+        searchResults.style.display = 'block';
+      }
+    });
+  }
+
+  // Clear search button handler
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      taskSearchInput.value = '';
+      searchResults.style.display = 'none';
+      clearSearchBtn.style.display = 'none';
+      taskSearchInput.focus();
+      
+      // Cancel any pending request
+      if (currentSearchXHR) {
+        currentSearchXHR.abort();
+      }
+    });
+  }
+  // ==================== END SEARCH FUNCTIONALITY ====================
+  
 });
 </script>
 {% endblock %}
