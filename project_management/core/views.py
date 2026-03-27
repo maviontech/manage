@@ -153,9 +153,11 @@ def login_password_view(request):
     if request.method == 'GET':
         if not request.session.get('tenant_config') or not request.session.get('ident_email'):
             return redirect('identify')
+        error = request.session.pop('session_expired_message', None)
         return render(request, 'core/login.html', {
             'email': request.session.get('ident_email'),
-            'domain': request.session['tenant_config'].get('domain_postfix')
+            'domain': request.session['tenant_config'].get('domain_postfix'),
+            'error': error,
         })
 
     email = request.session.get('ident_email')
@@ -271,6 +273,8 @@ def login_password_view(request):
     request.session['tenant_db_password'] = tenant_conf.get('db_password')
     request.session['tenant_db_host'] = tenant_conf.get('db_host', '127.0.0.1')
     request.session['tenant_db_port'] = tenant_conf.get('db_port', 3306)
+    request.session['last_activity'] = timezone.now().timestamp()
+    request.session.set_expiry(1800)
 
 
 

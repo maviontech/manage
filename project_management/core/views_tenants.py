@@ -285,7 +285,9 @@ def multi_tenant_login_view(request):
         request.session['admin_id'] = admin_user['id']
         request.session['admin_email'] = admin_user['email']
         request.session['admin_full_name'] = f"{admin_user['first_name']} {admin_user['last_name']}"
-        
+        request.session['last_activity'] = timezone.now().timestamp()
+        request.session.set_expiry(1800)
+
         messages.success(request, f'Welcome, {admin_user["first_name"]} {admin_user["last_name"]}! You are now logged in as Tenant Administrator.')
         return redirect('tenant_dashboard')
         

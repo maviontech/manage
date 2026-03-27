@@ -402,6 +402,23 @@
       if(t==='dark') document.body.classList.add('theme-gray');
     })();
   </script>
+  <script>
+    (function() {
+      if (window.__tracklineSessionFetchWrapped) return;
+      window.__tracklineSessionFetchWrapped = true;
+
+      const originalFetch = window.fetch.bind(window);
+
+      window.fetch = function(input, init) {
+        return originalFetch(input, init).then(function(response) {
+          if (response.status === 401) {
+            window.location.href = "{% url 'login_password' %}";
+          }
+          return response;
+        });
+      };
+    })();
+  </script>
 
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="Primary navigation">
