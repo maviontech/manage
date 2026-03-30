@@ -505,6 +505,14 @@ def _ensure_group_tables(tenant_conn):
                 INDEX (member)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """, [], fetch=False)
+        added_at_column = exec_sql(tenant_conn, """
+            SHOW COLUMNS FROM chat_group_member LIKE 'added_at'
+        """, [])
+        if not added_at_column:
+            exec_sql(tenant_conn, """
+                ALTER TABLE chat_group_member
+                ADD COLUMN added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            """, [], fetch=False)
 
         exec_sql(tenant_conn, """
             CREATE TABLE IF NOT EXISTS chat_group_message (
@@ -532,6 +540,26 @@ def _ensure_group_tables(tenant_conn):
         pass
 
 
+def _get_group_membership(tenant_conn, group_id, member):
+    """Return membership metadata for a user in a group, or None if not a member."""
+    rows = exec_sql(tenant_conn, """
+        SELECT MIN(added_at) AS added_at, COUNT(*) AS membership_count
+        FROM chat_group_member
+        WHERE group_id=%s AND member=%s
+    """, [int(group_id), member])
+    if not rows:
+        return None
+    row = rows[0]
+    if int(row.get('membership_count') or 0) <= 0:
+        return None
+    return row
+
+
+def _group_visibility_start(tenant_conn, group_id, member):
+    membership = _get_group_membership(tenant_conn, group_id, member)
+    return membership.get('added_at') if membership else None
+
+
 @require_GET
 def groups_list(request):
     """Return list of groups for current tenant.
@@ -548,24 +576,27 @@ def groups_list(request):
     tenant_id = str(request.session.get('tenant_id', ''))
     _ensure_group_tables(tenant_conn)
 
-    # fetch groups
-    rows = exec_sql(tenant_conn, """
-        SELECT g.id, g.name, g.created_by
-        FROM chat_group g
-        WHERE g.tenant_id=%s
-        ORDER BY g.created_at DESC
-    """, [tenant_id])
-
     # resolve current user for unread calculations
     me_raw = (request.session.get('ident_email') or getattr(request.user, 'email', None)) or request.session.get('member_id')
     me = _normalize_identity(tenant_conn, me_raw)
+
+    # fetch groups
+    rows = exec_sql(tenant_conn, """
+        SELECT g.id, g.name, g.created_by, MIN(gm.added_at) AS joined_at
+        FROM chat_group g
+        JOIN chat_group_member gm ON gm.group_id = g.id
+        WHERE g.tenant_id=%s AND gm.member=%s
+        GROUP BY g.id, g.name, g.created_by
+        ORDER BY MAX(g.created_at) DESC
+    """, [tenant_id, me])
 
     out = []
     for r in rows:
         gid = int(r.get('id'))
         # members
+        joined_at = r.get('joined_at')
         mems = exec_sql(tenant_conn, """
-            SELECT member FROM chat_group_member WHERE group_id=%s
+            SELECT DISTINCT member FROM chat_group_member WHERE group_id=%s
         """, [gid])
         members = [m.get('member') for m in mems if m.get('member')]
 
@@ -573,11 +604,15 @@ def groups_list(request):
         last_read = exec_sql(tenant_conn, """
             SELECT last_read_at FROM chat_group_read WHERE group_id=%s AND member=%s ORDER BY id DESC LIMIT 1
         """, [gid, me])
+        visible_from = joined_at
         if last_read and last_read[0].get('last_read_at'):
             lr = last_read[0]['last_read_at']
+            if visible_from is None or (lr and lr > visible_from):
+                visible_from = lr
+        if visible_from:
             unread_rows = exec_sql(tenant_conn, """
                 SELECT COUNT(*) AS cnt FROM chat_group_message WHERE group_id=%s AND created_at > %s AND sender <> %s
-            """, [gid, lr, me])
+            """, [gid, visible_from, me])
             unread = int(unread_rows[0].get('cnt') or 0) if unread_rows else 0
         else:
             unread_rows = exec_sql(tenant_conn, """
@@ -645,15 +680,17 @@ def create_group(request):
             mem = _normalize_identity(tenant_conn, m)
             if mem:
                 exec_sql(tenant_conn, """
-                    INSERT INTO chat_group_member (group_id, member) VALUES (%s, %s)
-                """, [group_id, mem])
+                    INSERT INTO chat_group_member (group_id, member, added_at)
+                    SELECT %s, %s, CURRENT_TIMESTAMP FROM DUAL
+                    WHERE NOT EXISTS (SELECT 1 FROM chat_group_member WHERE group_id=%s AND member=%s)
+                """, [group_id, mem, group_id, mem])
         except Exception:
             continue
 
     # ensure creator is a member as well
     try:
         exec_sql(tenant_conn, """
-            INSERT INTO chat_group_member (group_id, member) SELECT %s, %s FROM DUAL
+            INSERT INTO chat_group_member (group_id, member, added_at) SELECT %s, %s, CURRENT_TIMESTAMP FROM DUAL
             WHERE NOT EXISTS (SELECT 1 FROM chat_group_member WHERE group_id=%s AND member=%s)
         """, [group_id, me, group_id, me])
     except Exception:
@@ -680,12 +717,18 @@ def group_history(request):
 
     _ensure_group_tables(tenant_conn)
 
+    me_raw = (request.session.get('ident_email') or getattr(request.user, 'email', None)) or request.session.get('member_id')
+    me = _normalize_identity(tenant_conn, me_raw)
+    visible_from = _group_visibility_start(tenant_conn, group_id, me)
+    if not visible_from:
+        return HttpResponseForbidden('Not a group member')
+
     msgs = exec_sql(tenant_conn, """
         SELECT id, sender, text, is_read, created_at
         FROM chat_group_message
-        WHERE group_id=%s
+        WHERE group_id=%s AND created_at >= %s
         ORDER BY created_at ASC
-    """, [int(group_id)])
+    """, [int(group_id), visible_from])
 
     for m in msgs:
         m["created_at"] = m["created_at"].isoformat() if hasattr(m["created_at"], "isoformat") else str(m["created_at"])
@@ -720,6 +763,10 @@ def group_send(request):
 
     me_raw = (request.session.get('ident_email') or getattr(request.user, 'email', None)) or request.session.get('member_id')
     me = _normalize_identity(tenant_conn, me_raw)
+    tenant_id = str(request.session.get('tenant_id', ''))
+
+    if not _get_group_membership(tenant_conn, group_id, me):
+        return HttpResponseForbidden('Not a group member')
 
     try:
         exec_sql(tenant_conn, """
@@ -774,6 +821,8 @@ def mark_group_read(request):
 
     me_raw = (request.session.get('ident_email') or getattr(request.user, 'email', None)) or request.session.get('member_id')
     me = _normalize_identity(tenant_conn, me_raw)
+    if not _get_group_membership(tenant_conn, group_id, me):
+        return HttpResponseForbidden('Not a group member')
     try:
         exec_sql(tenant_conn, """
             INSERT INTO chat_group_read (group_id, member, last_read_at) VALUES (%s, %s, NOW())
@@ -811,6 +860,11 @@ def group_update(request):
         return HttpResponseForbidden('No tenant')
     _ensure_group_tables(tenant_conn)
 
+    me_raw = (request.session.get('ident_email') or getattr(request.user, 'email', None)) or request.session.get('member_id')
+    me = _normalize_identity(tenant_conn, me_raw)
+    if not _get_group_membership(tenant_conn, group_id, me):
+        return HttpResponseForbidden('Not a group member')
+
     # basic actions
     try:
         if action == 'rename':
@@ -826,7 +880,7 @@ def group_update(request):
             if not mem:
                 return HttpResponseBadRequest('Invalid member')
             exec_sql(tenant_conn, """
-                INSERT INTO chat_group_member (group_id, member) SELECT %s, %s FROM DUAL
+                INSERT INTO chat_group_member (group_id, member, added_at) SELECT %s, %s, CURRENT_TIMESTAMP FROM DUAL
                 WHERE NOT EXISTS (SELECT 1 FROM chat_group_member WHERE group_id=%s AND member=%s)
             """, [int(group_id), mem, int(group_id), mem], fetch=False)
             return JsonResponse({"ok": True})

@@ -23,6 +23,20 @@ MASTER_DB_CONFIG = {
 def normalize(val):
     return str(val).strip().lower() if val else ""
 
+
+def get_group_membership_added_at(tenant_conn, group_id, member):
+    rows = exec_sql(tenant_conn, """
+        SELECT MIN(added_at) AS added_at, COUNT(*) AS membership_count
+        FROM chat_group_member
+        WHERE group_id=%s AND member=%s
+    """, [int(group_id), normalize(member)])
+    if not rows:
+        return None
+    row = rows[0]
+    if int(row.get("membership_count") or 0) <= 0:
+        return None
+    return row.get("added_at")
+
 class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def connect(self):
@@ -66,12 +80,31 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
         await self.channel_layer.group_add(self.presence_group, self.channel_name)
         
-        # Join group-specific channel if group_id provided
+        self.group_channel = None
         if self.group_id:
-            self.group_channel = f"chat_group_{self.tenant_id}_{self.group_id}"
-            await self.channel_layer.group_add(self.group_channel, self.channel_name)
-            logger.info(f"📨 Joined group channel: {self.group_channel}")
-        
+            tenant_conn = None
+            membership_added_at = None
+            try:
+                tenant_conn = await sync_to_async(self._get_tenant_connection_for_group)()
+                membership_added_at = await sync_to_async(get_group_membership_added_at)(
+                    tenant_conn, self.group_id, self.me
+                )
+            except Exception as e:
+                logger.error(f"Failed to verify group membership for WS connect: {e}")
+            finally:
+                try:
+                    if tenant_conn:
+                        tenant_conn.close()
+                except Exception:
+                    pass
+
+            if membership_added_at:
+                self.group_channel = f"chat_group_{self.tenant_id}_{self.group_id}"
+                await self.channel_layer.group_add(self.group_channel, self.channel_name)
+                logger.info(f"Joined group channel: {self.group_channel}")
+            else:
+                logger.warning(f"WS group join denied for {self.me} in group {self.group_id}")
+
         # Join conversation-specific room for read receipts if peer is specified
         if self.peer and self.me:
             # Normalize both identities and sanitize for channel group names
@@ -302,6 +335,42 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """Handle group chat messages"""
         await self.send_json(event)
 
+    def _get_tenant_connection_for_group(self):
+        master_conn = pymysql.connect(
+            host=MASTER_DB_CONFIG['db_host'],
+            port=MASTER_DB_CONFIG['db_port'],
+            user=MASTER_DB_CONFIG['db_user'],
+            password=MASTER_DB_CONFIG['db_password'],
+            database=MASTER_DB_CONFIG['db_name'],
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True
+        )
+
+        try:
+            with master_conn.cursor() as cur:
+                cur.execute("""
+                    SELECT db_name, db_host, db_user, db_password
+                    FROM clients_master
+                    WHERE id = %s OR client_name = %s OR domain_postfix = %s
+                    LIMIT 1
+                """, [self.tenant_id, self.tenant_id, self.tenant_id])
+                row = cur.fetchone()
+        finally:
+            master_conn.close()
+
+        if not row:
+            raise Exception(f"Tenant {self.tenant_id} not found in clients_master")
+
+        return pymysql.connect(
+            host=row['db_host'],
+            port=3306,
+            user=row['db_user'],
+            password=row['db_password'],
+            database=row['db_name'],
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True
+        )
+
     def save_message(self, tenant, sender, receiver, text):
         # Get tenant credentials from clients_master using direct pymysql connection
         master_conn = pymysql.connect(
@@ -490,6 +559,33 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                         INDEX idx_created (created_at)
                     )
                 """)
+
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS chat_group_member (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        group_id INT,
+                        member VARCHAR(255),
+                        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_group (group_id),
+                        INDEX idx_member (member)
+                    )
+                """)
+
+                cur.execute("SHOW COLUMNS FROM chat_group_member LIKE 'added_at'")
+                if not cur.fetchone():
+                    cur.execute("""
+                        ALTER TABLE chat_group_member
+                        ADD COLUMN added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    """)
+
+                cur.execute("""
+                    SELECT MIN(added_at) AS added_at, COUNT(*) AS membership_count
+                    FROM chat_group_member
+                    WHERE group_id=%s AND member=%s
+                """, [int(group_id), sender_norm])
+                membership_row = cur.fetchone()
+                if not membership_row or int(membership_row.get('membership_count') or 0) <= 0:
+                    raise Exception("Sender is not a member of this group")
                 
                 # Insert message
                 cur.execute("""
