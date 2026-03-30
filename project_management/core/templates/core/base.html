@@ -613,7 +613,7 @@
 
             <li role="none" class="{% if page == 'change_password' %}active{% endif %}"><a href="{% url 'change_password' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-key"></i><span>Change Password</span></a></li>
 
-            {% if 'roles.manage' in user_permissions or user_is_admin %}
+            {% if 'roles.view' in user_permissions or 'roles.manage' in user_permissions or user_is_admin %}
             <li role="none" class="{% if page == 'roles' %}active{% endif %}">
               <a href="{% url 'roles_page' %}" class="submenu-link ripple" role="menuitem">
                 <i class="fa-solid fa-user-shield"></i><span>Roles &amp; Permissions</span>

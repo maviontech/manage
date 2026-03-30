@@ -271,8 +271,9 @@ def roles_page(request):
     from .rbac import has_permission
     import json
     
-    # Check permission
-    if not has_permission(request, 'roles.view'):
+    # Keep this page accessible for existing tenants whose Admin role has
+    # `roles.manage` but not the newer `roles.view` permission yet.
+    if not (has_permission(request, 'roles.manage') or has_permission(request, 'roles.view')):
         return render(request, 'core/Permission_denied.html', status=403)
     
     member_id = request.session.get('member_id')

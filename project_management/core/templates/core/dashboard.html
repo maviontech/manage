@@ -1416,6 +1416,422 @@
       padding: 6px 8px;
     }
   }
+
+  .qa-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.25rem;
+    border-radius: 18px;
+    margin-bottom: 1rem;
+    color: #fff;
+    background:
+      radial-gradient(circle at top right, rgba(125, 211, 252, 0.28), transparent 28%),
+      linear-gradient(135deg, #0f172a 0%, #1d4ed8 55%, #0891b2 100%);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .qa-hero h2 {
+    margin: 0.25rem 0 0.45rem;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  .qa-hero p {
+    margin: 0;
+    max-width: 720px;
+    color: rgba(255,255,255,0.88);
+    font-size: 14px;
+  }
+
+  .qa-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.72);
+  }
+
+  .qa-hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  .qa-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.55rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.18);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .qa-pill-strong {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .qa-work-grid,
+  .qa-layout-grid,
+  .qa-support-grid {
+    display: grid;
+    gap: 0.85rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .qa-work-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .qa-layout-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  }
+
+  .qa-support-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .qa-work-card {
+    display: block;
+    text-decoration: none;
+    color: #fff;
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: var(--shadow-md);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .qa-work-card:hover,
+  .qa-action-btn:hover,
+  .qa-feed-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .qa-card-blue { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
+  .qa-card-amber { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+  .qa-card-cyan { background: linear-gradient(135deg, #0891b2 0%, #0ea5e9 100%); }
+  .qa-card-rose { background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%); }
+
+  .qa-work-label,
+  .qa-work-meta {
+    display: block;
+  }
+
+  .qa-work-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.9;
+  }
+
+  .qa-work-value {
+    display: block;
+    margin: 0.5rem 0 0.2rem;
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .qa-work-meta {
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+  }
+
+  .qa-panel {
+    border-radius: 16px;
+    padding: 1.1rem;
+  }
+
+  .qa-panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 0.85rem;
+  }
+
+  .qa-panel-head h3 {
+    margin: 0;
+  }
+
+  .qa-panel-head p {
+    margin: 0.35rem 0 0;
+    color: var(--theme-text-secondary);
+    font-size: 13px;
+  }
+
+  .qa-lifecycle-grid {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .qa-lifecycle-list,
+  .qa-insights-list,
+  .qa-focus-list,
+  .qa-feed-list {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .qa-stat-row,
+  .qa-focus-item,
+  .qa-insight-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 12px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    font-size: 13px;
+  }
+
+  .qa-stat-row strong,
+  .qa-focus-item strong,
+  .qa-insight-item strong {
+    font-size: 15px;
+    color: var(--theme-text);
+  }
+
+  .qa-chart-wrap {
+    min-height: 240px;
+  }
+
+  .qa-chart-short {
+    min-height: 190px;
+  }
+
+  .qa-priority-filters,
+  .qa-actions-grid,
+  .qa-mini-grid {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .qa-priority-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .qa-priority-chip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.65rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 999px;
+    background: var(--gray-50);
+    color: var(--theme-text);
+    padding: 0.7rem 0.95rem;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .qa-priority-chip.is-active {
+    background: #111827;
+    color: #fff;
+    border-color: #111827;
+  }
+
+  .qa-priority-summary {
+    padding: 0.9rem 0;
+  }
+
+  .qa-priority-summary #qaPriorityTitle {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--theme-text-secondary);
+    font-weight: 700;
+  }
+
+  .qa-priority-summary #qaPriorityValue {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--theme-text);
+    line-height: 1.05;
+  }
+
+  .qa-priority-summary p {
+    margin: 0.35rem 0 0;
+    color: var(--theme-text-secondary);
+    font-size: 13px;
+  }
+
+  .qa-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .qa-mini-card {
+    padding: 0.85rem 0.95rem;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(37,99,235,0.06) 0%, rgba(14,165,233,0.04) 100%);
+    border: 1px solid rgba(37,99,235,0.12);
+  }
+
+  .qa-mini-card span {
+    display: block;
+    font-size: 12px;
+    color: var(--theme-text-secondary);
+    margin-bottom: 0.3rem;
+  }
+
+  .qa-mini-card strong {
+    font-size: 26px;
+    color: var(--theme-text);
+  }
+
+  .qa-progress-ring {
+    min-width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+    background: conic-gradient(#0ea5e9 0deg, #38bdf8 180deg, rgba(148,163,184,0.18) 0);
+    box-shadow: inset 0 0 0 10px rgba(255,255,255,0.92);
+  }
+
+  .qa-actions-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .qa-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 58px;
+    border-radius: 14px;
+    text-decoration: none;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: var(--shadow);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .qa-action-red { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); }
+  .qa-action-blue { background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%); }
+  .qa-action-amber { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); }
+  .qa-action-green { background: linear-gradient(135deg, #059669 0%, #34d399 100%); }
+  .qa-action-indigo { background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); }
+  .qa-action-slate { background: linear-gradient(135deg, #334155 0%, #64748b 100%); }
+
+  .qa-feed-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.9rem;
+    align-items: center;
+    padding: 0.9rem;
+    border-radius: 14px;
+    text-decoration: none;
+    color: inherit;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .qa-feed-kind {
+    min-width: 72px;
+    text-align: center;
+    padding: 0.35rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(37,99,235,0.1);
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .qa-feed-body {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .qa-feed-body strong {
+    color: var(--theme-text);
+    font-size: 14px;
+  }
+
+  .qa-feed-body span,
+  .qa-feed-time {
+    color: var(--theme-text-secondary);
+    font-size: 12px;
+  }
+
+  .qa-feed-unread {
+    border-color: rgba(14,165,233,0.32);
+    background: linear-gradient(180deg, rgba(14,165,233,0.08) 0%, rgba(255,255,255,0.95) 100%);
+  }
+
+  [data-theme="dark"] .qa-stat-row,
+  [data-theme="dark"] .qa-focus-item,
+  [data-theme="dark"] .qa-insight-item,
+  [data-theme="dark"] .qa-feed-item,
+  [data-theme="dark"] .qa-priority-chip {
+    background: #131a27 !important;
+    border-color: #253246 !important;
+  }
+
+  [data-theme="dark"] .qa-mini-card {
+    background: linear-gradient(180deg, rgba(30,58,138,0.24) 0%, rgba(8,145,178,0.18) 100%) !important;
+    border-color: rgba(96,165,250,0.22) !important;
+  }
+
+  [data-theme="dark"] .qa-priority-chip.is-active {
+    background: #eff6ff !important;
+    color: #0f172a !important;
+    border-color: #eff6ff !important;
+  }
+
+  @media (max-width: 1100px) {
+    .qa-work-grid,
+    .qa-support-grid,
+    .qa-layout-grid,
+    .qa-priority-filters {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .qa-lifecycle-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .qa-hero,
+    .qa-work-grid,
+    .qa-support-grid,
+    .qa-layout-grid,
+    .qa-actions-grid,
+    .qa-mini-grid,
+    .qa-priority-filters {
+      grid-template-columns: 1fr;
+    }
+
+    .qa-hero {
+      padding: 1rem;
+    }
+
+    .qa-feed-item {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -1460,6 +1876,229 @@
 </div>
 {% endif %}
 
+{% if is_tester %}
+<!-- <section class="qa-hero">
+  <div>
+    <div class="qa-eyebrow">Tester Command Center</div>
+    <h2>Execution-first dashboard for bugs, retests, verification, and test progress.</h2>
+    <p>Built for daily QA flow so you can see what needs action now, what is blocked, and where quality risk is building.</p>
+  </div>
+  <div class="qa-hero-badges">
+    <span class="qa-pill">Role: {{ user_role|default:"Tester" }}</span>
+    <span class="qa-pill qa-pill-strong">Execution {{ execution_rate|default:0 }}%</span>
+  </div>
+</section> -->
+
+<div class="qa-work-grid">
+  <a class="qa-work-card qa-card-blue" href="{% url 'tasks_overview' %}?personal=true">
+    <span class="qa-work-label">Bugs Assigned</span>
+    <span class="qa-work-value">{{ tester_work_assigned|default:0 }}</span>
+    <span class="qa-work-meta">Active bug and defect items on your queue</span>
+  </a>
+  <a class="qa-work-card qa-card-amber" href="{% url 'task_board' %}">
+    <span class="qa-work-label">To Retest</span>
+    <span class="qa-work-value">{{ tester_work_retest|default:0 }}</span>
+    <span class="qa-work-meta">Fixed or retest-ready issues waiting for validation</span>
+  </a>
+  <a class="qa-work-card qa-card-cyan" href="{% url 'tasks_overview' %}?personal=true">
+    <span class="qa-work-label">Pending Verification</span>
+    <span class="qa-work-value">{{ tester_work_verification|default:0 }}</span>
+    <span class="qa-work-meta">Items in verification or approval-type flow</span>
+  </a>
+  <a class="qa-work-card qa-card-rose" href="{% url 'tasks_overview' %}?personal=true">
+    <span class="qa-work-label">Reopened Bugs</span>
+    <span class="qa-work-value">{{ tester_work_reopened|default:0 }}</span>
+    <span class="qa-work-meta">Reopened issues that need another investigation pass</span>
+  </a>
+</div>
+
+<div class="qa-layout-grid">
+  <div class="chart-card qa-panel">
+    <div class="qa-panel-head">
+      <div>
+        <h3>Bug Status Overview</h3>
+        <p>Tracks lifecycle movement across your QA workload.</p>
+      </div>
+    </div>
+    <div class="qa-lifecycle-grid">
+      <div class="qa-lifecycle-list">
+        <div class="qa-stat-row"><span>New</span><strong>{{ bug_status_new|default:0 }}</strong></div>
+        <div class="qa-stat-row"><span>In Progress</span><strong>{{ bug_status_in_progress|default:0 }}</strong></div>
+        <div class="qa-stat-row"><span>Fixed</span><strong>{{ bug_status_fixed|default:0 }}</strong></div>
+        <div class="qa-stat-row"><span>Retesting</span><strong>{{ bug_status_retesting|default:0 }}</strong></div>
+        <div class="qa-stat-row"><span>Closed</span><strong>{{ bug_status_closed|default:0 }}</strong></div>
+        <div class="qa-stat-row"><span>Rejected</span><strong>{{ bug_status_rejected|default:0 }}</strong></div>
+      </div>
+      <div class="qa-chart-wrap">
+        <canvas id="testerLifecycleChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card qa-panel">
+    <div class="qa-panel-head">
+      <div>
+        <h3>Priority-Based Bugs</h3>
+        <p>Open bug pressure by severity, with a fast visual focus tool.</p>
+      </div>
+    </div>
+    <div class="qa-priority-filters" id="qaPriorityFilters">
+      <button type="button" class="qa-priority-chip is-active" data-priority="Critical" data-count="{{ tester_priority_critical|default:0 }}" data-note="Must-fix issues that need immediate QA attention.">Critical <strong>{{ tester_priority_critical|default:0 }}</strong></button>
+      <button type="button" class="qa-priority-chip" data-priority="High" data-count="{{ tester_priority_high|default:0 }}" data-note="High-impact issues that should move quickly through validation.">High <strong>{{ tester_priority_high|default:0 }}</strong></button>
+      <button type="button" class="qa-priority-chip" data-priority="Medium" data-count="{{ tester_priority_medium|default:0 }}" data-note="Medium-priority bugs that should be kept flowing through the queue.">Medium <strong>{{ tester_priority_medium|default:0 }}</strong></button>
+      <button type="button" class="qa-priority-chip" data-priority="Low" data-count="{{ tester_priority_low|default:0 }}" data-note="Low-priority issues that can be validated after urgent work clears.">Low <strong>{{ tester_priority_low|default:0 }}</strong></button>
+    </div>
+    <div class="qa-priority-summary">
+      <div id="qaPriorityTitle">Critical bugs</div>
+      <div id="qaPriorityValue">{{ tester_priority_critical|default:0 }}</div>
+      <p id="qaPriorityNote">Must-fix issues that need immediate QA attention.</p>
+    </div>
+    <div class="qa-chart-wrap qa-chart-short">
+      <canvas id="testerPriorityChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="qa-layout-grid">
+  <div class="chart-card qa-panel">
+    <div class="qa-panel-head">
+      <div>
+        <h3>Test Case Summary</h3>
+        <p>Tester work is not only defects, so this section tracks execution inventory too.</p>
+      </div>
+    </div>
+    <div class="qa-mini-grid">
+      <div class="qa-mini-card"><span>Total Test Cases</span><strong>{{ test_cases_total|default:0 }}</strong></div>
+      <div class="qa-mini-card"><span>Passed</span><strong>{{ test_cases_passed|default:0 }}</strong></div>
+      <div class="qa-mini-card"><span>Failed</span><strong>{{ test_cases_failed|default:0 }}</strong></div>
+      <div class="qa-mini-card"><span>Blocked</span><strong>{{ test_cases_blocked|default:0 }}</strong></div>
+    </div>
+  </div>
+
+  <div class="chart-card qa-panel">
+    <div class="qa-panel-head">
+      <div>
+        <h3>Test Execution Progress</h3>
+        <p>Executed versus pending cases for the current tester queue.</p>
+      </div>
+      <div class="qa-progress-ring" style="background: conic-gradient(#0ea5e9 0deg, #38bdf8 {% widthratio execution_rate|default:0 100 360 %}deg, rgba(148,163,184,0.18) 0);">{{ execution_rate|default:0 }}%</div>
+    </div>
+    <div class="qa-mini-grid">
+      <div class="qa-mini-card"><span>Executed</span><strong>{{ execution_executed|default:0 }}</strong></div>
+      <div class="qa-mini-card"><span>Pending</span><strong>{{ execution_pending|default:0 }}</strong></div>
+    </div>
+    <div class="qa-chart-wrap qa-chart-short">
+      <canvas id="testerExecutionChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="qa-support-grid">
+  <div class="chart-card qa-panel">
+    <div class="qa-panel-head">
+      <div>
+        <h3>Today’s Focus</h3>
+        <p>The items a tester typically checks first every day.</p>
+      </div>
+    </div>
+    <div class="qa-focus-list">
+      <div class="qa-focus-item"><span>Bugs due today</span><strong>{{ today_due_bugs|default:0 }}</strong></div>
+      <div class="qa-focus-item"><span>Retest today</span><strong>{{ today_retest_due|default:0 }}</strong></div>
+      <div class="qa-focus-item"><span>Verification due</span><strong>{{ today_verification_due|default:0 }}</strong></div>
+      <div class="qa-focus-item"><span>Overdue bugs</span><strong>{{ today_overdue_bugs|default:0 }}</strong></div>
+    </div>
+  </div>
+
+  <div class="chart-card qa-panel">
+    <div class="qa-panel-head">
+      <div>
+        <h3>Task Type Breakdown</h3>
+        <p>Visible testing work grouped by the type chosen during task creation.</p>
+      </div>
+    </div>
+    <div class="qa-chart-wrap qa-chart-short">
+      <canvas id="testerWorkTypeChart"></canvas>
+    </div>
+    <div class="donut-legend" style="justify-content:flex-start; width:100%;">
+      {% for label, count in work_type_breakdown.items %}
+      <div class="item">
+        <span class="dot" style="background:{% cycle '#2563eb' '#ef4444' '#10b981' '#f59e0b' '#8b5cf6' '#06b6d4' '#64748b' %}"></span>
+        {{ label }} ({{ count }})
+      </div>
+      {% empty %}
+      <div class="modern-td-empty">No visible task types yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="chart-card qa-panel">
+    <div class="qa-panel-head">
+      <div>
+        <h3>Smart Insights</h3>
+        <p>Small signals that help focus QA effort.</p>
+      </div>
+    </div>
+    <div class="qa-insights-list">
+      {% for insight in qa_insights %}
+      <div class="qa-insight-item">
+        <span>{{ insight.label }}</span>
+        <strong>{{ insight.value }}</strong>
+      </div>
+      {% empty %}
+      <div class="modern-td-empty">No QA insights available yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="qa-layout-grid">
+  <div class="chart-card qa-panel">
+    <div class="qa-panel-head">
+      <div>
+        <h3>Recent Activity</h3>
+        <p>Latest bug updates, comments, and status changes on your items.</p>
+      </div>
+    </div>
+    <div class="qa-feed-list">
+      {% for item in qa_recent_activity %}
+      <a class="qa-feed-item" href="{{ item.href }}">
+        <div class="qa-feed-kind">{{ item.kind }}</div>
+        <div class="qa-feed-body">
+          <strong>{{ item.title }}</strong>
+          <span>{{ item.description }}</span>
+        </div>
+        <div class="qa-feed-time">{{ item.created_at|date:'d M, H:i' }}</div>
+      </a>
+      {% empty %}
+      <div class="modern-td-empty">No recent QA activity available yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="chart-card qa-panel">
+    <div class="qa-panel-head">
+      <div>
+        <h3>Notifications</h3>
+        <p>Assigned bugs, ready-for-retest alerts, and recent communication.</p>
+      </div>
+    </div>
+    <div class="qa-feed-list">
+      {% for notification in tester_notifications %}
+      <a class="qa-feed-item {% if not notification.is_read %}qa-feed-unread{% endif %}" href="{{ notification.link|default:'/notifications/' }}">
+        <div class="qa-feed-kind">Alert</div>
+        <div class="qa-feed-body">
+          <strong>{{ notification.title }}</strong>
+          <span>{{ notification.message }}</span>
+        </div>
+        <div class="qa-feed-time">{{ notification.created_at|date:'d M, H:i' }}</div>
+      </a>
+      {% empty %}
+      <div class="modern-td-empty">No recent notifications for this tester.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% else %}
 <div class="dashboard-grid">
   {% if is_tester %}
     <!-- TESTER-SPECIFIC DASHBOARD CARDS -->
@@ -1733,6 +2372,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 {# Team modal only rendered for team leads #}
 {% if is_team_lead %}
@@ -1920,6 +2560,107 @@ document.addEventListener("DOMContentLoaded", function() {
           window.location = item.dataset.url;
         }
       }
+    });
+  }
+
+  const testerLifecycleCtx = document.getElementById('testerLifecycleChart')?.getContext('2d');
+  if (testerLifecycleCtx) {
+    new Chart(testerLifecycleCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ tester_lifecycle_labels|default:'[]'|safe }},
+        datasets: [{
+          label: 'Issues',
+          data: {{ tester_lifecycle_values|default:'[]'|safe }},
+          backgroundColor: ['#3b82f6', '#0ea5e9', '#f59e0b', '#8b5cf6', '#10b981', '#ef4444'],
+          borderRadius: 10
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
+
+  const testerPriorityCtx = document.getElementById('testerPriorityChart')?.getContext('2d');
+  if (testerPriorityCtx) {
+    new Chart(testerPriorityCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ tester_priority_labels|default:'[]'|safe }},
+        datasets: [{
+          data: {{ tester_priority_values|default:'[]'|safe }},
+          backgroundColor: ['#dc2626', '#f97316', '#eab308', '#38bdf8'],
+          borderRadius: 10
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
+
+  const testerExecutionCtx = document.getElementById('testerExecutionChart')?.getContext('2d');
+  if (testerExecutionCtx) {
+    new Chart(testerExecutionCtx, {
+      type: 'doughnut',
+      data: {
+        labels: {{ tester_execution_labels|default:'[]'|safe }},
+        datasets: [{
+          data: {{ tester_execution_values|default:'[]'|safe }},
+          backgroundColor: ['#0ea5e9', '#cbd5e1'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '68%',
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+
+  const testerWorkTypeCtx = document.getElementById('testerWorkTypeChart')?.getContext('2d');
+  if (testerWorkTypeCtx) {
+    new Chart(testerWorkTypeCtx, {
+      type: 'doughnut',
+      data: {
+        labels: {{ tester_work_type_labels|default:'[]'|safe }},
+        datasets: [{
+          data: {{ tester_work_type_values|default:'[]'|safe }},
+          backgroundColor: ['#2563eb', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#64748b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '68%',
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
+  const priorityFilterRoot = document.getElementById('qaPriorityFilters');
+  if (priorityFilterRoot) {
+    const titleEl = document.getElementById('qaPriorityTitle');
+    const valueEl = document.getElementById('qaPriorityValue');
+    const noteEl = document.getElementById('qaPriorityNote');
+    priorityFilterRoot.querySelectorAll('.qa-priority-chip').forEach(chip => {
+      chip.addEventListener('click', function() {
+        priorityFilterRoot.querySelectorAll('.qa-priority-chip').forEach(node => node.classList.remove('is-active'));
+        this.classList.add('is-active');
+        if (titleEl) titleEl.textContent = `${this.dataset.priority} bugs`;
+        if (valueEl) valueEl.textContent = this.dataset.count || '0';
+        if (noteEl) noteEl.textContent = this.dataset.note || '';
+      });
     });
   }
 

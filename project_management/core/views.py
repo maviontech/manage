@@ -15,6 +15,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from datetime import date, datetime
 import logging
+import json
 
 logger = logging.getLogger('project_management')
 
@@ -125,6 +126,529 @@ def _load_defect_contributor_metrics(cur, start_date, end_date):
         labels = []
         values = []
     return summary, labels, values
+
+
+def _load_user_role_context(cur, request, member_id):
+    user_role = None
+    user_role_name = None
+    user_role_names = []
+    try:
+        cur.execute("""
+            SELECT r.name
+            FROM tenant_role_assignments tra
+            JOIN roles r ON tra.role_id = r.id
+            WHERE tra.member_id = %s
+        """, (member_id,))
+        for role_row in (cur.fetchall() or []):
+            role_name = role_row.get('name') if isinstance(role_row, dict) else role_row[0]
+            if role_name:
+                user_role_names.append(role_name)
+
+        cur.execute("""
+            SELECT DISTINCT r.name
+            FROM project_role_assignments pra
+            JOIN roles r ON pra.role_id = r.id
+            WHERE pra.member_id = %s
+        """, (member_id,))
+        for role_row in (cur.fetchall() or []):
+            role_name = role_row.get('name') if isinstance(role_row, dict) else role_row[0]
+            if role_name:
+                user_role_names.append(role_name)
+
+        session_user = request.session.get('user')
+        if isinstance(session_user, dict) and session_user.get('role'):
+            user_role_names.append(session_user.get('role'))
+
+        deduped_role_names = []
+        seen_role_names = set()
+        for role_name in user_role_names:
+            normalized_name = (role_name or '').strip()
+            if normalized_name and normalized_name.lower() not in seen_role_names:
+                deduped_role_names.append(normalized_name)
+                seen_role_names.add(normalized_name.lower())
+
+        if deduped_role_names:
+            user_role_name = ', '.join(deduped_role_names)
+            user_role = ' '.join(name.lower() for name in deduped_role_names)
+    except Exception as e:
+        logger.error(f"ERROR detecting user role: {e}")
+        user_role = None
+
+    is_tester = bool(user_role and ('tester' in user_role or 'qa' in user_role or 'test' in user_role))
+    return {
+        'user_role': user_role,
+        'user_role_name': user_role_name,
+        'is_tester': is_tester,
+    }
+
+
+def _get_members_by_role_keywords(cur, keywords):
+    """
+    Return member IDs for users who have any tenant or project role matching the
+    provided keywords. Matching is case-insensitive and based on role name.
+    """
+    normalized = [k.strip().lower() for k in (keywords or []) if k and k.strip()]
+    if not normalized:
+        return []
+
+    like_clauses = " OR ".join(["LOWER(r.name) LIKE %s"] * len(normalized))
+    params = tuple(f"%{keyword}%" for keyword in normalized)
+    member_ids = set()
+
+    try:
+        cur.execute(f"""
+            SELECT DISTINCT tra.member_id
+            FROM tenant_role_assignments tra
+            JOIN roles r ON r.id = tra.role_id
+            WHERE {like_clauses}
+        """, params)
+        for row in (cur.fetchall() or []):
+            member_ids.add(int(row['member_id'] if isinstance(row, dict) else row[0]))
+
+        cur.execute(f"""
+            SELECT DISTINCT pra.member_id
+            FROM project_role_assignments pra
+            JOIN roles r ON r.id = pra.role_id
+            WHERE {like_clauses}
+        """, params)
+        for row in (cur.fetchall() or []):
+            member_ids.add(int(row['member_id'] if isinstance(row, dict) else row[0]))
+    except Exception as e:
+        logger.error(f"ERROR resolving role-scoped members: {e}")
+
+    return sorted(member_ids)
+
+
+def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, include_all_testing_work=False, scope_project_ids=None, scope_created_by_member_id=None):
+    def scalar_from_row(row, key_alias='c'):
+        if row is None:
+            return 0
+        if isinstance(row, dict):
+            return int(row.get(key_alias) or next(iter(row.values()), 0))
+        if isinstance(row, (list, tuple)):
+            return int(row[0]) if len(row) > 0 and row[0] is not None else 0
+        return 0
+
+    scoped_member_ids = [int(mid) for mid in (scope_member_ids or [member_id]) if mid is not None]
+    scoped_project_ids = [int(pid) for pid in (scope_project_ids or []) if pid is not None]
+
+    def assignee_sql(alias=""):
+        prefix = f"{alias}." if alias else ""
+        if include_all_testing_work:
+            return "1=1", ()
+        if scope_created_by_member_id is not None:
+            return f"{prefix}created_by = %s", (scope_created_by_member_id,)
+        placeholders = ','.join(['%s'] * len(scoped_member_ids))
+        return f"{prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders})", tuple(scoped_member_ids)
+
+    bug_filter = """
+        (
+            LOWER(TRIM(COALESCE(work_type, ''))) IN ('bug', 'defect')
+            OR LOWER(TRIM(COALESCE(title, ''))) LIKE '%%bug%%'
+            OR LOWER(TRIM(COALESCE(title, ''))) LIKE '%%defect%%'
+        )
+    """
+    test_filter = """
+        (
+            LOWER(TRIM(COALESCE(work_type, ''))) LIKE '%%test%%'
+            OR LOWER(TRIM(COALESCE(title, ''))) LIKE '%%test%%'
+            OR LOWER(TRIM(COALESCE(description, ''))) LIKE '%%test case%%'
+            OR LOWER(TRIM(COALESCE(description, ''))) LIKE '%%test scenario%%'
+        )
+    """
+    status_expr = TASK_STATUS_SQL
+    today = date.today()
+
+    tester_ctx = {
+        'bugs_assigned': 0,
+        'defects_assigned': 0,
+        'tests_assigned': 0,
+        'bugs_closed': 0,
+        'defects_closed': 0,
+        'work_type_breakdown': {},
+        'tester_work_type_labels': json.dumps([]),
+        'tester_work_type_values': json.dumps([]),
+        'tester_work_assigned': 0,
+        'tester_work_retest': 0,
+        'tester_work_verification': 0,
+        'tester_work_reopened': 0,
+        'bug_status_new': 0,
+        'bug_status_in_progress': 0,
+        'bug_status_fixed': 0,
+        'bug_status_retesting': 0,
+        'bug_status_closed': 0,
+        'bug_status_rejected': 0,
+        'tester_lifecycle_labels': json.dumps(['New', 'In Progress', 'Fixed', 'Retesting', 'Closed', 'Rejected']),
+        'tester_lifecycle_values': json.dumps([0, 0, 0, 0, 0, 0]),
+        'tester_priority_critical': 0,
+        'tester_priority_high': 0,
+        'tester_priority_medium': 0,
+        'tester_priority_low': 0,
+        'tester_priority_labels': json.dumps(['Critical', 'High', 'Medium', 'Low']),
+        'tester_priority_values': json.dumps([0, 0, 0, 0]),
+        'test_cases_total': 0,
+        'test_cases_passed': 0,
+        'test_cases_failed': 0,
+        'test_cases_blocked': 0,
+        'test_cases_pending': 0,
+        'execution_executed': 0,
+        'execution_pending': 0,
+        'execution_rate': 0,
+        'tester_execution_labels': json.dumps(['Executed', 'Pending']),
+        'tester_execution_values': json.dumps([0, 0]),
+        'today_due_bugs': 0,
+        'today_retest_due': 0,
+        'today_verification_due': 0,
+        'today_overdue_bugs': 0,
+        'qa_recent_activity': [],
+        'tester_notifications': [],
+        'qa_insights': [],
+    }
+
+    try:
+        assignee_where, assignee_params = assignee_sql()
+
+        cur.execute(f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE {assignee_where}
+              AND LOWER(TRIM(COALESCE(work_type, ''))) = 'bug'
+        """, assignee_params)
+        tester_ctx['bugs_assigned'] = scalar_from_row(cur.fetchone(), 'c')
+
+        cur.execute(f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE {assignee_where}
+              AND LOWER(TRIM(COALESCE(work_type, ''))) = 'defect'
+        """, assignee_params)
+        tester_ctx['defects_assigned'] = scalar_from_row(cur.fetchone(), 'c')
+
+        cur.execute(f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE {assignee_where}
+              AND {test_filter}
+        """, assignee_params)
+        tester_ctx['tests_assigned'] = scalar_from_row(cur.fetchone(), 'c')
+
+        cur.execute(f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE {assignee_where}
+              AND LOWER(TRIM(COALESCE(work_type, ''))) = 'bug'
+              AND {status_expr} IN ('closed', 'completed')
+        """, assignee_params)
+        tester_ctx['bugs_closed'] = scalar_from_row(cur.fetchone(), 'c')
+
+        cur.execute(f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE {assignee_where}
+              AND LOWER(TRIM(COALESCE(work_type, ''))) = 'defect'
+              AND {status_expr} IN ('closed', 'completed')
+        """, assignee_params)
+        tester_ctx['defects_closed'] = scalar_from_row(cur.fetchone(), 'c')
+
+        cur.execute(f"""
+            SELECT COALESCE(work_type, 'Task') AS wtype, COUNT(*) AS c
+            FROM tasks
+            WHERE {assignee_where}
+            GROUP BY wtype
+        """, assignee_params)
+        wt_rows = cur.fetchall() or []
+        for wt_row in wt_rows:
+            if isinstance(wt_row, dict):
+                work_type = (wt_row.get('wtype') or 'Default').strip() or 'Default'
+                tester_ctx['work_type_breakdown'][work_type] = int(wt_row.get('c', 0))
+            else:
+                work_type = ((wt_row[0] or 'Default')).strip() or 'Default'
+                tester_ctx['work_type_breakdown'][work_type] = int(wt_row[1] or 0)
+
+        work_type_items = sorted(
+            tester_ctx['work_type_breakdown'].items(),
+            key=lambda item: (-item[1], item[0].lower())
+        )
+        tester_ctx['tester_work_type_labels'] = json.dumps([label for label, _ in work_type_items])
+        tester_ctx['tester_work_type_values'] = json.dumps([value for _, value in work_type_items])
+
+        cur.execute(f"""
+            SELECT id, title, status, priority, due_date, project_id, subproject_id
+            FROM tasks
+            WHERE {assignee_where}
+              AND {bug_filter}
+        """, assignee_params)
+        bug_rows = cur.fetchall() or []
+
+        lifecycle_counts = {'New': 0, 'In Progress': 0, 'Fixed': 0, 'Retesting': 0, 'Closed': 0, 'Rejected': 0}
+        priority_counts = {'Critical': 0, 'High': 0, 'Medium': 0, 'Low': 0}
+        reopened_count = 0
+        retest_count = 0
+        verification_count = 0
+        due_today_count = 0
+        retest_today_count = 0
+        verification_today_count = 0
+        overdue_bug_count = 0
+        open_bug_total = 0
+        project_bug_counts = {}
+        module_bug_counts = {}
+
+        for row in bug_rows:
+            if isinstance(row, dict):
+                status_value = (row.get('status') or '').strip().lower()
+                priority_value = (row.get('priority') or 'Normal').strip().title()
+                due_date = row.get('due_date')
+                project_id = row.get('project_id')
+                subproject_id = row.get('subproject_id')
+            else:
+                status_value = (row[2] or '').strip().lower()
+                priority_value = (row[3] or 'Normal').strip().title()
+                due_date = row[4]
+                project_id = row[5]
+                subproject_id = row[6]
+
+            if status_value in ('new', 'open'):
+                lifecycle_counts['New'] += 1
+            elif status_value in ('in progress', 'in-progress', 'assigned', 'investigating', 'review'):
+                lifecycle_counts['In Progress'] += 1
+            elif status_value in ('fixed', 'resolved'):
+                lifecycle_counts['Fixed'] += 1
+            elif status_value in ('retesting', 'retest', 'ready for retest'):
+                lifecycle_counts['Retesting'] += 1
+            elif status_value in ('rejected', 'duplicate', 'invalid', 'cannot reproduce', 'won\'t fix', 'wontfix'):
+                lifecycle_counts['Rejected'] += 1
+            elif status_value in ('closed', 'completed', 'finished'):
+                lifecycle_counts['Closed'] += 1
+            else:
+                lifecycle_counts['In Progress'] += 1
+
+            if status_value in ('reopened', 're-opened'):
+                reopened_count += 1
+            if status_value in ('retesting', 'retest', 'ready for retest', 'fixed', 'resolved'):
+                retest_count += 1
+            if status_value in ('pending verification', 'verification pending', 'in verification', 'verify', 'verified'):
+                verification_count += 1
+
+            if status_value not in ('closed', 'completed', 'finished', 'rejected', 'duplicate', 'invalid', 'cannot reproduce', 'won\'t fix', 'wontfix'):
+                open_bug_total += 1
+                priority_key = 'Medium' if priority_value == 'Normal' else priority_value
+                if priority_key not in priority_counts:
+                    priority_key = 'Medium'
+                priority_counts[priority_key] += 1
+                if project_id:
+                    project_bug_counts[project_id] = project_bug_counts.get(project_id, 0) + 1
+                if subproject_id:
+                    module_bug_counts[subproject_id] = module_bug_counts.get(subproject_id, 0) + 1
+
+            due_value = due_date.date() if hasattr(due_date, 'date') else due_date
+            if due_value == today and status_value not in ('closed', 'completed', 'finished'):
+                due_today_count += 1
+            if due_value == today and status_value in ('retesting', 'retest', 'ready for retest', 'fixed', 'resolved'):
+                retest_today_count += 1
+            if due_value == today and status_value in ('pending verification', 'verification pending', 'in verification', 'verify', 'verified'):
+                verification_today_count += 1
+            if due_value and due_value < today and status_value not in ('closed', 'completed', 'finished'):
+                overdue_bug_count += 1
+
+        tester_ctx['tester_work_assigned'] = len(bug_rows)
+        tester_ctx['tester_work_retest'] = retest_count
+        tester_ctx['tester_work_verification'] = verification_count
+        tester_ctx['tester_work_reopened'] = reopened_count
+        tester_ctx['bug_status_new'] = lifecycle_counts['New']
+        tester_ctx['bug_status_in_progress'] = lifecycle_counts['In Progress']
+        tester_ctx['bug_status_fixed'] = lifecycle_counts['Fixed']
+        tester_ctx['bug_status_retesting'] = lifecycle_counts['Retesting']
+        tester_ctx['bug_status_closed'] = lifecycle_counts['Closed']
+        tester_ctx['bug_status_rejected'] = lifecycle_counts['Rejected']
+        tester_ctx['tester_lifecycle_values'] = json.dumps([
+            lifecycle_counts['New'],
+            lifecycle_counts['In Progress'],
+            lifecycle_counts['Fixed'],
+            lifecycle_counts['Retesting'],
+            lifecycle_counts['Closed'],
+            lifecycle_counts['Rejected'],
+        ])
+        tester_ctx['tester_priority_critical'] = priority_counts['Critical']
+        tester_ctx['tester_priority_high'] = priority_counts['High']
+        tester_ctx['tester_priority_medium'] = priority_counts['Medium']
+        tester_ctx['tester_priority_low'] = priority_counts['Low']
+        tester_ctx['tester_priority_values'] = json.dumps([
+            priority_counts['Critical'],
+            priority_counts['High'],
+            priority_counts['Medium'],
+            priority_counts['Low'],
+        ])
+        tester_ctx['today_due_bugs'] = due_today_count
+        tester_ctx['today_retest_due'] = retest_today_count
+        tester_ctx['today_verification_due'] = verification_today_count
+        tester_ctx['today_overdue_bugs'] = overdue_bug_count
+
+        cur.execute(f"""
+            SELECT id, status
+            FROM tasks
+            WHERE {assignee_where}
+              AND {test_filter}
+        """, assignee_params)
+        test_rows = cur.fetchall() or []
+        passed = failed = blocked = 0
+        for row in test_rows:
+            status_value = ((row.get('status') if isinstance(row, dict) else row[1]) or '').strip().lower()
+            if status_value in ('closed', 'completed', 'passed', 'pass'):
+                passed += 1
+            elif status_value in ('failed', 'fail'):
+                failed += 1
+            elif status_value in ('blocked', 'on hold'):
+                blocked += 1
+        total_tests = len(test_rows)
+        pending_tests = max(total_tests - (passed + failed + blocked), 0)
+        executed = passed + failed + blocked
+        execution_rate = int(round((executed / total_tests) * 100)) if total_tests else 0
+        tester_ctx['test_cases_total'] = total_tests
+        tester_ctx['test_cases_passed'] = passed
+        tester_ctx['test_cases_failed'] = failed
+        tester_ctx['test_cases_blocked'] = blocked
+        tester_ctx['test_cases_pending'] = pending_tests
+        tester_ctx['execution_executed'] = executed
+        tester_ctx['execution_pending'] = pending_tests
+        tester_ctx['execution_rate'] = execution_rate
+        tester_ctx['tester_execution_values'] = json.dumps([executed, pending_tests])
+
+        if _table_exists(cur, 'activity_log'):
+            activity_items = []
+            task_assignee_where, task_assignee_params = assignee_sql("t")
+            cur.execute(f"""
+                SELECT
+                    al.entity_id AS task_id,
+                    al.action,
+                    al.timestamp AS created_at,
+                    t.title
+                FROM activity_log al
+                JOIN tasks t ON al.entity_id = t.id
+                WHERE al.entity_type = 'task'
+                  AND {task_assignee_where}
+                  AND ({bug_filter} OR {test_filter})
+                ORDER BY al.timestamp DESC
+                LIMIT 8
+            """, task_assignee_params)
+            for row in (cur.fetchall() or []):
+                action_text = row.get('action') if isinstance(row, dict) else row[1]
+                task_id = row.get('task_id') if isinstance(row, dict) else row[0]
+                title = row.get('title') if isinstance(row, dict) else row[3]
+                created_at = row.get('created_at') if isinstance(row, dict) else row[2]
+                label = 'Updated'
+                lower_action = (action_text or '').lower()
+                if 'status from' in lower_action:
+                    label = 'Status Changed'
+                elif 'added comment' in lower_action:
+                    label = 'Comment Added'
+                elif 'assigned' in lower_action:
+                    label = 'Assigned'
+                activity_items.append({
+                    'kind': label,
+                    'title': title or f"Task #{task_id}",
+                    'description': action_text or 'Issue updated',
+                    'created_at': created_at,
+                    'href': f'/tasks/{task_id}/view/',
+                })
+
+            if _table_exists(cur, 'task_comments'):
+                task_assignee_where, task_assignee_params = assignee_sql("t")
+                cur.execute(f"""
+                    SELECT
+                        tc.task_id,
+                        tc.comment_text,
+                        tc.created_at,
+                        t.title
+                    FROM task_comments tc
+                    JOIN tasks t ON tc.task_id = t.id
+                    WHERE {task_assignee_where}
+                      AND ({bug_filter} OR {test_filter})
+                    ORDER BY tc.created_at DESC
+                    LIMIT 5
+                """, task_assignee_params)
+                for row in (cur.fetchall() or []):
+                    task_id = row.get('task_id') if isinstance(row, dict) else row[0]
+                    comment_text = row.get('comment_text') if isinstance(row, dict) else row[1]
+                    created_at = row.get('created_at') if isinstance(row, dict) else row[2]
+                    title = row.get('title') if isinstance(row, dict) else row[3]
+                    preview = (comment_text or '').strip()
+                    if len(preview) > 96:
+                        preview = preview[:93] + '...'
+                    activity_items.append({
+                        'kind': 'Comment',
+                        'title': title or f"Task #{task_id}",
+                        'description': preview or 'Comment added',
+                        'created_at': created_at,
+                        'href': f'/tasks/{task_id}/view/',
+                    })
+
+            activity_items.sort(key=lambda item: item.get('created_at') or datetime.min, reverse=True)
+            tester_ctx['qa_recent_activity'] = activity_items[:7]
+
+        if _table_exists(cur, 'notifications'):
+            cur.execute("""
+                SELECT title, message, link, is_read, created_at
+                FROM notifications
+                WHERE user_id = %s
+                ORDER BY created_at DESC
+                LIMIT 5
+            """, (member_id,))
+            notification_rows = cur.fetchall() or []
+            tester_ctx['tester_notifications'] = [
+                {
+                    'title': (row.get('title') if isinstance(row, dict) else row[0]) or 'Notification',
+                    'message': (row.get('message') if isinstance(row, dict) else row[1]) or '',
+                    'link': (row.get('link') if isinstance(row, dict) else row[2]) or '/notifications/',
+                    'is_read': bool((row.get('is_read') if isinstance(row, dict) else row[3]) or 0),
+                    'created_at': row.get('created_at') if isinstance(row, dict) else row[4],
+                }
+                for row in notification_rows
+            ]
+
+        insights = []
+        if project_bug_counts:
+            top_project_id = max(project_bug_counts, key=project_bug_counts.get)
+            cur.execute("SELECT name FROM projects WHERE id = %s LIMIT 1", (top_project_id,))
+            project_row = cur.fetchone()
+            project_name = project_row.get('name') if isinstance(project_row, dict) else (project_row[0] if project_row else 'Project')
+            insights.append({
+                'label': 'High bug density project',
+                'value': f"{project_name} ({project_bug_counts[top_project_id]} open issues)",
+            })
+        else:
+            insights.append({
+                'label': 'High bug density project',
+                'value': 'No active bug concentration right now',
+            })
+
+        if module_bug_counts:
+            top_module_id = max(module_bug_counts, key=module_bug_counts.get)
+            cur.execute("SELECT name FROM subprojects WHERE id = %s LIMIT 1", (top_module_id,))
+            module_row = cur.fetchone()
+            module_name = module_row.get('name') if isinstance(module_row, dict) else (module_row[0] if module_row else 'Module')
+            insights.append({
+                'label': 'Most failing module',
+                'value': f"{module_name} ({module_bug_counts[top_module_id]} open bugs)",
+            })
+        else:
+            insights.append({
+                'label': 'Most failing module',
+                'value': 'No hotspot detected in modules',
+            })
+
+        total_bug_volume = len(bug_rows)
+        reopen_rate = int(round((reopened_count / total_bug_volume) * 100)) if total_bug_volume else 0
+        closure_rate = int(round((lifecycle_counts['Closed'] / total_bug_volume) * 100)) if total_bug_volume else 0
+        insights.append({
+            'label': 'Reopen rate',
+            'value': f"{reopen_rate}% reopened, {closure_rate}% closed",
+        })
+        tester_ctx['qa_insights'] = insights
+
+    except Exception as e:
+        logger.error(f"ERROR: tester dashboard context {e}", exc_info=True)
+
+    return tester_ctx
 
 
 def identify_view(request):
@@ -377,6 +901,9 @@ def dashboard_view(request):
         'db_password': tenant.get('db_password')
     })
     cur = conn.cursor()
+    role_ctx = _load_user_role_context(cur, request, member_id)
+    is_tester = role_ctx['is_tester']
+    user_role_name = role_ctx['user_role_name']
 
     def scalar_from_row(row, key_alias='c'):
         if row is None:
@@ -389,6 +916,12 @@ def dashboard_view(request):
 
     # Get visible task user IDs based on Alex Carter visibility rules
     visible_user_ids = get_visible_task_user_ids(conn, member_id)
+    if is_tester:
+        tester_member_ids = _get_members_by_role_keywords(cur, ['tester', 'qa', 'test'])
+        if tester_member_ids:
+            visible_user_ids = tester_member_ids
+        else:
+            visible_user_ids = [member_id]
     
     assigned_count = 0
     try:
@@ -788,15 +1321,6 @@ def dashboard_view(request):
     except Exception as e:
         logger.error(f"ERROR: defect reporter metrics {e}")
         defect_reporter_summary = []
-
-        
-    
-
-
-
-    cur.close()
-    conn.close()
-
     ctx = {
         'user': request.session.get('user'),
         'assigned_count': assigned_count,
@@ -839,7 +1363,20 @@ def dashboard_view(request):
         'defect_reporter_summary': defect_reporter_summary,
         'defect_reporter_labels': json.dumps(defect_reporter_labels),
         'defect_reporter_values': json.dumps(defect_reporter_values),
+        'is_user_dashboard': False,
+        'is_tester': is_tester,
+        'user_role': user_role_name,
     }
+    if is_tester:
+        ctx.update(_build_tester_dashboard_context(
+            cur,
+            member_id,
+            scope_member_ids=visible_user_ids,
+            include_all_testing_work=True,
+        ))
+
+    cur.close()
+    conn.close()
 
     # If this is an AJAX/JSON request for the defect filter, return JSON payload
     accept = request.META.get('HTTP_ACCEPT', '')
@@ -876,7 +1413,11 @@ def dashboard_view(request):
         }
         return JsonResponse(payload)
 
-    return render(request, 'core/dashboard.html', ctx)
+    response = render(request, 'core/dashboard.html', ctx)
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 
 def user_dashboard_view(request):
@@ -904,44 +1445,9 @@ def user_dashboard_view(request):
     })
     cur = conn.cursor()
     
-    # ========== DETECT USER ROLE ==========
-    user_role = None
-    user_role_name = None
-    try:
-        # Check tenant_role_assignments first
-        cur.execute("""
-            SELECT r.name 
-            FROM tenant_role_assignments tra
-            JOIN roles r ON tra.role_id = r.id
-            WHERE tra.member_id = %s
-            LIMIT 1
-        """, (member_id,))
-        role_row = cur.fetchone()
-        if role_row:
-            user_role_name = role_row.get('name') if isinstance(role_row, dict) else role_row[0]
-        
-        # If no tenant role, check project_role_assignments
-        if not user_role_name:
-            cur.execute("""
-                SELECT r.name 
-                FROM project_role_assignments pra
-                JOIN roles r ON pra.role_id = r.id
-                WHERE pra.member_id = %s
-                LIMIT 1
-            """, (member_id,))
-            role_row = cur.fetchone()
-            if role_row:
-                user_role_name = role_row.get('name') if isinstance(role_row, dict) else role_row[0]
-        
-        # Normalize role name
-        if user_role_name:
-            user_role = user_role_name.lower().strip()
-    except Exception as e:
-        logger.error(f"ERROR detecting user role: {e}")
-        user_role = None
-    
-    # Check if user is a Tester/QA
-    is_tester = user_role and ('tester' in user_role or 'qa' in user_role or 'test' in user_role)
+    role_ctx = _load_user_role_context(cur, request, member_id)
+    is_tester = role_ctx['is_tester']
+    user_role_name = role_ctx['user_role_name']
 
     def scalar_from_row(row, key_alias='c'):
         if row is None:
@@ -1323,89 +1829,6 @@ def user_dashboard_view(request):
         logger.error(f"ERROR: defect reporter metrics user dashboard {e}")
         defect_reporter_summary = []
 
-    # ========== TESTER-SPECIFIC METRICS ==========
-    bugs_assigned = 0
-    defects_assigned = 0
-    tests_assigned = 0
-    bugs_closed = 0
-    defects_closed = 0
-    work_type_breakdown = {}
-    
-    if is_tester:
-        try:
-            # Count bugs assigned to this tester
-            cur.execute("""
-                SELECT COUNT(*) AS c 
-                FROM tasks 
-                WHERE assigned_type='member' 
-                AND assigned_to=%s 
-                AND LOWER(TRIM(COALESCE(work_type, ''))) = 'bug'
-            """, (member_id,))
-            bugs_assigned = scalar_from_row(cur.fetchone(), 'c')
-            
-            # Count defects assigned to this tester
-            cur.execute("""
-                SELECT COUNT(*) AS c 
-                FROM tasks 
-                WHERE assigned_type='member' 
-                AND assigned_to=%s 
-                AND LOWER(TRIM(COALESCE(work_type, ''))) = 'defect'
-            """, (member_id,))
-            defects_assigned = scalar_from_row(cur.fetchone(), 'c')
-            
-            # Count test-related tasks
-            cur.execute("""
-                SELECT COUNT(*) AS c 
-                FROM tasks 
-                WHERE assigned_type='member' 
-                AND assigned_to=%s 
-                AND (LOWER(TRIM(COALESCE(work_type, ''))) LIKE '%test%' 
-                     OR LOWER(TRIM(COALESCE(title, ''))) LIKE '%test%')
-            """, (member_id,))
-            tests_assigned = scalar_from_row(cur.fetchone(), 'c')
-            
-            # Count closed bugs
-            cur.execute("""
-                SELECT COUNT(*) AS c 
-                FROM tasks 
-                WHERE assigned_type='member' 
-                AND assigned_to=%s 
-                AND LOWER(TRIM(COALESCE(work_type, ''))) = 'bug'
-                AND status = 'Closed'
-            """, (member_id,))
-            bugs_closed = scalar_from_row(cur.fetchone(), 'c')
-            
-            # Count closed defects
-            cur.execute("""
-                SELECT COUNT(*) AS c 
-                FROM tasks 
-                WHERE assigned_type='member' 
-                AND assigned_to=%s 
-                AND LOWER(TRIM(COALESCE(work_type, ''))) = 'defect'
-                AND status = 'Closed'
-            """, (member_id,))
-            defects_closed = scalar_from_row(cur.fetchone(), 'c')
-            
-            # Work type breakdown for tester
-            cur.execute("""
-                SELECT COALESCE(work_type, 'Task') AS wtype, COUNT(*) AS c
-                FROM tasks
-                WHERE assigned_type='member' AND assigned_to=%s
-                GROUP BY wtype
-            """, (member_id,))
-            wt_rows = cur.fetchall() or []
-            for wt_row in wt_rows:
-                if isinstance(wt_row, dict):
-                    work_type_breakdown[wt_row.get('wtype', 'Task')] = int(wt_row.get('c', 0))
-                else:
-                    work_type_breakdown[wt_row[0] or 'Task'] = int(wt_row[1] or 0)
-                    
-        except Exception as e:
-            logger.error(f"ERROR: tester-specific metrics {e}")
-
-    cur.close()
-    conn.close()
-
     ctx = {
         'user': request.session.get('user'),
         'assigned_count': assigned_count,
@@ -1449,18 +1872,26 @@ def user_dashboard_view(request):
         'defect_reporter_labels': json.dumps(defect_reporter_labels),
         'defect_reporter_values': json.dumps(defect_reporter_values),
         'is_user_dashboard': True,  # Flag to indicate this is user-specific view
-        # Tester-specific metrics
         'is_tester': is_tester,
         'user_role': user_role_name,
-        'bugs_assigned': bugs_assigned,
-        'defects_assigned': defects_assigned,
-        'tests_assigned': tests_assigned,
-        'bugs_closed': bugs_closed,
-        'defects_closed': defects_closed,
-        'work_type_breakdown': work_type_breakdown,
     }
+    if is_tester:
+        ctx.update(_build_tester_dashboard_context(
+            cur,
+            member_id,
+            scope_member_ids=[member_id],
+            include_all_testing_work=False,
+            scope_created_by_member_id=member_id,
+        ))
 
-    return render(request, 'core/dashboard.html', ctx)
+    cur.close()
+    conn.close()
+
+    response = render(request, 'core/dashboard.html', ctx)
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 
 from django.http import JsonResponse, HttpResponseBadRequest
