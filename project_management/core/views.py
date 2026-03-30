@@ -77,6 +77,14 @@ def _table_exists(cur, table_name):
         return False
 
 
+TASK_STATUS_SQL = "LOWER(TRIM(COALESCE(status, '')))"
+TASK_CLOSED_STATUSES = ('closed', 'completed')
+TASK_FINISHED_STATUSES = ('finished',)
+TASK_PENDING_STATUSES = ('open', 'review', 'in progress', 'in-progress')
+TASK_NEW_STATUSES = ('new',)
+TASK_OPEN_BOARD_STATUSES = TASK_PENDING_STATUSES + TASK_NEW_STATUSES
+
+
 def _load_defect_contributor_metrics(cur, start_date, end_date):
     """
     Build defect creator metrics across the tenant DB for the selected window.
@@ -410,13 +418,22 @@ def dashboard_view(request):
     except Exception:
         projects_completed = 0
 
+    status_expr = TASK_STATUS_SQL
+
     tasks_completed = 0
     try:
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
             cur.execute(
-                f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND status = 'Closed'",
-                tuple(visible_user_ids))
+                f"""
+                SELECT COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member'
+                  AND assigned_to IN ({placeholders})
+                  AND {status_expr} IN ('closed', 'completed')
+                """,
+                tuple(visible_user_ids),
+            )
             tasks_completed = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         tasks_completed = 0
@@ -426,12 +443,39 @@ def dashboard_view(request):
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
             cur.execute(
-                f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND status NOT IN ('Closed', 'In Progress', 'Review', 'In-Progress')",
-                tuple(visible_user_ids))
+                f"""
+                SELECT COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member'
+                  AND assigned_to IN ({placeholders})
+                  AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress')
+                """,
+                tuple(visible_user_ids),
+            )
             tasks_pending = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         logger.error(f"ERROR tasks_pending: {e}")
         tasks_pending = 0
+
+
+    tasks_finished = 0
+    try:
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(
+                f"""
+                SELECT COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member'
+                  AND assigned_to IN ({placeholders})
+                  AND {status_expr} = 'finished'
+                """,
+                tuple(visible_user_ids),
+            )
+            tasks_finished = scalar_from_row(cur.fetchone(), 'c')
+    except Exception as e:
+        logger.error(f"ERROR tasks_finished: {e}")
+        tasks_finished = 0    
 
     progress_completed = progress_inprogress = progress_pending = 0
     try:
@@ -451,7 +495,7 @@ def dashboard_view(request):
                     items = [(r[0], int(r[1] or 0)) for r in rows]
                 for status, cnt in items:
                     s = (status or '').lower()
-                    if s == 'closed':
+                    if s in TASK_CLOSED_STATUSES or s in TASK_FINISHED_STATUSES:
                         progress_completed += cnt
                     elif s in ('in progress', 'review', 'in-progress'):
                         progress_inprogress += cnt
@@ -502,7 +546,7 @@ def dashboard_view(request):
                         p = (r.get('p') or 'Normal').title()
                         st = (r.get('status') or '').lower()
                         cnt = int(r.get('c') or 0)
-                        if st == 'closed':
+                        if st in TASK_CLOSED_STATUSES or st in TASK_FINISHED_STATUSES:
                             pri_closed[p] = pri_closed.get(p, 0) + cnt
                         else:
                             pri_open[p] = pri_open.get(p, 0) + cnt
@@ -511,7 +555,7 @@ def dashboard_view(request):
                         p = (r[0] or 'Normal').title()
                         st = (r[1] or '').lower()
                         cnt = int(r[2] or 0)
-                        if st == 'closed':
+                        if st in TASK_CLOSED_STATUSES or st in TASK_FINISHED_STATUSES:
                             pri_closed[p] = pri_closed.get(p, 0) + cnt
                         else:
                             pri_open[p] = pri_open.get(p, 0) + cnt
@@ -532,7 +576,16 @@ def dashboard_view(request):
     try:
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
-            cur.execute(f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND NOT (status = 'Closed')", tuple(visible_user_ids))
+            cur.execute(
+                f"""
+                SELECT COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member'
+                  AND assigned_to IN ({placeholders})
+                  AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress', 'new')
+                """,
+                tuple(visible_user_ids),
+            )
             board_open_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         logger.error(f"ERROR: board_open_count {e}")
@@ -543,7 +596,16 @@ def dashboard_view(request):
     try:
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
-            cur.execute(f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND status IN ('New','Open')", tuple(visible_user_ids))
+            cur.execute(
+                f"""
+                SELECT COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member'
+                  AND assigned_to IN ({placeholders})
+                  AND {status_expr} IN ('new', 'open')
+                """,
+                tuple(visible_user_ids),
+            )
             my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         logger.error(f"ERROR: my_new_tasks_count {e}")
@@ -742,6 +804,7 @@ def dashboard_view(request):
         'projects_completed': projects_completed,
         'tasks_completed': tasks_completed,
         'tasks_pending': tasks_pending,
+        'tasks_finished': tasks_finished,
         'progress_completed': progress_completed,
         'progress_inprogress': progress_inprogress,
         'progress_pending': progress_pending,
@@ -913,12 +976,21 @@ def user_dashboard_view(request):
         logger.error(f"ERROR active_projects: {e}")
         active_projects = 0
 
+    status_expr = TASK_STATUS_SQL
+
     # Get completed tasks for this user only
     tasks_completed = 0
     try:
         cur.execute(
-            "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status = 'Closed'",
-            (member_id,))
+            f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE assigned_type='member'
+              AND assigned_to=%s
+              AND {status_expr} IN ('closed', 'completed')
+            """,
+            (member_id,),
+        )
         tasks_completed = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         tasks_completed = 0
@@ -927,12 +999,36 @@ def user_dashboard_view(request):
     tasks_pending = 0
     try:
         cur.execute(
-            "SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status NOT IN ('Closed', 'In Progress', 'Review', 'In-Progress')",
-            (member_id,))
+            f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE assigned_type='member'
+              AND assigned_to=%s
+              AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress')
+            """,
+            (member_id,),
+        )
         tasks_pending = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         logger.error(f"ERROR tasks_pending: {e}")
         tasks_pending = 0
+
+    tasks_finished = 0
+    try:
+        cur.execute(
+            f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE assigned_type='member'
+              AND assigned_to=%s
+              AND {status_expr} = 'finished'
+            """,
+            (member_id,),
+        )
+        tasks_finished = scalar_from_row(cur.fetchone(), 'c')
+    except Exception as e:
+        logger.error(f"ERROR tasks_finished: {e}")
+        tasks_finished = 0
 
     # Task breakdown by status for this user
     progress_completed = progress_inprogress = progress_pending = 0
@@ -951,7 +1047,7 @@ def user_dashboard_view(request):
                 items = [(r[0], int(r[1] or 0)) for r in rows]
             for status, cnt in items:
                 s = (status or '').lower()
-                if s == 'closed':
+                if s in TASK_CLOSED_STATUSES or s in TASK_FINISHED_STATUSES:
                     progress_completed += cnt
                 elif s in ('in progress', 'review', 'in-progress'):
                     progress_inprogress += cnt
@@ -1000,7 +1096,7 @@ def user_dashboard_view(request):
                     p = (r.get('p') or 'Normal').title()
                     st = (r.get('status') or '').lower()
                     cnt = int(r.get('c') or 0)
-                    if st == 'closed':
+                    if st in TASK_CLOSED_STATUSES or st in TASK_FINISHED_STATUSES:
                         pri_closed[p] = pri_closed.get(p, 0) + cnt
                     else:
                         pri_open[p] = pri_open.get(p, 0) + cnt
@@ -1009,7 +1105,7 @@ def user_dashboard_view(request):
                     p = (r[0] or 'Normal').title()
                     st = (r[1] or '').lower()
                     cnt = int(r[2] or 0)
-                    if st == 'closed':
+                    if st in TASK_CLOSED_STATUSES or st in TASK_FINISHED_STATUSES:
                         pri_closed[p] = pri_closed.get(p, 0) + cnt
                     else:
                         pri_open[p] = pri_open.get(p, 0) + cnt
@@ -1029,7 +1125,16 @@ def user_dashboard_view(request):
     # Board open count for this user
     board_open_count = 0
     try:
-        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND NOT (status = 'Closed')", (member_id,))
+        cur.execute(
+            f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE assigned_type='member'
+              AND assigned_to=%s
+              AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress', 'new')
+            """,
+            (member_id,),
+        )
         board_open_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         logger.error(f"ERROR: board_open_count {e}")
@@ -1038,7 +1143,16 @@ def user_dashboard_view(request):
     # My new tasks count
     my_new_tasks_count = 0
     try:
-        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s AND status IN ('New','Open')", (member_id,))
+        cur.execute(
+            f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE assigned_type='member'
+              AND assigned_to=%s
+              AND {status_expr} IN ('new', 'open')
+            """,
+            (member_id,),
+        )
         my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         logger.error(f"ERROR: my_new_tasks_count {e}")
@@ -1299,6 +1413,7 @@ def user_dashboard_view(request):
         'projects_completed': 0,  # Not tracking individual user project completion
         'tasks_completed': tasks_completed,
         'tasks_pending': tasks_pending,
+        'tasks_finished': tasks_finished,
         'progress_completed': progress_completed,
         'progress_inprogress': progress_inprogress,
         'progress_pending': progress_pending,

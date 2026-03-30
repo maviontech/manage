@@ -4056,16 +4056,22 @@ def _metric_page_context(metric_key):
             'empty': 'No active projects found.'
         },
         'tasks-completed': {
-            'title': 'Tasks Completed',
-            'subtitle': 'Completed/closed tasks in your visibility scope',
+            'title': 'Tasks Closed',
+            'subtitle': 'Closed/completed tasks in your visibility scope',
             'table_type': 'tasks',
-            'empty': 'No completed tasks found.'
+            'empty': 'No closed tasks found.'
         },
         'tasks-pending': {
             'title': 'Tasks Pending',
-            'subtitle': 'Pending/open tasks in your visibility scope',
+            'subtitle': 'Open, review, and in-progress tasks in your visibility scope',
             'table_type': 'tasks',
             'empty': 'No pending tasks found.'
+        },
+        'tasks-finished': {
+            'title': 'Tasks Finished',
+            'subtitle': 'Finished tasks in your visibility scope',
+            'table_type': 'tasks',
+            'empty': 'No finished tasks found.'
         },
     }
     return mapping.get(metric_key)
@@ -4078,6 +4084,7 @@ def metric_drilldown_view(request, metric_key):
       - active-projects
       - tasks-completed
       - tasks-pending
+      - tasks-finished
     
     Query Parameters:
     - personal=true: Show only data for current user (personal dashboard view)
@@ -4186,7 +4193,12 @@ def metric_drilldown_view(request, metric_key):
             sort_sql, sort_field, sort_dir = _safe_metric_sort(request, allowed_sorts, 'created_at')
             if filter_user_ids:
                 placeholders = ','.join(['%s'] * len(filter_user_ids))
-                status_clause = "t.status IN ('Completed','Closed')" if metric_key == 'tasks-completed' else "t.status NOT IN ('Completed','Closed')"
+                if metric_key == 'tasks-completed':
+                    status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('completed', 'closed')"
+                elif metric_key == 'tasks-finished':
+                    status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) = 'finished'"
+                else:
+                    status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('open', 'review', 'in progress', 'in-progress')"
                 cur.execute(f"""
                     SELECT
                         t.id,
@@ -4250,7 +4262,7 @@ def export_metric_drilldown_excel(request):
     """
     Export metric drilldown with full base-table columns.
     - active-projects -> projects.*
-    - tasks-completed/tasks-pending -> tasks.*
+    - tasks-completed/tasks-pending/tasks-finished -> tasks.*
     """
     try:
         from openpyxl import Workbook
@@ -4288,7 +4300,12 @@ def export_metric_drilldown_excel(request):
         else:
             if visible_user_ids:
                 placeholders = ','.join(['%s'] * len(visible_user_ids))
-                status_clause = "status IN ('Completed','Closed')" if metric_key == 'tasks-completed' else "status NOT IN ('Completed','Closed')"
+                if metric_key == 'tasks-completed':
+                    status_clause = "LOWER(TRIM(COALESCE(status, ''))) IN ('completed', 'closed')"
+                elif metric_key == 'tasks-finished':
+                    status_clause = "LOWER(TRIM(COALESCE(status, ''))) = 'finished'"
+                else:
+                    status_clause = "LOWER(TRIM(COALESCE(status, ''))) IN ('open', 'review', 'in progress', 'in-progress')"
                 cur.execute(f"""
                     SELECT t.*
                     FROM tasks t

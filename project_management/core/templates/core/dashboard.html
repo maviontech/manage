@@ -142,6 +142,9 @@
   [data-theme="dark"] .metric-card.tasks-pending {
     background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%) !important;
   }
+  [data-theme="dark"] .metric-card.tasks-finished {
+    background: linear-gradient(135deg, #111827 0%, #374151 100%) !important;
+  }
   [data-theme="dark"] .metric-card .label {
     color: rgba(255,255,255,0.85) !important;
     -webkit-text-fill-color: rgba(255,255,255,0.85) !important;
@@ -577,6 +580,10 @@
 
   .metric-card.tasks-pending {
     background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  }
+
+  .metric-card.tasks-finished {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
   }
 
   /* ============================================
@@ -1517,7 +1524,7 @@
         <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 5l7 7-7 7"/>
         </svg>
-        <div class="label">Tasks Completed</div>
+        <div class="label">Tasks Closed</div>
         <div class="value">{{ tasks_completed|default:0 }}</div>
       </div>
     </a>
@@ -1528,6 +1535,15 @@
         </svg>
         <div class="label">Tasks Pending</div>
         <div class="value">{{ tasks_pending|default:0 }}</div>
+      </div>
+    </a>
+   <a href="{% url 'metric_drilldown' 'tasks-finished' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card tasks-finished" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Tasks Finished</div>
+        <div class="value">{{ tasks_finished|default:0 }}</div>
       </div>
     </a>
   {% endif %}
