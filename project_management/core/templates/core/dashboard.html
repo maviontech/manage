@@ -1896,19 +1896,19 @@
     <span class="qa-work-meta">Active bug and defect items on your queue</span>
   </a>
   <a class="qa-work-card qa-card-amber" href="{% url 'task_board' %}">
-    <span class="qa-work-label">To Retest</span>
+    <span class="qa-work-label">Total Assigned</span>
     <span class="qa-work-value">{{ tester_work_retest|default:0 }}</span>
-    <span class="qa-work-meta">Fixed or retest-ready issues waiting for validation</span>
+    <span class="qa-work-meta">Shows the total assigned bug and defect tasks.</span>
   </a>
   <a class="qa-work-card qa-card-cyan" href="{% url 'tasks_overview' %}?personal=true">
-    <span class="qa-work-label">Pending Verification</span>
+    <span class="qa-work-label">Finished</span>
     <span class="qa-work-value">{{ tester_work_verification|default:0 }}</span>
-    <span class="qa-work-meta">Items in verification or approval-type flow</span>
+    <span class="qa-work-meta">Shows bug and defect tasks with Finished status.</span>
   </a>
   <a class="qa-work-card qa-card-rose" href="{% url 'tasks_overview' %}?personal=true">
-    <span class="qa-work-label">Reopened Bugs</span>
+    <span class="qa-work-label">Closed</span>
     <span class="qa-work-value">{{ tester_work_reopened|default:0 }}</span>
-    <span class="qa-work-meta">Reopened issues that need another investigation pass</span>
+    <span class="qa-work-meta">Shows bug and defect tasks with Closed status.</span>
   </a>
 </div>
 
@@ -1922,12 +1922,12 @@
     </div>
     <div class="qa-lifecycle-grid">
       <div class="qa-lifecycle-list">
-        <div class="qa-stat-row"><span>New</span><strong>{{ bug_status_new|default:0 }}</strong></div>
+        <div class="qa-stat-row"><span>Open</span><strong>{{ bug_status_new|default:0 }}</strong></div>
         <div class="qa-stat-row"><span>In Progress</span><strong>{{ bug_status_in_progress|default:0 }}</strong></div>
-        <div class="qa-stat-row"><span>Fixed</span><strong>{{ bug_status_fixed|default:0 }}</strong></div>
-        <div class="qa-stat-row"><span>Retesting</span><strong>{{ bug_status_retesting|default:0 }}</strong></div>
+        <div class="qa-stat-row"><span>Finished</span><strong>{{ bug_status_fixed|default:0 }}</strong></div>
+        <div class="qa-stat-row"><span>Reopen</span><strong>{{ bug_status_retesting|default:0 }}</strong></div>
         <div class="qa-stat-row"><span>Closed</span><strong>{{ bug_status_closed|default:0 }}</strong></div>
-        <div class="qa-stat-row"><span>Rejected</span><strong>{{ bug_status_rejected|default:0 }}</strong></div>
+        <div class="qa-stat-row"><span>Blocked</span><strong>{{ bug_status_rejected|default:0 }}</strong></div>
       </div>
       <div class="qa-chart-wrap">
         <canvas id="testerLifecycleChart"></canvas>

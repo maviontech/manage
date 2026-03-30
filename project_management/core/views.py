@@ -278,7 +278,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         'bug_status_retesting': 0,
         'bug_status_closed': 0,
         'bug_status_rejected': 0,
-        'tester_lifecycle_labels': json.dumps(['New', 'In Progress', 'Fixed', 'Retesting', 'Closed', 'Rejected']),
+        'tester_lifecycle_labels': json.dumps(['Open', 'In Progress', 'Finished', 'Reopen', 'Closed', 'Blocked']),
         'tester_lifecycle_values': json.dumps([0, 0, 0, 0, 0, 0]),
         'tester_priority_critical': 0,
         'tester_priority_high': 0,
@@ -380,7 +380,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         """, assignee_params)
         bug_rows = cur.fetchall() or []
 
-        lifecycle_counts = {'New': 0, 'In Progress': 0, 'Fixed': 0, 'Retesting': 0, 'Closed': 0, 'Rejected': 0}
+        lifecycle_counts = {'Open': 0, 'In Progress': 0, 'Finished': 0, 'Reopen': 0, 'Closed': 0, 'Blocked': 0}
         priority_counts = {'Critical': 0, 'High': 0, 'Medium': 0, 'Low': 0}
         reopened_count = 0
         retest_count = 0
@@ -407,17 +407,17 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                 project_id = row[5]
                 subproject_id = row[6]
 
-            if status_value in ('new', 'open'):
-                lifecycle_counts['New'] += 1
+            if status_value == 'open':
+                lifecycle_counts['Open'] += 1
             elif status_value in ('in progress', 'in-progress', 'assigned', 'investigating', 'review'):
                 lifecycle_counts['In Progress'] += 1
-            elif status_value in ('fixed', 'resolved'):
-                lifecycle_counts['Fixed'] += 1
-            elif status_value in ('retesting', 'retest', 'ready for retest'):
-                lifecycle_counts['Retesting'] += 1
-            elif status_value in ('rejected', 'duplicate', 'invalid', 'cannot reproduce', 'won\'t fix', 'wontfix'):
-                lifecycle_counts['Rejected'] += 1
-            elif status_value in ('closed', 'completed', 'finished'):
+            elif status_value == 'finished':
+                lifecycle_counts['Finished'] += 1
+            elif status_value in ('reopened', 're-opened'):
+                lifecycle_counts['Reopen'] += 1
+            elif status_value in ('blocked',):
+                lifecycle_counts['Blocked'] += 1
+            elif status_value in ('closed', 'completed'):
                 lifecycle_counts['Closed'] += 1
             else:
                 lifecycle_counts['In Progress'] += 1
@@ -451,22 +451,22 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                 overdue_bug_count += 1
 
         tester_ctx['tester_work_assigned'] = len(bug_rows)
-        tester_ctx['tester_work_retest'] = retest_count
-        tester_ctx['tester_work_verification'] = verification_count
-        tester_ctx['tester_work_reopened'] = reopened_count
-        tester_ctx['bug_status_new'] = lifecycle_counts['New']
+        tester_ctx['tester_work_retest'] = len(bug_rows)
+        tester_ctx['tester_work_verification'] = lifecycle_counts['Finished']
+        tester_ctx['tester_work_reopened'] = lifecycle_counts['Closed']
+        tester_ctx['bug_status_new'] = lifecycle_counts['Open']
         tester_ctx['bug_status_in_progress'] = lifecycle_counts['In Progress']
-        tester_ctx['bug_status_fixed'] = lifecycle_counts['Fixed']
-        tester_ctx['bug_status_retesting'] = lifecycle_counts['Retesting']
+        tester_ctx['bug_status_fixed'] = lifecycle_counts['Finished']
+        tester_ctx['bug_status_retesting'] = lifecycle_counts['Reopen']
         tester_ctx['bug_status_closed'] = lifecycle_counts['Closed']
-        tester_ctx['bug_status_rejected'] = lifecycle_counts['Rejected']
+        tester_ctx['bug_status_rejected'] = lifecycle_counts['Blocked']
         tester_ctx['tester_lifecycle_values'] = json.dumps([
-            lifecycle_counts['New'],
+            lifecycle_counts['Open'],
             lifecycle_counts['In Progress'],
-            lifecycle_counts['Fixed'],
-            lifecycle_counts['Retesting'],
+            lifecycle_counts['Finished'],
+            lifecycle_counts['Reopen'],
             lifecycle_counts['Closed'],
-            lifecycle_counts['Rejected'],
+            lifecycle_counts['Blocked'],
         ])
         tester_ctx['tester_priority_critical'] = priority_counts['Critical']
         tester_ctx['tester_priority_high'] = priority_counts['High']
