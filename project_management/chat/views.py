@@ -19,6 +19,7 @@ import os
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.utils.crypto import get_random_string
+from chat.crypto import decrypt_chat_text, encrypt_chat_text
 
 def team_chat_page(request, peer_id=None):
     """
@@ -175,6 +176,7 @@ def conversation_history(request):
         ORDER BY created_at ASC
     """, [conv_id])
     for m in msgs:
+            m["text"] = decrypt_chat_text(m.get("text"))
             m["created_at"] = m["created_at"].isoformat() if hasattr(m["created_at"], "isoformat") else str(m["created_at"])
     logger.info(f"conversation_history: Returning {len(msgs)} messages for conv_id={conv_id}")
     return JsonResponse({"messages": msgs})
@@ -231,7 +233,7 @@ def send_message(request):
     # always insert message
     exec_sql(tenant_conn, """
         INSERT INTO chat_message (conversation_id, sender, text, is_read) VALUES (%s,%s,%s,0)
-    """, [conv_id, me, text])
+    """, [conv_id, me, encrypt_chat_text(text)])
     logger.info(f"send_message: inserted message into conv_id={conv_id}")
 
     # Optionally notify via websocket/consumer
@@ -731,6 +733,7 @@ def group_history(request):
     """, [int(group_id), visible_from])
 
     for m in msgs:
+        m["text"] = decrypt_chat_text(m.get("text"))
         m["created_at"] = m["created_at"].isoformat() if hasattr(m["created_at"], "isoformat") else str(m["created_at"])
     return JsonResponse({"messages": msgs})
 
@@ -771,7 +774,7 @@ def group_send(request):
     try:
         exec_sql(tenant_conn, """
             INSERT INTO chat_group_message (group_id, sender, text, is_read) VALUES (%s, %s, %s, 0)
-        """, [int(group_id), me, text])
+        """, [int(group_id), me, encrypt_chat_text(text)])
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=500)
 

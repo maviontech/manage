@@ -5,6 +5,7 @@ from core.db_helpers import exec_sql, get_tenant_conn
 import pymysql
 import os
 import logging
+from chat.crypto import encrypt_chat_text
 
 # Use the project logger configured in settings.LOGGING so messages
 # route to the websocket/notifications handler (websocket.log)
@@ -188,8 +189,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 logger.error(f"Error leaving group channel: {e}")
 
     async def receive_json(self, content):
-        logger.info(f"📨 Received: {content}")
-        
+        logger.info(
+            "Received websocket message: type=%s, has_group=%s, has_to=%s",
+            content.get("type"),
+            bool(content.get("group_id")),
+            bool(content.get("to")),
+        )
+
         msg_type = content.get("type")
         
         # Handle group messages
@@ -202,7 +208,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 logger.warning(f"⚠️ Missing text or group_id: text={bool(text)}, group_id={bool(group_id)}")
                 return
             
-            logger.info(f"💬 Saving group message from {self.me} to group {group_id}: {text[:50]}...")
+            logger.info(f"Saving group message from {self.me} to group {group_id}")
             
             try:
                 saved = await sync_to_async(self.save_group_message)(
@@ -249,7 +255,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             logger.warning(f"⚠️ Missing text or to_user: text={bool(text)}, to_user={bool(to_user)}")
             return
 
-        logger.info(f"💬 Saving message from {self.me} to {to_user}: {text[:50]}...")
+        logger.info(f"Saving message from {self.me} to {to_user}")
         
         try:
             saved = await sync_to_async(self.save_message)(
@@ -466,7 +472,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 cur.execute("""
                     INSERT INTO chat_message (conversation_id, sender, text, is_read)
                     VALUES (%s,%s,%s,0)
-                """, [conv_id, sender_norm, text])
+                """, [conv_id, sender_norm, encrypt_chat_text(text)])
                 
                 # Get the message ID and created_at timestamp
                 message_id = conn.insert_id()
@@ -591,7 +597,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 cur.execute("""
                     INSERT INTO chat_group_message (group_id, sender, text, is_read)
                     VALUES (%s, %s, %s, 0)
-                """, [int(group_id), sender_norm, text])
+                """, [int(group_id), sender_norm, encrypt_chat_text(text)])
                 
                 # Get the message ID and created_at timestamp
                 message_id = conn.insert_id()
@@ -717,7 +723,12 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     async def chat_message(self, event):
         # forward chat messages that were also broadcast to presence_group
         try:
-            logger.info(f"📨 NotificationConsumer forwarding chat_message: {event}")
+            message = event.get('message') or {}
+            logger.info(
+                "NotificationConsumer forwarding chat_message: sender=%s group=%s",
+                message.get('sender'),
+                message.get('group_id'),
+            )
             # Remove 'type' field and add 'event' field for client
             client_event = {k: v for k, v in event.items() if k != 'type'}
             if 'event' not in client_event:
