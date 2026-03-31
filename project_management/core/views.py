@@ -286,6 +286,9 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         'tester_priority_low': 0,
         'tester_priority_labels': json.dumps(['Critical', 'High', 'Medium', 'Low']),
         'tester_priority_values': json.dumps([0, 0, 0, 0]),
+        'tester_reporter_summary': [],
+        'tester_reporter_labels': json.dumps([]),
+        'tester_reporter_values': json.dumps([]),
         'test_cases_total': 0,
         'test_cases_passed': 0,
         'test_cases_failed': 0,
@@ -413,7 +416,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                 lifecycle_counts['In Progress'] += 1
             elif status_value == 'finished':
                 lifecycle_counts['Finished'] += 1
-            elif status_value in ('reopened', 're-opened'):
+            elif status_value in ('reopen', 'reopened', 're-opened'):
                 lifecycle_counts['Reopen'] += 1
             elif status_value in ('blocked',):
                 lifecycle_counts['Blocked'] += 1
@@ -422,7 +425,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
             else:
                 lifecycle_counts['In Progress'] += 1
 
-            if status_value in ('reopened', 're-opened'):
+            if status_value in ('reopen', 'reopened', 're-opened'):
                 reopened_count += 1
             if status_value in ('retesting', 'retest', 'ready for retest', 'fixed', 'resolved'):
                 retest_count += 1
@@ -483,6 +486,53 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         tester_ctx['today_retest_due'] = retest_today_count
         tester_ctx['today_verification_due'] = verification_today_count
         tester_ctx['today_overdue_bugs'] = overdue_bug_count
+
+        cur.execute(f"""
+            SELECT
+                COALESCE(
+                    NULLIF(TRIM(CONCAT(COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))), ''),
+                    NULLIF(TRIM(COALESCE(u.full_name, '')), ''),
+                    'Unknown Reporter'
+                ) AS reporter_name,
+                COUNT(*) AS assigned_count,
+                SUM(CASE WHEN {status_expr} IN ('closed', 'completed') THEN 1 ELSE 0 END) AS closed_count,
+                SUM(CASE WHEN {status_expr} NOT IN ('closed', 'completed') THEN 1 ELSE 0 END) AS open_count
+            FROM tasks t
+            LEFT JOIN members m ON m.id = t.created_by
+            LEFT JOIN users u ON u.id = t.created_by
+            WHERE {assignee_where}
+              AND {bug_filter}
+            GROUP BY reporter_name
+            ORDER BY assigned_count DESC, reporter_name ASC
+        """, assignee_params)
+        reporter_rows = cur.fetchall() or []
+        reporter_summary = []
+        reporter_labels = []
+        reporter_values = []
+        for row in reporter_rows[:12]:
+            if isinstance(row, dict):
+                reporter_name = row.get('reporter_name') or 'Unknown Reporter'
+                assigned_count = int(row.get('assigned_count') or 0)
+                closed_count = int(row.get('closed_count') or 0)
+                open_count = int(row.get('open_count') or 0)
+            else:
+                reporter_name = row[0] or 'Unknown Reporter'
+                assigned_count = int(row[1] or 0)
+                closed_count = int(row[2] or 0)
+                open_count = int(row[3] or 0)
+
+            reporter_summary.append({
+                'reporter_name': reporter_name,
+                'assigned_count': assigned_count,
+                'closed_count': closed_count,
+                'open_count': open_count,
+            })
+            reporter_labels.append(reporter_name)
+            reporter_values.append(assigned_count)
+
+        tester_ctx['tester_reporter_summary'] = reporter_summary
+        tester_ctx['tester_reporter_labels'] = json.dumps(reporter_labels)
+        tester_ctx['tester_reporter_values'] = json.dumps(reporter_values)
 
         cur.execute(f"""
             SELECT id, status

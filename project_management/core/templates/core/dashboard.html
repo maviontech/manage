@@ -1963,15 +1963,38 @@
   <div class="chart-card qa-panel">
     <div class="qa-panel-head">
       <div>
-        <h3>Test Case Summary</h3>
-        <p>Tester work is not only defects, so this section tracks execution inventory too.</p>
+        <h3>Defect Reporter Metrics</h3>
+        <p>Bug and defect items assigned to this tester, grouped by reporter.</p>
       </div>
     </div>
-    <div class="qa-mini-grid">
-      <div class="qa-mini-card"><span>Total Test Cases</span><strong>{{ test_cases_total|default:0 }}</strong></div>
-      <div class="qa-mini-card"><span>Passed</span><strong>{{ test_cases_passed|default:0 }}</strong></div>
-      <div class="qa-mini-card"><span>Failed</span><strong>{{ test_cases_failed|default:0 }}</strong></div>
-      <div class="qa-mini-card"><span>Blocked</span><strong>{{ test_cases_blocked|default:0 }}</strong></div>
+    <div class="qa-chart-wrap">
+      <canvas id="testerReporterChart"></canvas>
+    </div>
+    <div class="table-responsive-modern" style="max-height: 240px; overflow-y: auto; margin-top: 14px;">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Reporter</th>
+            <th>Assigned</th>
+            <th>Closed</th>
+            <th>Open</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for reporter in tester_reporter_summary %}
+          <tr>
+            <td class="modern-td-title">{{ reporter.reporter_name }}</td>
+            <td>{{ reporter.assigned_count }}</td>
+            <td>{{ reporter.closed_count }}</td>
+            <td>{{ reporter.open_count }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="modern-td-empty">No bug or defect reporters found for this tester yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -2602,6 +2625,37 @@ document.addEventListener("DOMContentLoaded", function() {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
+
+  const testerReporterCtx = document.getElementById('testerReporterChart')?.getContext('2d');
+  if (testerReporterCtx) {
+    new Chart(testerReporterCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ tester_reporter_labels|default:'[]'|safe }},
+        datasets: [{
+          label: 'Assigned Bugs/Defects',
+          data: {{ tester_reporter_values|default:'[]'|safe }},
+          backgroundColor: '#0ea5e9',
+          borderRadius: 6,
+          maxBarThickness: 56
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            title: { display: true, text: 'Reporters / Users' }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            title: { display: true, text: 'Assigned Count' }
+          }
+        }
       }
     });
   }
