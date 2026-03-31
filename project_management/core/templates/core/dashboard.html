@@ -1891,14 +1891,14 @@
 
 <div class="qa-work-grid">
   <a class="qa-work-card qa-card-blue" href="{% url 'tasks_overview' %}?personal=true">
-    <span class="qa-work-label">Bugs Assigned</span>
+    <span class="qa-work-label">Total Assigned</span>
     <span class="qa-work-value">{{ tester_work_assigned|default:0 }}</span>
-    <span class="qa-work-meta">Active bug and defect items on your queue</span>
+    <span class="qa-work-meta">Shows the total assigned bug and defect tasks.</span>
   </a>
   <a class="qa-work-card qa-card-amber" href="{% url 'task_board' %}">
-    <span class="qa-work-label">Total Assigned</span>
-    <span class="qa-work-value">{{ tester_work_retest|default:0 }}</span>
-    <span class="qa-work-meta">Shows the total assigned bug and defect tasks.</span>
+    <span class="qa-work-label">Reopen</span>
+    <span class="qa-work-value">{{ tester_work_reopened|default:0 }}</span>
+    <span class="qa-work-meta">Shows bug and defect tasks with Reopen status.</span>
   </a>
   <a class="qa-work-card qa-card-cyan" href="{% url 'tasks_overview' %}?personal=true">
     <span class="qa-work-label">Finished</span>
@@ -1907,7 +1907,7 @@
   </a>
   <a class="qa-work-card qa-card-rose" href="{% url 'tasks_overview' %}?personal=true">
     <span class="qa-work-label">Closed</span>
-    <span class="qa-work-value">{{ tester_work_reopened|default:0 }}</span>
+    <span class="qa-work-value">{{ tester_work_closed|default:0 }}</span>
     <span class="qa-work-meta">Shows bug and defect tasks with Closed status.</span>
   </a>
 </div>

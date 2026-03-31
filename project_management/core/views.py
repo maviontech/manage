@@ -272,6 +272,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         'tester_work_retest': 0,
         'tester_work_verification': 0,
         'tester_work_reopened': 0,
+        'tester_work_closed': 0,
         'bug_status_new': 0,
         'bug_status_in_progress': 0,
         'bug_status_fixed': 0,
@@ -334,6 +335,13 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
               AND {test_filter}
         """, assignee_params)
         tester_ctx['tests_assigned'] = scalar_from_row(cur.fetchone(), 'c')
+
+        cur.execute(f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE {assignee_where}
+        """, assignee_params)
+        total_assigned_work = scalar_from_row(cur.fetchone(), 'c')
 
         cur.execute(f"""
             SELECT COUNT(*) AS c
@@ -453,11 +461,12 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
             if due_value and due_value < today and status_value not in ('closed', 'completed', 'finished'):
                 overdue_bug_count += 1
 
-        # "Bugs Assigned" card should count only records created as Bug.
-        tester_ctx['tester_work_assigned'] = tester_ctx['bugs_assigned']
+        # Total assigned should match the work-type breakdown and include all assigned task types.
+        tester_ctx['tester_work_assigned'] = total_assigned_work
         tester_ctx['tester_work_retest'] = len(bug_rows)
         tester_ctx['tester_work_verification'] = lifecycle_counts['Finished']
-        tester_ctx['tester_work_reopened'] = lifecycle_counts['Closed']
+        tester_ctx['tester_work_reopened'] = lifecycle_counts['Reopen']
+        tester_ctx['tester_work_closed'] = lifecycle_counts['Closed']
         tester_ctx['bug_status_new'] = lifecycle_counts['Open']
         tester_ctx['bug_status_in_progress'] = lifecycle_counts['In Progress']
         tester_ctx['bug_status_fixed'] = lifecycle_counts['Finished']
