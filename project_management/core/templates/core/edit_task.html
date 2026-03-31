@@ -353,7 +353,7 @@ select.form-control {
                 <select name="status" class="form-control">
                     <option value="Open" {% if task.status == "Open" %}selected{% endif %}>Open</option>
                     <option value="In Progress" {% if task.status == "In Progress" %}selected{% endif %}>In Progress</option>
-                    <option value="Review" {% if task.status == "Review" %}selected{% endif %}>Review</option>
+                    <option value="Reopen" {% if task.status == "Reopen" or task.status == "Review" %}selected{% endif %}>Reopen</option>
                     <option value="Blocked" {% if task.status == "Blocked" %}selected{% endif %}>Blocked</option>
                     <option value="Closed" {% if task.status == "Closed" %}selected{% endif %}>Closed</option>
                 </select>

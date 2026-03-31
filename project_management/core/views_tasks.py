@@ -320,7 +320,7 @@ def my_tasks_view(request):
             base_sql += " AND t.assigned_to != %s"
             params.append(user_id)
 
-        base_sql += "\n               ORDER BY FIELD(t.status,'Open','In Progress','Review','Blocked','Closed'),\n                        t.due_date IS NULL, t.due_date ASC"
+        base_sql += "\n               ORDER BY FIELD(t.status,'Open','In Progress','Reopen','Review','Blocked','Closed'),\n                        t.due_date IS NULL, t.due_date ASC"
 
         cur.execute(base_sql, tuple(params))
         tasks = cur.fetchall()
@@ -416,7 +416,7 @@ def unassigned_tasks_view(request):
         LEFT JOIN members m ON t.created_by = m.id
         WHERE (t.assigned_to IS NULL OR t.assigned_to = '')
           AND t.status NOT IN ('Blocked', 'Closed')
-          AND t.status IN ('Open', 'In Progress', 'Review', 'Pending', 'New')
+          AND t.status IN ('Open', 'In Progress', 'Reopen', 'Review', 'Pending', 'New')
         ORDER BY 
             CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END,
             t.due_date ASC,
@@ -941,7 +941,7 @@ def download_excel_template(request):
             col_letter = chr(64 + col_index['status'])
             status_dv = DataValidation(
                 type="list",
-                formula1='"Open,In Progress,Review,Blocked,Closed,Pending,New"',
+                formula1='"Open,In Progress,Reopen,Blocked,Closed,Pending,New"',
                 allow_blank=True
             )
             status_dv.error = 'Please select a valid status'
@@ -1147,7 +1147,7 @@ def download_csv_template(request):
             writer.writerow([f'#   subproject_id: {subproj["id"]} - {subproj["name"]} (project: {subproj["project_id"]})'])
 
         writer.writerow(['# '])
-        writer.writerow(['# VALID STATUS: Open, In Progress, Review, Blocked, Closed, Pending, New'])
+        writer.writerow(['# VALID STATUS: Open, In Progress, Reopen, Blocked, Closed, Pending, New'])
         writer.writerow(['# VALID PRIORITY: Low, Normal, High, Critical'])
         writer.writerow(['# VALID WORK_TYPE: Task, Bug, Story, Defect, Subtask, Report, Change Request'])
         writer.writerow(['# DATE FORMAT: YYYY-MM-DD (e.g., 2026-03-15)'])
@@ -1443,7 +1443,7 @@ def bulk_import_csv_view(request):
 
                     # Validate status
                     status = row.get("status") or "Open"
-                    valid_statuses = ["Open", "In Progress", "Review", "Blocked", "Closed", "Pending", "New"]
+                    valid_statuses = ["Open", "In Progress", "Reopen", "Review", "Blocked", "Closed", "Pending", "New"]
                     if status not in valid_statuses:
                         raise Exception(f"Invalid status: {status}. Must be one of: {', '.join(valid_statuses)}")
 
@@ -1940,7 +1940,7 @@ def task_board_view(request):
     if not has_permission(request, 'tasks.view_board'):
         return render(request, 'core/Permission_denied.html', status=403)
     
-    status_columns = ["Open", "In Progress", "Review", "Blocked", "Closed"]
+    status_columns = ["Open", "In Progress", "Reopen", "Blocked", "Closed"]
     conn = get_tenant_conn(request)
     cur = conn.cursor()
     cur.execute("SELECT id, name FROM projects ORDER BY name")
@@ -3950,7 +3950,7 @@ def task_analytics_view(request):
             FROM tasks t
             LEFT JOIN members m ON m.id = t.assigned_to
             WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
-            ORDER BY work_type, FIELD(t.status,'Open','In Progress','Review','Blocked','Closed'), t.created_at DESC
+            ORDER BY work_type, FIELD(t.status,'Open','In Progress','Reopen','Review','Blocked','Closed'), t.created_at DESC
         """, tuple(visible_user_ids))
         
         all_tasks = cur.fetchall()

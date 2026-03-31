@@ -450,7 +450,8 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
             if due_value and due_value < today and status_value not in ('closed', 'completed', 'finished'):
                 overdue_bug_count += 1
 
-        tester_ctx['tester_work_assigned'] = len(bug_rows)
+        # "Bugs Assigned" card should count only records created as Bug.
+        tester_ctx['tester_work_assigned'] = tester_ctx['bugs_assigned']
         tester_ctx['tester_work_retest'] = len(bug_rows)
         tester_ctx['tester_work_verification'] = lifecycle_counts['Finished']
         tester_ctx['tester_work_reopened'] = lifecycle_counts['Closed']
