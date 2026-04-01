@@ -1582,6 +1582,18 @@
     margin: 0;
   }
 
+  .qa-support-grid > .chart-card:first-child .qa-panel-head h3 {
+    font-size: 0;
+    line-height: 1;
+  }
+
+  .qa-support-grid > .chart-card:first-child .qa-panel-head h3::after {
+    content: 'Planned Tasks';
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--theme-text);
+  }
+
   .qa-panel-head p {
     margin: 0.35rem 0 0;
     color: var(--theme-text-secondary);
@@ -2042,14 +2054,40 @@
     <div class="qa-panel-head">
       <div>
         <h3>Today’s Focus</h3>
-        <p>The items a tester typically checks first every day.</p>
+        <p>Showing planned tasks for: <strong>{{ planned_start|date:'d M Y' }}</strong> - <strong>{{ planned_end|date:'d M Y' }}</strong></p>
       </div>
     </div>
-    <div class="qa-focus-list">
-      <div class="qa-focus-item"><span>Bugs due today</span><strong>{{ today_due_bugs|default:0 }}</strong></div>
-      <div class="qa-focus-item"><span>Retest today</span><strong>{{ today_retest_due|default:0 }}</strong></div>
-      <div class="qa-focus-item"><span>Verification due</span><strong>{{ today_verification_due|default:0 }}</strong></div>
-      <div class="qa-focus-item"><span>Overdue bugs</span><strong>{{ today_overdue_bugs|default:0 }}</strong></div>
+    <div class="table-responsive-modern" style="max-height: 320px; overflow-y: auto;">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Status</th>
+            <th>Due</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in planned_tasks %}
+          <tr>
+            <td class="modern-td-title">{{ task.title }}</td>
+            <td>
+              {% if task.status == 'Completed' %}
+                <span class="badge-status badge-completed">{{ task.status }}</span>
+              {% elif task.status == 'Pending' %}
+                <span class="badge-status badge-pending">{{ task.status }}</span>
+              {% elif task.status == 'In Progress' %}
+                <span class="badge-status badge-inprogress">{{ task.status }}</span>
+              {% else %}
+                <span class="badge-status badge-default">{{ task.status }}</span>
+              {% endif %}
+            </td>
+            <td class="modern-td-date">{{ task.due_date|date:'d M Y' }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="modern-td-empty">No planned tasks in the configured window.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -2310,7 +2348,7 @@
 </div>
 
 <!-- Additional Charts Row (moved directly after dashboard-grid) -->
-<div class="charts-row">
+<div class="charts-row"{% if is_tester %} style="grid-template-columns: 1fr;"{% endif %}>
   <!-- Line Chart Card -->
   <div class="chart-card chart-card-modern">
     <h3 class="chart-title-modern">Tasks Over Time</h3>
@@ -2331,6 +2369,7 @@
     </div>
     <div class="chart-desc-modern">Default range is the last 30 days. Filters apply to line and defect metrics.</div>
   </div>
+  {% if not is_tester %}
   <!-- Table Card -->
   <div class="chart-card chart-card-modern">
     <h3 class="chart-title-modern">Planned Tasks</h3>
@@ -2371,6 +2410,7 @@
       </table>
     </div>
   </div>
+  {% endif %}
 </div>
 
 <div class="charts-row">
