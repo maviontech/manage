@@ -384,17 +384,10 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         tester_ctx['tester_work_type_labels'] = json.dumps([label for label, _ in work_type_items])
         tester_ctx['tester_work_type_values'] = json.dumps([value for _, value in work_type_items])
 
-        cur.execute(f"""
-            SELECT id, title, status, priority, due_date, project_id, subproject_id
-            FROM tasks
-            WHERE {assignee_where}
-              AND {bug_filter}
-        """, assignee_params)
-        bug_rows = cur.fetchall() or []
-
         lifecycle_counts = {'Open': 0, 'In Progress': 0, 'Finished': 0, 'Reopen': 0, 'Closed': 0, 'Blocked': 0}
         priority_counts = {'Critical': 0, 'High': 0, 'Medium': 0, 'Low': 0}
         reopened_count = 0
+        reopened_task_count = 0
         retest_count = 0
         verification_count = 0
         due_today_count = 0
@@ -405,19 +398,18 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         project_bug_counts = {}
         module_bug_counts = {}
 
-        for row in bug_rows:
+        cur.execute(f"""
+            SELECT status
+            FROM tasks
+            WHERE {assignee_where}
+        """, assignee_params)
+        task_status_rows = cur.fetchall() or []
+
+        for row in task_status_rows:
             if isinstance(row, dict):
                 status_value = (row.get('status') or '').strip().lower()
-                priority_value = (row.get('priority') or 'Normal').strip().title()
-                due_date = row.get('due_date')
-                project_id = row.get('project_id')
-                subproject_id = row.get('subproject_id')
             else:
-                status_value = (row[2] or '').strip().lower()
-                priority_value = (row[3] or 'Normal').strip().title()
-                due_date = row[4]
-                project_id = row[5]
-                subproject_id = row[6]
+                status_value = (row[0] or '').strip().lower()
 
             if status_value == 'open':
                 lifecycle_counts['Open'] += 1
@@ -433,6 +425,28 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                 lifecycle_counts['Closed'] += 1
             else:
                 lifecycle_counts['In Progress'] += 1
+
+        cur.execute(f"""
+            SELECT id, title, status, priority, due_date, project_id, subproject_id
+            FROM tasks
+            WHERE {assignee_where}
+              AND {bug_filter}
+        """, assignee_params)
+        bug_rows = cur.fetchall() or []
+
+        for row in bug_rows:
+            if isinstance(row, dict):
+                status_value = (row.get('status') or '').strip().lower()
+                priority_value = (row.get('priority') or 'Normal').strip().title()
+                due_date = row.get('due_date')
+                project_id = row.get('project_id')
+                subproject_id = row.get('subproject_id')
+            else:
+                status_value = (row[2] or '').strip().lower()
+                priority_value = (row[3] or 'Normal').strip().title()
+                due_date = row[4]
+                project_id = row[5]
+                subproject_id = row[6]
 
             if status_value in ('reopen', 'reopened', 're-opened'):
                 reopened_count += 1
@@ -462,11 +476,19 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
             if due_value and due_value < today and status_value not in ('closed', 'completed', 'finished'):
                 overdue_bug_count += 1
 
+        cur.execute(f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE {assignee_where}
+              AND {status_expr} IN ('reopen', 'reopened', 're-opened')
+        """, assignee_params)
+        reopened_task_count = scalar_from_row(cur.fetchone(), 'c')
+
         # Total assigned should match the work-type breakdown and include all assigned task types.
         tester_ctx['tester_work_assigned'] = total_assigned_work
         tester_ctx['tester_work_retest'] = len(bug_rows)
         tester_ctx['tester_work_verification'] = lifecycle_counts['Finished']
-        tester_ctx['tester_work_reopened'] = lifecycle_counts['Reopen']
+        tester_ctx['tester_work_reopened'] = reopened_task_count
         tester_ctx['tester_work_closed'] = lifecycle_counts['Closed']
         tester_ctx['bug_status_new'] = lifecycle_counts['Open']
         tester_ctx['bug_status_in_progress'] = lifecycle_counts['In Progress']
