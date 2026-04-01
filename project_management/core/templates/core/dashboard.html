@@ -2034,18 +2034,26 @@
   <div class="chart-card qa-panel">
     <div class="qa-panel-head">
       <div>
-        <h3>Test Execution Progress</h3>
-        <p>Executed versus pending cases for the current tester queue.</p>
+        <h3>Tasks Over Time</h3>
+        <p>Track created and completed work across the selected date range.</p>
       </div>
-      <div class="qa-progress-ring" style="background: conic-gradient(#0ea5e9 0deg, #38bdf8 {% widthratio execution_rate|default:0 100 360 %}deg, rgba(148,163,184,0.18) 0);">{{ execution_rate|default:0 }}%</div>
     </div>
-    <div class="qa-mini-grid">
-      <div class="qa-mini-card"><span>Executed</span><strong>{{ execution_executed|default:0 }}</strong></div>
-      <div class="qa-mini-card"><span>Pending</span><strong>{{ execution_pending|default:0 }}</strong></div>
+    <form method="get" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px;">
+      <div>
+        <label for="testerFromDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">From</label>
+        <input id="testerFromDate" type="date" name="tasks_from_date" value="{{ timeline_from }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text);">
+      </div>
+      <div>
+        <label for="testerToDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">To</label>
+        <input id="testerToDate" type="date" name="tasks_to_date" value="{{ timeline_to }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text);">
+      </div>
+      <button type="submit" style="padding:9px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;">Apply</button>
+      <a href="{{ request.path }}" style="display:inline-flex;align-items:center;justify-content:center;padding:6.5px 10px;border:none;border-radius:8px;background:#ef4444;color:#fff;font-weight:700;text-decoration:none;cursor:pointer;">Reset</a>
+    </form>
+    <div class="qa-chart-wrap">
+      <canvas id="lineChart"></canvas>
     </div>
-    <div class="qa-chart-wrap qa-chart-short">
-      <canvas id="testerExecutionChart"></canvas>
-    </div>
+    <div class="chart-desc-modern">Default range is the last 30 days. Filters apply to line and defect metrics.</div>
   </div>
 </div>
 
@@ -2731,27 +2739,6 @@ document.addEventListener("DOMContentLoaded", function() {
             title: { display: true, text: 'Assigned Count' }
           }
         }
-      }
-    });
-  }
-
-  const testerExecutionCtx = document.getElementById('testerExecutionChart')?.getContext('2d');
-  if (testerExecutionCtx) {
-    new Chart(testerExecutionCtx, {
-      type: 'doughnut',
-      data: {
-        labels: {{ tester_execution_labels|default:'[]'|safe }},
-        datasets: [{
-          data: {{ tester_execution_values|default:'[]'|safe }},
-          backgroundColor: ['#0ea5e9', '#cbd5e1'],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '68%',
-        plugins: { legend: { position: 'bottom' } }
       }
     });
   }
