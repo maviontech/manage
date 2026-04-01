@@ -145,6 +145,9 @@
   [data-theme="dark"] .metric-card.tasks-finished {
     background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%) !important;
   }
+  [data-theme="dark"] .metric-card.tasks-reopened {
+    background: linear-gradient(135deg, #0f3d4c 0%, #0f766e 100%) !important;
+  }
   [data-theme="dark"] .metric-card .label {
     color: rgba(255,255,255,0.85) !important;
     -webkit-text-fill-color: rgba(255,255,255,0.85) !important;
@@ -584,6 +587,24 @@
 
   .metric-card.tasks-finished {
     background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  }
+
+  .metric-card.tasks-reopened {
+    background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+  }
+
+  .metric-card.tasks-reopened::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 16px;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+    z-index: 2;
+    pointer-events: none;
   }
 
   /* ============================================
@@ -2195,8 +2216,8 @@
         <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 5l7 7-7 7"/>
         </svg>
-        <div class="label">Tasks Pending</div>
-        <div class="value">{{ tasks_pending|default:0 }}</div>
+        <div class="label">Tasks Open</div>
+        <div class="value">{{ tasks_open|default:0 }}</div>
       </div>
     </a>
    <a href="{% url 'metric_drilldown' 'tasks-finished' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
@@ -2206,6 +2227,16 @@
         </svg>
         <div class="label">Tasks Finished</div>
         <div class="value">{{ tasks_finished|default:0 }}</div>
+      </div>
+    </a>
+
+   <a href="{%url 'metric_drilldown' 'tasks-reopened' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
+      <div class="metric-card tasks-reopened" style="cursor: pointer; position: relative;">
+        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+        <div class="label">Tasks Reopened</div>
+        <div class="value">{{ tasks_reopened|default:0 }}</div>
       </div>
     </a>
   {% endif %}
@@ -2259,9 +2290,9 @@
         <h3>Task Breakdown:</h3>
         <canvas id="progressChart"></canvas>
         <div class="donut-legend" style="justify-content:flex-start;">
-          <div class="item"><span class="dot" style="background:#16a34a"></span> Completed ({{ progress_completed|default:0 }})</div>
+          <div class="item"><span class="dot" style="background:#16a34a"></span> Closed ({{ progress_closed|default:0 }})</div>
           <div class="item"><span class="dot" style="background:#1f86e3"></span> In Progress ({{ progress_inprogress|default:0 }})</div>
-          <div class="item"><span class="dot" style="background:#eab308"></span> Pending ({{ progress_pending|default:0 }})</div>
+          <div class="item"><span class="dot" style="background:#eab308"></span> Open ({{ progress_open|default:0 }})</div>
         </div>
       </div>
 
@@ -2728,9 +2759,9 @@ document.addEventListener("DOMContentLoaded", function() {
     new Chart(progressCtx, {
       type: 'doughnut',
       data: {
-        labels: ['Completed','In Progress','Pending'],
+        labels: ['Closed','In Progress','Open'],
         datasets: [{
-          data: [Number('{{ progress_completed|default:0 }}'), Number('{{ progress_inprogress|default:0 }}'), Number('{{ progress_pending|default:0 }}')],
+          data: [Number('{{ progress_closed|default:0 }}'), Number('{{ progress_inprogress|default:0 }}'), Number('{{ progress_open|default:0 }}')],
           backgroundColor: ['#16a34a', '#1f86e3', '#eab308'],
           hoverOffset: 6,
           borderWidth: 0

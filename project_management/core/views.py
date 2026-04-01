@@ -84,6 +84,7 @@ TASK_FINISHED_STATUSES = ('finished',)
 TASK_PENDING_STATUSES = ('open', 'review', 'in progress', 'in-progress')
 TASK_NEW_STATUSES = ('new',)
 TASK_OPEN_BOARD_STATUSES = TASK_PENDING_STATUSES + TASK_NEW_STATUSES
+TASK_OPEN_STATUSES = TASK_OPEN_BOARD_STATUSES
 
 
 def _load_defect_contributor_metrics(cur, start_date, end_date):
@@ -1031,7 +1032,7 @@ def dashboard_view(request):
     except Exception:
         tasks_completed = 0
 
-    tasks_pending = 0
+    tasks_open = 0
     try:
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
@@ -1041,14 +1042,14 @@ def dashboard_view(request):
                 FROM tasks
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
-                  AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress')
+                  AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress', 'new')
                 """,
                 tuple(visible_user_ids),
             )
-            tasks_pending = scalar_from_row(cur.fetchone(), 'c')
+            tasks_open = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
-        logger.error(f"ERROR tasks_pending: {e}")
-        tasks_pending = 0
+        logger.error(f"ERROR tasks_open: {e}")
+        tasks_open = 0
 
 
     tasks_finished = 0
@@ -1070,7 +1071,26 @@ def dashboard_view(request):
         logger.error(f"ERROR tasks_finished: {e}")
         tasks_finished = 0    
 
-    progress_completed = progress_inprogress = progress_pending = 0
+    tasks_reopened = 0
+    try:
+        if visible_user_ids:
+            placeholders = ','.join(['%s'] * len(visible_user_ids))
+            cur.execute(
+                f"""
+                SELECT COUNT(*) AS c
+                FROM tasks
+                WHERE assigned_type='member'
+                  AND assigned_to IN ({placeholders})
+                  AND {status_expr} IN ('reopen', 'reopened', 're-opened')
+                """,
+                tuple(visible_user_ids),
+            )
+            tasks_reopened = scalar_from_row(cur.fetchone(), 'c')
+    except Exception as e:
+        logger.error(f"ERROR tasks_reopened: {e}")
+        tasks_reopened = 0
+
+    progress_closed = progress_inprogress = progress_open = 0
     try:
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
@@ -1088,15 +1108,15 @@ def dashboard_view(request):
                     items = [(r[0], int(r[1] or 0)) for r in rows]
                 for status, cnt in items:
                     s = (status or '').lower()
-                    if s in TASK_CLOSED_STATUSES or s in TASK_FINISHED_STATUSES:
-                        progress_completed += cnt
+                    if s in TASK_CLOSED_STATUSES:
+                        progress_closed += cnt
                     elif s in ('in progress', 'review', 'in-progress'):
                         progress_inprogress += cnt
-                    else:
-                        progress_pending += cnt
+                    elif s in TASK_OPEN_STATUSES:
+                        progress_open += cnt
     except Exception as e:
         logger.error(f"ERROR progress counts: {e}")
-        progress_completed = progress_inprogress = progress_pending = 0
+        progress_closed = progress_inprogress = progress_open = 0
 
     priority_buckets = {'Critical': 0, 'High': 0, 'Normal': 0, 'Low': 0}
     try:
@@ -1387,11 +1407,15 @@ def dashboard_view(request):
         'active_projects': active_projects,
         'projects_completed': projects_completed,
         'tasks_completed': tasks_completed,
-        'tasks_pending': tasks_pending,
+        'tasks_open': tasks_open,
+        'tasks_pending': tasks_open,
         'tasks_finished': tasks_finished,
-        'progress_completed': progress_completed,
+        'tasks_reopened': tasks_reopened,
+        'progress_closed': progress_closed,
+        'progress_completed': progress_closed,
         'progress_inprogress': progress_inprogress,
-        'progress_pending': progress_pending,
+        'progress_open': progress_open,
+        'progress_pending': progress_open,
         'pri_critical': priority_buckets.get('Critical', 0),
         'pri_high': priority_buckets.get('High', 0),
         'pri_normal': priority_buckets.get('Normal', 0),
@@ -1562,7 +1586,7 @@ def user_dashboard_view(request):
         tasks_completed = 0
 
     # Get pending tasks for this user only
-    tasks_pending = 0
+    tasks_open = 0
     try:
         cur.execute(
             f"""
@@ -1570,14 +1594,14 @@ def user_dashboard_view(request):
             FROM tasks
             WHERE assigned_type='member'
               AND assigned_to=%s
-              AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress')
+              AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress', 'new')
             """,
             (member_id,),
         )
-        tasks_pending = scalar_from_row(cur.fetchone(), 'c')
+        tasks_open = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
-        logger.error(f"ERROR tasks_pending: {e}")
-        tasks_pending = 0
+        logger.error(f"ERROR tasks_open: {e}")
+        tasks_open = 0
 
     tasks_finished = 0
     try:
@@ -1596,8 +1620,26 @@ def user_dashboard_view(request):
         logger.error(f"ERROR tasks_finished: {e}")
         tasks_finished = 0
 
+
+    tasks_reopened = 0
+    try:
+        cur.execute(
+            f"""
+            SELECT COUNT(*) AS c
+            FROM tasks
+            WHERE assigned_type='member'
+              AND assigned_to=%s
+              AND {status_expr} IN ('reopen', 'reopened', 're-opened')
+        """,
+            (member_id,),
+        )
+        tasks_reopened = scalar_from_row(cur.fetchone(), 'c')
+    except Exception as e:
+        logger.error(f"ERROR tasks_reopened: {e}")
+        tasks_reopened = 0    
+
     # Task breakdown by status for this user
-    progress_completed = progress_inprogress = progress_pending = 0
+    progress_closed = progress_inprogress = progress_open = 0
     try:
         cur.execute("""
             SELECT status, COUNT(*) AS c
@@ -1613,15 +1655,15 @@ def user_dashboard_view(request):
                 items = [(r[0], int(r[1] or 0)) for r in rows]
             for status, cnt in items:
                 s = (status or '').lower()
-                if s in TASK_CLOSED_STATUSES or s in TASK_FINISHED_STATUSES:
-                    progress_completed += cnt
+                if s in TASK_CLOSED_STATUSES:
+                    progress_closed += cnt
                 elif s in ('in progress', 'review', 'in-progress'):
                     progress_inprogress += cnt
-                else:
-                    progress_pending += cnt
+                elif s in TASK_OPEN_STATUSES:
+                    progress_open += cnt
     except Exception as e:
         logger.error(f"ERROR progress counts: {e}")
-        progress_completed = progress_inprogress = progress_pending = 0
+        progress_closed = progress_inprogress = progress_open = 0
 
     # Priority breakdown for this user
     priority_buckets = {'Critical': 0, 'High': 0, 'Normal': 0, 'Low': 0}
@@ -1895,11 +1937,15 @@ def user_dashboard_view(request):
         'active_projects': active_projects,
         'projects_completed': 0,  # Not tracking individual user project completion
         'tasks_completed': tasks_completed,
-        'tasks_pending': tasks_pending,
+        'tasks_open': tasks_open,
+        'tasks_pending': tasks_open,
         'tasks_finished': tasks_finished,
-        'progress_completed': progress_completed,
+        'tasks_reopened': tasks_reopened,
+        'progress_closed': progress_closed,
+        'progress_completed': progress_closed,
         'progress_inprogress': progress_inprogress,
-        'progress_pending': progress_pending,
+        'progress_open': progress_open,
+        'progress_pending': progress_open,
         'pri_critical': priority_buckets.get('Critical', 0),
         'pri_high': priority_buckets.get('High', 0),
         'pri_normal': priority_buckets.get('Normal', 0),

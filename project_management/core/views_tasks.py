@@ -4073,6 +4073,12 @@ def _metric_page_context(metric_key):
             'table_type': 'tasks',
             'empty': 'No finished tasks found.'
         },
+        'tasks-reopened': {
+            'title': 'Tasks Reopened',
+            'subtitle': 'Tasks currently in reopened status in your visibility scope',
+            'table_type': 'tasks',
+            'empty': 'No reopened tasks found.'
+        },
     }
     return mapping.get(metric_key)
 
@@ -4085,6 +4091,7 @@ def metric_drilldown_view(request, metric_key):
       - tasks-completed
       - tasks-pending
       - tasks-finished
+      - tasks-reopened
     
     Query Parameters:
     - personal=true: Show only data for current user (personal dashboard view)
@@ -4197,6 +4204,8 @@ def metric_drilldown_view(request, metric_key):
                     status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('completed', 'closed')"
                 elif metric_key == 'tasks-finished':
                     status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) = 'finished'"
+                elif metric_key == 'tasks-reopened':
+                    status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('reopen', 'reopened', 're-opened')"
                 else:
                     status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('open', 'review', 'in progress', 'in-progress')"
                 cur.execute(f"""
@@ -4262,7 +4271,7 @@ def export_metric_drilldown_excel(request):
     """
     Export metric drilldown with full base-table columns.
     - active-projects -> projects.*
-    - tasks-completed/tasks-pending/tasks-finished -> tasks.*
+    - tasks-completed/tasks-pending/tasks-finished/tasks-reopened -> tasks.*
     """
     try:
         from openpyxl import Workbook
@@ -4304,6 +4313,8 @@ def export_metric_drilldown_excel(request):
                     status_clause = "LOWER(TRIM(COALESCE(status, ''))) IN ('completed', 'closed')"
                 elif metric_key == 'tasks-finished':
                     status_clause = "LOWER(TRIM(COALESCE(status, ''))) = 'finished'"
+                elif metric_key == 'tasks-reopened':
+                    status_clause = "LOWER(TRIM(COALESCE(status, ''))) IN ('reopen', 'reopened', 're-opened')"
                 else:
                     status_clause = "LOWER(TRIM(COALESCE(status, ''))) IN ('open', 'review', 'in progress', 'in-progress')"
                 cur.execute(f"""
