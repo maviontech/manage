@@ -220,6 +220,40 @@ def _get_members_by_role_keywords(cur, keywords):
     return sorted(member_ids)
 
 
+def _build_dashboard_task_scope(member_ids=None, created_by_member_id=None, include_created_by=False, alias=""):
+    """
+    Build a reusable task scope for dashboard widgets.
+    For tester dashboards we include both assigned work and tester-created work,
+    because QA items may be tracked either way.
+    """
+    prefix = f"{alias}." if alias else ""
+    clauses = []
+    params = []
+
+    normalized_member_ids = []
+    for member_id in (member_ids or []):
+        if member_id is None:
+            continue
+        try:
+            normalized_member_ids.append(int(member_id))
+        except (TypeError, ValueError):
+            continue
+
+    if normalized_member_ids:
+        placeholders = ','.join(['%s'] * len(normalized_member_ids))
+        clauses.append(f"({prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders}))")
+        params.extend(normalized_member_ids)
+
+    if include_created_by and created_by_member_id is not None:
+        clauses.append(f"{prefix}created_by = %s")
+        params.append(int(created_by_member_id))
+
+    if not clauses:
+        return "1=0", ()
+
+    return f"({' OR '.join(clauses)})", tuple(params)
+
+
 def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, include_all_testing_work=False, scope_project_ids=None, scope_created_by_member_id=None):
     def scalar_from_row(row, key_alias='c'):
         if row is None:
@@ -1305,14 +1339,24 @@ def dashboard_view(request):
             planned_start = date.today()
             planned_end = planned_start + timedelta(days=7)
 
-        if visible_user_ids:
-            placeholders = ','.join(['%s'] * len(visible_user_ids))
-            params = list(visible_user_ids) + [planned_start, planned_end]
+        planned_scope_sql = ""
+        planned_scope_params = ()
+        if is_tester:
+            planned_scope_sql, planned_scope_params = _build_dashboard_task_scope(
+                member_ids=visible_user_ids,
+                created_by_member_id=member_id,
+                include_created_by=True,
+            )
+        elif visible_user_ids:
+            planned_scope_sql, planned_scope_params = _build_dashboard_task_scope(member_ids=visible_user_ids)
+
+        if planned_scope_sql:
+            params = list(planned_scope_params) + [planned_start, planned_end]
             cur.execute(f"""
                 SELECT id, title, status, due_date, created_at
                 FROM tasks
-                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
-                  AND status NOT IN ('Completed', 'Closed', 'completed', 'closed')
+                WHERE {planned_scope_sql}
+                  AND {TASK_STATUS_SQL} NOT IN ('completed', 'closed')
                   AND due_date IS NOT NULL
                   AND DATE(due_date) BETWEEN %s AND %s
                 ORDER BY due_date ASC
@@ -1343,18 +1387,28 @@ def dashboard_view(request):
     line_chart_created = []
     line_chart_completed = []
     try:
+        timeline_scope_sql = ""
+        timeline_scope_params = ()
+        if is_tester:
+            timeline_scope_sql, timeline_scope_params = _build_dashboard_task_scope(
+                member_ids=visible_user_ids,
+                created_by_member_id=member_id,
+                include_created_by=True,
+            )
+        elif visible_user_ids:
+            timeline_scope_sql, timeline_scope_params = _build_dashboard_task_scope(member_ids=visible_user_ids)
+
         days_count = (tasks_timeline_to - tasks_timeline_from).days + 1
         for i in range(days_count):
             day = tasks_timeline_from + timedelta(days=i)
             line_chart_labels.append(day.strftime('%d %b'))
 
-            if visible_user_ids:
-                placeholders = ','.join(['%s'] * len(visible_user_ids))
-                params = list(visible_user_ids) + [day]
+            if timeline_scope_sql:
+                params = list(timeline_scope_params) + [day]
                 cur.execute(f"""
                     SELECT COUNT(*) as cnt FROM tasks
-                    WHERE assigned_type='member' AND assigned_to IN ({placeholders})
-                    AND DATE(created_at) = %s
+                    WHERE {timeline_scope_sql}
+                      AND DATE(created_at) = %s
                 """, tuple(params))
                 created_row = cur.fetchone()
                 if isinstance(created_row, dict):
@@ -1366,8 +1420,8 @@ def dashboard_view(request):
 
                 cur.execute(f"""
                     SELECT COUNT(*) as cnt FROM tasks
-                    WHERE assigned_type='member' AND assigned_to IN ({placeholders})
-                      AND status IN ('Completed','Closed')
+                    WHERE {timeline_scope_sql}
+                      AND {TASK_STATUS_SQL} IN ('completed', 'closed')
                       AND DATE(updated_at) = %s
                 """, tuple(params))
                 completed_row = cur.fetchone()
@@ -1843,16 +1897,27 @@ def user_dashboard_view(request):
             planned_start = date.today()
             planned_end = planned_start + timedelta(days=7)
 
+        planned_scope_sql = ""
+        planned_scope_params = ()
+        if is_tester:
+            planned_scope_sql, planned_scope_params = _build_dashboard_task_scope(
+                member_ids=[member_id],
+                created_by_member_id=member_id,
+                include_created_by=True,
+            )
+        else:
+            planned_scope_sql, planned_scope_params = _build_dashboard_task_scope(member_ids=[member_id])
+
         cur.execute("""
             SELECT id, title, status, due_date, created_at
             FROM tasks
-            WHERE assigned_type='member' AND assigned_to=%s
-              AND status NOT IN ('Completed', 'Closed', 'completed', 'closed')
+            WHERE {planned_scope_sql}
+              AND {TASK_STATUS_SQL} NOT IN ('completed', 'closed')
               AND due_date IS NOT NULL
               AND DATE(due_date) BETWEEN %s AND %s
             ORDER BY due_date ASC
             LIMIT 10
-        """, (member_id, planned_start, planned_end))
+        """.format(planned_scope_sql=planned_scope_sql, TASK_STATUS_SQL=TASK_STATUS_SQL), tuple(list(planned_scope_params) + [planned_start, planned_end]))
         rows = cur.fetchall() or []
         for r in rows:
             if isinstance(r, dict):
@@ -1877,6 +1942,15 @@ def user_dashboard_view(request):
     line_chart_created = []
     line_chart_completed = []
     try:
+        if is_tester:
+            timeline_scope_sql, timeline_scope_params = _build_dashboard_task_scope(
+                member_ids=[member_id],
+                created_by_member_id=member_id,
+                include_created_by=True,
+            )
+        else:
+            timeline_scope_sql, timeline_scope_params = _build_dashboard_task_scope(member_ids=[member_id])
+
         days_count = (tasks_timeline_to - tasks_timeline_from).days + 1
         for i in range(days_count):
             day = tasks_timeline_from + timedelta(days=i)
@@ -1884,9 +1958,9 @@ def user_dashboard_view(request):
 
             cur.execute("""
                 SELECT COUNT(*) as cnt FROM tasks
-                WHERE assigned_type='member' AND assigned_to=%s
+                WHERE {timeline_scope_sql}
                 AND DATE(created_at) = %s
-            """, (member_id, day))
+            """.format(timeline_scope_sql=timeline_scope_sql), tuple(list(timeline_scope_params) + [day]))
             created_row = cur.fetchone()
             if isinstance(created_row, dict):
                 line_chart_created.append(created_row.get('cnt', 0) or 0)
@@ -1897,10 +1971,10 @@ def user_dashboard_view(request):
 
             cur.execute("""
                 SELECT COUNT(*) as cnt FROM tasks
-                WHERE assigned_type='member' AND assigned_to=%s
-                AND status IN ('Completed','Closed')
+                WHERE {timeline_scope_sql}
+                AND {TASK_STATUS_SQL} IN ('completed', 'closed')
                 AND DATE(updated_at) = %s
-            """, (member_id, day))
+            """.format(timeline_scope_sql=timeline_scope_sql, TASK_STATUS_SQL=TASK_STATUS_SQL), tuple(list(timeline_scope_params) + [day]))
             completed_row = cur.fetchone()
             if isinstance(completed_row, dict):
                 line_chart_completed.append(completed_row.get('cnt', 0) or 0)
