@@ -13,7 +13,7 @@ from .db_helpers import get_tenant_conn, get_visible_task_user_ids
 from math import ceil
 from django.shortcuts import render, redirect
 from django.utils import timezone
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import logging
 import json
 
@@ -325,6 +325,9 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         'tester_reporter_summary': [],
         'tester_reporter_labels': json.dumps([]),
         'tester_reporter_values': json.dumps([]),
+        'tester_assignee_summary': [],
+        'tester_assignee_labels': json.dumps([]),
+        'tester_assignee_values': json.dumps([]),
         'test_cases_total': 0,
         'test_cases_passed': 0,
         'test_cases_failed': 0,
@@ -342,6 +345,8 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         'qa_recent_activity': [],
         'tester_notifications': [],
         'qa_insights': [],
+        'tester_weekly_assignment_labels': json.dumps([]),
+        'tester_weekly_assignment_datasets': json.dumps([]),
     }
 
     try:
@@ -600,6 +605,55 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         tester_ctx['tester_reporter_labels'] = json.dumps(reporter_labels)
         tester_ctx['tester_reporter_values'] = json.dumps(reporter_values)
 
+        assignee_summary = []
+        assignee_labels = []
+        assignee_values = []
+        assignee_member_id = scope_created_by_member_id if scope_created_by_member_id is not None else member_id
+        cur.execute("""
+            SELECT
+                CASE
+                    WHEN LOWER(TRIM(COALESCE(t.assigned_type, ''))) = 'member' THEN COALESCE(
+                        NULLIF(TRIM(CONCAT(COALESCE(assignee_m.first_name,''), ' ', COALESCE(assignee_m.last_name,''))), ''),
+                        NULLIF(TRIM(COALESCE(assignee_u.full_name, '')), ''),
+                        CONCAT('Member #', COALESCE(CAST(t.assigned_to AS CHAR), '0'))
+                    )
+                    WHEN LOWER(TRIM(COALESCE(t.assigned_type, ''))) = 'user' THEN COALESCE(
+                        NULLIF(TRIM(COALESCE(assignee_u.full_name, '')), ''),
+                        NULLIF(TRIM(CONCAT(COALESCE(assignee_m.first_name,''), ' ', COALESCE(assignee_m.last_name,''))), ''),
+                        CONCAT('User #', COALESCE(CAST(t.assigned_to AS CHAR), '0'))
+                    )
+                    WHEN LOWER(TRIM(COALESCE(t.assigned_type, ''))) = 'team' THEN 'Team'
+                    WHEN t.assigned_to IS NULL THEN 'Unassigned'
+                    ELSE 'Other'
+                END AS assignee_name,
+                COUNT(*) AS assigned_count
+            FROM tasks t
+            LEFT JOIN members assignee_m ON assignee_m.id = t.assigned_to
+            LEFT JOIN users assignee_u ON assignee_u.id = t.assigned_to
+            WHERE t.created_by = %s
+            GROUP BY assignee_name
+            ORDER BY assigned_count DESC, assignee_name ASC
+        """, (assignee_member_id,))
+        assignee_rows = cur.fetchall() or []
+        for row in assignee_rows[:12]:
+            if isinstance(row, dict):
+                assignee_name = row.get('assignee_name') or 'Unassigned'
+                assigned_count = int(row.get('assigned_count') or 0)
+            else:
+                assignee_name = row[0] or 'Unassigned'
+                assigned_count = int(row[1] or 0)
+
+            assignee_summary.append({
+                'assignee_name': assignee_name,
+                'assigned_count': assigned_count,
+            })
+            assignee_labels.append(assignee_name)
+            assignee_values.append(assigned_count)
+
+        tester_ctx['tester_assignee_summary'] = assignee_summary
+        tester_ctx['tester_assignee_labels'] = json.dumps(assignee_labels)
+        tester_ctx['tester_assignee_values'] = json.dumps(assignee_values)
+
         cur.execute(f"""
             SELECT id, status
             FROM tasks
@@ -722,45 +776,68 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                 for row in notification_rows
             ]
 
-        insights = []
-        if project_bug_counts:
-            top_project_id = max(project_bug_counts, key=project_bug_counts.get)
-            cur.execute("SELECT name FROM projects WHERE id = %s LIMIT 1", (top_project_id,))
-            project_row = cur.fetchone()
-            project_name = project_row.get('name') if isinstance(project_row, dict) else (project_row[0] if project_row else 'Project')
-            insights.append({
-                'label': 'High bug density project',
-                'value': f"{project_name} ({project_bug_counts[top_project_id]} open issues)",
-            })
-        else:
-            insights.append({
-                'label': 'High bug density project',
-                'value': 'No active bug concentration right now',
-            })
+        weekly_dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        tester_ctx['tester_weekly_assignment_labels'] = json.dumps([
+            day.strftime('%d %b') for day in weekly_dates
+        ])
 
-        if module_bug_counts:
-            top_module_id = max(module_bug_counts, key=module_bug_counts.get)
-            cur.execute("SELECT name FROM subprojects WHERE id = %s LIMIT 1", (top_module_id,))
-            module_row = cur.fetchone()
-            module_name = module_row.get('name') if isinstance(module_row, dict) else (module_row[0] if module_row else 'Module')
-            insights.append({
-                'label': 'Most failing module',
-                'value': f"{module_name} ({module_bug_counts[top_module_id]} open bugs)",
-            })
-        else:
-            insights.append({
-                'label': 'Most failing module',
-                'value': 'No hotspot detected in modules',
-            })
+        tester_role_member_ids = _get_members_by_role_keywords(cur, ['tester', 'qa', 'test'])
+        weekly_map = {}
+        chart_colors = ['#2563eb', '#f97316', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#eab308', '#ec4899']
 
-        total_bug_volume = len(bug_rows)
-        reopen_rate = int(round((reopened_count / total_bug_volume) * 100)) if total_bug_volume else 0
-        closure_rate = int(round((lifecycle_counts['Closed'] / total_bug_volume) * 100)) if total_bug_volume else 0
-        insights.append({
-            'label': 'Reopen rate',
-            'value': f"{reopen_rate}% reopened, {closure_rate}% closed",
-        })
-        tester_ctx['qa_insights'] = insights
+        if tester_role_member_ids:
+            placeholders = ','.join(['%s'] * len(tester_role_member_ids))
+            cur.execute(f"""
+                SELECT
+                    t.created_by AS tester_id,
+                    DATE(t.created_at) AS created_day,
+                    COALESCE(
+                        NULLIF(TRIM(CONCAT(COALESCE(m.first_name,''), ' ', COALESCE(m.last_name,''))), ''),
+                        NULLIF(TRIM(COALESCE(u.full_name, '')), ''),
+                        CONCAT('Tester #', COALESCE(CAST(t.created_by AS CHAR), '0'))
+                    ) AS tester_name,
+                    COUNT(*) AS task_count
+                FROM tasks t
+                LEFT JOIN members m ON m.id = t.created_by
+                LEFT JOIN users u ON u.id = t.created_by
+                WHERE t.created_by IN ({placeholders})
+                  AND DATE(t.created_at) BETWEEN %s AND %s
+                GROUP BY t.created_by, DATE(t.created_at), tester_name
+                ORDER BY tester_name ASC, created_day ASC
+            """, tuple(tester_role_member_ids) + (weekly_dates[0], weekly_dates[-1]))
+            for row in (cur.fetchall() or []):
+                if isinstance(row, dict):
+                    tester_id = row.get('tester_id')
+                    created_day = row.get('created_day')
+                    tester_name = row.get('tester_name') or 'Unknown Tester'
+                    task_count = int(row.get('task_count') or 0)
+                else:
+                    tester_id = row[0]
+                    created_day = row[1]
+                    tester_name = row[2] or 'Unknown Tester'
+                    task_count = int(row[3] or 0)
+
+                if tester_id not in weekly_map:
+                    weekly_map[tester_id] = {
+                        'label': tester_name,
+                        'data_by_day': {day.isoformat(): 0 for day in weekly_dates},
+                    }
+                day_key = created_day.isoformat() if hasattr(created_day, 'isoformat') else str(created_day)
+                weekly_map[tester_id]['data_by_day'][day_key] = task_count
+
+        tester_ctx['tester_weekly_assignment_datasets'] = json.dumps([
+            {
+                'label': series['label'],
+                'data': [series['data_by_day'].get(day.isoformat(), 0) for day in weekly_dates],
+                'borderColor': chart_colors[index % len(chart_colors)],
+                'backgroundColor': chart_colors[index % len(chart_colors)],
+                'tension': 0.35,
+                'fill': False,
+            }
+            for index, series in enumerate(
+                sorted(weekly_map.values(), key=lambda item: item['label'].lower())
+            )
+        ])
 
     except Exception as e:
         logger.error(f"ERROR: tester dashboard context {e}", exc_info=True)

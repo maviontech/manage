@@ -2034,26 +2034,35 @@
   <div class="chart-card qa-panel">
     <div class="qa-panel-head">
       <div>
-        <h3>Tasks Over Time</h3>
-        <p>Track created and completed work across the selected date range.</p>
+        <h3>Task Assignment Chart</h3>
+        <p>Tasks created by this tester, grouped by assignee.</p>
       </div>
     </div>
-    <form method="get" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px;">
-      <div>
-        <label for="testerFromDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">From</label>
-        <input id="testerFromDate" type="date" name="tasks_from_date" value="{{ timeline_from }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text);">
-      </div>
-      <div>
-        <label for="testerToDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">To</label>
-        <input id="testerToDate" type="date" name="tasks_to_date" value="{{ timeline_to }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text);">
-      </div>
-      <button type="submit" style="padding:9px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;">Apply</button>
-      <a href="{{ request.path }}" style="display:inline-flex;align-items:center;justify-content:center;padding:6.5px 10px;border:none;border-radius:8px;background:#ef4444;color:#fff;font-weight:700;text-decoration:none;cursor:pointer;">Reset</a>
-    </form>
     <div class="qa-chart-wrap">
-      <canvas id="lineChart"></canvas>
+      <canvas id="testerAssigneeChart"></canvas>
     </div>
-    <div class="chart-desc-modern">Default range is the last 30 days. Filters apply to line and defect metrics.</div>
+    <div class="table-responsive-modern" style="max-height: 240px; overflow-y: auto; margin-top: 14px;">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Assigned To</th>
+            <th>Task Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for assignee in tester_assignee_summary %}
+          <tr>
+            <td class="modern-td-title">{{ assignee.assignee_name }}</td>
+            <td>{{ assignee.assigned_count }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="2" class="modern-td-empty">No task assignments created by this tester yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -2124,19 +2133,12 @@
   <div class="chart-card qa-panel">
     <div class="qa-panel-head">
       <div>
-        <h3>Smart Insights</h3>
-        <p>Small signals that help focus QA effort.</p>
+        <h3>Weekly Task Assignment Trend</h3>
+        <p>Daily task assignments by tester for the last 7 days.</p>
       </div>
     </div>
-    <div class="qa-insights-list">
-      {% for insight in qa_insights %}
-      <div class="qa-insight-item">
-        <span>{{ insight.label }}</span>
-        <strong>{{ insight.value }}</strong>
-      </div>
-      {% empty %}
-      <div class="modern-td-empty">No QA insights available yet.</div>
-      {% endfor %}
+    <div class="qa-chart-wrap qa-chart-short">
+      <canvas id="testerWeeklyAssignmentChart"></canvas>
     </div>
   </div>
 </div>
@@ -2356,7 +2358,8 @@
 </div>
 
 <!-- Additional Charts Row (moved directly after dashboard-grid) -->
-<div class="charts-row"{% if is_tester %} style="grid-template-columns: 1fr;"{% endif %}>
+{% if not is_tester %}
+<div class="charts-row">
   <!-- Line Chart Card -->
   <div class="chart-card chart-card-modern">
     <h3 class="chart-title-modern">Tasks Over Time</h3>
@@ -2377,7 +2380,6 @@
     </div>
     <div class="chart-desc-modern">Default range is the last 30 days. Filters apply to line and defect metrics.</div>
   </div>
-  {% if not is_tester %}
   <!-- Table Card -->
   <div class="chart-card chart-card-modern">
     <h3 class="chart-title-modern">Planned Tasks</h3>
@@ -2418,8 +2420,8 @@
       </table>
     </div>
   </div>
-  {% endif %}
 </div>
+{% endif %}
 
 <div class="charts-row">
   <div class="chart-card chart-card-modern">
@@ -2737,6 +2739,66 @@ document.addEventListener("DOMContentLoaded", function() {
             beginAtZero: true,
             ticks: { precision: 0 },
             title: { display: true, text: 'Assigned Count' }
+          }
+        }
+      }
+    });
+  }
+
+  const testerAssigneeCtx = document.getElementById('testerAssigneeChart')?.getContext('2d');
+  if (testerAssigneeCtx) {
+    new Chart(testerAssigneeCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ tester_assignee_labels|default:'[]'|safe }},
+        datasets: [{
+          label: 'Task Count',
+          data: {{ tester_assignee_values|default:'[]'|safe }},
+          backgroundColor: '#f59e0b',
+          borderRadius: 8,
+          maxBarThickness: 56
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            title: { display: true, text: 'Assigned To' }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            title: { display: true, text: 'Task Count' }
+          }
+        }
+      }
+    });
+  }
+
+  const testerWeeklyAssignmentCtx = document.getElementById('testerWeeklyAssignmentChart')?.getContext('2d');
+  if (testerWeeklyAssignmentCtx) {
+    new Chart(testerWeeklyAssignmentCtx, {
+      type: 'line',
+      data: {
+        labels: {{ tester_weekly_assignment_labels|default:'[]'|safe }},
+        datasets: {{ tester_weekly_assignment_datasets|default:'[]'|safe }}
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Date' }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            title: { display: true, text: 'Task Count' }
           }
         }
       }
