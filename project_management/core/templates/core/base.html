@@ -1836,7 +1836,7 @@
           results.tasks.forEach(task => {
             const meta = (task.project_name ? task.project_name : task.assigned_to_display || task.status || 'Task');
             html += `
-              <a href="/tasks/${task.id}/" class="search-result-item" style="text-decoration: none; color: inherit;">
+              <a href="/tasks/${task.id}/view/" class="search-result-item" style="text-decoration: none; color: inherit;">
                 <div class="search-result-icon task">
                   <i class="fa fa-tasks"></i>
                 </div>
