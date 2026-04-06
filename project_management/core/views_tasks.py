@@ -3452,8 +3452,12 @@ def task_page_view(request, task_id):
                 'created_at': log_activity['created_at']
             })
     
-    # Sort activities by timestamp
-    activities = sorted(activities, key=lambda x: x['created_at'])
+    # Show the most recent activity first in the timeline.
+    activities = sorted(
+        activities,
+        key=lambda x: x['created_at'] or timezone.now(),
+        reverse=True,
+    )
     
     # Get attachments from database
     cur.execute("""
