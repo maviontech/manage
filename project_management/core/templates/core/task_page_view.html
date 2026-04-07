@@ -651,9 +651,13 @@
                     </div>
 
                     <!-- Add Comment Form -->
-                    <div class="comment-form" id="commentForm" style="display: none;">
-                        <textarea id="commentText" class="form-control" rows="4"
-                                  placeholder="Write your comment..."></textarea>
+                    <div class="comment-form" id="commentForm">
+                        <div class="comment-form-header">
+                            <h4>Comment  (optional)</h4>
+                            <p>Share an update, question, or note about this task.</p>
+                        </div>
+                        <textarea id="commentText" class="form-control comment-input" rows="4"
+                                  placeholder="Write a comment about this task..."></textarea>
                         <div class="form-actions">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="isInternal">
@@ -997,14 +1001,22 @@
     
     // Add Comment Functions
     function addComment() {
-        document.getElementById('commentForm').style.display = 'block';
-        document.getElementById('commentText').focus();
+        const commentForm = document.getElementById('commentForm');
+        const commentText = document.getElementById('commentText');
+
+        if (commentForm) {
+            commentForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        if (commentText) {
+            commentText.focus();
+        }
     }
     
     function cancelComment() {
-        document.getElementById('commentForm').style.display = 'none';
         document.getElementById('commentText').value = '';
         document.getElementById('isInternal').checked = false;
+        document.getElementById('commentText').focus();
     }
     
     function submitComment() {
