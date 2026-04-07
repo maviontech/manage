@@ -865,7 +865,7 @@
                         <select id="statusSelect" class="action-select" onchange="updateStatus(this.value)">
                             <option value="">Select Status</option>
                             <option value="Open" {% if issue.status == 'Open' %}selected{% endif %}>Open</option>
-                            <option value="New" {% if issue.status == 'New' %}selected{% endif %}>New</option>
+                            <option value="Blocked" {% if issue.status == 'Blocked' %}selected{% endif %}>Blocked</option>
                             <option value="In Progress" {% if issue.status == 'In Progress' %}selected{% endif %}>In Progress</option>
                             <option value="Finished" {% if issue.status == 'Finished' %}selected{% endif %}>Finished</option>
                             <option value="Closed" {% if issue.status == 'Closed' %}selected{% endif %}>Closed</option>
