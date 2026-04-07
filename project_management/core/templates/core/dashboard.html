@@ -2905,10 +2905,18 @@ document.addEventListener("DOMContentLoaded", function() {
             fill: true
           },
           {
-            label: 'Completed',
+            label: 'Closed',
             data: {{ line_chart_completed|default:'[0,0,0,0,0,0,0]'|safe }},
             borderColor: '#10b981',
             backgroundColor: 'rgba(16,185,129,0.08)',
+            tension: 0.3,
+            fill: true
+          },
+          {
+            label: 'Finished',
+            data: {{ line_chart_finished|default:'[0,0,0,0,0,0,0]'|safe }},
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245,158,11,0.08)',
             tension: 0.3,
             fill: true
           }

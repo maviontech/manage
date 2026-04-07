@@ -1463,6 +1463,7 @@ def dashboard_view(request):
     line_chart_labels = []
     line_chart_created = []
     line_chart_completed = []
+    line_chart_finished = []
     try:
         timeline_scope_sql = ""
         timeline_scope_params = ()
@@ -1508,14 +1509,30 @@ def dashboard_view(request):
                     line_chart_completed.append(completed_row[0] or 0)
                 else:
                     line_chart_completed.append(0)
+
+                cur.execute(f"""
+                    SELECT COUNT(*) as cnt FROM tasks
+                    WHERE {timeline_scope_sql}
+                      AND {TASK_STATUS_SQL} = 'finished'
+                      AND DATE(updated_at) = %s
+                """, tuple(params))
+                finished_row = cur.fetchone()
+                if isinstance(finished_row, dict):
+                    line_chart_finished.append(finished_row.get('cnt', 0) or 0)
+                elif finished_row:
+                    line_chart_finished.append(finished_row[0] or 0)
+                else:
+                    line_chart_finished.append(0)
             else:
                 line_chart_created.append(0)
                 line_chart_completed.append(0)
+                line_chart_finished.append(0)
     except Exception as e:
         logger.error(f"ERROR: line_chart_data {e}", exc_info=True)
         line_chart_labels = []
         line_chart_created = []
         line_chart_completed = []
+        line_chart_finished = []
 
     # ---------------------- DEFECT REPORTER METRICS ----------------------
     defect_reporter_summary = []
@@ -1588,6 +1605,7 @@ def dashboard_view(request):
         'line_chart_labels': json.dumps(line_chart_labels),
         'line_chart_created': json.dumps(line_chart_created),
         'line_chart_completed': json.dumps(line_chart_completed),
+        'line_chart_finished': json.dumps(line_chart_finished),
         'planned_start': planned_start,
         'planned_end': planned_end,
         'planned_limit': 10,
@@ -2018,6 +2036,7 @@ def user_dashboard_view(request):
     line_chart_labels = []
     line_chart_created = []
     line_chart_completed = []
+    line_chart_finished = []
     try:
         if is_tester:
             timeline_scope_sql, timeline_scope_params = _build_dashboard_task_scope(
@@ -2059,11 +2078,26 @@ def user_dashboard_view(request):
                 line_chart_completed.append(completed_row[0] or 0)
             else:
                 line_chart_completed.append(0)
+
+            cur.execute("""
+                SELECT COUNT(*) as cnt FROM tasks
+                WHERE {timeline_scope_sql}
+                AND {TASK_STATUS_SQL} = 'finished'
+                AND DATE(updated_at) = %s
+            """.format(timeline_scope_sql=timeline_scope_sql, TASK_STATUS_SQL=TASK_STATUS_SQL), tuple(list(timeline_scope_params) + [day]))
+            finished_row = cur.fetchone()
+            if isinstance(finished_row, dict):
+                line_chart_finished.append(finished_row.get('cnt', 0) or 0)
+            elif finished_row:
+                line_chart_finished.append(finished_row[0] or 0)
+            else:
+                line_chart_finished.append(0)
     except Exception as e:
         logger.error(f"ERROR: line_chart_data {e}", exc_info=True)
         line_chart_labels = []
         line_chart_created = []
         line_chart_completed = []
+        line_chart_finished = []
 
     defect_reporter_summary = []
     defect_reporter_labels = []
@@ -2138,6 +2172,7 @@ def user_dashboard_view(request):
         'line_chart_labels': json.dumps(line_chart_labels),
         'line_chart_created': json.dumps(line_chart_created),
         'line_chart_completed': json.dumps(line_chart_completed),
+        'line_chart_finished': json.dumps(line_chart_finished),
         'planned_start': planned_start,
         'planned_end': planned_end,
         'planned_limit': 10,
