@@ -1011,6 +1011,12 @@
                         Add Attachment
                     </button>
 
+                    <a href="{% url 'edit_task' issue.id %}" class="action-btn">
+                        <i class="fas fa-edit"></i>
+                        Edit Issue
+                    </a>
+
+
                     {% if user_role == 'ADMIN' %}
                     <button class="action-btn danger" onclick="deleteIssue()">
                         <i class="fas fa-trash"></i>
