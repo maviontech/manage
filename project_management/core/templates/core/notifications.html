@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadNotifications() {
   console.log('Loading notifications...'); // Debug log
   
-  fetch('{% url "api_notifications_list" %}')
+  fetch('{% url "api_notifications_list" %}?unread_only=1')
     .then(res => {
       console.log('Response status:', res.status); // Debug log
       return res.json();
@@ -524,7 +524,7 @@ function markAsRead(id) {
 function markAllAsRead() {
   if (!notifications || notifications.length === 0) return;
   
-  if (!confirm('Mark all notifications as read? They will be removed from this list.')) return;
+  if (!confirm('Mark all notifications as read?')) return;
   
   // Fade out all notifications
   document.querySelectorAll('.notification-item').forEach(item => {

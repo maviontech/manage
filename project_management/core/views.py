@@ -3428,6 +3428,8 @@ def api_notifications_list(request):
     member_id = request.session.get('member_id')
     if not member_id:
         return JsonResponse({'error': 'Member ID not found'}, status=401)
+
+    unread_only = request.GET.get('unread_only', '').lower() in ('1', 'true', 'yes')
     
     try:
         conn = get_tenant_conn(request)
@@ -3454,14 +3456,23 @@ def api_notifications_list(request):
                 'message': 'Notifications table not found. Run migration script.'
             })
         
-        # Get ALL notifications for user (both read and unread), with unread first
-        cur.execute("""
-            SELECT id, title, message, type, is_read, link, created_at
-            FROM notifications
-            WHERE user_id = %s
-            ORDER BY is_read ASC, created_at DESC
-            LIMIT 50
-        """, (member_id,))
+        if unread_only:
+            cur.execute("""
+                SELECT id, title, message, type, is_read, link, created_at
+                FROM notifications
+                WHERE user_id = %s AND is_read = 0
+                ORDER BY created_at DESC
+                LIMIT 50
+            """, (member_id,))
+        else:
+            # Get all notifications for history views, with unread items first.
+            cur.execute("""
+                SELECT id, title, message, type, is_read, link, created_at
+                FROM notifications
+                WHERE user_id = %s
+                ORDER BY is_read ASC, created_at DESC
+                LIMIT 50
+            """, (member_id,))
         notifications = cur.fetchall()
         notifications_list = []
         

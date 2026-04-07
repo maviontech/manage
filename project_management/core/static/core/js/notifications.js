@@ -575,7 +575,7 @@
         
         container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#9ca3af;"><i class="fa fa-spinner fa-spin" style="font-size:24px;"></i><p style="margin-top:12px;font-size:14px;">Loading...</p></div>';
         
-        fetch('/api/notifications/list')
+        fetch('/api/notifications/list?unread_only=1')
             .then(res => res.json())
             .then(data => {
                 if (data.error) {
