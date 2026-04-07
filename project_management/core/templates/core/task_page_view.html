@@ -357,8 +357,8 @@
     .desc-action-btn { background:transparent; border:1px solid #e6eefb; padding:8px 10px; border-radius:8px; cursor:pointer; color:#2563eb; font-weight:700; display:inline-flex; gap:8px; align-items:center; }
     .desc-action-btn:hover { background:#f8fafc; transform:translateY(-2px); }
 
-    .description-content { padding: 20px; color:#0f172a; font-size:15px; line-height:1.7; max-height: 320px; overflow: auto; }
-    .description-content.collapsed { max-height: 160px; }
+    .description-content { padding: 20px; color:#0f172a; font-size:15px; line-height:1.7; max-height: none; overflow: visible; }
+    .description-content.collapsed { max-height: 160px; overflow: hidden; }
     .description-content p { margin:0 0 12px 0; }
     .description-content pre { background:#0f172a; color:#e6eefb; padding:12px; border-radius:8px; overflow:auto; }
     .description-content code { background:#f1f5f9; padding:2px 6px; border-radius:6px; font-family:monospace; }
@@ -443,9 +443,20 @@
                     }
                 }
                 // initial collapsed if long
-                if (descEl.scrollHeight > 260) setCollapsed(true);
-                btnToggle && btnToggle.addEventListener('click', function(){ setCollapsed(!descEl.classList.contains('collapsed')); });
-                showMoreBtn && showMoreBtn.addEventListener('click', function(){ setCollapsed(!descEl.classList.contains('collapsed')); });
+                if (descEl.scrollHeight > 260) {
+                    setCollapsed(true);
+                } else {
+                    if (btnToggle) btnToggle.style.display = 'none';
+                    if (showMoreBtn) showMoreBtn.style.display = 'none';
+                }
+                btnToggle && btnToggle.addEventListener('click', function(event){
+                    event.preventDefault();
+                    setCollapsed(!descEl.classList.contains('collapsed'));
+                });
+                showMoreBtn && showMoreBtn.addEventListener('click', function(event){
+                    event.preventDefault();
+                    setCollapsed(!descEl.classList.contains('collapsed'));
+                });
                 btnCopy && btnCopy.addEventListener('click', async function(){
                     try {
                         const txt = descEl.innerText || descEl.textContent || '';
