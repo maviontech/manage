@@ -298,10 +298,17 @@ def my_tasks_view(request):
                FROM tasks t
                LEFT JOIN projects p ON p.id = t.project_id
                LEFT JOIN members m ON m.id = t.created_by
-               WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
+               WHERE (
+                   (t.assigned_type='member' AND t.assigned_to IN ({placeholders}))
+                   OR
+                   (t.assigned_type='team' AND t.assigned_to IN (
+                       SELECT team_id FROM team_memberships WHERE member_id = %s
+                   ))
+               )
         """
 
         params = list(visible_user_ids)
+        params.append(user_id)  # Add current user for team membership check
 
         # Apply server-side filters
         if sel_project:
@@ -488,11 +495,19 @@ def board_data_api(request):
     # build optional filters
     count_filters = []
     
-    # Apply visibility filter for member-assigned tasks
+    # Apply visibility filter for member-assigned tasks AND team-assigned tasks
     if visible_user_ids:
         placeholders = ','.join(['%s'] * len(visible_user_ids))
-        count_filters.append(f"(assigned_type = 'member' AND assigned_to IN ({placeholders}))")
+        # Show both member-assigned tasks AND team-assigned tasks where user is a team member
+        count_filters.append(f"""(
+            (assigned_type = 'member' AND assigned_to IN ({placeholders}))
+            OR
+            (assigned_type = 'team' AND assigned_to IN (
+                SELECT team_id FROM team_memberships WHERE member_id = %s
+            ))
+        )""")
         count_params.extend(visible_user_ids)
+        count_params.append(user_id)  # Add current user for team membership check
     
     if status:
         count_filters.append("status = %s")
@@ -554,11 +569,19 @@ def board_data_api(request):
     params = []
     main_filters = []
     
-    # Apply visibility filter for member-assigned tasks
+    # Apply visibility filter for member-assigned tasks AND team-assigned tasks
     if visible_user_ids:
         placeholders = ','.join(['%s'] * len(visible_user_ids))
-        main_filters.append(f"(t.assigned_type = 'member' AND t.assigned_to IN ({placeholders}))")
+        # Show both member-assigned tasks AND team-assigned tasks where user is a team member
+        main_filters.append(f"""(
+            (t.assigned_type = 'member' AND t.assigned_to IN ({placeholders}))
+            OR
+            (t.assigned_type = 'team' AND t.assigned_to IN (
+                SELECT team_id FROM team_memberships WHERE member_id = %s
+            ))
+        )""")
         params.extend(visible_user_ids)
+        params.append(user_id)  # Add current user for team membership check
     
     if status:
         main_filters.append("t.status = %s")
@@ -3953,9 +3976,15 @@ def task_analytics_view(request):
                 CONCAT(m.first_name, ' ', m.last_name) AS assigned_name
             FROM tasks t
             LEFT JOIN members m ON m.id = t.assigned_to
-            WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
+            WHERE (
+                (t.assigned_type='member' AND t.assigned_to IN ({placeholders}))
+                OR
+                (t.assigned_type='team' AND t.assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
             ORDER BY work_type, FIELD(t.status,'Open','In Progress','Reopen','Review','Blocked','Closed'), t.created_at DESC
-        """, tuple(visible_user_ids))
+        """, tuple(list(visible_user_ids) + [user_id]))
         
         all_tasks = cur.fetchall()
         
@@ -3966,9 +3995,15 @@ def task_analytics_view(request):
                 status,
                 COUNT(*) AS count
             FROM tasks
-            WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+            WHERE (
+                (assigned_type='member' AND assigned_to IN ({placeholders}))
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
             GROUP BY work_type, status
-        """, tuple(visible_user_ids))
+        """, tuple(list(visible_user_ids) + [user_id]))
         
         stats = cur.fetchall()
         
@@ -4143,7 +4178,7 @@ def metric_drilldown_view(request, metric_key):
             sort_sql, sort_field, sort_dir = _safe_metric_sort(request, allowed_sorts, 'created_at')
             
             if is_personal_view:
-                # For personal view, show only projects with tasks assigned to this user
+                # For personal view, show only projects with tasks assigned to this user OR their teams
                 cur.execute(f"""
                     SELECT
                         p.id,
@@ -4159,11 +4194,16 @@ def metric_drilldown_view(request, metric_key):
                     FROM projects p
                     INNER JOIN tasks t ON t.project_id = p.id
                     WHERE p.status = 'Active'
-                    AND t.assigned_type = 'member'
-                    AND t.assigned_to = %s
+                    AND (
+                        (t.assigned_type = 'member' AND t.assigned_to = %s)
+                        OR
+                        (t.assigned_type = 'team' AND t.assigned_to IN (
+                            SELECT team_id FROM team_memberships WHERE member_id = %s
+                        ))
+                    )
                     GROUP BY p.id, p.name, p.description, p.status, p.start_date, p.tentative_end_date, p.end_date, p.created_at
                     ORDER BY {sort_sql} {sort_dir}
-                """, (member_id,))
+                """, (member_id, member_id))
             else:
                 # For admin view, show all active projects
                 cur.execute(f"""
@@ -4233,11 +4273,16 @@ def metric_drilldown_view(request, metric_key):
                     LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
                     LEFT JOIN members c ON t.created_by = c.id
                     LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
-                    WHERE t.assigned_type = 'member'
-                      AND t.assigned_to IN ({placeholders})
+                    WHERE (
+                        (t.assigned_type = 'member' AND t.assigned_to IN ({placeholders}))
+                        OR
+                        (t.assigned_type = 'team' AND t.assigned_to IN (
+                            SELECT team_id FROM team_memberships WHERE member_id IN ({placeholders})
+                        ))
+                    )
                       AND {status_clause}
                     ORDER BY {sort_sql} {sort_dir}
-                """, tuple(filter_user_ids))
+                """, tuple(filter_user_ids + filter_user_ids))
                 rows = cur.fetchall() or []
             else:
                 sort_field = 'created_at'
@@ -4324,11 +4369,16 @@ def export_metric_drilldown_excel(request):
                 cur.execute(f"""
                     SELECT t.*
                     FROM tasks t
-                    WHERE t.assigned_type = 'member'
-                      AND t.assigned_to IN ({placeholders})
+                    WHERE (
+                        (t.assigned_type = 'member' AND t.assigned_to IN ({placeholders}))
+                        OR
+                        (t.assigned_type = 'team' AND t.assigned_to IN (
+                            SELECT team_id FROM team_memberships WHERE member_id = %s
+                        ))
+                    )
                       AND {status_clause}
                     ORDER BY t.created_at DESC
-                """, tuple(visible_user_ids))
+                """, tuple(list(visible_user_ids) + [member_id]))
                 rows = cur.fetchall() or []
 
         if rows:
@@ -4447,23 +4497,34 @@ def tasks_overview_view(request):
         if filter_user_ids:
             placeholders = ','.join(['%s'] * len(filter_user_ids))
             cur.execute(
-                f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders})",
-                tuple(filter_user_ids)
+                f"""SELECT COUNT(*) AS c FROM tasks WHERE (
+                    (assigned_type='member' AND assigned_to IN ({placeholders}))
+                    OR
+                    (assigned_type='team' AND assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                )""",
+                tuple(list(filter_user_ids) + [member_id])
             )
             row = cur.fetchone()
             total_tasks = int(row['c']) if row else 0
         
         # Active projects
         if is_personal_view:
-            # For personal view, only count projects with tasks assigned to this user
+            # For personal view, only count projects with tasks assigned to this user OR their teams
             cur.execute("""
                 SELECT COUNT(DISTINCT p.id) AS c
                 FROM projects p
                 INNER JOIN tasks t ON t.project_id = p.id
                 WHERE p.status = 'Active' 
-                AND t.assigned_type = 'member'
-                AND t.assigned_to = %s
-            """, (member_id,))
+                AND (
+                    (t.assigned_type = 'member' AND t.assigned_to = %s)
+                    OR
+                    (t.assigned_type = 'team' AND t.assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                )
+            """, (member_id, member_id))
         else:
             # For admin view, count all active projects
             cur.execute("SELECT COUNT(*) AS c FROM projects WHERE status = 'Active'")
@@ -4475,8 +4536,14 @@ def tasks_overview_view(request):
         if filter_user_ids:
             placeholders = ','.join(['%s'] * len(filter_user_ids))
             cur.execute(
-                f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders}) AND status IN ('Completed', 'Closed')",
-                tuple(filter_user_ids)
+                f"""SELECT COUNT(*) AS c FROM tasks WHERE (
+                    (assigned_type='member' AND assigned_to IN ({placeholders}))
+                    OR
+                    (assigned_type='team' AND assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                ) AND status IN ('Completed', 'Closed')""",
+                tuple(list(filter_user_ids) + [member_id])
             )
             row = cur.fetchone()
             tasks_completed = int(row['c']) if row else 0
@@ -4526,11 +4593,17 @@ def tasks_overview_view(request):
                 LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
                 LEFT JOIN members c ON t.created_by = c.id
                 LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
-                WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
+                WHERE (
+                    (t.assigned_type='member' AND t.assigned_to IN ({placeholders}))
+                    OR
+                    (t.assigned_type='team' AND t.assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                )
                 ORDER BY t.created_at DESC
                 LIMIT 100
                 """,
-                tuple(filter_user_ids)
+                tuple(list(filter_user_ids) + [member_id])
             )
             rows = cur.fetchall()
             
@@ -4657,10 +4730,16 @@ def export_tasks_excel(request):
                 LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
                 LEFT JOIN members c ON t.created_by = c.id
                 LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
-                WHERE t.assigned_type='member' AND t.assigned_to IN ({placeholders})
+                WHERE (
+                    (t.assigned_type='member' AND t.assigned_to IN ({placeholders}))
+                    OR
+                    (t.assigned_type='team' AND t.assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                )
                 ORDER BY t.created_at DESC
                 """,
-                tuple(visible_user_ids)
+                tuple(list(visible_user_ids) + [member_id])
             )
             rows = cur.fetchall()
             

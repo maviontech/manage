@@ -241,8 +241,22 @@ def _build_dashboard_task_scope(member_ids=None, created_by_member_id=None, incl
 
     if normalized_member_ids:
         placeholders = ','.join(['%s'] * len(normalized_member_ids))
-        clauses.append(f"({prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders}))")
-        params.extend(normalized_member_ids)
+        member_id_for_team_check = normalized_member_ids[0] if len(normalized_member_ids) == 1 else None
+        if member_id_for_team_check:
+            # Single user - include both member tasks and team tasks
+            clauses.append(f"""(
+                ({prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders}))
+                OR
+                ({prefix}assigned_type='team' AND {prefix}assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )""")
+            params.extend(normalized_member_ids)
+            params.append(member_id_for_team_check)
+        else:
+            # Multiple users - just include member tasks for all
+            clauses.append(f"({prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders}))")
+            params.extend(normalized_member_ids)
 
     if include_created_by and created_by_member_id is not None:
         clauses.append(f"{prefix}created_by = %s")
@@ -274,7 +288,18 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         if scope_created_by_member_id is not None:
             return f"{prefix}created_by = %s", (scope_created_by_member_id,)
         placeholders = ','.join(['%s'] * len(scoped_member_ids))
-        return f"{prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders})", tuple(scoped_member_ids)
+        member_id_for_team = scoped_member_ids[0] if len(scoped_member_ids) == 1 else None
+        if member_id_for_team:
+            # Single user - include both member and team tasks
+            return f"""(
+                ({prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders}))
+                OR
+                ({prefix}assigned_type='team' AND {prefix}assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )""", tuple(list(scoped_member_ids) + [member_id_for_team])
+        else:
+            return f"{prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders})", tuple(scoped_member_ids)
 
     bug_filter = """
         (
@@ -1121,7 +1146,13 @@ def dashboard_view(request):
     try:
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
-            cur.execute(f"SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({placeholders})", tuple(visible_user_ids))
+            cur.execute(f"""SELECT COUNT(*) AS c FROM tasks WHERE (
+                (assigned_type='member' AND assigned_to IN ({placeholders}))
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )""", tuple(list(visible_user_ids) + [member_id]))
             assigned_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         assigned_count = 0
@@ -1230,9 +1261,15 @@ def dashboard_view(request):
             cur.execute(f"""
                 SELECT status, COUNT(*) AS c
                 FROM tasks
-                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+                WHERE (
+                    (assigned_type='member' AND assigned_to IN ({placeholders}))
+                    OR
+                    (assigned_type='team' AND assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                )
                 GROUP BY status
-            """, tuple(visible_user_ids))
+            """, tuple(list(visible_user_ids) + [member_id]))
             rows = cur.fetchall() or []
             if rows:
                 if isinstance(rows[0], dict):
@@ -1258,9 +1295,15 @@ def dashboard_view(request):
             cur.execute(f"""
                 SELECT COALESCE(priority,'Normal') AS p, COUNT(*) AS c
                 FROM tasks
-                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+                WHERE (
+                    (assigned_type='member' AND assigned_to IN ({placeholders}))
+                    OR
+                    (assigned_type='team' AND assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                )
                 GROUP BY p
-            """, tuple(visible_user_ids))
+            """, tuple(list(visible_user_ids) + [member_id]))
             rows = cur.fetchall() or []
             if rows:
                 if isinstance(rows[0], dict):
@@ -1282,9 +1325,15 @@ def dashboard_view(request):
             cur.execute(f"""
                 SELECT COALESCE(priority,'Normal') AS p, status, COUNT(*) AS c
                 FROM tasks
-                WHERE assigned_type='member' AND assigned_to IN ({placeholders})
+                WHERE (
+                    (assigned_type='member' AND assigned_to IN ({placeholders}))
+                    OR
+                    (assigned_type='team' AND assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                )
                 GROUP BY p, status
-            """, tuple(visible_user_ids))
+            """, tuple(list(visible_user_ids) + [member_id]))
             rows = cur.fetchall() or []
             if rows:
                 if isinstance(rows[0], dict):
@@ -1716,7 +1765,13 @@ def user_dashboard_view(request):
     # Get tasks assigned ONLY to this user (not using visible_user_ids)
     assigned_count = 0
     try:
-        cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to=%s", (member_id,))
+        cur.execute("""SELECT COUNT(*) AS c FROM tasks WHERE (
+            (assigned_type='member' AND assigned_to=%s)
+            OR
+            (assigned_type='team' AND assigned_to IN (
+                SELECT team_id FROM team_memberships WHERE member_id = %s
+            ))
+        )""", (member_id, member_id))
         assigned_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         assigned_count = 0
@@ -1729,9 +1784,14 @@ def user_dashboard_view(request):
             FROM projects p
             INNER JOIN tasks t ON t.project_id = p.id
             WHERE p.status = 'Active' 
-            AND t.assigned_type = 'member'
-            AND t.assigned_to = %s
-        """, (member_id,))
+            AND (
+                (t.assigned_type = 'member' AND t.assigned_to = %s)
+                OR
+                (t.assigned_type = 'team' AND t.assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
+        """, (member_id, member_id))
         active_projects = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
         logger.error(f"ERROR active_projects: {e}")
@@ -1746,11 +1806,16 @@ def user_dashboard_view(request):
             f"""
             SELECT COUNT(*) AS c
             FROM tasks
-            WHERE assigned_type='member'
-              AND assigned_to=%s
+            WHERE (
+                (assigned_type='member' AND assigned_to=%s)
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
               AND {status_expr} IN ('closed', 'completed')
             """,
-            (member_id,),
+            (member_id, member_id),
         )
         tasks_completed = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
@@ -1763,11 +1828,16 @@ def user_dashboard_view(request):
             f"""
             SELECT COUNT(*) AS c
             FROM tasks
-            WHERE assigned_type='member'
-              AND assigned_to=%s
+            WHERE (
+                (assigned_type='member' AND assigned_to=%s)
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
               AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress', 'new')
             """,
-            (member_id,),
+            (member_id, member_id),
         )
         tasks_open = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
@@ -1780,11 +1850,16 @@ def user_dashboard_view(request):
             f"""
             SELECT COUNT(*) AS c
             FROM tasks
-            WHERE assigned_type='member'
-              AND assigned_to=%s
+            WHERE (
+                (assigned_type='member' AND assigned_to=%s)
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
               AND {status_expr} = 'finished'
             """,
-            (member_id,),
+            (member_id, member_id),
         )
         tasks_finished = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
@@ -1798,11 +1873,16 @@ def user_dashboard_view(request):
             f"""
             SELECT COUNT(*) AS c
             FROM tasks
-            WHERE assigned_type='member'
-              AND assigned_to=%s
+            WHERE (
+                (assigned_type='member' AND assigned_to=%s)
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
               AND {status_expr} IN ('reopen', 'reopened', 're-opened')
         """,
-            (member_id,),
+            (member_id, member_id),
         )
         tasks_reopened = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
@@ -1815,9 +1895,15 @@ def user_dashboard_view(request):
         cur.execute("""
             SELECT status, COUNT(*) AS c
             FROM tasks
-            WHERE assigned_type='member' AND assigned_to=%s
+            WHERE (
+                (assigned_type='member' AND assigned_to=%s)
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
             GROUP BY status
-        """, (member_id,))
+        """, (member_id, member_id))
         rows = cur.fetchall() or []
         if rows:
             if isinstance(rows[0], dict):
@@ -1842,9 +1928,15 @@ def user_dashboard_view(request):
         cur.execute("""
             SELECT COALESCE(priority,'Normal') AS p, COUNT(*) AS c
             FROM tasks
-            WHERE assigned_type='member' AND assigned_to=%s
+            WHERE (
+                (assigned_type='member' AND assigned_to=%s)
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
             GROUP BY p
-        """, (member_id,))
+        """, (member_id, member_id))
         rows = cur.fetchall() or []
         if rows:
             if isinstance(rows[0], dict):
@@ -1865,9 +1957,15 @@ def user_dashboard_view(request):
         cur.execute("""
             SELECT COALESCE(priority,'Normal') AS p, status, COUNT(*) AS c
             FROM tasks
-            WHERE assigned_type='member' AND assigned_to=%s
+            WHERE (
+                (assigned_type='member' AND assigned_to=%s)
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
             GROUP BY p, status
-        """, (member_id,))
+        """, (member_id, member_id))
         rows = cur.fetchall() or []
         if rows:
             if isinstance(rows[0], dict):
@@ -1908,11 +2006,16 @@ def user_dashboard_view(request):
             f"""
             SELECT COUNT(*) AS c
             FROM tasks
-            WHERE assigned_type='member'
-              AND assigned_to=%s
+            WHERE (
+                (assigned_type='member' AND assigned_to=%s)
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
               AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress', 'new')
             """,
-            (member_id,),
+            (member_id, member_id),
         )
         board_open_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
@@ -1926,11 +2029,16 @@ def user_dashboard_view(request):
             f"""
             SELECT COUNT(*) AS c
             FROM tasks
-            WHERE assigned_type='member'
-              AND assigned_to=%s
+            WHERE (
+                (assigned_type='member' AND assigned_to=%s)
+                OR
+                (assigned_type='team' AND assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
               AND {status_expr} IN ('new', 'open')
             """,
-            (member_id,),
+            (member_id, member_id),
         )
         my_new_tasks_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:

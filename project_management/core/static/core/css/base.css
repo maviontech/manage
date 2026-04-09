@@ -351,16 +351,7 @@ body.sidebar-collapsed .brand-sub{display:none}
   letter-spacing:0.1px;
 }
 
-/* Submenu link dot indicator */
-.submenu-link::before {
-  content: '';
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.2);
-  transition: all 0.22s ease;
-  flex-shrink: 0;
-}
+
 
 .submenu-link i{
   width:18px;
