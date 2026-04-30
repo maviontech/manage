@@ -3383,7 +3383,7 @@ def task_page_view(request, task_id):
             is_internal, created_at
         FROM task_comments
         WHERE task_id = %s
-        ORDER BY created_at ASC
+        ORDER BY created_at DESC
     """, (task_id,))
     
     comments = cur.fetchall()
