@@ -1807,8 +1807,28 @@ def api_task_update(request):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
     try:
+        def _assignment_display_name(assigned_type, assigned_to):
+            if not assigned_type or not assigned_to:
+                return "Unassigned"
+            if assigned_type == "member":
+                cur.execute(
+                    "SELECT CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) AS name FROM members WHERE id = %s",
+                    (assigned_to,),
+                )
+                row = cur.fetchone()
+                if row and row.get("name") and row["name"].strip():
+                    return row["name"].strip()
+                return f"Member {assigned_to}"
+            if assigned_type == "team":
+                cur.execute("SELECT name FROM teams WHERE id = %s", (assigned_to,))
+                row = cur.fetchone()
+                if row and row.get("name"):
+                    return f"Team: {row['name']}"
+                return f"Team {assigned_to}"
+            return str(assigned_to)
+
         # check exists
-        cur.execute("SELECT id, title, status, created_by, assigned_to, assigned_type FROM tasks WHERE id = %s LIMIT 1", (tid,))
+        cur.execute("SELECT id, title, status, priority, created_by, assigned_to, assigned_type FROM tasks WHERE id = %s LIMIT 1", (tid,))
         existing = cur.fetchone()
         if not existing:
             return JsonResponse({'ok': False, 'error': 'task not found'}, status=404)
@@ -1903,10 +1923,52 @@ def api_task_update(request):
         # optional: log activity
         performed_by = request.session.get("user_id")
         try:
-            cur.execute(
-                "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
-                ("task", tid, f"updated_via_api", performed_by),
-            )
+            logged_meaningful_change = False
+
+            old_assigned_type = existing.get('assigned_type') if isinstance(existing, dict) else None
+            old_assigned_to = existing.get('assigned_to') if isinstance(existing, dict) else None
+            old_assignee_text = _assignment_display_name(old_assigned_type, old_assigned_to)
+
+            if _assigned_change is not None:
+                if _assigned_change == '':
+                    new_assigned_type, new_assigned_to = None, None
+                elif ":" in _assigned_change:
+                    new_assigned_type, new_assigned_to = _assigned_change.split(":", 1)
+                else:
+                    new_assigned_type, new_assigned_to = "member", _assigned_change
+
+                old_assignment_key = f"{old_assigned_type}:{old_assigned_to}" if old_assigned_type and old_assigned_to else ""
+                new_assignment_key = f"{new_assigned_type}:{new_assigned_to}" if new_assigned_type and new_assigned_to else ""
+
+                if old_assignment_key != new_assignment_key:
+                    new_assignee_text = _assignment_display_name(new_assigned_type, new_assigned_to)
+                    cur.execute(
+                        "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+                        ("task", tid, f"Changed assignee from {old_assignee_text} to {new_assignee_text}", performed_by),
+                    )
+                    logged_meaningful_change = True
+
+            old_status = existing.get('status') if isinstance(existing, dict) else None
+            if status is not None and status != old_status:
+                cur.execute(
+                    "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+                    ("task", tid, f"Changed status from {old_status} to {status}", performed_by),
+                )
+                logged_meaningful_change = True
+
+            old_priority = existing.get('priority') if isinstance(existing, dict) else None
+            if priority is not None and priority != old_priority:
+                cur.execute(
+                    "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+                    ("task", tid, f"Changed priority from {old_priority} to {priority}", performed_by),
+                )
+                logged_meaningful_change = True
+
+            if not logged_meaningful_change:
+                cur.execute(
+                    "INSERT INTO activity_log (entity_type, entity_id, action, performed_by) VALUES (%s,%s,%s,%s)",
+                    ("task", tid, "Updated task details", performed_by),
+                )
         except Exception:
             # don't fail entire operation if logging fails
             pass
@@ -3431,8 +3493,20 @@ def task_page_view(request, task_id):
     for log_activity in log_activities:
         action_text = log_activity['action']
         
-        # Parse status/priority changes
-        if 'status from' in action_text.lower():
+        # Parse status/priority/assignment changes
+        if 'assignee from' in action_text.lower():
+            parts = action_text.split(' from ', 1)
+            if len(parts) == 2:
+                old_new = parts[1].split(' to ', 1)
+                activities.append({
+                    'user_name': log_activity['user_name'],
+                    'action_type': 'assigned',
+                    'old_value': old_new[0].strip() if len(old_new) > 0 else None,
+                    'new_value': old_new[1].strip() if len(old_new) > 1 else None,
+                    'description': action_text,
+                    'created_at': log_activity['created_at']
+                })
+        elif 'status from' in action_text.lower():
             parts = action_text.split(' from ')
             if len(parts) == 2:
                 old_new = parts[1].split(' to ')
