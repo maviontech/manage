@@ -1923,22 +1923,22 @@
 </section> -->
 
 <div class="qa-work-grid">
-  <a class="qa-work-card qa-card-blue" href="{% url 'tasks_overview' %}?personal=true">
+  <a class="qa-work-card qa-card-blue" href="{% url 'metric_drilldown' 'tasks-assigned' %}{% if is_user_dashboard %}?personal=true{% endif %}">
     <span class="qa-work-label">Total Assigned</span>
     <span class="qa-work-value">{{ tester_work_assigned|default:0 }}</span>
     <span class="qa-work-meta">Shows the total assigned bug and defect tasks.</span>
   </a>
-  <a class="qa-work-card qa-card-amber" href="{% url 'task_board' %}">
+  <a class="qa-work-card qa-card-amber" href="{% url 'metric_drilldown' 'tasks-reopened' %}{% if is_user_dashboard %}?personal=true{% endif %}">
     <span class="qa-work-label">Reopen</span>
     <span class="qa-work-value">{{ tester_work_reopened|default:0 }}</span>
     <span class="qa-work-meta">Shows all assigned tasks with Reopen status.</span>
   </a>
-  <a class="qa-work-card qa-card-cyan" href="{% url 'tasks_overview' %}?personal=true">
+  <a class="qa-work-card qa-card-cyan" href="{% url 'metric_drilldown' 'tasks-finished' %}{% if is_user_dashboard %}?personal=true{% endif %}">
     <span class="qa-work-label">Finished</span>
     <span class="qa-work-value">{{ tester_work_verification|default:0 }}</span>
     <span class="qa-work-meta">Shows bug and defect tasks with Finished status.</span>
   </a>
-  <a class="qa-work-card qa-card-rose" href="{% url 'tasks_overview' %}?personal=true">
+  <a class="qa-work-card qa-card-rose" href="{% url 'metric_drilldown' 'tasks-completed' %}{% if is_user_dashboard %}?personal=true{% endif %}">
     <span class="qa-work-label">Closed</span>
     <span class="qa-work-value">{{ tester_work_closed|default:0 }}</span>
     <span class="qa-work-meta">Shows bug and defect tasks with Closed status.</span>

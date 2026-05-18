@@ -4162,6 +4162,12 @@ def _safe_metric_sort(request, allowed, default_field):
 
 def _metric_page_context(metric_key):
     mapping = {
+        'tasks-assigned': {
+            'title': 'Total Assigned Tasks',
+            'subtitle': 'All assigned tasks in your visibility scope',
+            'table_type': 'tasks',
+            'empty': 'No assigned tasks found.'
+        },
         'active-projects': {
             'title': 'Active Projects',
             'subtitle': 'Currently active projects with task delivery snapshot',
@@ -4200,6 +4206,7 @@ def metric_drilldown_view(request, metric_key):
     """
     Dedicated metric drilldown listing with sorting + pagination.
     Supported metrics:
+      - tasks-assigned
       - active-projects
       - tasks-completed
       - tasks-pending
@@ -4318,7 +4325,9 @@ def metric_drilldown_view(request, metric_key):
             sort_sql, sort_field, sort_dir = _safe_metric_sort(request, allowed_sorts, 'created_at')
             if filter_user_ids:
                 placeholders = ','.join(['%s'] * len(filter_user_ids))
-                if metric_key == 'tasks-completed':
+                if metric_key == 'tasks-assigned':
+                    status_clause = "1=1"
+                elif metric_key == 'tasks-completed':
                     status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('completed', 'closed')"
                 elif metric_key == 'tasks-finished':
                     status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) = 'finished'"
@@ -4394,7 +4403,7 @@ def export_metric_drilldown_excel(request):
     """
     Export metric drilldown with full base-table columns.
     - active-projects -> projects.*
-    - tasks-completed/tasks-pending/tasks-finished/tasks-reopened -> tasks.*
+    - tasks-assigned/tasks-completed/tasks-pending/tasks-finished/tasks-reopened -> tasks.*
     """
     try:
         from openpyxl import Workbook
@@ -4417,7 +4426,8 @@ def export_metric_drilldown_excel(request):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
     try:
-        visible_user_ids = get_visible_task_user_ids(conn, member_id)
+        is_personal_view = request.GET.get('personal', '').lower() == 'true'
+        visible_user_ids = [member_id] if is_personal_view else get_visible_task_user_ids(conn, member_id)
         headers = []
         rows = []
 
@@ -4432,7 +4442,9 @@ def export_metric_drilldown_excel(request):
         else:
             if visible_user_ids:
                 placeholders = ','.join(['%s'] * len(visible_user_ids))
-                if metric_key == 'tasks-completed':
+                if metric_key == 'tasks-assigned':
+                    status_clause = "1=1"
+                elif metric_key == 'tasks-completed':
                     status_clause = "LOWER(TRIM(COALESCE(status, ''))) IN ('completed', 'closed')"
                 elif metric_key == 'tasks-finished':
                     status_clause = "LOWER(TRIM(COALESCE(status, ''))) = 'finished'"
@@ -4447,12 +4459,12 @@ def export_metric_drilldown_excel(request):
                         (t.assigned_type = 'member' AND t.assigned_to IN ({placeholders}))
                         OR
                         (t.assigned_type = 'team' AND t.assigned_to IN (
-                            SELECT team_id FROM team_memberships WHERE member_id = %s
+                            SELECT team_id FROM team_memberships WHERE member_id IN ({placeholders})
                         ))
                     )
                       AND {status_clause}
                     ORDER BY t.created_at DESC
-                """, tuple(list(visible_user_ids) + [member_id]))
+                """, tuple(list(visible_user_ids) + list(visible_user_ids)))
                 rows = cur.fetchall() or []
 
         if rows:

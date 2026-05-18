@@ -452,9 +452,9 @@
 [data-theme="dark"] .btn-filter,
 [data-theme="dark"] .btn-export,
 [data-theme="dark"] .btn-back {
-  background: var(--theme-surface) !important;
+  background: #0f932d !important;
   border-color: var(--theme-border) !important;
-  color: var(--theme-text-secondary) !important;
+  color: #ffffff !important;
 }
 [data-theme="dark"] .btn-filter:hover,
 [data-theme="dark"] .btn-export:hover,

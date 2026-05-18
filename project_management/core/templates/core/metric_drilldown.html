@@ -201,7 +201,7 @@
 
 <div class="toolbar">
   <a class="btn-main btn-back js-load" href="{% url 'dashboard' %}{% if request.GET.from_date or request.GET.to_date %}?from_date={{ request.GET.from_date }}&to_date={{ request.GET.to_date }}{% endif %}">Back to Dashboard</a>
-  <a class="btn-main btn-export js-load" href="{% url 'export_metric_drilldown_excel' %}?metric={{ metric_key }}">Export Excel</a>
+  <a class="btn-main btn-export" href="{% url 'export_metric_drilldown_excel' %}?metric={{ metric_key }}{% if request.GET.personal %}&personal={{ request.GET.personal }}{% endif %}">Export Excel</a>
 </div>
 
 <div class="table-wrap">
