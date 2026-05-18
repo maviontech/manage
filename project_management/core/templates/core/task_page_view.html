@@ -683,7 +683,7 @@
                     <div style="display:flex;align-items:center;gap:12px;">
                         <span class="desc-badge"><i class="fas fa-info-circle"></i> Description</span>
                         <div style="display:flex;flex-direction:column;">
-                            <div style="font-size:16px;font-weight:800;color:#0f172a;">{{ issue.summary|truncatechars:60 }}</div>
+                            <div style="font-size:16px;font-weight:800;">{{ issue.summary|truncatechars:60 }}</div>
                             <div class="desc-meta">{{ issue.reporter_name|default:issue.reporter_email }} • Created {{ issue.created_at|date:"d M Y" }}</div>
                         </div>
                     </div>
