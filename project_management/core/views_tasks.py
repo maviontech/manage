@@ -2630,7 +2630,6 @@ def create_bug_view(request):
 # ==============================
 #  CREATE STORY
 # ==============================
-@require_permission('tasks.create')
 def create_story_view(request):
     """
     Creates a new user story with story-specific fields
