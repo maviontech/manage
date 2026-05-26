@@ -454,6 +454,34 @@ body.sidebar-collapsed .submenu-link{padding-left:10px;padding-right:10px;justif
   color:#fff;
 }
 
+/* Header icon ghost buttons should render as compact squares, not text pills */
+#notifications,
+#dashboard-toggle{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:36px;
+  height:36px;
+  padding:0;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.08);
+  color:#fff;
+  flex-shrink:0;
+}
+
+#notifications:hover,
+#dashboard-toggle:hover{
+  background:rgba(255,255,255,0.18);
+  border-color:rgba(255,255,255,0.3);
+}
+
+#notifications svg,
+#dashboard-toggle svg{
+  width:18px;
+  height:18px;
+}
+
 /* header */
 .header{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;background:linear-gradient(90deg,#1f6fd8,#2b82ea);box-shadow:0 6px 20px rgba(16,50,87,0.08);flex:0 0 auto;width:100%}
 .header-left{display:flex;align-items:center;gap:14px}
