@@ -1120,7 +1120,7 @@
 <!-- ===== JS Logic (board + modal + assignees load + projects load + improved population flow) ===== -->
 <script>
 let CURRENT_BOARD_PAGE = 1;
-const PER_PAGE = 10;
+let BOARD_PER_PAGE = 10;
 let ALL_TASKS = [];
 const TASK_DETAIL_API = "{% url 'api_task_detail' %}";
 const TASK_UPDATE_API = "{% url 'api_task_update' %}";
@@ -1137,6 +1137,7 @@ async function loadBoard(page=1){
     const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
     ALL_TASKS = tasks;
     const pageNum = payload.page || 1;
+    BOARD_PER_PAGE = Number.isInteger(payload.per_page) && payload.per_page > 0 ? payload.per_page : BOARD_PER_PAGE;
     const totalPages = payload.total_pages || 1;
     const totalCount = payload.total_count || tasks.length;
     renderAllColumns(tasks);
@@ -1374,8 +1375,12 @@ function updateSummary(page, totalCount, totalPages){
     summary.textContent = "Error loading summary";
     return;
   }
-  const start = Math.max(1, (page-1)*PER_PAGE + 1);
-  const end = Math.min(page*PER_PAGE, totalCount);
+  if (totalCount === 0) {
+    summary.textContent = "Showing 0 of 0 tasks";
+    return;
+  }
+  const start = Math.max(1, (page-1)*BOARD_PER_PAGE + 1);
+  const end = Math.min(page*BOARD_PER_PAGE, totalCount);
   summary.textContent = `Showing ${start}-${end} of ${totalCount} tasks`;
 }
 
