@@ -356,6 +356,7 @@ select.form-control {
                     <option value="Reopen" {% if task.status == "Reopen" or task.status == "Review" %}selected{% endif %}>Reopen</option>
                     <option value="Blocked" {% if task.status == "Blocked" %}selected{% endif %}>Blocked</option>
                     <option value="Closed" {% if task.status == "Closed" %}selected{% endif %}>Closed</option>
+                    <option value="Finished" {% if task.status == "Finished" %}selected{% endif %}>Finished</option>
                 </select>
             </div>
 
