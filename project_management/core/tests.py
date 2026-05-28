@@ -57,6 +57,18 @@ class SessionTimeoutMiddlewareTests(TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertJSONEqual(response.content, {'error': 'Session expired'})
 
+    def test_expired_media_request_redirects_to_login(self):
+        request = self._build_request('/media/task_attachments/example.png')
+        request.session['user'] = {'email': 'user@example.com'}
+        request.session['member_id'] = 12
+        request.session['last_activity'] = time.time() - 1900
+        request.session.save()
+
+        response = self.middleware(request)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login_password/')
+
     def test_active_session_updates_last_activity_and_allows_request(self):
         request = self._build_request('/dashboard/')
         request.session['user'] = {'email': 'user@example.com'}

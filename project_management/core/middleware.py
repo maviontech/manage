@@ -15,7 +15,6 @@ class SessionTimeoutMiddleware:
 
     EXEMPT_PATH_PREFIXES = (
         '/static/',
-        '/media/',
         '/favicon.ico',
     )
 
