@@ -233,12 +233,14 @@ LOGGING = {
         },
         'websocket_file': {
             'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'logging.FileHandler' if DEBUG else 'logging.handlers.RotatingFileHandler',
             'filename': os.path.join(LOGS_DIR, 'websocket.log'),
             'encoding': 'utf-8',
-            'maxBytes': 1024*1024*5, # 5 MB
-            'backupCount': 3,
             'formatter': 'verbose',
+            **({} if DEBUG else {
+                'maxBytes': 1024*1024*5, # 5 MB
+                'backupCount': 3,
+            }),
         },
         'utility_file': {
             'level': 'INFO',

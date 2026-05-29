@@ -36,6 +36,7 @@
         let members = [];
         let groups = [];
         let ws = null;
+        let notificationWS = null;
         let typingWS = null; // WebSocket for typing indicators
         let pollInterval = null;
         let lastMessageDate = 0;
@@ -297,7 +298,19 @@
             }
         }
 
-        // Refresh unread counts for DMs and groups and update the overall unread badge
+        function updateOverallUnreadBadge(total) {
+            const overall = document.getElementById('unread-badge');
+            if (!overall) return;
+
+            if (total > 0) {
+                overall.textContent = total;
+                overall.style.display = '';
+            } else {
+                overall.style.display = 'none';
+            }
+        }
+
+        // Refresh unread counts for DMs and groups and update sidebar badges too.
         async function refreshUnreadCounts() {
             try {
                 // Fetch DM unread counts
@@ -347,14 +360,12 @@
                 } catch (e) { /* ignore group refresh errors */ }
 
                 // Update overall unread badge
-                const overall = document.getElementById('unread-badge');
-                if (overall) {
-                    if (total > 0) {
-                        overall.textContent = total;
-                        overall.style.display = '';
-                    } else {
-                        overall.style.display = 'none';
-                    }
+                updateOverallUnreadBadge(total);
+
+                // If the user is looking at the unread inbox, redraw it so new
+                // conversations appear immediately without a page refresh.
+                if (currentMode === 'unread') {
+                    showUnreadMessages();
                 }
             } catch (e) {
                 console.error('refreshUnreadCounts error', e);
@@ -881,6 +892,139 @@
             }
         }
 
+        function initNotificationWebSocket() {
+            if (notificationWS && (
+                notificationWS.readyState === WebSocket.OPEN ||
+                notificationWS.readyState === WebSocket.CONNECTING
+            )) {
+                return;
+            }
+
+            if (notificationWS) {
+                try { notificationWS.close(); } catch (e) {}
+                notificationWS = null;
+            }
+
+            if (!TENANT_ID || TENANT_ID === 'None' || TENANT_ID === 'null' || TENANT_ID === 'undefined') {
+                console.error('Cannot initialize notification WebSocket: Invalid tenant ID');
+                return;
+            }
+
+            const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const url = `${scheme}://${window.location.host}/ws/notifications/?tenant=${encodeURIComponent(TENANT_ID)}`;
+
+            try {
+                notificationWS = new WebSocket(url);
+                console.log('Initializing notification WebSocket...', notificationWS);
+
+                notificationWS.onopen = () => {
+                    console.log('Notification WebSocket connected');
+                };
+
+                notificationWS.onmessage = (ev) => {
+                    let msg;
+                    console.log('Notification WebSocket raw message:', ev.data);
+                    try { msg = JSON.parse(ev.data); } catch (e) { return; }
+
+                    const eventType = msg.event || msg.type;
+
+                    if (eventType === 'new_message') {
+                        const senderEmail = (msg.from || '').toLowerCase();
+                        const toEmail = (msg.to || '').toLowerCase();
+                        const messageText = msg.message || '';
+                        const timestamp = msg.created_at;
+                        const cid = msg.cid;
+
+                        const myEmail = normId(CURRENT_USER);
+                        const myMemberId = normId(CURRENT_MEMBER_ID);
+                        const normalizedSender = normId(senderEmail);
+                        const normalizedTo = normId(toEmail);
+                        const isFromOther = (normalizedSender !== myEmail && normalizedSender !== myMemberId);
+
+                        if (isFromOther && messageText) {
+                            const senderMember = members.find(m => normId(m.email) === normalizedSender);
+                            const senderName = senderMember ? formatDisplayName((senderMember.name || '').replace(/<[^>]+>/g, '').trim() || senderEmail) : senderEmail;
+                            showPopupNotification(senderName, senderEmail, messageText, null, null);
+                        }
+
+                        if (currentMode === 'dm' && selectedPeer) {
+                            const peerEmailNorm = normId(selectedPeerEmail || selectedPeer);
+                            const peerIdNorm = normId(selectedPeer);
+                            const fromPeer = (normalizedSender === peerEmailNorm || normalizedSender === peerIdNorm);
+                            const toMe = (normalizedTo === myEmail || normalizedTo === myMemberId);
+                            const fromMe = (normalizedSender === myEmail || normalizedSender === myMemberId);
+                            const toPeer = (normalizedTo === peerEmailNorm || normalizedTo === peerIdNorm);
+                            const isRelevant = (fromPeer && toMe) || (fromMe && toPeer);
+
+                            if (isRelevant) {
+                                if (cid) {
+                                    const existing = document.querySelector(`[data-cid="${cid}"]`);
+                                    if (existing) {
+                                        try {
+                                            const statusIcon = existing.querySelector('.msg-status i');
+                                            if (statusIcon) {
+                                                statusIcon.className = 'fas fa-check-double';
+                                                existing.querySelector('.msg-status').classList.add('delivered');
+                                            }
+                                        } catch (e) { /* ignore */ }
+                                    } else {
+                                        appendMessage({
+                                            sender: senderEmail,
+                                            sender_name: senderEmail.split('@')[0],
+                                            text: messageText,
+                                            created_at: timestamp,
+                                            from: senderEmail,
+                                            id: msg.id,
+                                            cid: cid
+                                        });
+                                    }
+                                } else {
+                                    appendMessage({
+                                        sender: senderEmail,
+                                        sender_name: senderEmail.split('@')[0],
+                                        text: messageText,
+                                        created_at: timestamp,
+                                        from: senderEmail,
+                                        id: msg.id
+                                    });
+                                }
+
+                                if (fromPeer) {
+                                    markRead(selectedPeer);
+                                }
+                            }
+                        }
+
+                        try { refreshUnreadCounts(); } catch (e) { /* ignore */ }
+                    }
+
+                    if (eventType === 'presence_update') {
+                        const userEmail = (msg.user_email || '').toLowerCase();
+                        const status = msg.status || 'offline';
+                        const userPics = document.querySelectorAll(`.user-pic-sm[data-user-email="${userEmail}"]`);
+                        userPics.forEach(userPic => {
+                            const indicator = userPic.querySelector('.presence-indicator');
+                            if (indicator) {
+                                if (status === 'online') {
+                                    indicator.classList.add('online');
+                                } else {
+                                    indicator.classList.remove('online');
+                                }
+                            }
+                        });
+                    }
+                };
+
+                notificationWS.onclose = () => {
+                    console.log('Notification WebSocket closed, reconnecting...');
+                    notificationWS = null;
+                    setTimeout(initNotificationWebSocket, 3000);
+                };
+            } catch (e) {
+                console.warn('Notification WebSocket failed', e);
+            }
+        }
+
         // Typing indicator WebSocket
         function initTypingWebSocket() {
             // Only initialize once
@@ -1399,32 +1543,6 @@
                 if (typeof showToast === 'function') showToast('Error sending message');
             } finally {
                 if (sendBtn) sendBtn.style.opacity = '1';
-            }
-        }
-
-        // Unread counts
-        async function refreshUnreadCounts() {
-            try {
-                const resp = await fetch('/chat/unread/');
-                if (!resp.ok) return;
-                const data = await resp.json();
-                let total = 0;
-                if (data && data.unread) {
-                    for (const item of data.unread) {
-                        total += item.count;
-                    }
-                }
-                const badge = document.getElementById('unread-badge');
-                if (badge) {
-                    if (total > 0) {
-                        badge.textContent = total;
-                        badge.style.display = '';
-                    } else {
-                        badge.style.display = 'none';
-                    }
-                }
-            } catch (e) {
-                // Optionally log error
             }
         }
 
@@ -1997,5 +2115,6 @@
         // Init
         loadMembers();
         loadGroups();
+        initNotificationWebSocket();
         refreshUnreadCounts();
         setInterval(refreshUnreadCounts, 6000);

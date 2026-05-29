@@ -127,6 +127,14 @@
 
     function setupNotificationWebSocket() {
         const TENANT_ID = document.body.getAttribute('data-tenant-id') || '';
+        const MEMBER_ID = document.body.getAttribute('data-member-id') || '';
+        const IDENT_EMAIL = document.body.getAttribute('data-ident-email') || '';
+
+        if (!MEMBER_ID && !IDENT_EMAIL) {
+            console.warn('No authenticated session marker found, notification WebSocket skipped');
+            return;
+        }
+
         if (!TENANT_ID) {
             console.warn('No tenant ID found, WebSocket connection skipped');
             return;
@@ -159,7 +167,12 @@
                 console.error('❌ Notification WebSocket error:', error);
             };
             
-            notificationWS.onclose = function() {
+            notificationWS.onclose = function(event) {
+                if (event && (event.code === 4001 || event.code === 4002 || event.code === 4003)) {
+                    console.warn('Notification WebSocket closed by server:', event.code);
+                    return;
+                }
+
                 console.warn('🔌 Notification WebSocket closed, reconnecting...');
                 setTimeout(setupNotificationWebSocket, CONFIG.WS_RECONNECT_DELAY);
             };

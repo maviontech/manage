@@ -1026,6 +1026,8 @@ def login_password_view(request):
     request.session['tenant_db_port'] = tenant_conf.get('db_port', 3306)
     request.session['last_activity'] = timezone.now().timestamp()
     request.session.set_expiry(1800)
+    request.session.modified = True
+    request.session.save()
 
 
 

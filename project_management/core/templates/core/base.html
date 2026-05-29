@@ -391,7 +391,11 @@
 
   {% block extra_head %}{% endblock %}
 </head>
-<body data-tenant-id="{{ request.session.tenant_id|default:'' }}">
+<body
+  data-tenant-id="{{ request.session.tenant_id|default:'' }}"
+  data-member-id="{{ request.session.member_id|default:'' }}"
+  data-ident-email="{{ request.session.ident_email|default:''|escapejs }}"
+>
   <div id="app" class="app" data-theme="light">
   <script>
     // Apply saved theme immediately to prevent flash
