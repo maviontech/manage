@@ -1,4 +1,4 @@
-{# Reusable attachments block: drag/drop + file list. #}
+{# Reusable attachments block: drag/drop + paste + file list. #}
 <style>
   .attachments-card {
     margin: 1.25rem 0 1.5rem 0;
@@ -28,7 +28,7 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
   }
-  .attachments-dropzone.dragover { 
+  .attachments-dropzone.dragover {
     background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
     border-color: #3b82f6;
     border-style: solid;
@@ -44,8 +44,8 @@
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
   }
-  .attachments-hint { 
-    color: #64748b; 
+  .attachments-hint {
+    color: #64748b;
     font-size: 0.875rem;
     line-height: 1.5;
   }
@@ -55,14 +55,14 @@
     font-size: 1rem;
     margin-bottom: 4px;
   }
-  .attachments-list { 
+  .attachments-list {
     margin: 0;
     padding: 16px;
     text-align: left;
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
   }
-  .attachments-list li { 
+  .attachments-list li {
     padding: 12px 14px;
     border-radius: 8px;
     background: #ffffff;
@@ -77,7 +77,7 @@
     border-color: #cbd5e1;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
-  .attachments-list .remove { 
+  .attachments-list .remove {
     color: #ef4444;
     cursor: pointer;
     margin-left: 12px;
@@ -98,7 +98,6 @@
     margin: 0;
   }
 
-  /* ===== DARK MODE ===== */
   [data-theme="dark"] .attachments-card {
     background: var(--theme-surface) !important;
     border-color: var(--theme-border) !important;
@@ -139,12 +138,12 @@
 </style>
 
 <div class="attachments-card">
-  <div class="attachments-dropzone" tabindex="0" role="button">
+  <div class="attachments-dropzone" tabindex="0" role="button" aria-label="Upload attachments">
     <div class="attachments-icon-wrapper">
       <i class="fa-solid fa-cloud-arrow-up" style="font-size:28px;color:#ffffff"></i>
     </div>
     <div style="text-align:left">
-      <div class="attachments-title">Click to upload or drag and drop</div>
+      <div class="attachments-title">Click to upload, drag and drop, or paste</div>
       <div class="attachments-hint">Screenshots, logs, or documents (Max 10MB per file, up to 5 files)</div>
     </div>
   </div>
@@ -152,7 +151,7 @@
   <input type="file" id="attachmentsInput" name="attachments" multiple style="display:none" accept="image/*,.pdf,.txt,.log,.doc,.docx,.xls,.xlsx" />
 
   <ul id="attachmentsList" class="attachments-list" aria-live="polite"></ul>
-  <div class="attachments-meta">Accepted formats: Images, PDF, TXT, LOG, DOC, DOCX, XLS, XLSX.</div>
+  <div class="attachments-meta">Accepted formats: Images, PDF, TXT, LOG, DOC, DOCX, XLS, XLSX. You can also paste screenshots directly.</div>
 </div>
 
 <script>
@@ -160,70 +159,167 @@
     const input = document.getElementById('attachmentsInput');
     const dropzone = document.querySelector('.attachments-dropzone');
     const list = document.getElementById('attachmentsList');
+
+    if (!input || !dropzone || !list) return;
+
     const MAX_FILES = 5;
-    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_SIZE = 10 * 1024 * 1024;
+    const ACCEPTED_EXTENSIONS = ['pdf', 'txt', 'log', 'doc', 'docx', 'xls', 'xlsx'];
+    const ACCEPTED_IMAGE_PREFIX = 'image/';
+
+    let selectedFiles = [];
 
     function humanSize(bytes){
       if(bytes < 1024) return bytes + ' B';
-      if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-      return (bytes/(1024*1024)).toFixed(1) + ' MB';
+      if(bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    // maintain a local list of selected files so incremental additions are preserved
-    let selectedFiles = [];
+    function getExtension(fileName){
+      const parts = (fileName || '').split('.');
+      return parts.length > 1 ? parts.pop().toLowerCase() : '';
+    }
+
+    function isAcceptedFile(file){
+      if(!file) return false;
+      if((file.type || '').startsWith(ACCEPTED_IMAGE_PREFIX)) return true;
+      return ACCEPTED_EXTENSIONS.includes(getExtension(file.name));
+    }
+
+    function syncInputFiles(){
+      const dt = new DataTransfer();
+      selectedFiles.forEach(file => dt.items.add(file));
+      input.files = dt.files;
+    }
 
     function renderFiles(files){
       list.innerHTML = '';
-      Array.from(files).forEach((f, idx)=>{
+      Array.from(files).forEach((file, idx) => {
         const li = document.createElement('li');
-        li.textContent = f.name + ' — ' + humanSize(f.size);
+        li.textContent = file.name + ' - ' + humanSize(file.size);
+
         const remove = document.createElement('span');
         remove.className = 'remove';
         remove.innerHTML = '<i class="fa-solid fa-trash"></i>';
-        remove.addEventListener('click', ()=>{
-          selectedFiles = selectedFiles.filter((_,i)=> i!==idx);
-          const dt = new DataTransfer();
-          selectedFiles.forEach(f => dt.items.add(f));
-          input.files = dt.files;
+        remove.addEventListener('click', () => {
+          selectedFiles = selectedFiles.filter((_, i) => i !== idx);
+          syncInputFiles();
           renderFiles(selectedFiles);
         });
+
         li.appendChild(remove);
         list.appendChild(li);
       });
     }
 
-    // Open file picker without clearing previous selection so users can add files incrementally
-    dropzone.addEventListener('click', ()=>{ input.click(); });
-    dropzone.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
-    dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.classList.add('dragover'); });
-    dropzone.addEventListener('dragleave', function(e){ dropzone.classList.remove('dragover'); });
-    dropzone.addEventListener('drop', function(e){
-      e.preventDefault(); dropzone.classList.remove('dragover');
-      const files = e.dataTransfer.files;
-      handleNewFiles(files);
-    });
+    function extractFilesFromTransfer(dataTransfer){
+      if (!dataTransfer) return [];
+      if (dataTransfer.items && dataTransfer.items.length) {
+        return Array.from(dataTransfer.items)
+          .filter(item => item.kind === 'file')
+          .map(item => item.getAsFile())
+          .filter(Boolean);
+      }
+      return Array.from(dataTransfer.files || []);
+    }
 
-    input.addEventListener('change', function(){ handleNewFiles(this.files); });
+    function extractFilesFromClipboard(clipboardData){
+      if (!clipboardData) return [];
+      if (clipboardData.items && clipboardData.items.length) {
+        return Array.from(clipboardData.items)
+          .filter(item => item.kind === 'file')
+          .map(item => item.getAsFile())
+          .filter(Boolean);
+      }
+      return Array.from(clipboardData.files || []);
+    }
 
     function handleNewFiles(fileList){
-      const existing = Array.from(selectedFiles || []);
+      const existing = Array.from(selectedFiles);
       const incoming = Array.from(fileList || []);
 
-      // dedupe by name+size+lastModified
-      const existingSigs = new Set(existing.map(f=> `${f.name}|${f.size}|${f.lastModified}`));
-      const filtered = incoming.filter(f => !existingSigs.has(`${f.name}|${f.size}|${f.lastModified}`));
+      if (!incoming.length) return;
 
+      const existingSigs = new Set(existing.map(file => `${file.name}|${file.size}|${file.lastModified}`));
+      const filtered = incoming.filter(file => !existingSigs.has(`${file.name}|${file.size}|${file.lastModified}`));
       const combined = existing.concat(filtered);
 
-      if(combined.length > MAX_FILES){ alert('Maximum ' + MAX_FILES + ' files allowed'); return; }
+      if (combined.length > MAX_FILES) {
+        alert('Maximum ' + MAX_FILES + ' files allowed');
+        return;
+      }
 
-      for(const f of filtered){ if(f.size > MAX_SIZE){ alert(f.name + ' exceeds 10MB limit'); return; } }
+      for (const file of filtered) {
+        if (file.size > MAX_SIZE) {
+          alert(file.name + ' exceeds 10MB limit');
+          return;
+        }
+        if (!isAcceptedFile(file)) {
+          alert(file.name + ' is not a supported file type');
+          return;
+        }
+      }
 
       selectedFiles = combined;
-      const dt = new DataTransfer();
-      selectedFiles.forEach(f => dt.items.add(f));
-      input.files = dt.files;
+      syncInputFiles();
       renderFiles(selectedFiles);
     }
+
+    dropzone.addEventListener('click', () => input.click());
+    dropzone.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        input.click();
+      }
+    });
+
+    dropzone.addEventListener('dragenter', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'copy';
+      }
+      dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', (event) => {
+      if (!dropzone.contains(event.relatedTarget)) {
+        dropzone.classList.remove('dragover');
+      }
+    });
+
+    dropzone.addEventListener('drop', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropzone.classList.remove('dragover');
+      handleNewFiles(extractFilesFromTransfer(event.dataTransfer));
+    });
+
+    input.addEventListener('change', function(){
+      handleNewFiles(this.files);
+    });
+
+    document.addEventListener('paste', (event) => {
+      const files = extractFilesFromClipboard(event.clipboardData);
+      if (!files.length) return;
+
+      event.preventDefault();
+      handleNewFiles(files);
+      dropzone.classList.add('dragover');
+      window.setTimeout(() => dropzone.classList.remove('dragover'), 180);
+    });
+
+    ['dragenter', 'dragover', 'drop'].forEach((eventName) => {
+      document.addEventListener(eventName, (event) => {
+        if (dropzone.contains(event.target)) return;
+        event.preventDefault();
+      });
+    });
   })();
 </script>
