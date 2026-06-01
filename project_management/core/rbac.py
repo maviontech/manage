@@ -171,7 +171,7 @@ def require_permission(permission_code, project_param='project_id', json_respons
             if not member_id:
                 if json_response:
                     return JsonResponse({'error': 'Authentication required'}, status=401)
-                return redirect('login')
+                return redirect('identify')
             
             # Try to get project_id from various sources
             project_id = (
