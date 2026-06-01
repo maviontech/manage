@@ -13,6 +13,11 @@ PAGE_SIZE = 10
 def projects_list(request):
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return redirect('login_password')
+
     # Read query params
     page = request.GET.get('page', 1)
     q = request.GET.get('q', '').strip()
@@ -62,6 +67,11 @@ def projects_list(request):
 
 
 def projects_search_ajax(request):
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
     q = request.GET.get('q', '').strip()
     conn, cur = get_tenant_conn_and_cursor(request)
     try:
@@ -340,6 +350,11 @@ def project_edit(request, project_id):
 
     return render(request, "core/project_create.html", {"form": form, "editing": True, "project": project})
 def subprojects_list(request, project_id):
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return redirect('login_password')
+    
     conn, cur = get_tenant_conn_and_cursor(request)
     try:
         cur.execute("SELECT * FROM projects WHERE id=%s", (project_id,))

@@ -52,15 +52,30 @@ def require_admin(request):
 
 # ---------- Page renders ----------
 def people_page(request):
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return redirect('login_password')
+    
     # renders the people management UI
     return render(request, 'core/people.html', {})
 
 def teams_page(request):
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return redirect('login_password')
+    
     return render(request, 'core/teams.html', {})
 
 # ---------- People APIs ----------
 @require_http_methods(["GET"])
 def api_people_list(request):
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return JsonResponse({'ok': False, 'error': 'Authentication required'}, status=401)
+    
     conn = get_tenant_conn(request)
     with conn.cursor() as cur:
         cur.execute("SELECT id, email, first_name, last_name, phone, created_at FROM members ORDER BY created_at DESC")
@@ -70,6 +85,11 @@ def api_people_list(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_create_member(request):
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return JsonResponse({'ok': False, 'error': 'Authentication required'}, status=401)
+    
     # create or update member; optionally create users entry too
     try:
         data = json.loads(request.body.decode('utf-8'))
@@ -158,6 +178,11 @@ def api_teams_list(request):
     """
     Returns a list of teams with lead email and member count for the current tenant.
     """
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return JsonResponse({'ok': False, 'error': 'Authentication required'}, status=401)
+    
     try:
         conn = get_tenant_conn(request)
     except Exception as e:
@@ -219,6 +244,11 @@ def api_create_team(request):
     Create a new team in the current tenant DB.
     Uses get_tenant_conn(request) to obtain tenant connection.
     """
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return JsonResponse({'ok': False, 'error': 'Authentication required'}, status=401)
+    
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -266,6 +296,11 @@ def api_team_members(request, team_id):
     Return team info and its members for the current tenant.
     Uses get_tenant_conn(request) to obtain tenant connection.
     """
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return JsonResponse({'ok': False, 'error': 'Authentication required'}, status=401)
+    
     try:
         conn = get_tenant_conn(request)
     except Exception as e:
@@ -318,6 +353,11 @@ def api_team_members(request, team_id):
 def api_team_add_member(request, team_id):
     """Add or update a member in a team (idempotent)."""
 
+    # Check authentication
+    current_user_id = request.session.get('member_id') or request.session.get('user_id')
+    if not current_user_id:
+        return JsonResponse({'ok': False, 'error': 'Authentication required'}, status=401)
+
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -353,6 +393,11 @@ def api_team_add_member(request, team_id):
 def api_team_remove_member(request, team_id):
     """Remove a member from a team."""
 
+    # Check authentication
+    current_user_id = request.session.get('member_id') or request.session.get('user_id')
+    if not current_user_id:
+        return JsonResponse({'ok': False, 'error': 'Authentication required'}, status=401)
+
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
@@ -382,6 +427,11 @@ def api_team_remove_member(request, team_id):
 @require_http_methods(["POST"])
 def api_team_set_lead(request, team_id):
     """Set a team lead (updates team_lead_id and ensures membership)."""
+
+    # Check authentication
+    current_user_id = request.session.get('member_id') or request.session.get('user_id')
+    if not current_user_id:
+        return JsonResponse({'ok': False, 'error': 'Authentication required'}, status=401)
 
     try:
         data = json.loads(request.body.decode('utf-8'))

@@ -2340,7 +2340,13 @@ def api_team_list(request):
     """
     user = request.session.get('user')
     if not user:
-        return JsonResponse({'teams': []})
+        return JsonResponse({'teams': []}, status=401)
+    
+    # Check authentication  
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return JsonResponse({'teams': []}, status=401)
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
     teams = []
@@ -2385,6 +2391,11 @@ def api_team_summary(request):
       totals: { completed, inprogress, pending, priorities: {Critical_open, Critical_closed, ... } }
     }
     """
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
     team_id = request.GET.get('team_id')
     if not team_id:
         return HttpResponseBadRequest("team_id required")

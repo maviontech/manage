@@ -12,6 +12,11 @@ def work_week_view(request):
     Display tasks organized by day of the week (Monday to Sunday)
     Shows current week with ability to navigate to previous/next weeks
     """
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return redirect('login_password')
+    
     conn = get_tenant_conn(request)
     cur = conn.cursor()
     
@@ -171,6 +176,11 @@ def api_work_week_tasks(request):
     """
     API endpoint to get tasks for a specific date
     """
+    # Check authentication
+    member_id = request.session.get('member_id') or request.session.get('user_id')
+    if not member_id:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    
     try:
         date_str = request.GET.get('date')
         if not date_str:
