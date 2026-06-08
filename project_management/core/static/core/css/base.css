@@ -460,7 +460,6 @@ body.sidebar-collapsed .submenu-link{padding-left:10px;padding-right:10px;justif
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:36px;
   height:36px;
   padding:0;
   border-radius:10px;
@@ -468,6 +467,18 @@ body.sidebar-collapsed .submenu-link{padding-left:10px;padding-right:10px;justif
   background:rgba(255,255,255,0.08);
   color:#fff;
   flex-shrink:0;
+}
+
+#notifications{
+  width:36px;
+}
+
+#dashboard-toggle{
+  width:auto;
+  min-width:36px;
+  gap:6px;
+  padding:0 12px;
+  white-space:nowrap;
 }
 
 #notifications:hover,
@@ -480,6 +491,13 @@ body.sidebar-collapsed .submenu-link{padding-left:10px;padding-right:10px;justif
 #dashboard-toggle svg{
   width:18px;
   height:18px;
+}
+
+#dashboard-view-label{
+  display:inline-block;
+  margin-left:0 !important;
+  white-space:nowrap;
+  line-height:1;
 }
 
 /* header */
