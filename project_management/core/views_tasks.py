@@ -2488,6 +2488,7 @@ def api_get_project_work_types(request):
 # ==============================
 #  CREATE BUG
 # ==============================
+@require_permission('tasks.create')
 def create_bug_view(request):
     """
     Creates a new bug with bug-specific fields
@@ -2630,6 +2631,7 @@ def create_bug_view(request):
 # ==============================
 #  CREATE STORY
 # ==============================
+@require_permission('tasks.create')
 def create_story_view(request):
     """
     Creates a new user story with story-specific fields

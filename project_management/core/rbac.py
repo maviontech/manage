@@ -171,6 +171,12 @@ def require_permission(permission_code, project_param='project_id', json_respons
             if not member_id:
                 if json_response:
                     return JsonResponse({'error': 'Authentication required'}, status=401)
+                if request.session.get('tenant_config') and request.session.get('ident_email'):
+                    request.session.setdefault(
+                        'session_expired_message',
+                        'Your session has expired. Please log in again.',
+                    )
+                    return redirect('login_password')
                 return redirect('identify')
             
             # Try to get project_id from various sources
