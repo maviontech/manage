@@ -25,7 +25,7 @@
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
             </svg>
-            <input type="text" id="taskSearchInput" class="task-search-input" placeholder="Search tasks by ID, title..." />
+            <input type="text" id="taskSearchInput" class="task-search-input" placeholder="Search tasks by ID, title..." value="{{ sel_query|default:'' }}" />
             <svg class="clear-search-icon" id="clearSearchBtn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none; cursor: pointer;">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -65,7 +65,17 @@
             {% endfor %}
           {% endif %}
         </select>
-        <button id="resetFiltersBtn" class="btn-modern btn-reset" style="{% if not sel_status and not sel_work_type and not sel_project and sel_assigned == 'all' or not sel_assigned %}display: none;{% endif %}">
+        <select id="subprojectFilter" class="filter-select" style="{% if not sel_project %}display: none;{% endif %}">
+          <option value="">All subprojects</option>
+          {% if subprojects %}
+            {% for sp in subprojects %}
+              <option value="{{ sp.id }}" {% if sel_subproject and sel_subproject == sp.id|stringformat:"s" %}selected{% endif %}>
+                {{ sp.name }}
+              </option>
+            {% endfor %}
+          {% endif %}
+        </select>
+        <button id="resetFiltersBtn" class="btn-modern btn-reset" style="display: none;">
           <i class="fa-solid fa-rotate-left"></i>
           Reset
         </button>
@@ -169,7 +179,7 @@
         </thead>
         <tbody>
           {% for t in tasks %}
-          <tr class="task-row" data-href="{% url 'task_detail' t.id %}" data-work-type="{{ t.work_type|default:'Task' }}" data-assigned-to="{{ t.assigned_to }}" data-project-id="{{ t.project_id|default:'' }}" data-project-name="{{ t.project_name|default:'' }}" data-status="{{ t.status }}">
+          <tr class="task-row" data-href="{% url 'task_detail' t.id %}" data-work-type="{{ t.work_type|default:'Task' }}" data-assigned-to="{{ t.assigned_to }}" data-project-id="{{ t.project_id|default:'' }}" data-project-name="{{ t.project_name|default:'' }}" data-subproject-id="{{ t.subproject_id|default:'' }}" data-subproject-name="{{ t.subproject_name|default:'' }}" data-status="{{ t.status }}">
             <td>
               <span class="task-id">#{{ t.id }}</span>
             </td>
@@ -277,13 +287,13 @@
     <div class="pagination-footer">
       <div class="pagination-nav">
         {% if page_obj.has_previous %}
-          <a href="?page=1&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-btn pagination-btn-first" title="First Page">
+          <a href="?page=1&per_page={{ items_per_page }}{% if sel_query %}&q={{ sel_query|urlencode }}{% endif %}{% if sel_status %}&status={{ sel_status|urlencode }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type|urlencode }}{% endif %}{% if sel_project %}&project={{ sel_project|urlencode }}{% endif %}{% if sel_subproject %}&subproject={{ sel_subproject|urlencode }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned|urlencode }}{% endif %}" class="pagination-btn pagination-btn-first" title="First Page">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="11 17 6 12 11 7"></polyline>
               <polyline points="18 17 13 12 18 7"></polyline>
             </svg>
           </a>
-          <a href="?page={{ page_obj.previous_page_number }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-btn pagination-btn-prev" title="Previous Page">
+          <a href="?page={{ page_obj.previous_page_number }}&per_page={{ items_per_page }}{% if sel_query %}&q={{ sel_query|urlencode }}{% endif %}{% if sel_status %}&status={{ sel_status|urlencode }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type|urlencode }}{% endif %}{% if sel_project %}&project={{ sel_project|urlencode }}{% endif %}{% if sel_subproject %}&subproject={{ sel_subproject|urlencode }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned|urlencode }}{% endif %}" class="pagination-btn pagination-btn-prev" title="Previous Page">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
@@ -307,9 +317,9 @@
             {% if page_obj.number == num %}
               <span class="pagination-page pagination-page-active">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-              <a href="?page={{ num }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-page">{{ num }}</a>
+              <a href="?page={{ num }}&per_page={{ items_per_page }}{% if sel_query %}&q={{ sel_query|urlencode }}{% endif %}{% if sel_status %}&status={{ sel_status|urlencode }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type|urlencode }}{% endif %}{% if sel_project %}&project={{ sel_project|urlencode }}{% endif %}{% if sel_subproject %}&subproject={{ sel_subproject|urlencode }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned|urlencode }}{% endif %}" class="pagination-page">{{ num }}</a>
             {% elif num == 1 or num == page_obj.paginator.num_pages %}
-              <a href="?page={{ num }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-page">{{ num }}</a>
+              <a href="?page={{ num }}&per_page={{ items_per_page }}{% if sel_query %}&q={{ sel_query|urlencode }}{% endif %}{% if sel_status %}&status={{ sel_status|urlencode }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type|urlencode }}{% endif %}{% if sel_project %}&project={{ sel_project|urlencode }}{% endif %}{% if sel_subproject %}&subproject={{ sel_subproject|urlencode }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned|urlencode }}{% endif %}" class="pagination-page">{{ num }}</a>
             {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
               <span class="pagination-ellipsis">...</span>
             {% endif %}
@@ -317,12 +327,12 @@
         </div>
         
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-btn pagination-btn-next" title="Next Page">
+          <a href="?page={{ page_obj.next_page_number }}&per_page={{ items_per_page }}{% if sel_query %}&q={{ sel_query|urlencode }}{% endif %}{% if sel_status %}&status={{ sel_status|urlencode }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type|urlencode }}{% endif %}{% if sel_project %}&project={{ sel_project|urlencode }}{% endif %}{% if sel_subproject %}&subproject={{ sel_subproject|urlencode }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned|urlencode }}{% endif %}" class="pagination-btn pagination-btn-next" title="Next Page">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </a>
-          <a href="?page={{ page_obj.paginator.num_pages }}&per_page={{ items_per_page }}{% if sel_status %}&status={{ sel_status }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type }}{% endif %}{% if sel_project %}&project={{ sel_project }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned }}{% endif %}" class="pagination-btn pagination-btn-last" title="Last Page">
+          <a href="?page={{ page_obj.paginator.num_pages }}&per_page={{ items_per_page }}{% if sel_query %}&q={{ sel_query|urlencode }}{% endif %}{% if sel_status %}&status={{ sel_status|urlencode }}{% endif %}{% if sel_work_type %}&work_type={{ sel_work_type|urlencode }}{% endif %}{% if sel_project %}&project={{ sel_project|urlencode }}{% endif %}{% if sel_subproject %}&subproject={{ sel_subproject|urlencode }}{% endif %}{% if sel_assigned and sel_assigned != 'all' %}&assigned={{ sel_assigned|urlencode }}{% endif %}" class="pagination-btn pagination-btn-last" title="Last Page">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="13 17 18 12 13 7"></polyline>
               <polyline points="6 17 11 12 6 7"></polyline>
@@ -361,6 +371,7 @@
     {% endif %}
   </div>
 </div>
+{{ subprojects_by_project|json_script:"subprojects-by-project-data" }}
 
 <style>
 /* === Page Header === */
@@ -1636,15 +1647,28 @@
   const projectFilter = document.getElementById('projectFilter');
   const statusFilter = document.getElementById('statusFilter');
   const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+  const subprojectFilter = document.getElementById('subprojectFilter');
+  const taskSearchInput = document.getElementById('taskSearchInput');
+  const searchResults = document.getElementById('searchResults');
+  const clearSearchBtn = document.getElementById('clearSearchBtn');
+  const subprojectsByProjectEl = document.getElementById('subprojects-by-project-data');
+  const subprojectsByProject = subprojectsByProjectEl ? JSON.parse(subprojectsByProjectEl.textContent) : {};
+  const allSubprojects = [
+    {% for sp in subprojects %}
+      { id: "{{ sp.id|escapejs }}", name: "{{ sp.name|escapejs }}", project_id: "{{ sp.project_id|escapejs }}" }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
 
   // Function to check if any filters are active
   function hasActiveFilters() {
     const selectedType = workTypeFilter ? workTypeFilter.value : '';
     const assignedMode = assignedFilter ? assignedFilter.value : 'all';
     const selectedProject = projectFilter ? projectFilter.value : '';
+    const selectedSubproject = subprojectFilter ? subprojectFilter.value : '';
     const selectedStatus = statusFilter ? statusFilter.value : '';
+    const searchQuery = taskSearchInput ? taskSearchInput.value.trim() : '';
     
-    return selectedType || selectedProject || selectedStatus || (assignedMode && assignedMode !== 'all');
+    return selectedType || selectedProject || selectedSubproject || selectedStatus || searchQuery || (assignedMode && assignedMode !== 'all');
   }
 
   // Function to toggle reset button visibility
@@ -1663,7 +1687,9 @@
     const selectedType = workTypeFilter ? workTypeFilter.value : '';
     const assignedMode = assignedFilter ? assignedFilter.value : 'all';
     const selectedProject = projectFilter ? projectFilter.value : '';
+    const selectedSubproject = subprojectFilter ? subprojectFilter.value : '';
     const selectedStatus = statusFilter ? statusFilter.value : '';
+    const searchQuery = taskSearchInput ? taskSearchInput.value.trim() : '';
 
     const urlParams = new URLSearchParams(window.location.search);
     // preserve items per page
@@ -1673,10 +1699,37 @@
 
     if (selectedType) urlParams.set('work_type', selectedType); else urlParams.delete('work_type');
     if (selectedProject) urlParams.set('project', selectedProject); else urlParams.delete('project');
+    if (selectedSubproject) urlParams.set('subproject', selectedSubproject); else urlParams.delete('subproject');
     if (selectedStatus) urlParams.set('status', selectedStatus); else urlParams.delete('status');
     if (assignedMode && assignedMode !== 'all') urlParams.set('assigned', assignedMode); else urlParams.delete('assigned');
+    if (searchQuery) urlParams.set('q', searchQuery); else urlParams.delete('q');
 
     window.location.search = urlParams.toString();
+  }
+
+  function populateSubprojectOptions(projectId, selectedSubproject) {
+    if (!subprojectFilter) return;
+
+    const requestedValue = selectedSubproject !== undefined ? String(selectedSubproject || '') : String(subprojectFilter.value || '');
+    const sourceSubprojects = projectId ? (subprojectsByProject[String(projectId)] || []) : allSubprojects;
+
+    subprojectFilter.style.display = projectId ? '' : 'none';
+
+    subprojectFilter.innerHTML = '<option value="">All subprojects</option>';
+
+    sourceSubprojects.forEach(function(subproject) {
+      const option = document.createElement('option');
+      option.value = subproject.id;
+      option.textContent = subproject.name;
+      if (requestedValue && String(subproject.id) === requestedValue) {
+        option.selected = true;
+      }
+      subprojectFilter.appendChild(option);
+    });
+
+    if (requestedValue && !sourceSubprojects.some(function(subproject) { return String(subproject.id) === requestedValue; })) {
+      subprojectFilter.value = '';
+    }
   }
 
   // Reset all filters
@@ -1688,8 +1741,10 @@
     // Clear all filter parameters
     urlParams.delete('work_type');
     urlParams.delete('project');
+    urlParams.delete('subproject');
     urlParams.delete('status');
     urlParams.delete('assigned');
+    urlParams.delete('q');
     urlParams.set('page', '1');
     
     if (per) {
@@ -1704,9 +1759,25 @@
 
   if (workTypeFilter) workTypeFilter.addEventListener('change', applyFilters);
   if (assignedFilter) assignedFilter.addEventListener('change', applyFilters);
-  if (projectFilter) projectFilter.addEventListener('change', applyFilters);
+  if (projectFilter) {
+    projectFilter.addEventListener('change', function() {
+      populateSubprojectOptions(this.value, '');
+      if (subprojectFilter) {
+        subprojectFilter.value = '';
+      }
+      applyFilters();
+    });
+  }
+  if (subprojectFilter) subprojectFilter.addEventListener('change', applyFilters);
   if (statusFilter) statusFilter.addEventListener('change', applyFilters);
   if (resetFiltersBtn) resetFiltersBtn.addEventListener('click', resetFilters);
+  populateSubprojectOptions(projectFilter ? projectFilter.value : '', "{{ sel_subproject|escapejs }}");
+  if (taskSearchInput && clearSearchBtn) {
+    clearSearchBtn.style.display = taskSearchInput.value.trim() ? 'block' : 'none';
+  }
+  if (searchResults) {
+    searchResults.style.display = 'none';
+  }
   
   // Initial check for reset button visibility
   toggleResetButton();
@@ -1745,9 +1816,6 @@
   }
   
   // ==================== TASK SEARCH FUNCTIONALITY ====================
-  const taskSearchInput = document.getElementById('taskSearchInput');
-  const searchResults = document.getElementById('searchResults');
-  const clearSearchBtn = document.getElementById('clearSearchBtn');
   let searchTimeout = null;
   let currentSearchXHR = null;
 
@@ -1852,31 +1920,19 @@
   // Search input event handler
   if (taskSearchInput) {
     taskSearchInput.addEventListener('input', function() {
-      const query = this.value;
-      
-      // Clear previous timeout
+      if (clearSearchBtn) {
+        clearSearchBtn.style.display = this.value.trim() ? 'block' : 'none';
+      }
+      if (searchResults) {
+        searchResults.style.display = 'none';
+      }
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
 
-      // Debounce search - wait 300ms after user stops typing
       searchTimeout = setTimeout(function() {
-        searchTasks(query);
-      }, 300);
-    });
-
-    // Close search results when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!taskSearchInput.contains(e.target) && !searchResults.contains(e.target)) {
-        searchResults.style.display = 'none';
-      }
-    });
-
-    // Show results again when focusing on input with text
-    taskSearchInput.addEventListener('focus', function() {
-      if (this.value.trim().length >= 1 && searchResults.innerHTML) {
-        searchResults.style.display = 'block';
-      }
+        applyFilters();
+      }, 350);
     });
   }
 
@@ -1885,14 +1941,12 @@
     clearSearchBtn.addEventListener('click', function(e) {
       e.stopPropagation();
       taskSearchInput.value = '';
-      searchResults.style.display = 'none';
+      if (searchResults) {
+        searchResults.style.display = 'none';
+      }
       clearSearchBtn.style.display = 'none';
       taskSearchInput.focus();
-      
-      // Cancel any pending request
-      if (currentSearchXHR) {
-        currentSearchXHR.abort();
-      }
+      applyFilters();
     });
   }
   // ==================== END SEARCH FUNCTIONALITY ====================

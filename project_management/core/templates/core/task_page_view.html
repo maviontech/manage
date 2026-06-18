@@ -923,6 +923,17 @@
                     </div>
 
                     <div class="metadata-group">
+                        <label>Subproject</label>
+                        <div class="metadata-value">
+                            {% if issue.subproject_name %}
+                            <span class="badge badge-module">{{ issue.subproject_name }}</span>
+                            {% else %}
+                            <span class="text-muted">Not specified</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="metadata-group">
                         <label>Resolution</label>
                         <div class="metadata-value">
                             <span class="badge badge-resolution-{{ issue.resolution|lower }}">

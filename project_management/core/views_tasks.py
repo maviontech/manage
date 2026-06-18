@@ -283,20 +283,27 @@ def my_tasks_view(request):
     # or all tasks if current user is Alex Carter)
     # Read filter params from querystring
     sel_project = request.GET.get('project', '').strip()
+    sel_subproject = request.GET.get('subproject', '').strip()
     sel_status = request.GET.get('status', '').strip()
     sel_work_type = request.GET.get('work_type', '').strip()
     sel_assigned = request.GET.get('assigned', 'all').strip()  # 'all'|'mine'|'others'
+    sel_query = request.GET.get('q', '').strip()
 
     tasks = []
+    projects = []
+    subprojects = []
+    subprojects_by_project = {}
     if visible_user_ids:
         placeholders = ','.join(['%s'] * len(visible_user_ids))
         base_sql = f"""
                SELECT t.id, t.title, t.status, t.priority, t.due_date, t.closure_date,
                       COALESCE(t.work_type, 'Task') AS work_type,
                       t.assigned_to, t.project_id, p.name AS project_name,
+                      t.subproject_id, sp.name AS subproject_name,
                       t.created_by, CONCAT(m.first_name, ' ', m.last_name) AS reporter_name
                FROM tasks t
                LEFT JOIN projects p ON p.id = t.project_id
+               LEFT JOIN subprojects sp ON sp.id = t.subproject_id
                LEFT JOIN members m ON m.id = t.created_by
                WHERE (
                    (t.assigned_type='member' AND t.assigned_to IN ({placeholders}))
@@ -314,12 +321,19 @@ def my_tasks_view(request):
         if sel_project:
             base_sql += " AND t.project_id = %s"
             params.append(sel_project)
+        if sel_subproject:
+            base_sql += " AND t.subproject_id = %s"
+            params.append(sel_subproject)
         if sel_status:
             base_sql += " AND t.status = %s"
             params.append(sel_status)
         if sel_work_type:
             base_sql += " AND COALESCE(t.work_type, 'Task') = %s"
             params.append(sel_work_type)
+        if sel_query:
+            base_sql += " AND (CAST(t.id AS CHAR) LIKE %s OR t.title LIKE %s OR COALESCE(t.description, '') LIKE %s)"
+            like = f"%{sel_query}%"
+            params.extend([like, like, like])
         if sel_assigned == 'mine':
             base_sql += " AND t.assigned_to = %s"
             params.append(user_id)
@@ -332,13 +346,70 @@ def my_tasks_view(request):
         cur.execute(base_sql, tuple(params))
         tasks = cur.fetchall()
 
-        # Build project list from returned tasks for project filter dropdown
-        projects_set = {}
-        for r in tasks:
-            pid = r.get('project_id') if isinstance(r, dict) else r[8]
-            pname = r.get('project_name') if isinstance(r, dict) else r[8]
-            if pid:
-                projects_set[str(pid)] = pname or ''
+        visible_filter_sql = f"""
+            FROM tasks t
+            LEFT JOIN projects p ON p.id = t.project_id
+            LEFT JOIN subprojects sp ON sp.id = t.subproject_id
+            WHERE (
+                (t.assigned_type='member' AND t.assigned_to IN ({placeholders}))
+                OR
+                (t.assigned_type='team' AND t.assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
+        """
+        visible_params = list(visible_user_ids)
+        visible_params.append(user_id)
+
+        cur.execute(
+            f"""
+                SELECT DISTINCT p.id, p.name
+                {visible_filter_sql}
+                AND p.id IS NOT NULL
+                ORDER BY p.name
+            """,
+            tuple(visible_params),
+        )
+        project_rows = cur.fetchall() or []
+        for row in project_rows:
+            if isinstance(row, dict):
+                projects.append({'id': str(row.get('id')), 'name': row.get('name') or ''})
+            else:
+                projects.append({'id': str(row[0]), 'name': row[1] or ''})
+
+        subproject_sql = f"""
+            SELECT DISTINCT sp.id, sp.name, sp.project_id, p.name AS project_name
+            {visible_filter_sql}
+            AND sp.id IS NOT NULL
+        """
+        subproject_params = list(visible_params)
+        if sel_project:
+            subproject_sql += " AND sp.project_id = %s"
+            subproject_params.append(sel_project)
+        subproject_sql += " ORDER BY p.name, sp.name"
+
+        cur.execute(subproject_sql, tuple(subproject_params))
+        subproject_rows = cur.fetchall() or []
+        for row in subproject_rows:
+            if isinstance(row, dict):
+                subproject = {
+                    'id': str(row.get('id')),
+                    'name': row.get('name') or '',
+                    'project_id': str(row.get('project_id')),
+                    'project_name': row.get('project_name') or '',
+                }
+            else:
+                subproject = {
+                    'id': str(row[0]),
+                    'name': row[1] or '',
+                    'project_id': str(row[2]),
+                    'project_name': row[3] or '',
+                }
+            subprojects.append(subproject)
+            subprojects_by_project.setdefault(subproject['project_id'], []).append({
+                'id': subproject['id'],
+                'name': subproject['name'],
+            })
     else:
         tasks = []
     
@@ -364,13 +435,6 @@ def my_tasks_view(request):
         page_obj = paginator.get_page(paginator.num_pages)
 
     today = datetime.date.today()
-    # prepare projects list for template (id, name)
-    projects = []
-    try:
-        projects = [{'id': k, 'name': v} for k, v in projects_set.items()]
-        projects.sort(key=lambda x: (x['name'] or '').lower())
-    except Exception:
-        projects = []
 
     return render(request, "core/tasks_my.html", {
         "page_obj": page_obj,
@@ -380,10 +444,14 @@ def my_tasks_view(request):
         "current_user_id": user_id,
         "items_per_page": items_per_page,
         "projects": projects,
+        "subprojects": subprojects,
+        "subprojects_by_project": subprojects_by_project,
         "sel_project": sel_project,
+        "sel_subproject": sel_subproject,
         "sel_status": sel_status,
         "sel_work_type": sel_work_type,
         "sel_assigned": sel_assigned,
+        "sel_query": sel_query,
     })
 
 
@@ -3397,6 +3465,7 @@ def task_page_view(request, task_id):
         'issue_type': issue['work_type'] or 'Task',
         'severity': 'BLOCKER' if issue['priority'] == 'Critical' else 'MAJOR' if issue['priority'] == 'High' else 'MINOR',
         'module': issue['project_name'],
+        'subproject_name': issue['subproject_name'],
         'resolution': 'PENDING' if issue['status'] in ['Open', 'New'] else 'FINISHED' if issue['status'] == 'Closed' else 'IN_PROGRESS',
         'created_at': issue['created_at'],
         'due_date': issue['due_date'],
