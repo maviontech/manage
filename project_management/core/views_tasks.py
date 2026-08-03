@@ -4272,6 +4272,40 @@ def _metric_page_context(metric_key):
     return mapping.get(metric_key)
 
 
+def _is_tester_member(cur, request, member_id):
+    """Return whether the current member has a tester/QA role."""
+    role_names = []
+    session_user = request.session.get('user')
+    if isinstance(session_user, dict) and session_user.get('role'):
+        role_names.append(str(session_user.get('role')))
+    if request.session.get('role'):
+        role_names.append(str(request.session.get('role')))
+
+    try:
+        cur.execute("""
+            SELECT r.name
+            FROM tenant_role_assignments tra
+            JOIN roles r ON r.id = tra.role_id
+            WHERE tra.member_id = %s
+            UNION
+            SELECT r.name
+            FROM project_role_assignments pra
+            JOIN roles r ON r.id = pra.role_id
+            WHERE pra.member_id = %s
+        """, (member_id, member_id))
+        for row in (cur.fetchall() or []):
+            role_name = row.get('name') if isinstance(row, dict) else row[0]
+            if role_name:
+                role_names.append(str(role_name))
+    except Exception:
+        # Older tenants may not have both role-assignment tables yet. The
+        # session role remains a safe fallback in that case.
+        pass
+
+    normalized_roles = ' '.join(role_names).lower()
+    return any(keyword in normalized_roles for keyword in ('tester', 'qa', 'test'))
+
+
 def metric_drilldown_view(request, metric_key):
     """
     Dedicated metric drilldown listing with sorting + pagination.
@@ -4304,6 +4338,10 @@ def metric_drilldown_view(request, metric_key):
     try:
         # Check if this is a personal dashboard view
         is_personal_view = request.GET.get('personal', '').lower() == 'true'
+        tester_filters_enabled = (
+            metric_key == 'tasks-assigned'
+            and _is_tester_member(cur, request, member_id)
+        )
         
         # Determine which user IDs to filter by
         if is_personal_view:
@@ -4415,6 +4453,9 @@ def metric_drilldown_view(request, metric_key):
                         t.work_type,
                         t.due_date,
                         t.created_at,
+                        t.project_id,
+                        t.assigned_type,
+                        t.assigned_to,
                         p.name AS project_name,
                         CASE
                             WHEN t.assigned_type = 'team' THEN CONCAT('Team: ', COALESCE(tm.name, ''))
@@ -4441,9 +4482,69 @@ def metric_drilldown_view(request, metric_key):
                 sort_field = 'created_at'
                 sort_dir = 'desc'
 
+        filter_values = {
+            'status': (request.GET.get('status_filter') or '').strip(),
+            'date': (request.GET.get('date_filter') or '').strip(),
+            'assigned': (request.GET.get('assigned_filter') or '').strip(),
+            'project': (request.GET.get('project_filter') or '').strip(),
+        }
+        filter_options = {'statuses': [], 'assignees': [], 'projects': []}
+
+        if tester_filters_enabled:
+            # Build choices from the tester's unfiltered visibility scope, then
+            # apply all selected values before pagination.
+            statuses = set()
+            assignees = {}
+            projects = {}
+            for row in rows:
+                if row.get('status'):
+                    statuses.add(str(row.get('status')).strip())
+                if row.get('assigned_type') and row.get('assigned_to') is not None:
+                    assigned_key = f"{row.get('assigned_type')}:{row.get('assigned_to')}"
+                    assignees[assigned_key] = row.get('assigned_name') or 'Unassigned'
+                if row.get('project_id') is not None:
+                    projects[str(row.get('project_id'))] = row.get('project_name') or 'No Project'
+
+            filter_options = {
+                'statuses': sorted(statuses, key=str.lower),
+                'assignees': [
+                    {'value': key, 'label': label}
+                    for key, label in sorted(assignees.items(), key=lambda item: str(item[1]).lower())
+                ],
+                'projects': [
+                    {'value': key, 'label': label}
+                    for key, label in sorted(projects.items(), key=lambda item: str(item[1]).lower())
+                ],
+            }
+
+            if filter_values['status']:
+                expected_status = filter_values['status'].lower()
+                rows = [r for r in rows if str(r.get('status') or '').strip().lower() == expected_status]
+            if filter_values['date']:
+                rows = [
+                    r for r in rows
+                    if r.get('created_at') and str(r.get('created_at'))[:10] == filter_values['date']
+                ]
+            if filter_values['assigned']:
+                rows = [
+                    r for r in rows
+                    if f"{r.get('assigned_type')}:{r.get('assigned_to')}" == filter_values['assigned']
+                ]
+            if filter_values['project']:
+                rows = [r for r in rows if str(r.get('project_id') or '') == filter_values['project']]
+
         from django.core.paginator import Paginator
+        from urllib.parse import urlencode
         paginator = Paginator(rows, 10)
         page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        preserved_params = {}
+        if is_personal_view:
+            preserved_params['personal'] = 'true'
+        if tester_filters_enabled:
+            for key, value in filter_values.items():
+                if value:
+                    preserved_params[f'{key}_filter'] = value
 
         context = {
             'metric_key': metric_key,
@@ -4455,6 +4556,11 @@ def metric_drilldown_view(request, metric_key):
             'page_obj': page_obj,
             'sort': sort_field,
             'dir': sort_dir,
+            'tester_filters_enabled': tester_filters_enabled,
+            'filter_values': filter_values,
+            'filter_options': filter_options,
+            'preserved_query': urlencode(preserved_params),
+            'clear_query': 'personal=true' if is_personal_view else '',
         }
         return render(request, 'core/metric_drilldown.html', context)
     finally:
@@ -4497,6 +4603,10 @@ def export_metric_drilldown_excel(request):
     cur = conn.cursor()
     try:
         is_personal_view = request.GET.get('personal', '').lower() == 'true'
+        tester_filters_enabled = (
+            metric_key == 'tasks-assigned'
+            and _is_tester_member(cur, request, member_id)
+        )
         visible_user_ids = [member_id] if is_personal_view else get_visible_task_user_ids(conn, member_id)
         headers = []
         rows = []
@@ -4512,6 +4622,32 @@ def export_metric_drilldown_excel(request):
         else:
             if visible_user_ids:
                 placeholders = ','.join(['%s'] * len(visible_user_ids))
+                extra_filter_clauses = []
+                extra_filter_params = []
+                if tester_filters_enabled:
+                    status_filter = (request.GET.get('status_filter') or '').strip()
+                    date_filter = (request.GET.get('date_filter') or '').strip()
+                    assigned_filter = (request.GET.get('assigned_filter') or '').strip()
+                    project_filter = (request.GET.get('project_filter') or '').strip()
+
+                    if status_filter:
+                        extra_filter_clauses.append("LOWER(TRIM(COALESCE(t.status, ''))) = LOWER(%s)")
+                        extra_filter_params.append(status_filter)
+                    if date_filter:
+                        extra_filter_clauses.append("DATE(t.created_at) = %s")
+                        extra_filter_params.append(date_filter)
+                    if ':' in assigned_filter:
+                        assigned_type, assigned_id = assigned_filter.split(':', 1)
+                        if assigned_type in ('member', 'team') and assigned_id.isdigit():
+                            extra_filter_clauses.append("t.assigned_type = %s AND t.assigned_to = %s")
+                            extra_filter_params.extend([assigned_type, assigned_id])
+                    if project_filter.isdigit():
+                        extra_filter_clauses.append("t.project_id = %s")
+                        extra_filter_params.append(project_filter)
+
+                extra_filter_sql = ''.join(
+                    f" AND ({clause})" for clause in extra_filter_clauses
+                )
                 if metric_key == 'tasks-assigned':
                     status_clause = "1=1"
                 elif metric_key == 'tasks-completed':
@@ -4533,8 +4669,9 @@ def export_metric_drilldown_excel(request):
                         ))
                     )
                       AND {status_clause}
+                      {extra_filter_sql}
                     ORDER BY t.created_at DESC
-                """, tuple(list(visible_user_ids) + list(visible_user_ids)))
+                """, tuple(list(visible_user_ids) + list(visible_user_ids) + extra_filter_params))
                 rows = cur.fetchall() or []
 
         if rows:

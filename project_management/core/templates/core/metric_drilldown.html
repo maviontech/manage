@@ -52,6 +52,51 @@
     color: #1d4ed8;
     background: #e0edff;
   }
+  .tester-filter-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(130px, 1fr)) auto auto;
+    align-items: end;
+    gap: 10px;
+    flex: 1;
+    margin-left: auto;
+  }
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  .filter-field label {
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .filter-field select,
+  .filter-field input {
+    width: 100%;
+    min-height: 40px;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 13px;
+  }
+  .btn-filter {
+    min-height: 40px;
+    color: #fff;
+    background: #2563eb;
+  }
+  .btn-clear {
+    min-height: 40px;
+    box-sizing: border-box;
+    color: #475569;
+    background: #f1f5f9;
+  }
   .table-wrap {
     position: relative;
     background: #fff;
@@ -182,10 +227,25 @@
     border-color: #2563eb !important;
   }
   [data-theme="dark"] .btn-back { background: rgba(59,130,246,0.15) !important; color: #60a5fa !important; }
+  [data-theme="dark"] .filter-field label { color: var(--theme-text-secondary) !important; }
+  [data-theme="dark"] .filter-field select,
+  [data-theme="dark"] .filter-field input {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+  }
+  [data-theme="dark"] .btn-clear { background: var(--theme-bg-secondary) !important; color: var(--theme-text-secondary) !important; }
   [data-theme="dark"] .empty { color: var(--theme-text-muted) !important; }
   [data-theme="dark"] .loading-overlay {
     background: rgba(15,20,25,0.8) !important;
     color: #60a5fa !important;
+  }
+  @media (max-width: 1100px) {
+    .tester-filter-form { grid-template-columns: repeat(2, minmax(150px, 1fr)) auto auto; }
+  }
+  @media (max-width: 700px) {
+    .tester-filter-form { grid-template-columns: 1fr 1fr; flex-basis: 100%; }
+    .btn-filter, .btn-clear { justify-content: center; }
   }
 </style>
 {% endblock %}
@@ -201,7 +261,45 @@
 
 <div class="toolbar">
   <a class="btn-main btn-back js-load" href="{% url 'dashboard' %}{% if request.GET.from_date or request.GET.to_date %}?from_date={{ request.GET.from_date }}&to_date={{ request.GET.to_date }}{% endif %}">Back to Dashboard</a>
-  <a class="btn-main btn-export" href="{% url 'export_metric_drilldown_excel' %}?metric={{ metric_key }}{% if request.GET.personal %}&personal={{ request.GET.personal }}{% endif %}">Export Excel</a>
+  {% if tester_filters_enabled %}
+  <form class="tester-filter-form" method="get" aria-label="Filter assigned tasks">
+    {% if request.GET.personal %}<input type="hidden" name="personal" value="{{ request.GET.personal }}">{% endif %}
+    <div class="filter-field">
+      <label for="statusFilter">Status</label>
+      <select id="statusFilter" name="status_filter">
+        <option value="">All statuses</option>
+        {% for status in filter_options.statuses %}
+        <option value="{{ status }}" {% if filter_values.status == status %}selected{% endif %}>{{ status }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="dateFilter">Created date</label>
+      <input id="dateFilter" type="date" name="date_filter" value="{{ filter_values.date }}">
+    </div>
+    <div class="filter-field">
+      <label for="assignedFilter">Assigned to</label>
+      <select id="assignedFilter" name="assigned_filter">
+        <option value="">All assignees</option>
+        {% for assignee in filter_options.assignees %}
+        <option value="{{ assignee.value }}" {% if filter_values.assigned == assignee.value %}selected{% endif %}>{{ assignee.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="projectFilter">Project</label>
+      <select id="projectFilter" name="project_filter">
+        <option value="">All projects</option>
+        {% for project in filter_options.projects %}
+        <option value="{{ project.value }}" {% if filter_values.project == project.value %}selected{% endif %}>{{ project.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn-main btn-filter" type="submit">Filter</button>
+    <a class="btn-main btn-clear js-load" href="?{{ clear_query }}">Clear</a>
+  </form>
+  {% endif %}
+  <a class="btn-main btn-export" href="{% url 'export_metric_drilldown_excel' %}?metric={{ metric_key }}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Export Excel</a>
 </div>
 
 <div class="table-wrap">
@@ -210,7 +308,7 @@
     {% if table_type == 'projects' %}
     <thead>
       <tr>
-        <th><a class="js-load" href="?sort=id&dir={% if sort == 'id' and dir == 'asc' %}desc{% else %}asc{% endif %}">ID</a></th>
+        <th><a class="js-load" href="?sort=id&dir={% if sort == 'id' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">ID</a></th>
         <th><a class="js-load" href="?sort=name&dir={% if sort == 'name' and dir == 'asc' %}desc{% else %}asc{% endif %}">Project</a></th>
         <th><a class="js-load" href="?sort=status&dir={% if sort == 'status' and dir == 'asc' %}desc{% else %}asc{% endif %}">Status</a></th>
         <th><a class="js-load" href="?sort=start_date&dir={% if sort == 'start_date' and dir == 'asc' %}desc{% else %}asc{% endif %}">Start</a></th>
@@ -246,15 +344,15 @@
     {% else %}
     <thead>
       <tr>
-        <th><a class="js-load" href="?sort=id&dir={% if sort == 'id' and dir == 'asc' %}desc{% else %}asc{% endif %}">ID</a></th>
-        <th><a class="js-load" href="?sort=title&dir={% if sort == 'title' and dir == 'asc' %}desc{% else %}asc{% endif %}">Task</a></th>
-        <th><a class="js-load" href="?sort=project&dir={% if sort == 'project' and dir == 'asc' %}desc{% else %}asc{% endif %}">Project</a></th>
-        <th><a class="js-load" href="?sort=status&dir={% if sort == 'status' and dir == 'asc' %}desc{% else %}asc{% endif %}">Status</a></th>
-        <th><a class="js-load" href="?sort=priority&dir={% if sort == 'priority' and dir == 'asc' %}desc{% else %}asc{% endif %}">Priority</a></th>
-        <th><a class="js-load" href="?sort=assigned_to&dir={% if sort == 'assigned_to' and dir == 'asc' %}desc{% else %}asc{% endif %}">Assigned To</a></th>
-        <th><a class="js-load" href="?sort=reporter&dir={% if sort == 'reporter' and dir == 'asc' %}desc{% else %}asc{% endif %}">Reporter</a></th>
-        <th><a class="js-load" href="?sort=due_date&dir={% if sort == 'due_date' and dir == 'asc' %}desc{% else %}asc{% endif %}">Due</a></th>
-        <th><a class="js-load" href="?sort=created_at&dir={% if sort == 'created_at' and dir == 'asc' %}desc{% else %}asc{% endif %}">Created</a></th>
+        <th><a class="js-load" href="?sort=id&dir={% if sort == 'id' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">ID</a></th>
+        <th><a class="js-load" href="?sort=title&dir={% if sort == 'title' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Task</a></th>
+        <th><a class="js-load" href="?sort=project&dir={% if sort == 'project' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Project</a></th>
+        <th><a class="js-load" href="?sort=status&dir={% if sort == 'status' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Status</a></th>
+        <th><a class="js-load" href="?sort=priority&dir={% if sort == 'priority' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Priority</a></th>
+        <th><a class="js-load" href="?sort=assigned_to&dir={% if sort == 'assigned_to' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Assigned To</a></th>
+        <th><a class="js-load" href="?sort=reporter&dir={% if sort == 'reporter' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Reporter</a></th>
+        <th><a class="js-load" href="?sort=due_date&dir={% if sort == 'due_date' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Due</a></th>
+        <th><a class="js-load" href="?sort=created_at&dir={% if sort == 'created_at' and dir == 'asc' %}desc{% else %}asc{% endif %}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Created</a></th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -288,17 +386,17 @@
 {% if page_obj and page_obj.paginator.num_pages > 1 %}
 <div class="pagination">
   {% if page_obj.has_previous %}
-    <a class="page-link js-load" href="?page={{ page_obj.previous_page_number }}&sort={{ sort }}&dir={{ dir }}">Prev</a>
+    <a class="page-link js-load" href="?page={{ page_obj.previous_page_number }}&sort={{ sort }}&dir={{ dir }}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Prev</a>
   {% endif %}
   {% for num in page_obj.paginator.page_range %}
     {% if num == page_obj.number %}
       <span class="page-link active">{{ num }}</span>
     {% elif num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
-      <a class="page-link js-load" href="?page={{ num }}&sort={{ sort }}&dir={{ dir }}">{{ num }}</a>
+      <a class="page-link js-load" href="?page={{ num }}&sort={{ sort }}&dir={{ dir }}{% if preserved_query %}&{{ preserved_query }}{% endif %}">{{ num }}</a>
     {% endif %}
   {% endfor %}
   {% if page_obj.has_next %}
-    <a class="page-link js-load" href="?page={{ page_obj.next_page_number }}&sort={{ sort }}&dir={{ dir }}">Next</a>
+    <a class="page-link js-load" href="?page={{ page_obj.next_page_number }}&sort={{ sort }}&dir={{ dir }}{% if preserved_query %}&{{ preserved_query }}{% endif %}">Next</a>
   {% endif %}
 </div>
 {% endif %}
