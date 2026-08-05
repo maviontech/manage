@@ -179,7 +179,7 @@
         </thead>
         <tbody>
           {% for t in tasks %}
-          <tr class="task-row" data-href="{% url 'task_detail' t.id %}" data-work-type="{{ t.work_type|default:'Task' }}" data-assigned-to="{{ t.assigned_to }}" data-project-id="{{ t.project_id|default:'' }}" data-project-name="{{ t.project_name|default:'' }}" data-subproject-id="{{ t.subproject_id|default:'' }}" data-subproject-name="{{ t.subproject_name|default:'' }}" data-status="{{ t.status }}">
+          <tr class="task-row" data-href="{% url 'task_page_view' t.id %}" data-work-type="{{ t.work_type|default:'Task' }}" data-assigned-to="{{ t.assigned_to }}" data-project-id="{{ t.project_id|default:'' }}" data-project-name="{{ t.project_name|default:'' }}" data-subproject-id="{{ t.subproject_id|default:'' }}" data-subproject-name="{{ t.subproject_name|default:'' }}" data-status="{{ t.status }}">
             <td>
               <span class="task-id">{{ t.id }}</span>
             </td>
