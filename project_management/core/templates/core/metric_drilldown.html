@@ -333,7 +333,7 @@
 
 <div class="table-wrap">
   <div class="loading-overlay" id="loadingOverlay">Loading...</div>
-  <table>
+  <table class="tl-cards-mobile">
     {% if table_type == 'projects' %}
     <thead>
       <tr>
@@ -359,7 +359,7 @@
         <td>{{ row.total_tasks|default:0 }}</td>
         <td>{{ row.completed_tasks|default:0 }}</td>
         <td>{{ row.pending_tasks|default:0 }}</td>
-        <td>
+        <td class="tl-cell-actions">
           <div class="actions">
             <a class="action-btn js-load" href="{% url 'subprojects_list' row.id %}">View</a>
             <a class="action-btn secondary js-load" href="{% url 'project_edit' row.id %}">Edit</a>
@@ -389,14 +389,14 @@
       {% for row in rows %}
       <tr>
         <td><span class="id-chip">TASK-{{ row.id|stringformat:'04d' }}</span></td>
-        <td><a class="cell-title" href="{% url 'task_detail' row.id %}">{{ row.title|default:'(untitled)'|truncatechars:70 }}</a></td>
-        <td class="cell-mut">{{ row.project_name|default:"—" }}</td>
-        <td><span class="st-badge st-{{ row.status|default:''|slugify }}">{{ row.status|default:"—" }}</span></td>
-        <td><span class="pr-badge pr-{{ row.priority|default:'Normal'|lower }}">{{ row.priority|default:"Normal" }}</span></td>
-        <td>{{ row.assigned_name|default:"—" }}</td>
-        <td class="cell-mut">{{ row.reporter_name|default:"—" }}</td>
-        <td class="cell-mut">{{ row.due_date|date:"d M Y"|default:"—" }}</td>
-        <td class="cell-mut">{{ row.created_at|date:"d M Y"|default:"—" }}</td>
+        <td class="tl-cell-block" data-label="Task"><a class="cell-title" href="{% url 'task_detail' row.id %}">{{ row.title|default:'(untitled)'|truncatechars:70 }}</a></td>
+        <td class="cell-mut" data-label="Project">{{ row.project_name|default:"—" }}</td>
+        <td data-label="Status"><span class="st-badge st-{{ row.status|default:''|slugify }}">{{ row.status|default:"—" }}</span></td>
+        <td data-label="Priority"><span class="pr-badge pr-{{ row.priority|default:'Normal'|lower }}">{{ row.priority|default:"Normal" }}</span></td>
+        <td data-label="Assigned">{{ row.assigned_name|default:"—" }}</td>
+        <td class="cell-mut" data-label="Reporter">{{ row.reporter_name|default:"—" }}</td>
+        <td class="cell-mut" data-label="Due">{{ row.due_date|date:"d M Y"|default:"—" }}</td>
+        <td class="cell-mut" data-label="Created">{{ row.created_at|date:"d M Y"|default:"—" }}</td>
         <td>
           <div class="actions">
             <a class="action-btn js-load" href="{% url 'task_detail' row.id %}">View</a>

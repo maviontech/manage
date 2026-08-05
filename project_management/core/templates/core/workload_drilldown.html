@@ -42,7 +42,7 @@
   <div class="tl-card" style="padding:16px 18px;">
     {% if tasks %}
     <div style="overflow-x:auto;">
-      <table class="wl-table">
+      <table class="wl-table tl-cards-mobile">
         <thead>
           <tr>
             <th>ID</th>
@@ -58,12 +58,12 @@
           {% for t in tasks %}
           <tr onclick="window.location='{% url 'task_page_view' t.id %}'">
             <td><span class="wl-id">TASK-{{ t.id|stringformat:'04d' }}</span></td>
-            <td class="wl-title"><a href="{% url 'task_page_view' t.id %}">{{ t.title|default:'(untitled)'|truncatechars:64 }}</a></td>
-            <td class="wl-hide-sm"><span class="work-type-mini-badge work-type-{{ t.work_type|default:'Task'|lower|cut:' ' }}">{{ t.work_type|default:'Task' }}</span></td>
-            <td class="wl-hide-sm"><span class="priority-badge priority-{{ t.priority|default:'Normal'|lower }}">{{ t.priority|default:'Normal' }}</span></td>
-            <td><span class="status-badge status-{{ t.status|default:''|slugify }}">{{ t.status|default:'—' }}</span></td>
-            <td class="wl-hide-sm wl-meta">{{ t.project_name|default:'—' }}{% if t.subproject_name %} <span style="opacity:.6">› {{ t.subproject_name }}</span>{% endif %}</td>
-            <td>{% if t.due_date %}<span class="wl-due{% if t.due_date < today %} over{% endif %}">{{ t.due_date|date:'d M Y' }}</span>{% else %}<span class="wl-meta">—</span>{% endif %}</td>
+            <td class="wl-title tl-cell-block" data-label="Task"><a href="{% url 'task_page_view' t.id %}">{{ t.title|default:'(untitled)'|truncatechars:64 }}</a></td>
+            <td class="wl-hide-sm" data-label="Type"><span class="work-type-mini-badge work-type-{{ t.work_type|default:'Task'|lower|cut:' ' }}">{{ t.work_type|default:'Task' }}</span></td>
+            <td class="wl-hide-sm" data-label="Priority"><span class="priority-badge priority-{{ t.priority|default:'Normal'|lower }}">{{ t.priority|default:'Normal' }}</span></td>
+            <td data-label="Status"><span class="status-badge status-{{ t.status|default:''|slugify }}">{{ t.status|default:'—' }}</span></td>
+            <td class="wl-hide-sm wl-meta" data-label="Project">{{ t.project_name|default:'—' }}{% if t.subproject_name %} <span style="opacity:.6">› {{ t.subproject_name }}</span>{% endif %}</td>
+            <td data-label="Due">{% if t.due_date %}<span class="wl-due{% if t.due_date < today %} over{% endif %}">{{ t.due_date|date:'d M Y' }}</span>{% else %}<span class="wl-meta">—</span>{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>

@@ -291,7 +291,7 @@
 
 <div class="tasks-table-container">
   {% if tasks %}
-  <table class="tasks-table">
+  <table class="tasks-table tl-cards-mobile">
     <thead>
       <tr>
         <th class="sortable" data-type="number">ID <span class="sort-indicator" style="margin-left:6px;font-size:0.9rem;opacity:0.8;">↕</span></th>
@@ -309,13 +309,13 @@
       {% for task in tasks %}
       <tr>
         <td data-sort-value="{{ task.id }}"><span class="id-chip">TASK-{{ task.id|stringformat:'04d' }}</span></td>
-        <td data-sort-value="{{ task.title|default:''|lower }}">
+        <td class="tl-cell-block" data-label="Task" data-sort-value="{{ task.title|default:''|lower }}">
           <a href="{% url 'task_page_view' task.id %}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">
             {{ task.title }}
           </a>
         </td>
-        <td data-sort-value="{{ task.project_name|default:''|lower }}">{{ task.project_name|default:"No Project" }}</td>
-        <td data-sort-value="{{ task.status|default:''|lower }}">
+        <td data-label="Project" data-sort-value="{{ task.project_name|default:''|lower }}">{{ task.project_name|default:"No Project" }}</td>
+        <td data-label="Status" data-sort-value="{{ task.status|default:''|lower }}">
           {% if task.status == 'Completed' or task.status == 'Closed' %}
             <span class="badge badge-completed">{{ task.status }}</span>
           {% elif task.status == 'In Progress' %}
@@ -326,13 +326,13 @@
             <span class="badge badge-closed">{{ task.status }}</span>
           {% endif %}
         </td>
-        <td data-sort-value="{{ task.priority|default:''|lower }}">
+        <td data-label="Priority" data-sort-value="{{ task.priority|default:''|lower }}">
           <span class="priority-{{ task.priority|lower }}">{{ task.priority }}</span>
         </td>
-        <td data-sort-value="{{ task.assigned_name|default:''|lower }}">{{ task.assigned_name|default:"Unassigned" }}</td>
-        <td data-sort-value="{{ task.reporter_name|default:''|lower }}">{{ task.reporter_name|default:"—" }}</td>
-        <td data-sort-value="{{ task.due_date|date:'Y-m-d' }}">{{ task.due_date|date:"M d, Y"|default:"—" }}</td>
-        <td data-sort-value="{{ task.created_at|date:'Y-m-d' }}">{{ task.created_at|date:"M d, Y" }}</td>
+        <td data-label="Assigned" data-sort-value="{{ task.assigned_name|default:''|lower }}">{{ task.assigned_name|default:"Unassigned" }}</td>
+        <td data-label="Reporter" data-sort-value="{{ task.reporter_name|default:''|lower }}">{{ task.reporter_name|default:"—" }}</td>
+        <td data-label="Due" data-sort-value="{{ task.due_date|date:'Y-m-d' }}">{{ task.due_date|date:"M d, Y"|default:"—" }}</td>
+        <td data-label="Created" data-sort-value="{{ task.created_at|date:'Y-m-d' }}">{{ task.created_at|date:"M d, Y" }}</td>
       </tr>
       {% endfor %}
     </tbody>
