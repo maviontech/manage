@@ -89,21 +89,10 @@
         z-index: 1;
     }
 
-    .stat-card.total .stat-card-icon {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-
-    .stat-card.active .stat-card-icon {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .stat-card.draft .stat-card-icon {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-
-    .stat-card.archived .stat-card-icon {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-    }
+    .stat-card.total .stat-card-icon { background: var(--tl-accent, #2563eb); }
+    .stat-card.active .stat-card-icon { background: var(--tl-success-solid, #059669); }
+    .stat-card.draft .stat-card-icon { background: var(--tl-warning-solid, #d97706); }
+    .stat-card.archived .stat-card-icon { background: var(--tl-neutral-solid, #6b7280); }
 
     .stat-card-content h3 {
         font-size: 2rem;
@@ -139,14 +128,16 @@
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--tl-accent, #2563eb);
+        background-image: linear-gradient(180deg, color-mix(in srgb, var(--tl-accent, #2563eb) 86%, white), var(--tl-accent, #2563eb));
         color: white;
-        padding: 0.75rem 1.5rem;
+        padding: 0.7rem 1.25rem;
         border-radius: 8px;
         border: none;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 1px 2px color-mix(in srgb, var(--tl-accent, #2563eb) 38%, transparent), 0 4px 12px color-mix(in srgb, var(--tl-accent, #2563eb) 26%, transparent);
+        transition: background-color 0.15s, box-shadow 0.15s;
     }
 
     .btn-primary:hover {
@@ -179,7 +170,7 @@
         width: 50px;
         height: 50px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--tl-accent, #2563eb);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -259,7 +250,7 @@
         width: 80px;
         height: 80px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--tl-accent, #2563eb);
         display: flex;
         align-items: center;
         justify-content: center;

@@ -598,9 +598,11 @@
 /* Gradient hero banners -> calm surface + accent bar (light + dark) */
 .people-hero, .teams-hero, .employees-header-bar, .project-hero, .config-header,
 .report-header, .drilldown-header, .week-header, .page-header-professional,
+.pw-hero, .notifications-header,
 [data-theme="dark"] .people-hero, [data-theme="dark"] .teams-hero, [data-theme="dark"] .employees-header-bar,
 [data-theme="dark"] .project-hero, [data-theme="dark"] .config-header,
-[data-theme="dark"] .report-header, [data-theme="dark"] .drilldown-header, [data-theme="dark"] .week-header, [data-theme="dark"] .page-header-professional {
+[data-theme="dark"] .report-header, [data-theme="dark"] .drilldown-header, [data-theme="dark"] .week-header, [data-theme="dark"] .page-header-professional,
+[data-theme="dark"] .pw-hero, [data-theme="dark"] .notifications-header {
   background: var(--tl-surface) !important;
   background-image: none !important;
   border: 1px solid var(--tl-border) !important;
@@ -619,11 +621,13 @@
 .report-header h1, .report-header h2, .report-header h3,
 .drilldown-header h1, .drilldown-header h2, .drilldown-header h3,
 .week-header h1, .week-header h2, .week-header h3,
-.page-header-professional h1, .page-header-professional h2, .page-header-professional h3 {
+.page-header-professional h1, .page-header-professional h2, .page-header-professional h3,
+.pw-hero h1, .pw-hero h2, .pw-hero h3, .notifications-header h1, .notifications-header h2, .notifications-header h3 {
   color: var(--tl-text) !important; -webkit-text-fill-color: var(--tl-text) !important; background: none !important;
 }
 .report-header p, .drilldown-header p, .week-header p, .page-header-professional p,
-.report-header .subtitle, .drilldown-header .subtitle, .page-header-professional .subtitle { color: var(--tl-text-muted) !important; }
+.report-header .subtitle, .drilldown-header .subtitle, .page-header-professional .subtitle,
+.pw-hero p, .notifications-header p, .pw-hero .subtitle, .notifications-header .subtitle { color: var(--tl-text-muted) !important; }
 
 /* Wave 4: timer / work-week accents */
 .btn-start-timer {
