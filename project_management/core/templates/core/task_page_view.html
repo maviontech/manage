@@ -546,90 +546,68 @@
             const btnCopy = document.getElementById('btnCopyDesc');
             const wordCountEl = document.getElementById('descWordCount');
             const showMoreBtn = document.getElementById('showMoreBtn');
-            if (descEl) {
-                const text = descEl.innerText || descEl.textContent || '';
-                const words = text.trim().split(/\s+/).filter(Boolean).length;
-                wordCountEl.textContent = words + ' words';
-                // toggle collapse
-                function setCollapsed(collapsed){
-                    if (collapsed) {
-                        descEl.classList.add('collapsed');
-                        btnToggle.innerHTML = '<i class="fas fa-chevron-down"></i>';
-                        showMoreBtn.textContent = 'Show more';
-                    } else {
-                        descEl.classList.remove('collapsed');
-                        btnToggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
-                        showMoreBtn.textContent = 'Show less';
-                    }
-                }
-                // initial collapsed if long
-                if (descEl.scrollHeight > 260) {
-                    setCollapsed(true);
-                } else {
-                    if (btnToggle) btnToggle.style.display = 'none';
-                    if (showMoreBtn) showMoreBtn.style.display = 'none';
-                }
-                btnToggle && btnToggle.addEventListener('click', function(event){
-                    event.preventDefault();
-                    setCollapsed(!descEl.classList.contains('collapsed'));
-                });
-                showMoreBtn && showMoreBtn.addEventListener('click', function(event){
-                    event.preventDefault();
-                    setCollapsed(!descEl.classList.contains('collapsed'));
-                });
-                btnCopy && btnCopy.addEventListener('click', async function(){
-                    try {
-                        const txt = descEl.innerText || descEl.textContent || '';
-                        await navigator.clipboard.writeText(txt);
-                        btnCopy.textContent = 'Copied';
-                        setTimeout(()=> btnCopy.innerHTML = '<i class="fas fa-copy"></i> Copy', 1500);
-                    } catch (e) {
-                        console.error('copy failed', e);
-                        alert('Copy not supported');
-                    }
-                });
+            const src = document.getElementById('descriptionSource');
+            if (!descEl) return;
+
+            // ---- 1) Split Description into Steps / Expected / Actual cards ----
+            // Bug descriptions embed these fields with **Marker:** headings for both
+            // legacy plain-text bugs AND new rich-text/HTML bugs. Render them as
+            // separate colored cards so every bug looks consistent.
+            function hasText(html){ return !!(html && html.replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim()); }
+            function sectionCard(type, title, bodyHtml){
+                if(!hasText(bodyHtml)) return '';
+                if(type==='desc') return `<div class="desc-paragraph">${bodyHtml}</div>`;
+                return `<div class="desc-section desc-${type}"><div class="desc-section-title">${title}</div><div class="desc-section-body">${bodyHtml}</div></div>`;
             }
-            // Parse raw description into colored sections (Steps / Expected / Actual)
+            function typeFor(name){
+                name = name.toLowerCase();
+                if (name.indexOf('step') === 0) return ['steps','Steps to Reproduce'];
+                if (name.indexOf('expected') === 0) return ['expected','Expected Behavior'];
+                return ['actual','Actual Behavior'];
+            }
             try {
-                const src = document.getElementById('descriptionSource');
-                if (src && descEl) {
-                    const raw = src.textContent || '';
-                    // Rich-text (HTML) descriptions are already rendered via |safe — skip markdown parsing.
-                    if (/<[a-z][\s\S]*>/i.test(raw)) { return; }
-                    const lines = raw.split(/\r?\n/).map(l=>l.replace(/\u00a0/g,' ').replace(/\t/g,' ').trimRight());
+                const raw = src ? (src.textContent || '') : '';
+                const isHtml = /<[a-z][\s\S]*>/i.test(raw);
+                const markerRe = /\*\*\s*(steps\s*to\s*reproduce|expected\s*behaviou?r|actual\s*behaviou?r)\s*:?\s*\*\*/gi;
+                if (isHtml) {
+                    // Split the already-rendered HTML on the literal **Marker:** strings.
+                    let html = descEl.innerHTML;
+                    markerRe.lastIndex = 0;
+                    if (markerRe.test(html)) {
+                        markerRe.lastIndex = 0;
+                        const segs = []; let last = 0; let curType = 'desc'; let curTitle = ''; let m;
+                        while ((m = markerRe.exec(html))) {
+                            segs.push({ type: curType, title: curTitle, html: html.slice(last, m.index) });
+                            const t = typeFor(m[1]); curType = t[0]; curTitle = t[1];
+                            last = markerRe.lastIndex;
+                        }
+                        segs.push({ type: curType, title: curTitle, html: html.slice(last) });
+                        const out = segs.map(s => sectionCard(s.type, s.title, s.html)).filter(Boolean).join('\n');
+                        if (out) descEl.innerHTML = out;
+                    }
+                } else if (src) {
+                    // Legacy plain-text descriptions: parse line-by-line.
+                    const lines = raw.split(/\r?\n/).map(l=>l.replace(/ /g,' ').replace(/\t/g,' ').trimRight());
                     const sections = [];
                     let cur = {type:'text', lines:[]};
                     const headingMap = {
-                        'steps to reproduce': 'steps',
-                        'stepsto reproduce': 'steps',
-                        'steps': 'steps',
-                        'steps to reproduce:': 'steps',
-                        'expected behavior': 'expected',
-                        'expected': 'expected',
-                        'actual behavior': 'actual',
-                        'actual': 'actual'
+                        'steps to reproduce':'steps','steps':'steps',
+                        'expected behavior':'expected','expected behaviour':'expected','expected':'expected',
+                        'actual behavior':'actual','actual behaviour':'actual','actual':'actual'
                     };
                     function pushCur(){ if(cur.lines.length>0){ sections.push(cur); cur={type:'text',lines:[]}; }}
                     for (let i=0;i<lines.length;i++){
                         const ln = lines[i].trim();
                         if(!ln) { cur.lines.push(''); continue; }
-                        const low = ln.replace(/\*+/g,'').replace(/\s+/g,' ').trim().toLowerCase();
-                        if (headingMap[low.replace(':','')]){
-                            pushCur(); cur={type: headingMap[low.replace(':','')], lines: []};
-                            continue;
-                        }
-                        // detect headings with trailing colon like "**Expected Behavior:**"
-                        const m = ln.match(/^\*{0,2}\s*([A-Za-z ]{3,40}?)\s*:\s*$/);
-                        if (m){ const key = (m[1]||'').toLowerCase().replace(/\s+/g,' ').trim(); if(headingMap[key]){ pushCur(); cur={type:headingMap[key],lines:[]}; continue; } }
+                        const low = ln.replace(/\*+/g,'').replace(/\s+/g,' ').replace(':','').trim().toLowerCase();
+                        if (headingMap[low]){ pushCur(); cur={type: headingMap[low], lines: []}; continue; }
                         cur.lines.push(ln);
                     }
                     pushCur();
-
                     function wrap(text){ return escapeHtml(text).replace(/\n/g,'<br>'); }
-
                     const out = sections.map(s=>{
+                        const txt = s.lines.join('\n').trim();
                         if(s.type==='steps'){
-                            // build ordered list from numbered or dash lines
                             const items = s.lines.filter(Boolean).map(l=>{
                                 const m = l.match(/^\s*\d+\.\s*(.*)$/); if(m) return m[1];
                                 const m2 = l.match(/^[-\*]\s*(.*)$/); if(m2) return m2[1];
@@ -637,21 +615,38 @@
                             });
                             if(items.length===0) return '';
                             return `<div class="desc-section desc-steps"><div class="desc-section-title">Steps to Reproduce</div><ol>`+items.map(it=>`<li>${wrap(it)}</li>`).join('')+`</ol></div>`;
-                        } else if (s.type==='expected'){
-                            const txt = s.lines.join('\n').trim(); if(!txt) return '';
-                            return `<div class="desc-section desc-expected"><div class="desc-section-title">Expected Behavior</div><div class="desc-section-body">${wrap(txt)}</div></div>`;
-                        } else if (s.type==='actual'){
-                            const txt = s.lines.join('\n').trim(); if(!txt) return '';
-                            return `<div class="desc-section desc-actual"><div class="desc-section-title">Actual Behavior</div><div class="desc-section-body">${wrap(txt)}</div></div>`;
-                        } else {
-                            const txt = s.lines.join('\n').trim(); if(!txt) return '';
-                            return `<div class="desc-paragraph">${wrap(txt)}</div>`;
-                        }
+                        } else if (s.type==='expected'){ if(!txt) return ''; return `<div class="desc-section desc-expected"><div class="desc-section-title">Expected Behavior</div><div class="desc-section-body">${wrap(txt)}</div></div>`; }
+                        else if (s.type==='actual'){ if(!txt) return ''; return `<div class="desc-section desc-actual"><div class="desc-section-title">Actual Behavior</div><div class="desc-section-body">${wrap(txt)}</div></div>`; }
+                        else { if(!txt) return ''; return `<div class="desc-paragraph">${wrap(txt)}</div>`; }
                     }).filter(Boolean).join('\n');
-
                     if(out) descEl.innerHTML = out;
                 }
             } catch (e){ console.error('desc parse failed',e); }
+
+            // ---- 2) Word count + collapse/expand (measured AFTER sectioning) ----
+            const text = descEl.innerText || descEl.textContent || '';
+            if (wordCountEl) wordCountEl.textContent = text.trim().split(/\s+/).filter(Boolean).length + ' words';
+            function setCollapsed(collapsed){
+                descEl.classList.toggle('collapsed', collapsed);
+                if (btnToggle) btnToggle.innerHTML = collapsed ? '<i class="fas fa-chevron-down"></i>' : '<i class="fas fa-chevron-up"></i>';
+                if (showMoreBtn) showMoreBtn.textContent = collapsed ? 'Show more' : 'Show less';
+            }
+            descEl.classList.remove('collapsed');
+            const needsToggle = descEl.scrollHeight > 240;
+            if (needsToggle) {
+                setCollapsed(true);
+                if (btnToggle) btnToggle.style.display = '';
+                if (showMoreBtn) showMoreBtn.style.display = '';
+            } else {
+                if (btnToggle) btnToggle.style.display = 'none';
+                if (showMoreBtn) showMoreBtn.style.display = 'none';
+            }
+            if (btnToggle) btnToggle.addEventListener('click', function(e){ e.preventDefault(); setCollapsed(!descEl.classList.contains('collapsed')); });
+            if (showMoreBtn) showMoreBtn.addEventListener('click', function(e){ e.preventDefault(); setCollapsed(!descEl.classList.contains('collapsed')); });
+            if (btnCopy) btnCopy.addEventListener('click', async function(){
+                try { await navigator.clipboard.writeText(descEl.innerText || descEl.textContent || ''); btnCopy.textContent = 'Copied'; setTimeout(()=> btnCopy.innerHTML = '<i class="fas fa-copy"></i> Copy', 1500); }
+                catch (e) { console.error('copy failed', e); alert('Copy not supported'); }
+            });
         })();
         });
     </script>
