@@ -441,7 +441,7 @@
       <div id="team-meta" style="margin-bottom:8px; color:var(--theme-text-secondary,#4b5563); font-size:12px;"></div>
 
       <div style="overflow:auto;">
-        <table class="t-table" id="team-members-table">
+        <table class="t-table tl-cards-mobile tl-cards-avatar" id="team-members-table">
           <thead><tr><th style="width:48px">Avatar</th><th>Name</th><th>Email</th><th>Role</th><th style="width:100px">Actions</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -666,9 +666,9 @@ function renderTeamMembers() {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td><div class="t-avatar">${avatar}</div></td>
       <td style="font-weight:600">${name}</td>
-      <td>${m.email}</td>
-      <td>${m.team_role || 'Member'}</td>
-      <td><button class="t-btn small ghost" onclick="removeMember(${m.member_id})">Remove</button></td>`;
+      <td data-label="Email">${m.email}</td>
+      <td data-label="Role">${m.team_role || 'Member'}</td>
+      <td class="tl-cell-actions"><button class="t-btn small ghost" onclick="removeMember(${m.member_id})">Remove</button></td>`;
     tbody.appendChild(tr);
   }
   renderPager('members-pager', pages, page, (p)=> { MEMBERS_PAGE = p; renderTeamMembers(); });

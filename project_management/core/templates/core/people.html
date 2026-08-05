@@ -384,7 +384,7 @@
       </div>
 
       <div style="overflow:auto;">
-        <table class="p-table" id="people-table" aria-live="polite">
+        <table class="p-table tl-cards-mobile tl-cards-avatar" id="people-table" aria-live="polite">
           <thead>
             <tr><th style="width:48px">Avatar</th><th>Name</th><th>Email</th><th>Phone</th></tr>
           </thead>
@@ -464,8 +464,8 @@ function renderTable() {
     tr.innerHTML = `
       <td><div class="p-avatar">${avatarChar}</div></td>
       <td><div style="font-weight:600">${name}</div></td>
-      <td>${p.email}</td>
-      <td>${p.phone || ''}</td>`;
+      <td data-label="Email">${p.email}</td>
+      <td data-label="Phone">${p.phone || '—'}</td>`;
     tbody.appendChild(tr);
   }
   renderPager(pages, page);

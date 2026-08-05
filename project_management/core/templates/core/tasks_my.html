@@ -114,7 +114,7 @@
     </div>
     
     <div class="table-responsive">
-      <table class="tasks-table">
+      <table class="tasks-table tl-cards-mobile">
         <thead>
           <tr>
             <th style="width: 80px;">
@@ -183,7 +183,7 @@
             <td>
               <span class="task-id">{{ t.id }}</span>
             </td>
-            <td>
+            <td class="tl-cell-block" data-label="Task">
               <div class="task-title">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="flex-shrink: 0;">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -198,7 +198,7 @@
                 <span class="task-title-text" title="{{ t.title }}">{{ t.title }}</span>
               </div>
             </td>
-            <td>
+            <td data-label="Reporter">
               <div class="reporter-info">
                 {% if t.reporter_name %}
                   <div class="reporter-avatar">
@@ -210,7 +210,7 @@
                 {% endif %}
               </div>
             </td>
-            <td>
+            <td data-label="Priority">
               <span class="priority-badge priority-{{ t.priority|lower }}">
                 {% if t.priority == 'Critical' %}
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
@@ -230,12 +230,12 @@
                 {{ t.priority }}
               </span>
             </td>
-            <td>
+            <td data-label="Status">
               <span class="status-badge status-{{ t.status|slugify }}">
                 {{ t.status }}
               </span>
             </td>
-            <td>
+            <td data-label="Due">
               {% if t.due_date %}
                 <span class="date-badge {% if t.due_date < today %}date-overdue{% else %}date-normal{% endif %}">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
@@ -248,7 +248,7 @@
                 <span class="date-badge date-empty">—</span>
               {% endif %}
             </td>
-            <td>
+            <td data-label="Closed">
               {% if t.closure_date %}
                 <span class="date-badge date-completed">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
@@ -261,7 +261,7 @@
                 <span class="date-badge date-empty">—</span>
               {% endif %}
             </td>
-            <td>
+            <td class="tl-cell-actions">
               <div class="action-buttons">
                 <a href="{% url 'task_page_view' t.id %}" class="btn-action btn-view" title="View Task" onclick="event.stopPropagation();">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

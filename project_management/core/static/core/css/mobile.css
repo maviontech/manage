@@ -991,6 +991,17 @@
   /* Opt-out for an empty-state row spanning all columns */
   table.tl-cards-mobile > tbody > tr > td[colspan] { display: block; text-align: center; border: none !important; }
   table.tl-cards-mobile > tbody > tr > td[colspan]::before { content: none; }
+
+  /* Avatar-first variant (People/Teams/Employees): hide the avatar cell and
+     promote the 2nd cell (Name) to the card title. */
+  table.tl-cards-avatar > tbody > tr > td:first-child { display: none !important; }
+  table.tl-cards-avatar > tbody > tr > td:nth-child(2) {
+    display: block !important; text-align: left !important;
+    padding: 0 0 10px !important; margin-bottom: 6px;
+    border-bottom: 1px solid var(--tl-border, #eef2f7) !important;
+    font-weight: 700; font-size: 15px;
+  }
+  table.tl-cards-avatar > tbody > tr > td:nth-child(2)::before { content: none !important; }
 }
 
 /* ============================================

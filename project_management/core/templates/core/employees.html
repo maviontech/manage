@@ -446,7 +446,7 @@
 <!-- Table -->
 <div class="employees-container">
   <div id="employeesTableContainer">
-    <table class="employees-table" id="employeesTable">
+    <table class="employees-table tl-cards-mobile" id="employeesTable">
       <thead>
         <tr>
           <th><i class="fa fa-hashtag" style="margin-right:4px;font-size:10px;"></i> Code</th>
@@ -639,7 +639,7 @@ function renderEmployees(employees) {
 
     return `<tr>
       <td><strong style="color:#3b82f6;">${emp.employee_code}</strong></td>
-      <td>
+      <td class="tl-cell-block" data-label="Name">
         <div style="display:flex;align-items:center;gap:6px;">
           <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:10px;flex-shrink:0;">
             ${initials}
@@ -647,20 +647,20 @@ function renderEmployees(employees) {
           <strong style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${emp.full_name}">${emp.full_name}</strong>
         </div>
       </td>
-      <td style="color:var(--theme-text-secondary,#64748b);" title="${emp.email}">
+      <td data-label="Email" style="color:var(--theme-text-secondary,#64748b);" title="${emp.email}">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:calc(100% - 4px);vertical-align:middle;">${emp.email}</span>
       </td>
-      <td style="color:var(--theme-text-secondary,#64748b);">
+      <td data-label="Phone" style="color:var(--theme-text-secondary,#64748b);">
         ${emp.phone ? `<span style="white-space:nowrap;">${emp.phone}</span>` : '-'}
       </td>
-      <td>
+      <td data-label="Department">
         ${emp.department ? `<span style="background:rgba(59,130,246,0.1);color:#3b82f6;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:600;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;" title="${emp.department}">${emp.department}</span>` : '-'}
       </td>
-      <td style="color:var(--theme-text-secondary,#64748b);" title="${emp.designation || '-'}">
+      <td data-label="Designation" style="color:var(--theme-text-secondary,#64748b);" title="${emp.designation || '-'}">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${emp.designation || '-'}</span>
       </td>
-      <td><span class="status-badge status-${statusClass}">${emp.status}</span></td>
-      <td>${actions}</td>
+      <td data-label="Status"><span class="status-badge status-${statusClass}">${emp.status}</span></td>
+      <td class="tl-cell-actions">${actions}</td>
     </tr>`;
   }).join('');
 }
