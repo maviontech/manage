@@ -25,8 +25,8 @@
       --danger: #ef4444;
       --danger-dark: #dc2626;
       --warning: #f59e0b;
-      --purple: #a855f7;
-      --purple-light: #c084fc;
+      --purple: #2563eb;
+      --purple-light: #60a5fa;
     }
     
     /* Smooth animations */
@@ -76,7 +76,7 @@
       height: 100%;
       background-image: 
         radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(37, 99, 235, 0.06) 0%, transparent 50%),
         radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 50%);
       animation: float 20s ease-in-out infinite;
       pointer-events: none;
@@ -130,7 +130,7 @@
       font-weight:700;
       color:#fff;
       background: linear-gradient(135deg, var(--accent1), var(--accent2), var(--purple));
-      box-shadow:0 8px 24px rgba(37, 99, 235, 0.35), 0 0 40px rgba(168, 85, 247, 0.2);
+      box-shadow:0 8px 24px rgba(37, 99, 235, 0.35), 0 0 40px rgba(37, 99, 235, 0.2);
       font-size:20px;
       position: relative;
       overflow: hidden;
@@ -317,7 +317,7 @@
     }
     
     .preview{
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(168, 85, 247, 0.05));
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.05));
       padding:16px;
       border-radius:12px;
       border:1px solid rgba(59, 130, 246, 0.2);
@@ -517,7 +517,7 @@
     
     .cred {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(168, 85, 247, 0.08));
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.08));
       padding:14px;
       border-radius:10px;
       border:1px solid rgba(59, 130, 246, 0.25);
@@ -570,7 +570,7 @@
     }
 
     .kbd {
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(168, 85, 247, 0.08));
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.08));
       padding:8px 14px;
       border-radius:8px;
       font-size:13px;
@@ -585,7 +585,7 @@
     }
     
     .kbd:hover {
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(168, 85, 247, 0.12));
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.12));
       border-color: var(--accent2);
       transform: translateY(-2px);
       box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
@@ -630,7 +630,7 @@
 
     .work-type-card:has(input:checked) {
       border-color: var(--accent2);
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(168, 85, 247, 0.08));
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(37, 99, 235, 0.08));
       box-shadow: 0 4px 20px rgba(37, 99, 235, 0.25);
     }
 
@@ -793,7 +793,7 @@
 
                 <label class="work-type-card">
                   <input type="checkbox" name="work_types" value="Sub Task">
-                  <div class="work-type-icon" style="background:rgba(168,85,247,0.1)"><i class="fa-solid fa-list" style="color:#a855f7"></i></div>
+                  <div class="work-type-icon" style="background:rgba(37, 99, 235,0.1)"><i class="fa-solid fa-list" style="color:#2563eb"></i></div>
                   <div>
                     <div class="work-type-title">Sub Task</div>
                     <div class="work-type-desc">A smaller task within a main task</div>
@@ -802,7 +802,7 @@
 
                 <label class="work-type-card">
                   <input type="checkbox" name="work_types" value="Report">
-                  <div class="work-type-icon" style="background:rgba(236,72,153,0.1)"><i class="fa-solid fa-chart-line" style="color:#ec4899"></i></div>
+                  <div class="work-type-icon" style="background:rgba(59, 130, 246,0.1)"><i class="fa-solid fa-chart-line" style="color:#3b82f6"></i></div>
                   <div>
                     <div class="work-type-title">Report</div>
                     <div class="work-type-desc">Generate reports and analytics</div>
