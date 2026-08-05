@@ -1706,10 +1706,15 @@ def dashboard_view(request):
     except Exception as e:
         logger.error(f"ERROR unified dashboard extras: {e}")
 
+    # Total must never be less than the status counts we render (avoids the
+    # "Total 0 while Open 41" contradiction when tasks aren't member-assigned).
+    _status_total = int(progress_open or 0) + int(progress_inprogress or 0) + int(progress_closed or 0)
+    total_tasks_display = max(int(assigned_count or 0), _status_total)
+
     ctx = {
         'user': request.session.get('user'),
         'active_range': active_range,
-        'total_tasks': assigned_count,
+        'total_tasks': total_tasks_display,
         'overdue_count': overdue_count,
         'workload': workload,
         'needs_attention': needs_attention,

@@ -150,8 +150,21 @@
   .tl-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--tl-ring); }
   .tl-btn-sm { height: 2rem; padding: 0 0.625rem; font-size: 0.8125rem; }
   .tl-btn-lg { height: 2.5rem; padding: 0 1.125rem; font-size: 0.9375rem; }
-  .tl-btn-primary { background: var(--tl-accent); color: var(--tl-accent-contrast); }
-  .tl-btn-primary:hover { background: var(--tl-accent-hover); }
+  .tl-btn-primary {
+    background-color: var(--tl-accent);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--tl-accent) 86%, white), var(--tl-accent));
+    color: var(--tl-accent-contrast);
+    font-weight: 600;
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--tl-accent) 38%, transparent),
+                0 4px 12px color-mix(in srgb, var(--tl-accent) 26%, transparent);
+  }
+  .tl-btn-primary:hover {
+    background-image: linear-gradient(180deg, var(--tl-accent), var(--tl-accent-hover));
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--tl-accent) 42%, transparent),
+                0 6px 18px color-mix(in srgb, var(--tl-accent) 34%, transparent);
+  }
+  .tl-btn-primary:active { transform: translateY(1px);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--tl-accent) 42%, transparent); }
   .tl-btn-secondary { background: var(--tl-surface); color: var(--tl-text); border-color: var(--tl-border-strong); }
   .tl-btn-secondary:hover { background: var(--tl-surface-hover); }
   .tl-btn-ghost { background: transparent; color: var(--tl-text-muted); }
