@@ -15,6 +15,15 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 11px center; }
   @media (max-width: 860px) { .tl-editor-grid { grid-template-columns: 1fr; } .tl-side { position: static; } }
+  @media (max-width: 640px) {
+    .tl-editor { padding: 0 12px 40px; }
+    .tl-actionbar { flex-wrap: wrap; gap: 12px; padding: 12px 0; }
+    .tl-actionbar > div:last-child { margin-left: 0 !important; width: 100%; display: flex; }
+    .tl-actionbar > div:last-child .tl-btn { flex: 1 1 auto; justify-content: center; }
+    .tl-actionbar .tl-page-title { font-size: 18px; }
+    .tl-rte, .tl-rte-toolbar, .tl-input, .tl-select, .tl-textarea { max-width: 100%; }
+    .tl-rte-toolbar { flex-wrap: wrap; }
+  }
 </style>
 
 <div class="tl-scope tl-editor">

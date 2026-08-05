@@ -860,54 +860,57 @@
   }
 }
 
-/* ============================================
-   ENTERPRISE COMPONENTS (v2) — MOBILE
-   New tl-*/tld-* components, drill-downs, settings,
-   two-pane forms & detail pages. Stack multi-column
-   grids and let wide tables scroll on small screens.
-   ============================================ */
+/* ==========================================
+   ENTERPRISE COMPONENTS (v2) - MOBILE
+   New tl-/tld- components, drill-downs, settings,
+   two-pane forms and detail pages.
+   ========================================== */
 @media (max-width: 860px) {
-  /* Two-pane issue editor + task detail -> single column */
   .tl-editor-grid,
   .detail-content { grid-template-columns: 1fr !important; }
-  .tl-side, .detail-side, .tl-editor .tl-side { position: static !important; width: 100% !important; }
+  .tl-side,
+  .detail-side { position: static !important; width: 100% !important; }
 
-  /* Dashboard v2 rows */
+  .tl-actionbar { flex-wrap: wrap !important; gap: 12px !important; }
+  .tl-actionbar > div:last-child { margin-left: 0 !important; width: 100%; }
+  .tl-actionbar > div:last-child .tl-btn { flex: 1 1 auto; justify-content: center; }
+  .tl-editor { padding-left: 14px !important; padding-right: 14px !important; }
+  .tl-rte,
+  .tl-rte-toolbar,
+  .tl-input,
+  .tl-select,
+  .tl-textarea { max-width: 100% !important; }
+  .tl-rte-toolbar { flex-wrap: wrap !important; }
+
   .tld-row { grid-template-columns: 1fr !important; }
+  .pw-grid,
+  .access-grid,
+  .layout { grid-template-columns: 1fr !important; }
 
-  /* Settings two-column layouts */
-  .pw-grid, .access-grid, .layout { grid-template-columns: 1fr !important; }
-
-  /* Drill-down filter toolbar + generic toolbars -> stack */
   .tester-filter-form { grid-template-columns: 1fr 1fr !important; margin-left: 0 !important; }
   .toolbar { flex-direction: column; align-items: stretch !important; }
   .toolbar .btn-main { justify-content: center; }
 
-  /* Settings header: title inline, actions wrap below full-width */
   .tl-settings-header { flex-wrap: wrap; }
   .tl-settings-header .tlsh-actions { margin-left: 0; width: 100%; }
 
-  /* Wide enterprise tables scroll instead of squeezing */
-  .table-wrap, .tasks-table-container, .wl-wrap .tl-card > div[style*="overflow"] {
-    overflow-x: auto !important; -webkit-overflow-scrolling: touch;
-  }
+  .table-wrap,
+  .tasks-table-container { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
 
-  /* Drill-down page header: title + actions stack */
-  .drilldown-header, .board-header-card { flex-wrap: wrap; }
+  .drilldown-header,
+  .board-header-card { flex-wrap: wrap; }
 
-  /* Dashboard top bar: title above controls */
   .tld-bar { flex-direction: column; align-items: stretch !important; gap: 12px; }
   .tld-bar > div:last-child { margin-left: 0 !important; }
-  .tld-range, .tld-range-btn { width: 100%; }
+  .tld-range,
+  .tld-range-btn { width: 100%; }
   .tld-range-btn { justify-content: space-between; }
   .tld-range-menu { width: 100% !important; right: auto !important; left: 0; }
 }
 
 @media (max-width: 560px) {
-  /* KPI strip: two per row on small phones */
   .tld-kpis { grid-template-columns: repeat(2, 1fr) !important; }
   .tester-filter-form { grid-template-columns: 1fr !important; }
-  /* Workload / drill-down stat chips: two per row */
   .wl-chips { gap: 8px; }
   .wl-chips .wl-chip { min-width: calc(50% - 8px); flex: 1 1 calc(50% - 8px); }
 }
