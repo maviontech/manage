@@ -15,7 +15,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f1f5f9;
             min-height: 100vh;
             color: #1a202c;
         }
@@ -28,7 +28,7 @@
         /* Sidebar Styles */
         .sidebar {
             width: 280px;
-            background: linear-gradient(180deg, #1a202c 0%, #2d3748 100%);
+            background: #0f172a;
             color: #fff;
             padding: 30px 0;
             position: fixed;
@@ -66,7 +66,7 @@
 
         .sidebar-logo i {
             font-size: 42px;
-            color: #667eea;
+            color: #2563eb;
         }
 
         .sidebar-logo-text h1 {
@@ -122,15 +122,15 @@
         }
 
         .nav-item:hover {
-            background: rgba(102, 126, 234, 0.15);
+            background: rgba(37, 99, 235, 0.15);
             color: #fff;
             transform: translateX(5px);
         }
 
         .nav-item.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             color: #fff;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
         }
 
         .nav-item i {
@@ -168,12 +168,12 @@
         }
 
         .content-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             padding: 40px;
             border-radius: 20px;
             color: #fff;
             margin-bottom: 40px;
-            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 40px rgba(37, 99, 235, 0.3);
         }
 
         .content-header h1 {
@@ -192,20 +192,20 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             color: #fff;
             padding: 12px 24px;
             border-radius: 12px;
             text-decoration: none;
             font-weight: 600;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
             font-size: 14px;
         }
 
         .back-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
         }
 
         .section {
@@ -222,7 +222,7 @@
             color: #2d3748;
             margin-bottom: 25px;
             padding-bottom: 15px;
-            border-bottom: 3px solid #667eea;
+            border-bottom: 3px solid #2563eb;
         }
 
         .section-content {
@@ -253,23 +253,26 @@
         }
 
         .feature-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 15px;
             padding: 30px;
-            color: #fff;
+            color: #1e293b;
             transition: all 0.3s ease;
             cursor: pointer;
         }
 
         .feature-card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10);
+            border-color: #bfdbfe;
         }
 
         .feature-icon {
             width: 60px;
             height: 60px;
-            background: rgba(255, 255, 255, 0.2);
+            background: #eff6ff;
+            color: #2563eb;
             border-radius: 15px;
             display: flex;
             align-items: center;
@@ -286,7 +289,8 @@
 
         .feature-description {
             font-size: 14px;
-            opacity: 0.95;
+            opacity: 1;
+            color: #64748b;
             line-height: 1.6;
         }
 
@@ -302,7 +306,7 @@
             padding: 25px;
             background: #f7fafc;
             border-radius: 15px;
-            border-left: 5px solid #667eea;
+            border-left: 5px solid #2563eb;
             transition: all 0.3s ease;
         }
 
@@ -315,7 +319,7 @@
         .step-number {
             width: 50px;
             height: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             color: #fff;
             border-radius: 50%;
             display: flex;
@@ -340,8 +344,9 @@
 
         /* Tips & Notes */
         .tip-box {
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-            color: #fff;
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
             padding: 20px 25px;
             border-radius: 12px;
             margin: 25px 0;
@@ -356,8 +361,9 @@
         }
 
         .warning-box {
-            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
-            color: #fff;
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
             padding: 20px 25px;
             border-radius: 12px;
             margin: 25px 0;
@@ -416,7 +422,7 @@
         }
 
         .manual-footer strong {
-            color: #667eea;
+            color: #2563eb;
         }
 
         /* Responsive Design */
@@ -735,25 +741,63 @@
 
                 <div class="section-content">
                     <h2 style="font-size: 24px; margin-bottom: 20px; color: #2d3748;">Understanding Your Dashboard</h2>
-                    <p>The dashboard is the first screen you see after logging in. It provides a comprehensive overview of your work and projects.</p>
+                    <p>The dashboard is the first screen you see after logging in. It gives you a single, unified overview of work and projects — headline metrics at the top, then charts and operational lists below. Everything on the page reacts to two controls in the header: the <strong>View</strong> switch and the <strong>time&nbsp;range</strong>.</p>
 
-                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Dashboard Components:</h3>
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Admin View vs. My View</h3>
+                    <p>The button in the top-right of the dashboard header toggles between two scopes:</p>
                     <ul>
-                        <li><strong>Total Tasks Assigned:</strong> Shows the total number of tasks assigned to you</li>
-                        <li><strong>Active Projects:</strong> Number of projects currently in progress</li>
-                        <li><strong>Tasks Completed:</strong> Count of tasks you've successfully completed</li>
-                        <li><strong>Tasks Pending:</strong> Number of tasks awaiting your action</li>
-                        <li><strong>Quick Actions:</strong> Fast access buttons for My Tasks, Create Task, Board View, and Projects</li>
-                        <li><strong>Task Breakdown:</strong> Visual donut chart showing completed vs in-progress vs pending tasks</li>
-                        <li><strong>Tasks by Priority:</strong> Stacked bar chart displaying open and closed tasks by priority level (Critical, High, Normal, Low)</li>
-                        <li><strong>Tasks Over Time:</strong> Line chart showing task creation and completion trends</li>
-                        <li><strong>Planned Tasks:</strong> Calendar view of upcoming tasks within the configured window</li>
+                        <li><strong>My View:</strong> Every number, chart and list is scoped to <em>you</em> only. This is the personal cockpit for your own workload.</li>
+                        <li><strong>Admin View:</strong> The same dashboard scoped across everyone you are allowed to see (team / organization), for managers and admins who need the wider picture.</li>
+                    </ul>
+                    <div class="tip-box">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>Role behaviour:</strong> Non-admin users always see <strong>My View</strong> — the toggle is reserved for administrators. Switching view (or reloading) never silently changes your selected time range, and changing the time range never flips you back to Admin View. Your chosen view stays put.
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">The time-range control</h3>
+                    <p>Next to the view switch is the date-range selector. It drives the headline stat cards, the status breakdown and the priority load, so you can answer "how did we do in this period?" at a glance. Available presets:</p>
+                    <ul>
+                        <li><strong>Last 30 days</strong> — the default when you open the dashboard.</li>
+                        <li><strong>This month</strong>, <strong>Last 3 months</strong>, <strong>Last 6 months</strong> — rolling windows.</li>
+                        <li><strong>Custom range</strong> — pick an explicit From / To date pair.</li>
+                    </ul>
+                    <p>The stat cards, the status donut and the priority-load chart count work <strong>created within the selected window</strong> — exactly the same basis as the Throughput chart — so picking a longer range raises the totals and a shorter range narrows them. The <strong>Overdue</strong> figure is the one deliberate exception: it always reflects what is overdue <em>right now</em>, regardless of range.</p>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Headline stat cards</h3>
+                    <ul>
+                        <li><strong>Total Tasks</strong> — all work items in scope for the selected view &amp; range.</li>
+                        <li><strong>Open</strong> — items still to be started (New / Open).</li>
+                        <li><strong>In Progress</strong> — items actively being worked (In&nbsp;Progress / Review).</li>
+                        <li><strong>Finished</strong> — items marked Finished.</li>
+                        <li><strong>Overdue</strong> — items past their due date and not yet closed (live, not range-bound).</li>
+                        <li><strong>Reopened</strong> — items that were sent back / reopened.</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Charts &amp; operational panels</h3>
+                    <ul>
+                        <li><strong>Throughput:</strong> line chart of Created vs Closed vs Finished across the selected window.</li>
+                        <li><strong>Status breakdown:</strong> donut of Open / In&nbsp;Progress / Closed for active work.</li>
+                        <li><strong>Needs attention:</strong> the overdue or blocked items that want action first.</li>
+                        <li><strong>Priority load:</strong> open vs closed by priority (Critical, High, Normal, Low).</li>
+                        <li><strong>Workload by assignee:</strong> who is carrying how much active work.</li>
+                        <li><strong>Recent activity:</strong> the latest changes across your team.</li>
+                        <li><strong>Active work:</strong> the open items currently in flight.</li>
+                        <li><strong>Completion rate:</strong> a gauge of closed &amp; finished vs total.</li>
+                    </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Role-specific dashboards</h3>
+                    <p>Trackline tailors the personal (My View) dashboard to what your role actually does:</p>
+                    <ul>
+                        <li><strong>Developers &amp; managers</strong> see work <em>assigned to them</em> — the assignee-based cards, workload and active-work lists described above.</li>
+                        <li><strong>Testers / QA</strong> report defects rather than getting tasks assigned, so their My&nbsp;View is scoped to the <strong>bugs and defects they reported</strong>. The cards map to the QA lifecycle — New, In&nbsp;Progress, Fixed, Retesting, Closed and Reopened — the Overdue card counts their overdue bugs, and Priority load reflects open bugs by severity. Needs&nbsp;attention and Active&nbsp;work are populated from their reported bugs so the panel is never empty.</li>
                     </ul>
 
                     <div class="tip-box">
                         <i class="fas fa-lightbulb"></i>
                         <div>
-                            <strong>Dashboard Tip:</strong> Use the Quick Actions section to jump directly to frequently used features. The dashboard updates in real-time as tasks and projects change.
+                            <strong>Dashboard Tip:</strong> Start on the default <em>Last 30 days / My View</em> for your daily standup, then widen to <em>Last 3 months</em> or <em>Admin View</em> for retrospectives and reporting. The page never scrolls sideways and every chart resizes to your screen.
                         </div>
                     </div>
                 </div>
@@ -930,6 +974,49 @@
                         <li>Export task details to PDF</li>
                         <li>Edit or delete tasks (with appropriate permissions)</li>
                     </ul>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Rich-text descriptions &amp; long-text fields</h3>
+                    <p>The Description field — and every other long-text field, including a Bug's Steps to Reproduce, Expected Behavior and Actual Behavior, and a Change Request's justification — is a full rich-text editor, not a plain textarea. The toolbar supports:</p>
+                    <ul>
+                        <li><strong>Text formatting:</strong> bold, italic, underline.</li>
+                        <li><strong>Lists:</strong> bulleted and numbered lists, with increase / decrease indent.</li>
+                        <li><strong>Typography:</strong> font family and font size selection.</li>
+                        <li><strong>Colour:</strong> text colour picker.</li>
+                        <li><strong>Links:</strong> insert and edit hyperlinks.</li>
+                        <li><strong>Alignment:</strong> left, center, right, and justify.</li>
+                        <li><strong>Images:</strong> insert images directly into the text — upload from your machine or paste — so a screenshot can sit inline exactly where it belongs.</li>
+                    </ul>
+                    <div class="tip-box">
+                        <i class="fas fa-lightbulb"></i>
+                        <div>
+                            <strong>Formatting Tip:</strong> Paste a screenshot straight into the editor to embed it inline. Formatting you apply is preserved when the item is saved and is rendered faithfully on the task detail page.
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Bug &amp; Defect specific fields</h3>
+                    <p>When you create a Bug or Defect you get extra, purpose-built fields so QA reports are complete and reproducible:</p>
+                    <ul>
+                        <li><strong>Steps to Reproduce:</strong> the exact sequence that triggers the problem (rich text — number the steps, embed a screenshot).</li>
+                        <li><strong>Expected Behavior:</strong> what should have happened.</li>
+                        <li><strong>Actual Behavior:</strong> what actually happened.</li>
+                        <li><strong>Severity:</strong> the technical impact of the defect (e.g. Blocker, Critical, Major, Medium, Minor) — kept <em>separate</em> from Priority, which is about scheduling urgency.</li>
+                        <li><strong>System information:</strong> browser, operating system and screen resolution can be captured with the report to speed up reproduction.</li>
+                    </ul>
+                    <div class="tip-box">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>Severity is editable:</strong> Severity can now be changed after a bug is created — open the item, click <strong>Edit</strong>, and adjust the Severity field alongside status and priority. Earlier versions locked severity at creation time; that limitation is gone.
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 20px; margin: 30px 0 15px; color: #2d3748;">Reading a bug on the detail page</h3>
+                    <p>On the task detail page a bug's write-up is split into clearly separated, colour-coded cards instead of one wall of text:</p>
+                    <ul>
+                        <li>A blue <strong>Steps to Reproduce</strong> card (rendered as an ordered list),</li>
+                        <li>a green <strong>Expected Behavior</strong> card, and</li>
+                        <li>a red <strong>Actual Behavior</strong> card.</li>
+                    </ul>
+                    <p>This works for every bug — those written in the rich-text editor and older plain-text bugs alike. Long descriptions are collapsed with a <strong>Show more / Show less</strong> toggle so the page stays tidy; short descriptions are shown in full with no toggle. Alongside the write-up the right-hand Details panel shows Reporter, Assignee, Project / Subproject, Resolution, key dates and the captured Environment.</p>
 
                     <div class="tip-box">
                         <i class="fas fa-lightbulb"></i>
@@ -1243,7 +1330,7 @@
             <!-- Footer -->
             <div class="manual-footer">
                 <div class="manual-footer-logo">
-                    <i class="fas fa-rocket" style="font-size: 40px; color: #667eea;"></i>
+                    <i class="fas fa-rocket" style="font-size: 40px; color: #2563eb;"></i>
                     <h3>Trackline Project Management</h3>
                 </div>
                 <p>Clarity. Control. Closure.</p>
