@@ -382,9 +382,16 @@
     .badge[class*="minor"] { background: linear-gradient(90deg,#fff7ed,#fffaf0); color:#92400e; border-color:#ffedd5; }
 
     /* responsive adjustments */
+    @media (max-width: 900px) {
+        /* Stack the main column + Details panel on tablet/mobile */
+        .detail-content { grid-template-columns: 1fr !important; }
+        .detail-side, .detail-sidebar { position: static !important; width: 100% !important; }
+    }
     @media (max-width: 720px) {
-        .status-bar { gap: 10px; padding: 12px; }
+        .status-bar { gap: 10px; padding: 12px; flex-wrap: wrap; }
         .badge { padding: 6px 10px; font-size: 12px; }
+        .description-card .card-header { flex-wrap: wrap; gap: 10px; }
+        .description-actions { width: 100%; justify-content: flex-start; }
     }
 
     /* Back button: clean, pill-style, subtle shadow */

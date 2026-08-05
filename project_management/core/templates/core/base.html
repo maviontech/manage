@@ -290,7 +290,7 @@
   <link rel="stylesheet" href="{% static 'core/css/notifications.css' %}">
   
   {# Mobile Responsive Styles #}
-  <link rel="stylesheet" href="{% static 'core/css/mobile.css' %}">
+  <link rel="stylesheet" href="{% static 'core/css/mobile.css' %}?v={% now 'U' %}">
 
   {# Enterprise design system (Tailwind v4, compiled). Additive — no global reset. #}
   {# Cache-busted so rebuilds are reflected immediately during the UI overhaul. #}
