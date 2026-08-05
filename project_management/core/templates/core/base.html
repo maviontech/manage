@@ -1606,6 +1606,21 @@
           performSearch(query);
         }, 300);
       });
+
+      // Open the first actionable result when Enter is pressed in global search.
+      searchInput.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter' || !resultsDropdown.classList.contains('show')) {
+          return;
+        }
+
+        const firstResult = resultsDropdown.querySelector(
+          'a.search-result-item[href], .search-result-item[onclick]'
+        );
+        if (firstResult) {
+          e.preventDefault();
+          firstResult.click();
+        }
+      });
       
       // Close dropdown when clicking outside
       document.addEventListener('click', function(e) {
