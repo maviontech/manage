@@ -19,12 +19,18 @@ class Command(BaseCommand):
         email = options['email']
         tenant_db = options.get('tenant_db')
         
-        # Get database connection details from environment
-        host = os.environ.get('MYSQL_ADMIN_HOST', '127.0.0.1')
-        port = int(os.environ.get('MYSQL_ADMIN_PORT', 3306))
-        user = os.environ.get('MYSQL_ADMIN_USER', 'root')
-        password = os.environ.get('MYSQL_ADMIN_PWD', 'root')
-        master_db = os.environ.get('MASTER_DB_NAME', 'master_db')
+        # Get database connection details from Django settings (fallback: env)
+        from django.conf import settings
+        def _cfg(name, default):
+            v = getattr(settings, name, None)
+            if v in (None, ''):
+                v = os.environ.get(name)
+            return v if v not in (None, '') else default
+        host = _cfg('MYSQL_ADMIN_HOST', '127.0.0.1')
+        port = int(_cfg('MYSQL_ADMIN_PORT', 3306))
+        user = _cfg('MYSQL_ADMIN_USER', 'root')
+        password = _cfg('MYSQL_ADMIN_PWD', 'root')
+        master_db = _cfg('MASTER_DB_NAME', 'master_db')
         
         try:
             # Connect to master database

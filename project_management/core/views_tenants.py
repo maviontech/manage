@@ -15,7 +15,7 @@ import pymysql
 from .db_initializer import DBInitializer  # uses the file you already have. :contentReference[oaicite:1]{index=1}
 from .auth import hash_password, check_password  # same helper used in db_initializer
 
-MASTER_DB = os.environ.get('MASTER_DB_NAME', 'master_db')
+MASTER_DB = getattr(settings, 'MASTER_DB_NAME', None) or os.environ.get('MASTER_DB_NAME', 'master_db')
 # Ensure ADMIN_CONF exists (same as elsewhere in your project)
 
 ADMIN_CONF = {

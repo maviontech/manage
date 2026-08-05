@@ -14,13 +14,25 @@ except Exception:
     HAS_DJANGO_HASHERS = False
 logger = logging.getLogger('project_management')
 # MASTER DB connection config read from environment (or you can hardcode)
+def _admin_cfg(name, default):
+    """Resolve a master-DB setting: Django settings first (current source of
+    truth), then environment (for a future .env switch), then a safe default."""
+    try:
+        from django.conf import settings as _dj
+        val = getattr(_dj, name, None)
+    except Exception:
+        val = None
+    if val is None or val == '':
+        val = os.environ.get(name)
+    return val if val not in (None, '') else default
+
 MASTER_DB_CONFIG = {
     'db_engine': 'mysql',
-    'db_host': os.environ.get('MYSQL_ADMIN_HOST', '127.0.0.1'),
-    'db_port': int(os.environ.get('MYSQL_ADMIN_PORT') or 3306),
-    'db_user': os.environ.get('MYSQL_ADMIN_USER', 'root'),
-    'db_password': os.environ.get('MYSQL_ADMIN_PWD', 'root'),
-    'db_name': os.environ.get('MASTER_DB_NAME', 'master_db')
+    'db_host': _admin_cfg('MYSQL_ADMIN_HOST', '127.0.0.1'),
+    'db_port': int(_admin_cfg('MYSQL_ADMIN_PORT', 3306)),
+    'db_user': _admin_cfg('MYSQL_ADMIN_USER', 'root'),
+    'db_password': _admin_cfg('MYSQL_ADMIN_PWD', 'root'),
+    'db_name': _admin_cfg('MASTER_DB_NAME', 'master_db'),
 }
 
 def hash_password(plain_password: str) -> str:

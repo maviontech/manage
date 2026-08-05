@@ -9,11 +9,22 @@ import logging
 # Use the 'utility' logger configured in settings.LOGGING
 logger = logging.getLogger('utility')
 
-MASTER_DB = os.environ.get('MASTER_DB_NAME', 'master_db')
-ADMIN_HOST = os.environ.get('MYSQL_ADMIN_HOST', '127.0.0.1')
-ADMIN_PORT = int(os.environ.get('MYSQL_ADMIN_PORT', 3306))
-ADMIN_USER = os.environ.get('MYSQL_ADMIN_USER', 'root')
-ADMIN_PWD = os.environ.get('MYSQL_ADMIN_PWD', 'root')
+def _admin_cfg(name, default):
+    """Django settings first (current source of truth), then env, then default."""
+    try:
+        from django.conf import settings as _dj
+        val = getattr(_dj, name, None)
+    except Exception:
+        val = None
+    if val is None or val == '':
+        val = os.environ.get(name)
+    return val if val not in (None, '') else default
+
+MASTER_DB = _admin_cfg('MASTER_DB_NAME', 'master_db')
+ADMIN_HOST = _admin_cfg('MYSQL_ADMIN_HOST', '127.0.0.1')
+ADMIN_PORT = int(_admin_cfg('MYSQL_ADMIN_PORT', 3306))
+ADMIN_USER = _admin_cfg('MYSQL_ADMIN_USER', 'root')
+ADMIN_PWD = _admin_cfg('MYSQL_ADMIN_PWD', 'root')
 
 
 def initialize_master_database():
