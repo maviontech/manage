@@ -594,6 +594,8 @@
                 const src = document.getElementById('descriptionSource');
                 if (src && descEl) {
                     const raw = src.textContent || '';
+                    // Rich-text (HTML) descriptions are already rendered via |safe — skip markdown parsing.
+                    if (/<[a-z][\s\S]*>/i.test(raw)) { return; }
                     const lines = raw.split(/\r?\n/).map(l=>l.replace(/\u00a0/g,' ').replace(/\t/g,' ').trimRight());
                     const sections = [];
                     let cur = {type:'text', lines:[]};
@@ -696,8 +698,8 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="description-content collapsed" id="descriptionContent">
-                        {{ issue.description|linebreaks|default:"No description provided." }}
+                    <div class="description-content collapsed tl-richtext" id="descriptionContent">
+                        {{ issue.description|safe|default:"No description provided." }}
                         </div>
                         <pre id="descriptionSource" style="display:none">{{ issue.description|default:"" }}</pre>
                     <div class="description-footer">

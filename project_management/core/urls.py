@@ -93,6 +93,7 @@ urlpatterns = [
     path("tasks/api/board-data/", views_tasks.board_data_api, name="board_data"),
     path('api/task/detail/', views_tasks.api_task_detail, name='api_task_detail'),
     path('api/task/update/', views_tasks.api_task_update, name='api_task_update'),
+    path('api/rte/image/', views_tasks.rte_image_upload, name='rte_image_upload'),
     path('tasks/api/search/', views_tasks.api_tasks_search, name='api_tasks_search'),
     path('tasks/api/project-work-types/', views_tasks.api_get_project_work_types, name='api_project_work_types'),
 

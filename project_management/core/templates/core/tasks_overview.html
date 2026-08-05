@@ -28,13 +28,17 @@
   }
 
   .page-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: var(--white);
-    padding: 1rem;
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-    box-shadow: var(--shadow-lg);
+    background: var(--tl-surface);
+    color: var(--tl-text);
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-tl, 10px);
+    border: 1px solid var(--tl-border);
+    border-left: 3px solid var(--tl-accent);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--tl-shadow-sm);
   }
+  .page-header h1, .page-header h2, .page-header .page-title { color: var(--tl-text) !important; -webkit-text-fill-color: var(--tl-text) !important; }
+  .page-header p, .page-header .subtitle { color: var(--tl-text-muted) !important; }
 
   .page-header h1 {
     margin: 0 0 0.5rem 0;
@@ -99,24 +103,25 @@
   }
 
   .btn-export {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: var(--white);
-    padding: 12px 24px;
+    background: var(--tl-surface);
+    color: var(--tl-text);
+    padding: 9px 16px;
     border-radius: 8px;
-    border: none;
-    font-weight: 600;
+    border: 1px solid var(--tl-border-strong);
+    font-weight: 550;
     font-size: 14px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    box-shadow: var(--shadow-md);
-    transition: all 0.3s ease;
+    box-shadow: none;
+    transition: background-color .15s, border-color .15s;
   }
 
   .btn-export:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    transform: none;
+    background: var(--tl-surface-hover);
+    border-color: var(--tl-accent);
   }
 
   .tasks-table-container {
@@ -291,7 +296,7 @@
     <tbody>
       {% for task in tasks %}
       <tr>
-        <td data-sort-value="{{ task.id }}"><strong>#{{ task.id }}</strong></td>
+        <td data-sort-value="{{ task.id }}"><strong>{{ task.id }}</strong></td>
         <td data-sort-value="{{ task.title|default:''|lower }}">
           <a href="{% url 'task_detail' task.id %}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">
             {{ task.title }}

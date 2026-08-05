@@ -294,16 +294,16 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    padding: 0.7rem 1.4rem;
+    background: var(--tl-accent);
     color: #ffffff;
-    font-size: 1rem;
-    border-radius: 12px;
+    font-size: 0.9rem;
+    border-radius: 8px;
     text-decoration: none;
-    font-weight: 700;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0px 8px 24px rgba(37, 99, 235, 0.3), 0px 2px 8px rgba(0, 0, 0, 0.1);
-    letter-spacing: 0.3px;
+    font-weight: 600;
+    transition: background-color 0.15s ease;
+    box-shadow: none;
+    letter-spacing: 0.2px;
     border: none;
 }
 
@@ -486,7 +486,7 @@ hr {
                 </div>
                 <div class="detail-value description-content" id="taskDescription">
                     {% if task.description %}
-                        <div class="formatted-description" id="descriptionText">{{ task.description }}</div>
+                        <div class="formatted-description tl-richtext" id="descriptionText">{{ task.description|safe }}</div>
                         <button class="read-more-btn" id="readMoreBtn" style="display: none;">
                             <span class="read-more-text">Read More</span>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron-icon">
@@ -535,7 +535,7 @@ hr {
 
         <div class="text-center mt-4" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
             <a href="{% url 'edit_task' task.id %}" class="edit-btn">✏️ Edit Task</a>
-            <a href="{% url 'export_task_pdf' task.id %}" class="edit-btn" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);" download>📄 Export to PDF</a>
+            <a href="{% url 'export_task_pdf' task.id %}" class="edit-btn" style="background: var(--tl-surface); color: var(--tl-text); border: 1px solid var(--tl-border-strong);" download>📄 Export to PDF</a>
         </div>
 
         <!-- Timer History Section -->

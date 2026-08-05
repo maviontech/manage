@@ -292,6 +292,10 @@
   {# Mobile Responsive Styles #}
   <link rel="stylesheet" href="{% static 'core/css/mobile.css' %}">
 
+  {# Enterprise design system (Tailwind v4, compiled). Additive — no global reset. #}
+  {# Cache-busted so rebuilds are reflected immediately during the UI overhaul. #}
+  <link rel="stylesheet" href="{% static 'core/css/tailwind.css' %}?v={% now 'U' %}">
+
   {# Small local overrides to ensure submenus collapse without leaving vertical gaps #}
   <style>
     /* Reset submenu spacing and animate height instead of display */
@@ -675,7 +679,7 @@
           <img src="{% static 'core/logo1.png' %}" alt="Maviontech" style="width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0;"/>
           <span style="display: block; font-size: 12px; color: #a0aec0; line-height: 1.4; text-align: left;">Powered by<br><strong style="color: #fff; font-size: 13px;">Maviontech Pvt Ltd</strong></span>
         </div>
-        <a href="{% url 'user_manual' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; text-decoration: none; border-radius: 10px; font-size: 13px; font-weight: 600; transition: all 0.3s ease; width: 100%; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.35)';">
+        <a href="{% url 'user_manual' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background: rgba(255,255,255,0.06); color: #e2e8f0; text-decoration: none; border-radius: 9px; font-size: 13px; font-weight: 600; transition: all 0.2s ease; width: 100%; border: 1px solid rgba(255,255,255,0.08);" onmouseover="this.style.background='rgba(255,255,255,0.12)';" onmouseout="this.style.background='rgba(255,255,255,0.06)';">
           <i class="fas fa-book-open" style="font-size: 15px;"></i>
           <span>User Manual</span>
         </a>

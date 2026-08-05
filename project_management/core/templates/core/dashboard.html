@@ -509,7 +509,7 @@
      ============================================ */
   .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
     gap: 0.75rem;
     margin-bottom: 1rem;
   }
@@ -782,16 +782,20 @@
     padding-left: 0.75rem;
   }
 
-  #progressChart {
-    max-width: 100%;
-    margin: 0 auto;
-    display: block;
-    height: 190px !important;
-  }
-
-  #priorityChart {
-    width: 100%;
-    height: 240px !important;
+  /* Chart containers: a relatively-positioned box with a fixed height; the
+     canvas fills it absolutely. This is the Chart.js-correct pattern (paired
+     with maintainAspectRatio:false) and prevents the donut/bars from
+     distorting or shrinking when the window is resized. */
+  .tl-chartbox { position: relative; width: 100%; }
+  .tl-chartbox--donut  { height: 210px; }
+  .tl-chartbox--bar    { height: 260px; }
+  .tl-chartbox--line   { height: 300px; }
+  .tl-chartbox--defect { height: 380px; }
+  #progressChart, #priorityChart, #lineChart, #defectReporterChart,
+  .tl-chartbox > canvas {
+    position: absolute !important; inset: 0;
+    width: 100% !important; height: 100% !important;
+    max-width: 100%; display: block; margin: 0;
   }
 
   .donut-legend {
@@ -925,10 +929,8 @@
       height: 64px;
     }
 
-    #progressChart {
-      max-width: 100%;
-      height: 170px !important;
-    }
+    .tl-chartbox--donut { height: 190px; }
+    .tl-chartbox--bar   { height: 220px; }
 
     .dashboard-grid {
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -1301,13 +1303,8 @@
     }
 
     /* Progress / donut chart */
-    #progressChart {
-      height: 140px !important;
-    }
-
-    #priorityChart {
-      height: 200px !important;
-    }
+    .tl-chartbox--donut { height: 170px; }
+    .tl-chartbox--bar   { height: 190px; }
 
     .donut-pane {
       padding-left: 0;
@@ -1874,7 +1871,7 @@
 {% block content %}
 <!-- Dashboard View Indicator -->
 {% if is_user_dashboard %}
-<div class="dashboard-view-banner personal-banner" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);">
+<div class="dashboard-view-banner personal-banner" style="background: var(--tl-surface); color: var(--tl-text); padding: 10px 16px; border-radius: var(--radius-tl); border: 1px solid var(--tl-border); border-left: 3px solid var(--tl-accent); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
   <div style="display: flex; align-items: center; gap: 8px;">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -1890,7 +1887,7 @@
   </a> -->
 </div>
 {% else %}
-<div class="dashboard-view-banner admin-banner" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);">
+<div class="dashboard-view-banner admin-banner" style="background: var(--tl-surface); color: var(--tl-text); padding: 10px 16px; border-radius: var(--radius-tl); border: 1px solid var(--tl-border); border-left: 3px solid var(--tl-accent); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
   <div style="display: flex; align-items: center; gap: 8px;">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="7" height="7" rx="1"></rect>
@@ -2336,11 +2333,11 @@
       <!-- Right: Task Breakdown -->
       <div class="donut-pane">
         <h3>Task Breakdown:</h3>
-        <canvas id="progressChart"></canvas>
+        <div class="tl-chartbox tl-chartbox--donut"><canvas id="progressChart"></canvas></div>
         <div class="donut-legend" style="justify-content:flex-start;">
-          <div class="item"><span class="dot" style="background:#16a34a"></span> Closed ({{ progress_closed|default:0 }})</div>
-          <div class="item"><span class="dot" style="background:#1f86e3"></span> In Progress ({{ progress_inprogress|default:0 }})</div>
-          <div class="item"><span class="dot" style="background:#eab308"></span> Open ({{ progress_open|default:0 }})</div>
+          <div class="item"><span class="dot" style="background:#94a3b8"></span> Closed ({{ progress_closed|default:0 }})</div>
+          <div class="item"><span class="dot" style="background:#60a5fa"></span> In Progress ({{ progress_inprogress|default:0 }})</div>
+          <div class="item"><span class="dot" style="background:#2563eb"></span> Open ({{ progress_open|default:0 }})</div>
         </div>
       </div>
 
@@ -2350,7 +2347,7 @@
   <!-- Stacked horizontal bar: open vs closed per priority -->
   <div class="chart-card">
     <h3>Tasks by Priority (Open vs Closed)</h3>
-    <canvas id="priorityChart"></canvas>
+    <div class="tl-chartbox tl-chartbox--bar"><canvas id="priorityChart"></canvas></div>
     <div style="margin-top:10px;color:var(--theme-text-muted);font-size:13px;">
       Bars are stacked: <strong style="color:var(--theme-text);">Open</strong> (not closed) + <strong style="color:var(--theme-text);">Closed</strong>.
     </div>
@@ -2373,9 +2370,9 @@
         <input id="toDate" type="date" name="tasks_to_date" value="{{ timeline_to }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text);">
       </div>
       <button type="submit" style="padding:9px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;">Apply</button>
-      <a href="{{ request.path }}" style="display:inline-flex;align-items:center;justify-content:center;padding:6.5px 10px;border:none;border-radius:8px;background:#ef4444;color:#fff;font-weight:700;text-decoration:none;cursor:pointer;">Reset</a>
+      <a href="{{ request.path }}" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid var(--tl-border-strong);border-radius:8px;background:var(--tl-surface);color:var(--tl-text);font-weight:600;text-decoration:none;cursor:pointer;">Reset</a>
     </form>
-    <div class="chart-canvas-modern">
+    <div class="chart-canvas-modern tl-chartbox tl-chartbox--line">
       <canvas id="lineChart"></canvas>
     </div>
     <div class="chart-desc-modern">Default range is the last 30 days. Filters apply to line and defect metrics.</div>
@@ -2443,12 +2440,12 @@
           <button type="submit" style="padding:8px 12px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;">Apply</button>
         </div>
         <div style="margin-top:20px;">
-          <a href="{{ request.path }}" style="display:inline-flex;align-items:center;justify-content:center;padding:6.5px 10px;border:none;border-radius:8px;background:#ef4444;color:#fff;font-weight:700;text-decoration:none;cursor:pointer;">Reset</a>
+          <a href="{{ request.path }}" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid var(--tl-border-strong);border-radius:8px;background:var(--tl-surface);color:var(--tl-text);font-weight:600;text-decoration:none;cursor:pointer;">Reset</a>
         </div>
       </form>
     </div>
-    <div class="chart-canvas-modern" style="display:flex;justify-content:center;align-items:center;padding:6px 0;">
-      <canvas id="defectReporterChart" style="width:100%;height:420px;max-width:100%;"></canvas>
+    <div class="chart-canvas-modern tl-chartbox tl-chartbox--defect">
+      <canvas id="defectReporterChart"></canvas>
     </div>
     <div class="chart-desc-modern">Defects reported by each reporter in the selected timeline.</div>
   </div>
@@ -2551,6 +2548,21 @@ document.addEventListener("DOMContentLoaded", function() {
   Chart.defaults.borderColor = chartGridColor;
   Chart.defaults.scale.grid = Chart.defaults.scale.grid || {};
   Chart.defaults.scale.grid.color = chartGridColor;
+
+  // --- Premium vertical gradient helper for bars (deep base -> light top) ---
+  function tlBarGradient(base, top) {
+    return function (ctx) {
+      var chart = ctx.chart, area = chart.chartArea;
+      if (!area) return base; // first paint before layout
+      var g = chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+      g.addColorStop(0, base);
+      g.addColorStop(1, top);
+      return g;
+    };
+  }
+  // Reusable premium fills
+  var TL_GRAD_BLUE = tlBarGradient('#1d4ed8', '#60a5fa');   // deep -> light blue
+  var TL_GRAD_SLATE = tlBarGradient('#94a3b8', '#e2e8f0');  // neutral for "closed/done"
 
   // Attach handlers to shortcut buttons
   document.querySelectorAll('.shortcut-btn').forEach(btn => {
@@ -2723,7 +2735,7 @@ document.addEventListener("DOMContentLoaded", function() {
         datasets: [{
           label: 'Assigned Bugs/Defects',
           data: {{ tester_reporter_values|default:'[]'|safe }},
-          backgroundColor: '#0ea5e9',
+          backgroundColor: '#2563eb',
           borderRadius: 6,
           maxBarThickness: 56
         }]
@@ -2851,12 +2863,12 @@ document.addEventListener("DOMContentLoaded", function() {
         labels: ['Closed','In Progress','Open'],
         datasets: [{
           data: [Number('{{ progress_closed|default:0 }}'), Number('{{ progress_inprogress|default:0 }}'), Number('{{ progress_open|default:0 }}')],
-          backgroundColor: ['#16a34a', '#1f86e3', '#eab308'],
+          backgroundColor: ['#94a3b8', '#60a5fa', '#2563eb'],
           hoverOffset: 6,
           borderWidth: 0
         }]
       },
-      options: { responsive:true, cutout:'60%', plugins:{ legend:{display:false} } }
+      options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{display:false} } }
     });
   }
 
@@ -2880,11 +2892,11 @@ document.addEventListener("DOMContentLoaded", function() {
       data: {
         labels: ['Critical','High','Normal','Low'],
         datasets: [
-          { label: 'Open', data: openArr, backgroundColor: '#ef4444', stack: 'a', borderRadius: 6 },
-          { label: 'Closed', data: closedArr, backgroundColor: '#2BA388', stack: 'a', borderRadius: 6 }
+          { label: 'Open', data: openArr, backgroundColor: TL_GRAD_BLUE, stack: 'a', borderRadius: 6, borderSkipped: false },
+          { label: 'Closed', data: closedArr, backgroundColor: TL_GRAD_SLATE, stack: 'a', borderRadius: 6, borderSkipped: false }
         ]
       },
-      options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'top' } } }
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'top' } } }
     });
   }
 
@@ -2907,16 +2919,16 @@ document.addEventListener("DOMContentLoaded", function() {
           {
             label: 'Closed',
             data: {{ line_chart_completed|default:'[0,0,0,0,0,0,0]'|safe }},
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16,185,129,0.08)',
+            borderColor: '#94a3b8',
+            backgroundColor: 'rgba(148,163,184,0.10)',
             tension: 0.3,
             fill: true
           },
           {
             label: 'Finished',
             data: {{ line_chart_finished|default:'[0,0,0,0,0,0,0]'|safe }},
-            borderColor: '#f59e0b',
-            backgroundColor: 'rgba(245,158,11,0.08)',
+            borderColor: '#16a34a',
+            backgroundColor: 'rgba(22,163,74,0.08)',
             tension: 0.3,
             fill: true
           }
@@ -2924,6 +2936,7 @@ document.addEventListener("DOMContentLoaded", function() {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { position: 'top' } },
         scales: { y: { beginAtZero: true } }
       }
@@ -2940,12 +2953,15 @@ document.addEventListener("DOMContentLoaded", function() {
         datasets: [{
           label: 'Defects Reported',
           data: {{ defect_reporter_values|default:'[]'|safe }},
-          backgroundColor: '#0ea5e9',
-          borderRadius: 6
+          backgroundColor: TL_GRAD_BLUE,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 46
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
           x: {

@@ -397,10 +397,10 @@
 
 .kanban-column {
   flex: 0 0 340px;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 2px solid rgba(59, 130, 246, 0.08);
+  background: var(--tl-surface);
+  border-radius: var(--radius-tl, 10px);
+  box-shadow: var(--tl-shadow-sm);
+  border: 1px solid var(--tl-border);
   display: flex;
   flex-direction: column;
   height: auto;
@@ -408,19 +408,20 @@
 }
 
 .kanban-header {
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-  color: #ffffff;
-  text-align: center;
-  border-radius: 14px 14px 0 0;
-  font-weight: 800;
-  font-size: 0.95rem;
-  padding: 0.875rem 1rem;
+  background: var(--tl-surface-2);
+  color: var(--tl-text);
+  text-align: left;
+  border-radius: var(--radius-tl, 10px) var(--radius-tl, 10px) 0 0;
+  border-bottom: 1px solid var(--tl-border);
+  font-weight: 650;
+  font-size: 0.78rem;
+  padding: 0.8rem 1rem;
   position: sticky;
   top: 0;
   z-index: 2;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  box-shadow: none;
 }
 
 .kanban-body {

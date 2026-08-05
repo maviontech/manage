@@ -5149,3 +5149,28 @@ def export_tasks_excel(request):
         import traceback
         traceback.print_exc()
         return HttpResponse(f"Error exporting data: {str(e)}", status=500)
+
+
+@require_POST
+def rte_image_upload(request):
+    """Accept an image from the rich-text editor, store it under media/rte_images/
+    and return its URL. Auth is the tenant session; CSRF is enforced normally."""
+    import uuid
+    if not request.session.get('user'):
+        return JsonResponse({'error': 'Authentication required.'}, status=401)
+    f = request.FILES.get('image')
+    if not f:
+        return JsonResponse({'error': 'No image supplied.'}, status=400)
+    allowed = {'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'}
+    if getattr(f, 'content_type', '') not in allowed:
+        return JsonResponse({'error': 'Unsupported image type.'}, status=400)
+    if f.size > 5 * 1024 * 1024:
+        return JsonResponse({'error': 'Image too large (max 5MB).'}, status=400)
+    ext = os.path.splitext(f.name)[1].lower() or '.png'
+    name = 'rte_images/{}{}'.format(uuid.uuid4().hex, ext)
+    path = os.path.join(settings.MEDIA_ROOT, name)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'wb') as out:
+        for chunk in f.chunks():
+            out.write(chunk)
+    return JsonResponse({'url': settings.MEDIA_URL + name})

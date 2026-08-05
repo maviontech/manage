@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "trackline-dev",
+      "runtimeExecutable": "C:\\projects\\manage\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["manage.py", "runserver", "127.0.0.1:8000"],
+      "cwd": "C:\\projects\\manage\\project_management",
+      "port": 8000
+    }
+  ]
+}

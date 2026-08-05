@@ -1,416 +1,155 @@
 {% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Edit Task | Trackline{% endblock %}
 
 {% block content %}
 <style>
-/* === Modern Edit Task Styling === */
-.edit-task-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 1.5rem;
-}
-
-/* Page Header Card */
-.page-header-card {
-    background: white;
-    border-radius: 16px;
-    padding: 32px 40px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border-top: 4px solid #2563eb;
-}
-
-.header-content-wrapper {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 24px;
-}
-
-.header-left {
-    flex: 1;
-}
-
-.page-header-title {
-    font-size: 32px;
-    font-weight: 700;
-    margin: 0 0 12px 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: #2563eb;
-}
-
-.page-header-title svg {
-    vertical-align: middle;
-}
-
-.page-header-subtitle {
-    font-size: 15px;
-    margin: 0;
-    color: #6b7280;
-}
-
-/* Back Button */
-.btn-back {
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-weight: 500;
-    font-size: 15px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease;
-    text-decoration: none;
-    white-space: nowrap;
-}
-
-.btn-back:hover {
-    background: #f9fafb;
-    border-color: #9ca3af;
-    color: #1f2937;
-}
-
-/* Form Card */
-.form-card {
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 32px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e5e7eb;
-}
-
-/* Form Groups */
-.form-group {
-    margin-bottom: 24px;
-}
-
-.form-label {
-    font-weight: 600;
-    font-size: 14px;
-    color: #374151;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.form-label svg {
-    color: #3b82f6;
-    width: 16px;
-    height: 16px;
-}
-
-.required-indicator {
-    color: #ef4444;
-    font-weight: 700;
-}
-
-/* Form Controls */
-.form-control {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    font-size: 15px;
-    color: #1f2937;
-    background: #f9fafb;
-    transition: all 0.3s ease;
-    font-family: inherit;
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: #3b82f6;
-    background: white;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-}
-
-.form-control::placeholder {
-    color: #9ca3af;
-}
-
-textarea.form-control {
-    resize: vertical;
-    min-height: 120px;
-    line-height: 1.6;
-}
-
-select.form-control {
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 40px;
-}
-
-/* Action Buttons Container */
-.form-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 2px solid #f3f4f6;
-}
-
-/* Cancel Button */
-.btn-cancel {
-    background: #f3f4f6;
-    color: #6b7280;
-    border: 2px solid #e5e7eb;
-    padding: 12px 32px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 15px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn-cancel:hover {
-    background: #e5e7eb;
-    color: #374151;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Save Button */
-.btn-save {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-    border: none;
-    padding: 12px 32px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 15px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.btn-save:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-}
-
-/* ===== DARK MODE ===== */
-[data-theme="dark"] .edit-task-container { color: var(--theme-text); }
-[data-theme="dark"] .page-header-card {
-  background: var(--theme-surface) !important;
-  box-shadow: var(--theme-shadow-md) !important;
-  border-top-color: #3b82f6;
-}
-[data-theme="dark"] .page-header-title { color: #60a5fa !important; }
-[data-theme="dark"] .page-header-subtitle { color: var(--theme-text-secondary) !important; }
-[data-theme="dark"] .btn-back {
-  background: var(--theme-surface) !important;
-  color: var(--theme-text) !important;
-  border-color: var(--theme-border) !important;
-}
-[data-theme="dark"] .btn-back:hover { background: var(--theme-surface-hover) !important; }
-[data-theme="dark"] .form-card {
-  background: var(--theme-surface) !important;
-  border-color: var(--theme-border) !important;
-  box-shadow: var(--theme-shadow-md) !important;
-}
-[data-theme="dark"] .form-label { color: var(--theme-text) !important; }
-[data-theme="dark"] .form-control {
-  background: var(--theme-input-bg) !important;
-  border-color: var(--theme-input-border) !important;
-  color: var(--theme-text) !important;
-}
-[data-theme="dark"] .form-control:focus {
-  background: var(--theme-surface) !important;
-  border-color: #3b82f6 !important;
-}
-[data-theme="dark"] .form-control::placeholder { color: var(--theme-text-muted) !important; }
-[data-theme="dark"] .form-actions { border-top-color: var(--theme-border) !important; }
-[data-theme="dark"] .btn-cancel {
-  background: var(--theme-bg-secondary) !important;
-  color: var(--theme-text-secondary) !important;
-  border-color: var(--theme-border) !important;
-}
-[data-theme="dark"] .btn-cancel:hover {
-  background: var(--theme-surface-hover) !important;
-  color: var(--theme-text) !important;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .edit-task-container {
-        padding: 1rem;
-    }
-    
-    .page-header-card {
-        padding: 24px;
-    }
-    
-    .header-content-wrapper {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .page-header-title {
-        font-size: 24px;
-    }
-    
-    .btn-back {
-        margin-top: 16px;
-        justify-content: center;
-    }
-    
-    .form-card {
-        padding: 24px;
-    }
-    
-    .form-actions {
-        flex-direction: column-reverse;
-    }
-    
-    .btn-cancel, .btn-save {
-        width: 100%;
-        justify-content: center;
-    }
-}
+  .tl-editor { max-width: 1080px; margin: 0 auto; padding: 0 20px 56px; }
+  .tl-actionbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 0 14px; margin-bottom: 20px;
+    background: var(--tl-bg); border-bottom: 1px solid var(--tl-border);
+  }
+  .tl-editor-grid { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 20px; align-items: start; }
+  .tl-prop { display: flex; flex-direction: column; gap: 6px; }
+  .tl-prop + .tl-prop { margin-top: 2px; }
+  .tl-side { position: sticky; top: 82px; }
+  .tl-crumb a { color: var(--tl-text-muted); }
+  .tl-crumb a:hover { color: var(--tl-accent); }
+  /* native select chevron */
+  .tl-select {
+    appearance: none; -webkit-appearance: none; padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  @media (max-width: 860px) {
+    .tl-editor-grid { grid-template-columns: 1fr; }
+    .tl-side { position: static; }
+  }
 </style>
 
-<div class="edit-task-container">
-    <!-- Page Header -->
-    <div class="page-header-card">
-        <div class="header-content-wrapper">
-            <div class="header-left">
-                <h1 class="page-header-title">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
-                    Edit Task
-                </h1>
-                <p class="page-header-subtitle">Update the task details below. Fields marked * are required.</p>
-            </div>
-            
-            <button type="button" onclick="history.back()" class="btn-back">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
-                Back to Tasks
-            </button>
+<div class="tl-scope tl-editor">
+  <form id="editTaskForm" method="post">
+    {% csrf_token %}
+
+    <!-- Sticky action bar -->
+    <div class="tl-actionbar">
+      <div style="min-width:0;">
+        <div class="tl-crumb" style="font-size:12px;font-weight:600;color:var(--tl-text-subtle);">
+          <a href="{% url 'my_tasks' %}">Tasks</a><span style="margin:0 6px;">/</span>Edit
         </div>
+        <h1 class="tl-page-title" style="margin:2px 0 0;display:flex;align-items:center;gap:10px;">
+          Edit task
+          <span style="font-size:13px;font-weight:600;color:var(--tl-text-subtle);background:var(--tl-surface-2);border:1px solid var(--tl-border);padding:2px 8px;border-radius:6px;">ID {{ task.id }}</span>
+        </h1>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:10px;flex-shrink:0;">
+        <a href="javascript:history.back()" class="tl-btn tl-btn-secondary">Cancel</a>
+        <button type="submit" class="tl-btn tl-btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Save changes
+        </button>
+      </div>
     </div>
 
-    <!-- Form Card -->
-    <div class="form-card">
-        <form method="post">
-            {% csrf_token %}
+    <div class="tl-editor-grid">
+      <!-- ===== MAIN COLUMN ===== -->
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0;">
+        <div class="tl-card tl-card-pad">
+          <div class="tl-prop">
+            <label class="tl-label" for="f-title">Title <span style="color:var(--tl-danger-solid);">*</span></label>
+            <input id="f-title" type="text" name="title" value="{{ task.title }}" required
+                   class="tl-input" style="height:2.75rem;font-size:1rem;font-weight:550;" placeholder="Short, descriptive title">
+          </div>
 
-            <!-- Title -->
-            <div class="form-group">
-                <label class="form-label">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 6h16M4 12h16M4 18h16"/>
-                    </svg>
-                    Title <span class="required-indicator">*</span>
-                </label>
-                <input type="text" name="title" value="{{ task.title }}" 
-                       class="form-control" required 
-                       placeholder="Enter task title">
-            </div>
-
-            <!-- Priority -->
-            <div class="form-group">
-                <label class="form-label">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    Priority
-                </label>
-                <input type="text" name="priority" class="form-control" 
-                       value="{{ task.priority }}" 
-                       placeholder="Enter priority (e.g., High, Medium, Low)">
-            </div>
-
-            <!-- Status -->
-            <div class="form-group">
-                <label class="form-label">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                    </svg>
-                    Status <span class="required-indicator">*</span>
-                </label>
-                <select name="status" class="form-control">
-                    <option value="Open" {% if task.status == "Open" %}selected{% endif %}>Open</option>
-                    <option value="In Progress" {% if task.status == "In Progress" %}selected{% endif %}>In Progress</option>
-                    <option value="Reopen" {% if task.status == "Reopen" or task.status == "Review" %}selected{% endif %}>Reopen</option>
-                    <option value="Blocked" {% if task.status == "Blocked" %}selected{% endif %}>Blocked</option>
-                    <option value="Closed" {% if task.status == "Closed" %}selected{% endif %}>Closed</option>
-                    <option value="Finished" {% if task.status == "Finished" %}selected{% endif %}>Finished</option>
+          <div class="tl-prop" style="margin-top:20px;">
+            <label class="tl-label">Description</label>
+            <div class="tl-rte" data-rte data-rte-upload="{% url 'rte_image_upload' %}">
+              <div class="tl-rte-toolbar" role="toolbar" aria-label="Text formatting">
+                <button type="button" class="tl-rte-btn" data-cmd="bold" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="italic" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="underline" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="strikeThrough" title="Strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+                <span class="tl-rte-sep"></span>
+                <select class="tl-rte-select" data-cmd="fontName" title="Font">
+                  <option value="">Font</option><option value="Inter">Inter</option><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times</option><option value="Courier New">Mono</option>
                 </select>
+                <select class="tl-rte-select" data-cmd="fontSize" title="Font size">
+                  <option value="">Size</option><option value="2">Small</option><option value="3">Normal</option><option value="4">Large</option><option value="5">X-Large</option><option value="6">Huge</option>
+                </select>
+                <input type="color" class="tl-rte-color" data-cmd="foreColor" title="Text color" value="#111827">
+                <span class="tl-rte-sep"></span>
+                <button type="button" class="tl-rte-btn" data-cmd="insertUnorderedList" title="Bulleted list"><i class="fa-solid fa-list-ul"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="insertOrderedList" title="Numbered list"><i class="fa-solid fa-list-ol"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="outdent" title="Decrease indent"><i class="fa-solid fa-outdent"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="indent" title="Increase indent"><i class="fa-solid fa-indent"></i></button>
+                <span class="tl-rte-sep"></span>
+                <button type="button" class="tl-rte-btn" data-cmd="justifyLeft" title="Align left"><i class="fa-solid fa-align-left"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="justifyCenter" title="Align center"><i class="fa-solid fa-align-center"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="justifyRight" title="Align right"><i class="fa-solid fa-align-right"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="justifyFull" title="Justify"><i class="fa-solid fa-align-justify"></i></button>
+                <span class="tl-rte-sep"></span>
+                <button type="button" class="tl-rte-btn" data-cmd="createLink" title="Insert link"><i class="fa-solid fa-link"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="insertImageUpload" title="Insert image (or paste a screenshot)"><i class="fa-solid fa-image"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="removeFormat" title="Clear formatting"><i class="fa-solid fa-text-slash"></i></button>
+              </div>
+              <div class="tl-rte-editor" contenteditable="true" data-placeholder="Describe the task — context, steps to reproduce, expected vs. actual…">{{ task.description|safe }}</div>
+              <textarea name="description" hidden>{{ task.description }}</textarea>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <!-- Description -->
-            <div class="form-group">
-                <label class="form-label">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    Description
-                </label>
-                <textarea name="description" class="form-control" rows="8"
-                          placeholder="Enter task description">{{ task.description }}</textarea>
-                <small class="form-text" style="color: #64748b; margin-top: 8px; display: block;">
-                    💡 <strong>Tip:</strong> Use <code>**text**</code> for bold sections, start lines with <code>-</code> for bullet points
-                </small>
-            </div>
+      <!-- ===== PROPERTIES PANEL ===== -->
+      <aside class="tl-card tl-side" style="padding:0;">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--tl-border);">
+          <span class="tl-eyebrow">Properties</span>
+        </div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:16px;">
+          <div class="tl-prop">
+            <label class="tl-label" for="f-status">Status</label>
+            <select id="f-status" name="status" class="tl-select">
+              <option value="Open" {% if task.status == "Open" %}selected{% endif %}>Open</option>
+              <option value="In Progress" {% if task.status == "In Progress" %}selected{% endif %}>In Progress</option>
+              <option value="Reopen" {% if task.status == "Reopen" or task.status == "Review" %}selected{% endif %}>Reopen</option>
+              <option value="Blocked" {% if task.status == "Blocked" %}selected{% endif %}>Blocked</option>
+              <option value="Finished" {% if task.status == "Finished" %}selected{% endif %}>Finished</option>
+              <option value="Closed" {% if task.status == "Closed" %}selected{% endif %}>Closed</option>
+            </select>
+          </div>
 
-            <!-- Due Date -->
-            <div class="form-group">
-                <label class="form-label">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                    Due Date
-                </label>
-                <input type="date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}"
-                       class="form-control">
-            </div>
+          <div class="tl-prop">
+            <label class="tl-label" for="f-priority">Priority</label>
+            <select id="f-priority" name="priority" class="tl-select">
+              <option value="Low" {% if task.priority == "Low" %}selected{% endif %}>Low</option>
+              <option value="Normal" {% if task.priority == "Normal" %}selected{% endif %}>Normal</option>
+              <option value="Medium" {% if task.priority == "Medium" %}selected{% endif %}>Medium</option>
+              <option value="High" {% if task.priority == "High" %}selected{% endif %}>High</option>
+              <option value="Critical" {% if task.priority == "Critical" %}selected{% endif %}>Critical</option>
+            </select>
+          </div>
 
-            <!-- Action Buttons -->
-            <div class="form-actions">
-                <a href="javascript:history.back()" class="btn-cancel">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                    Cancel
-                </a>
-                <button type="submit" class="btn-save">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                    Save Changes
-                </button>
+          <div class="tl-prop">
+            <label class="tl-label" for="f-due">Due date</label>
+            <input id="f-due" type="date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}" class="tl-input">
+          </div>
+
+          <div style="border-top:1px solid var(--tl-border);padding-top:14px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tl-text-muted);">
+              <span>Reference</span><span style="color:var(--tl-text);font-weight:600;">ID {{ task.id }}</span>
             </div>
-        </form>
+            {% if task.created_at %}
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tl-text-muted);">
+              <span>Created</span><span style="color:var(--tl-text);font-weight:600;">{{ task.created_at|date:'d M Y' }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </aside>
     </div>
+  </form>
 </div>
+<script src="{% static 'core/js/rte.js' %}"></script>
 {% endblock %}
