@@ -597,8 +597,10 @@
 
 /* Gradient hero banners -> calm surface + accent bar (light + dark) */
 .people-hero, .teams-hero, .employees-header-bar, .project-hero, .config-header,
+.report-header, .drilldown-header, .week-header, .page-header-professional,
 [data-theme="dark"] .people-hero, [data-theme="dark"] .teams-hero, [data-theme="dark"] .employees-header-bar,
-[data-theme="dark"] .project-hero, [data-theme="dark"] .config-header {
+[data-theme="dark"] .project-hero, [data-theme="dark"] .config-header,
+[data-theme="dark"] .report-header, [data-theme="dark"] .drilldown-header, [data-theme="dark"] .week-header, [data-theme="dark"] .page-header-professional {
   background: var(--tl-surface) !important;
   background-image: none !important;
   border: 1px solid var(--tl-border) !important;
@@ -613,6 +615,28 @@
 .project-hero .hero-subtitle, .config-header p { color: var(--tl-text-muted) !important; }
 .project-hero .hero-icon, .config-header .config-icon { background: var(--tl-accent-soft) !important; color: var(--tl-accent) !important; }
 .btn-back-hero { background: var(--tl-surface) !important; color: var(--tl-text) !important; border: 1px solid var(--tl-border-strong) !important; }
+/* report / drilldown / week / professional headers: readable text on surface */
+.report-header h1, .report-header h2, .report-header h3,
+.drilldown-header h1, .drilldown-header h2, .drilldown-header h3,
+.week-header h1, .week-header h2, .week-header h3,
+.page-header-professional h1, .page-header-professional h2, .page-header-professional h3 {
+  color: var(--tl-text) !important; -webkit-text-fill-color: var(--tl-text) !important; background: none !important;
+}
+.report-header p, .drilldown-header p, .week-header p, .page-header-professional p,
+.report-header .subtitle, .drilldown-header .subtitle, .page-header-professional .subtitle { color: var(--tl-text-muted) !important; }
+
+/* Wave 4: timer / work-week accents */
+.btn-start-timer {
+  background-color: var(--tl-accent) !important;
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--tl-accent) 86%, white), var(--tl-accent)) !important;
+  color: #fff !important; border: none !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--tl-accent) 38%, transparent),
+              0 4px 12px color-mix(in srgb, var(--tl-accent) 26%, transparent) !important;
+}
+.btn-start-timer:hover { background-image: linear-gradient(180deg, var(--tl-accent), var(--tl-accent-hover)) !important; }
+.timer-card { background: var(--tl-surface-2) !important; background-image: none !important; border: 1px solid var(--tl-border) !important; color: var(--tl-text) !important; }
+.timer-card h1, .timer-card h2, .timer-card h3, .timer-card span, .timer-card p { color: var(--tl-text) !important; }
+.timer-circle { background: var(--tl-accent-soft) !important; background-image: none !important; color: var(--tl-accent) !important; box-shadow: none !important; }
 
 /* Employee status badges -> muted semantic */
 .status-active     { color: var(--tl-success-text) !important; background: var(--tl-success-bg) !important; border: 1px solid var(--tl-success-border) !important; }
