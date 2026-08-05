@@ -473,18 +473,26 @@
 /* ---- Table shell + header ---- */
 .tasks-table thead,
 .professional-table thead,
-.projects-table thead {
+.projects-table thead,
+.employees-table thead,
+.team-table thead,
+[data-theme="dark"] .employees-table thead,
+[data-theme="dark"] .team-table thead {
   background: var(--tl-surface-2) !important;
+  background-image: none !important;
 }
 .tasks-table th,
 .professional-table thead th,
-.projects-table thead th {
+.projects-table thead th,
+.employees-table thead th,
+.team-table thead th {
   color: var(--tl-text-muted) !important;
   font-weight: 600 !important;
   font-size: 11px !important;
   letter-spacing: 0.04em !important;
   border-bottom: 1px solid var(--tl-border) !important;
   padding: 11px 15px !important;
+  text-transform: uppercase !important;
 }
 .tasks-table tbody tr { border-bottom: 1px solid var(--tl-border) !important; }
 .tasks-table tbody tr:hover {
@@ -586,6 +594,30 @@
   box-shadow: 0 2px 4px color-mix(in srgb, var(--tl-accent) 42%, transparent),
               0 6px 18px color-mix(in srgb, var(--tl-accent) 34%, transparent) !important;
 }
+
+/* Gradient hero banners -> calm surface + accent bar (light + dark) */
+.people-hero, .teams-hero, .employees-header-bar, .project-hero, .config-header,
+[data-theme="dark"] .people-hero, [data-theme="dark"] .teams-hero, [data-theme="dark"] .employees-header-bar,
+[data-theme="dark"] .project-hero, [data-theme="dark"] .config-header {
+  background: var(--tl-surface) !important;
+  background-image: none !important;
+  border: 1px solid var(--tl-border) !important;
+  border-left: 3px solid var(--tl-accent) !important;
+  box-shadow: var(--tl-shadow-sm) !important;
+  color: var(--tl-text) !important;
+}
+.people-hero::before, .teams-hero::before, .employees-header-bar::before,
+.project-hero::before, .config-header::before { display: none !important; }
+/* hero titles/subtitles readable on surface (buttons keep their own color) */
+.project-hero .hero-title, .config-header h1, .config-header h2 { color: var(--tl-text) !important; -webkit-text-fill-color: var(--tl-text) !important; }
+.project-hero .hero-subtitle, .config-header p { color: var(--tl-text-muted) !important; }
+.project-hero .hero-icon, .config-header .config-icon { background: var(--tl-accent-soft) !important; color: var(--tl-accent) !important; }
+.btn-back-hero { background: var(--tl-surface) !important; color: var(--tl-text) !important; border: 1px solid var(--tl-border-strong) !important; }
+
+/* Employee status badges -> muted semantic */
+.status-active     { color: var(--tl-success-text) !important; background: var(--tl-success-bg) !important; border: 1px solid var(--tl-success-border) !important; }
+.status-inactive, .status-terminated { color: var(--tl-neutral-text) !important; background: var(--tl-neutral-bg) !important; border: 1px solid var(--tl-neutral-border) !important; }
+.status-onleave    { color: var(--tl-warning-text) !important; background: var(--tl-warning-bg) !important; border: 1px solid var(--tl-warning-border) !important; }
 
 /* ============================================================
    TASK DETAIL PAGE — badge families (page_view.css lives here)
