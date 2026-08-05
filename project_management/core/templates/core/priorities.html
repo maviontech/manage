@@ -513,10 +513,7 @@
 
 {% block content %}
 <div class="priorities-container">
-    <div class="page-header">
-        <h1>Task Priorities</h1>
-        <p>Monitor and manage task priorities across your projects</p>
-    </div>
+    {% include "core/_settings_header.html" with icon="fa-solid fa-flag" title="Task Priorities" subtitle="Monitor and manage task priorities across your projects." %}
 
     <div class="priority-grid">
         {% for stat in priority_stats %}

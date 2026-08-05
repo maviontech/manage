@@ -378,10 +378,7 @@
 
 {% block content %}
 <div class="workflows-container">
-    <div class="page-header">
-        <h1>Workflows</h1>
-        <p>Manage and monitor your workflow processes</p>
-    </div>
+    {% include "core/_settings_header.html" with icon="fa-solid fa-stream" title="Workflows" subtitle="Manage and monitor your workflow processes." %}
 
     <div class="stats-grid">
         <div class="stat-card total">

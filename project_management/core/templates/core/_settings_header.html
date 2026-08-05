@@ -1,0 +1,14 @@
+{% comment %}
+Canonical Settings-module page header.
+Usage:
+  {% include "core/_settings_header.html" with icon="fa-solid fa-key" title="Change Password" subtitle="Choose a strong password to keep your account secure." %}
+Optional: eyebrow (defaults to "Settings").
+{% endcomment %}
+<div class="tl-settings-header">
+  <div class="tlsh-icon"><i class="{{ icon|default:'fa-solid fa-gear' }}"></i></div>
+  <div class="tlsh-text">
+    <div class="tlsh-eyebrow">{{ eyebrow|default:"Settings" }}</div>
+    <h1>{{ title }}</h1>
+    {% if subtitle %}<p>{{ subtitle }}</p>{% endif %}
+  </div>
+</div>

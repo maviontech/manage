@@ -629,6 +629,62 @@
 .report-header .subtitle, .drilldown-header .subtitle, .page-header-professional .subtitle,
 .pw-hero p, .notifications-header p, .pw-hero .subtitle, .notifications-header .subtitle { color: var(--tl-text-muted) !important; }
 
+/* =========================================================
+   SETTINGS MODULE — canonical premium page header
+   One consistent, enterprise-grade header for every Settings
+   screen (Change Password, Workflows, Priorities, Roles,
+   Access Control, Password Policy, Work Week). Calm, spacious,
+   Jira-like: icon chip + eyebrow + title + subtitle + a thin
+   divider — never a loud gradient bar.
+   ========================================================= */
+.tl-settings-header {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 4px 0 22px !important;
+  padding: 2px 2px 18px !important;
+  border-bottom: 1px solid var(--tl-border) !important;
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  color: var(--tl-text) !important;
+}
+.tl-settings-header .tlsh-icon {
+  flex: none;
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--tl-accent-soft);
+  color: var(--tl-accent);
+  font-size: 18px;
+  border: 1px solid color-mix(in srgb, var(--tl-accent) 20%, transparent);
+}
+.tl-settings-header .tlsh-text { min-width: 0; }
+.tl-settings-header .tlsh-eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--tl-accent);
+  margin: 2px 0 4px;
+}
+.tl-settings-header h1 {
+  font-size: 22px; font-weight: 800; line-height: 1.2;
+  margin: 0; color: var(--tl-text); letter-spacing: -0.01em;
+}
+.tl-settings-header p {
+  margin: 5px 0 0; font-size: 14px; line-height: 1.5;
+  color: var(--tl-text-muted); max-width: 62ch;
+}
+.tl-settings-header .tlsh-actions {
+  margin-left: auto; display: flex; gap: 10px; align-items: center;
+  padding-top: 4px;
+}
+/* Content wrapper to keep settings pages aligned with the header width */
+.tl-settings-wrap { max-width: 1120px; margin: 0 auto; }
+@media (max-width: 640px) {
+  .tl-settings-header { gap: 12px; }
+  .tl-settings-header .tlsh-icon { width: 40px; height: 40px; font-size: 16px; }
+  .tl-settings-header h1 { font-size: 19px; }
+}
+
 /* Wave 4: timer / work-week accents */
 .btn-start-timer {
   background-color: var(--tl-accent) !important;
