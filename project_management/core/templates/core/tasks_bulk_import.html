@@ -177,33 +177,27 @@
      UPLOAD SECTION
      ============================================ */
   .upload-area {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: var(--border-radius);
+    background: var(--tl-surface-2, #f8fafc);
+    border: 2px dashed var(--tl-border-strong, #d1d5db);
+    border-radius: var(--radius-tl, 10px);
     padding: 2.5rem;
     text-align: center;
-    color: var(--white);
+    color: var(--tl-text, #111827);
     margin-bottom: 2rem;
-    box-shadow: var(--shadow-lg);
+    box-shadow: none;
     position: relative;
     overflow: hidden;
   }
+  .upload-area .upload-title { color: var(--tl-text, #111827) !important; }
+  .upload-area .upload-subtitle, .upload-area p { color: var(--tl-text-muted, #6b7280) !important; }
 
-  .upload-area::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-    border-radius: 50%;
-  }
+  .upload-area::before { content: none; }
 
   .upload-icon {
-    width: 80px;
-    height: 80px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
+    width: 72px;
+    height: 72px;
+    background: var(--tl-accent-soft, #eff6ff);
+    color: var(--tl-accent, #2563eb);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -617,10 +611,10 @@
         </div>
         
         <div style="text-align: center; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-          <a href="#" id="downloadExcelBtn" class="btn-professional btn-primary-professional" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+          <a href="#" id="downloadExcelBtn" class="btn-professional btn-primary-professional" style="background: var(--tl-surface); color: var(--tl-text); border: 1px solid var(--tl-border-strong);">
             <i class="fas fa-file-excel"></i> Download Excel Template
           </a>
-          <a href="{% url 'download_csv_template' %}" class="btn-professional btn-primary-professional" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+          <a href="{% url 'download_csv_template' %}" class="btn-professional btn-primary-professional" style="background: var(--tl-surface); color: var(--tl-text); border: 1px solid var(--tl-border-strong);">
             <i class="fas fa-file-csv"></i> Download CSV Template (All Fields)
           </a>
         </div>

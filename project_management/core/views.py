@@ -268,7 +268,7 @@ def _build_dashboard_task_scope(member_ids=None, created_by_member_id=None, incl
     return f"({' OR '.join(clauses)})", tuple(params)
 
 
-def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, include_all_testing_work=False, scope_project_ids=None, scope_created_by_member_id=None):
+def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, include_all_testing_work=False, scope_project_ids=None, scope_created_by_member_id=None, date_from=None, date_to=None):
     def scalar_from_row(row, key_alias='c'):
         if row is None:
             return 0
@@ -281,12 +281,19 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
     scoped_member_ids = [int(mid) for mid in (scope_member_ids or [member_id]) if mid is not None]
     scoped_project_ids = [int(pid) for pid in (scope_project_ids or []) if pid is not None]
 
+    def _date_clause(prefix):
+        # Optional created_at window so the tester KPIs respond to the range control.
+        if date_from is not None and date_to is not None:
+            return f" AND DATE({prefix}created_at) BETWEEN %s AND %s", (date_from, date_to)
+        return "", ()
+
     def assignee_sql(alias=""):
         prefix = f"{alias}." if alias else ""
+        dc_sql, dc_params = _date_clause(prefix)
         if include_all_testing_work:
-            return "1=1", ()
+            return "1=1" + dc_sql, tuple(dc_params)
         if scope_created_by_member_id is not None:
-            return f"{prefix}created_by = %s", (scope_created_by_member_id,)
+            return f"{prefix}created_by = %s" + dc_sql, (scope_created_by_member_id,) + tuple(dc_params)
         placeholders = ','.join(['%s'] * len(scoped_member_ids))
         member_id_for_team = scoped_member_ids[0] if len(scoped_member_ids) == 1 else None
         if member_id_for_team:
@@ -297,9 +304,9 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                 ({prefix}assigned_type='team' AND {prefix}assigned_to IN (
                     SELECT team_id FROM team_memberships WHERE member_id = %s
                 ))
-            )""", tuple(list(scoped_member_ids) + [member_id_for_team])
+            )""" + dc_sql, tuple(list(scoped_member_ids) + [member_id_for_team]) + tuple(dc_params)
         else:
-            return f"{prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders})", tuple(scoped_member_ids)
+            return f"{prefix}assigned_type='member' AND {prefix}assigned_to IN ({placeholders})" + dc_sql, tuple(scoped_member_ids) + tuple(dc_params)
 
     bug_filter = """
         (
@@ -583,6 +590,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
         tester_ctx['today_verification_due'] = verification_today_count
         tester_ctx['today_overdue_bugs'] = overdue_bug_count
 
+        rep_where, rep_params = assignee_sql("t")
         cur.execute(f"""
             SELECT
                 COALESCE(
@@ -596,11 +604,11 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
             FROM tasks t
             LEFT JOIN members m ON m.id = t.created_by
             LEFT JOIN users u ON u.id = t.created_by
-            WHERE {assignee_where}
+            WHERE {rep_where}
               AND {bug_filter}
             GROUP BY reporter_name
             ORDER BY assigned_count DESC, reporter_name ASC
-        """, assignee_params)
+        """, rep_params)
         reporter_rows = cur.fetchall() or []
         reporter_summary = []
         reporter_labels = []
@@ -1151,6 +1159,34 @@ def dashboard_view(request, personal=False):
     if personal:
         visible_user_ids = [member_id]
 
+    # ---- KPI time window (drives the stat cards + status/priority) ----
+    # Parse the unified range control up-front so the headline numbers respond
+    # to 30d / month / 3m / 6m / custom just like the throughput chart does.
+    from datetime import timedelta as _timedelta
+    _kpi_to = date.today()
+    _kpi_from = _kpi_to - _timedelta(days=29)
+    _rng = (request.GET.get('range') or '').strip().lower()
+    _rng_days = {'30d': 29, 'month': 30, '3m': 90, '6m': 180}
+    _kf = (request.GET.get('tasks_from_date') or request.GET.get('from_date') or '').strip()
+    _kt = (request.GET.get('tasks_to_date') or request.GET.get('to_date') or '').strip()
+    if _rng in _rng_days:
+        _kpi_from = _kpi_to - _timedelta(days=_rng_days[_rng])
+    elif _kf or _kt:
+        try:
+            if _kf:
+                _kpi_from = datetime.strptime(_kf, '%Y-%m-%d').date()
+            if _kt:
+                _kpi_to = datetime.strptime(_kt, '%Y-%m-%d').date()
+            if _kpi_from > _kpi_to:
+                _kpi_from, _kpi_to = _kpi_to, _kpi_from
+        except ValueError:
+            _kpi_to = date.today()
+            _kpi_from = _kpi_to - _timedelta(days=29)
+    kpi_from, kpi_to = _kpi_from, _kpi_to
+    # Reusable window clause appended to each KPI count query.
+    DW = " AND DATE(created_at) BETWEEN %s AND %s"
+    dwp = (kpi_from, kpi_to)
+
     assigned_count = 0
     try:
         if visible_user_ids:
@@ -1161,7 +1197,7 @@ def dashboard_view(request, personal=False):
                 (assigned_type='team' AND assigned_to IN (
                     SELECT team_id FROM team_memberships WHERE member_id = %s
                 ))
-            )""", tuple(list(visible_user_ids) + [member_id]))
+            )""" + DW, tuple(list(visible_user_ids) + [member_id]) + dwp)
             assigned_count = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
         assigned_count = 0
@@ -1198,8 +1234,8 @@ def dashboard_view(request, personal=False):
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} IN ('closed', 'completed')
-                """,
-                tuple(visible_user_ids),
+                """ + DW,
+                tuple(visible_user_ids) + dwp,
             )
             tasks_completed = scalar_from_row(cur.fetchone(), 'c')
     except Exception:
@@ -1216,8 +1252,8 @@ def dashboard_view(request, personal=False):
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress', 'new')
-                """,
-                tuple(visible_user_ids),
+                """ + DW,
+                tuple(visible_user_ids) + dwp,
             )
             tasks_open = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
@@ -1236,8 +1272,8 @@ def dashboard_view(request, personal=False):
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} = 'finished'
-                """,
-                tuple(visible_user_ids),
+                """ + DW,
+                tuple(visible_user_ids) + dwp,
             )
             tasks_finished = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
@@ -1255,8 +1291,8 @@ def dashboard_view(request, personal=False):
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} IN ('reopen', 'reopened', 're-opened')
-                """,
-                tuple(visible_user_ids),
+                """ + DW,
+                tuple(visible_user_ids) + dwp,
             )
             tasks_reopened = scalar_from_row(cur.fetchone(), 'c')
     except Exception as e:
@@ -1276,9 +1312,9 @@ def dashboard_view(request, personal=False):
                     (assigned_type='team' AND assigned_to IN (
                         SELECT team_id FROM team_memberships WHERE member_id = %s
                     ))
-                )
+                )""" + DW + """
                 GROUP BY status
-            """, tuple(list(visible_user_ids) + [member_id]))
+            """, tuple(list(visible_user_ids) + [member_id]) + dwp)
             rows = cur.fetchall() or []
             if rows:
                 if isinstance(rows[0], dict):
@@ -1310,9 +1346,9 @@ def dashboard_view(request, personal=False):
                     (assigned_type='team' AND assigned_to IN (
                         SELECT team_id FROM team_memberships WHERE member_id = %s
                     ))
-                )
+                )""" + DW + """
                 GROUP BY p
-            """, tuple(list(visible_user_ids) + [member_id]))
+            """, tuple(list(visible_user_ids) + [member_id]) + dwp)
             rows = cur.fetchall() or []
             if rows:
                 if isinstance(rows[0], dict):
@@ -1340,9 +1376,9 @@ def dashboard_view(request, personal=False):
                     (assigned_type='team' AND assigned_to IN (
                         SELECT team_id FROM team_memberships WHERE member_id = %s
                     ))
-                )
+                )""" + DW + """
                 GROUP BY p, status
-            """, tuple(list(visible_user_ids) + [member_id]))
+            """, tuple(list(visible_user_ids) + [member_id]) + dwp)
             rows = cur.fetchall() or []
             if rows:
                 if isinstance(rows[0], dict):
@@ -1778,12 +1814,27 @@ def dashboard_view(request, personal=False):
         'user_role': user_role_name,
     }
     if is_tester:
-        tctx = _build_tester_dashboard_context(
-            cur,
-            member_id,
-            scope_member_ids=visible_user_ids,
-            include_all_testing_work=True,
-        )
+        if personal:
+            # My View for a tester = the tester's own QA work (bugs/defects they
+            # reported), windowed to the selected range — NOT the whole tenant.
+            tctx = _build_tester_dashboard_context(
+                cur,
+                member_id,
+                scope_created_by_member_id=member_id,
+                include_all_testing_work=False,
+                date_from=kpi_from,
+                date_to=kpi_to,
+            )
+        else:
+            # Admin/team view for a tester = all testing work, windowed to range.
+            tctx = _build_tester_dashboard_context(
+                cur,
+                member_id,
+                scope_member_ids=visible_user_ids,
+                include_all_testing_work=True,
+                date_from=kpi_from,
+                date_to=kpi_to,
+            )
         ctx.update(tctx)
         # Testers work on bugs/defects they don't necessarily own as assignee, so
         # the assigned-to-based KPIs come out empty. Map the QA workload numbers
@@ -1807,6 +1858,55 @@ def dashboard_view(request, personal=False):
         ctx['pri_normal_open'] = _g('tester_priority_medium')
         ctx['pri_low_open'] = _g('tester_priority_low')
         ctx['pri_critical_closed'] = ctx['pri_high_closed'] = ctx['pri_normal_closed'] = ctx['pri_low_closed'] = 0
+
+        # The operational lists (Active work / Needs attention / Workload) are
+        # assignee-based, so they come back empty for testers (who report rather
+        # than get assigned). Repopulate them from the tester's scoped bugs.
+        try:
+            if personal:
+                t_scope, t_scope_params = "t.created_by = %s", (member_id,)
+            else:
+                t_scope, t_scope_params = "1=1", tuple()
+            _bugf = """(LOWER(TRIM(COALESCE(t.work_type,''))) IN ('bug','defect')
+                        OR LOWER(TRIM(COALESCE(t.title,''))) LIKE '%%bug%%'
+                        OR LOWER(TRIM(COALESCE(t.title,''))) LIKE '%%defect%%')"""
+            _win = " AND DATE(t.created_at) BETWEEN %s AND %s"
+            _wp = (kpi_from, kpi_to)
+            # Active work: open bugs, most recently updated first.
+            cur.execute(f"""SELECT t.id, t.title, t.work_type, t.priority, t.status, t.due_date,
+                    TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS assignee
+                FROM tasks t LEFT JOIN members m ON m.id=t.created_by
+                WHERE {t_scope} AND {_bugf}{_win}
+                  AND {status_expr} NOT IN ('closed','completed','finished')
+                ORDER BY t.updated_at DESC LIMIT 6""", t_scope_params + _wp)
+            ctx['active_work'] = cur.fetchall() or []
+            # Needs attention: overdue or blocked bugs.
+            cur.execute(f"""SELECT t.id, t.title, t.work_type, t.status, t.due_date,
+                    TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS assignee
+                FROM tasks t LEFT JOIN members m ON m.id=t.created_by
+                WHERE {t_scope} AND {_bugf}{_win}
+                  AND ((t.due_date IS NOT NULL AND t.due_date < CURDATE()
+                        AND {status_expr} NOT IN ('closed','completed','finished'))
+                       OR {status_expr}='blocked')
+                ORDER BY t.due_date ASC LIMIT 6""", t_scope_params + _wp)
+            ctx['needs_attention'] = cur.fetchall() or []
+            # Workload: bugs grouped by reporter (who filed the most).
+            cur.execute(f"""SELECT TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS name,
+                    COUNT(t.id) AS cnt
+                FROM tasks t JOIN members m ON m.id=t.created_by
+                WHERE {t_scope} AND {_bugf}{_win}
+                  AND {status_expr} NOT IN ('closed','completed','finished')
+                GROUP BY m.id ORDER BY cnt DESC LIMIT 6""", t_scope_params + _wp)
+            _wl = cur.fetchall() or []
+            _mx = max([int(r.get('cnt') or 0) for r in _wl], default=0) or 1
+            ctx['workload'] = [{
+                'name': (r.get('name') or '').strip() or 'Unknown',
+                'count': int(r.get('cnt') or 0),
+                'pct': round(100 * int(r.get('cnt') or 0) / _mx),
+                'initials': (''.join([p[0] for p in ((r.get('name') or '').strip().split()[:2])]).upper() or '?'),
+            } for r in _wl]
+        except Exception as e:
+            logger.error(f"ERROR tester operational lists: {e}")
 
     cur.close()
     conn.close()
