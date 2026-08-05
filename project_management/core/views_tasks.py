@@ -4270,6 +4270,12 @@ def _metric_page_context(metric_key):
             'table_type': 'tasks',
             'empty': 'No reopened tasks found.'
         },
+        'tasks-open': {
+            'title': 'Open Tasks',
+            'subtitle': 'Tasks not yet started (New / Open) in your visibility scope',
+            'table_type': 'tasks',
+            'empty': 'No open tasks found.'
+        },
         'tasks-inprogress': {
             'title': 'Tasks In Progress',
             'subtitle': 'Tasks actively in progress or under review in your visibility scope',
@@ -5227,7 +5233,7 @@ def workload_drilldown_view(request, member_id):
             LEFT JOIN subprojects sp ON sp.id = t.subproject_id
             WHERE t.assigned_type='member' AND t.assigned_to=%s
               AND LOWER(TRIM(COALESCE(t.status,''))) NOT IN ('closed','completed','finished','done')
-            ORDER BY (t.due_date IS NULL), t.due_date ASC, t.id DESC
+            ORDER BY t.created_at DESC, t.id DESC
         """, (member_id,))
         rows = cur.fetchall() or []
     except Exception as e:
