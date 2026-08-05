@@ -132,6 +132,17 @@
           </div>
 
           <div class="tl-prop">
+            <label class="tl-label" for="f-severity">Severity</label>
+            <select id="f-severity" name="severity" class="tl-select">
+              <option value="" {% if not task.severity %}selected{% endif %}>— Not set —</option>
+              <option value="Low" {% if task.severity == "Low" %}selected{% endif %}>Low</option>
+              <option value="Medium" {% if task.severity == "Medium" %}selected{% endif %}>Medium</option>
+              <option value="High" {% if task.severity == "High" %}selected{% endif %}>High</option>
+              <option value="Critical" {% if task.severity == "Critical" %}selected{% endif %}>Critical</option>
+            </select>
+          </div>
+
+          <div class="tl-prop">
             <label class="tl-label" for="f-due">Due date</label>
             <input id="f-due" type="date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}" class="tl-input">
           </div>

@@ -1,0 +1,30 @@
+{% comment %}Rich-text field. Params: field (textarea name), placeholder, initial (optional HTML).
+   Load core/js/rte.js once per page and it will initialise every .tl-rte.{% endcomment %}
+<div class="tl-rte" data-rte data-rte-upload="{% url 'rte_image_upload' %}">
+  <div class="tl-rte-toolbar" role="toolbar" aria-label="Text formatting">
+    <button type="button" class="tl-rte-btn" data-cmd="bold" title="Bold"><i class="fa-solid fa-bold"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="italic" title="Italic"><i class="fa-solid fa-italic"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="underline" title="Underline"><i class="fa-solid fa-underline"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="strikeThrough" title="Strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+    <span class="tl-rte-sep"></span>
+    <select class="tl-rte-select" data-cmd="fontName" title="Font"><option value="">Font</option><option value="Inter">Inter</option><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times</option><option value="Courier New">Mono</option></select>
+    <select class="tl-rte-select" data-cmd="fontSize" title="Font size"><option value="">Size</option><option value="2">Small</option><option value="3">Normal</option><option value="4">Large</option><option value="5">X-Large</option><option value="6">Huge</option></select>
+    <input type="color" class="tl-rte-color" data-cmd="foreColor" title="Text color" value="#111827">
+    <span class="tl-rte-sep"></span>
+    <button type="button" class="tl-rte-btn" data-cmd="insertUnorderedList" title="Bulleted list"><i class="fa-solid fa-list-ul"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="insertOrderedList" title="Numbered list"><i class="fa-solid fa-list-ol"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="outdent" title="Decrease indent"><i class="fa-solid fa-outdent"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="indent" title="Increase indent"><i class="fa-solid fa-indent"></i></button>
+    <span class="tl-rte-sep"></span>
+    <button type="button" class="tl-rte-btn" data-cmd="justifyLeft" title="Align left"><i class="fa-solid fa-align-left"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="justifyCenter" title="Align center"><i class="fa-solid fa-align-center"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="justifyRight" title="Align right"><i class="fa-solid fa-align-right"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="justifyFull" title="Justify"><i class="fa-solid fa-align-justify"></i></button>
+    <span class="tl-rte-sep"></span>
+    <button type="button" class="tl-rte-btn" data-cmd="createLink" title="Insert link"><i class="fa-solid fa-link"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="insertImageUpload" title="Insert image (or paste a screenshot)"><i class="fa-solid fa-image"></i></button>
+    <button type="button" class="tl-rte-btn" data-cmd="removeFormat" title="Clear formatting"><i class="fa-solid fa-text-slash"></i></button>
+  </div>
+  <div class="tl-rte-editor" contenteditable="true" data-placeholder="{{ placeholder|default:'Write here…' }}">{{ initial|default:''|safe }}</div>
+  <textarea name="{{ field }}" hidden>{{ initial|default:'' }}</textarea>
+</div>

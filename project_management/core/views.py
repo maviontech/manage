@@ -1428,6 +1428,18 @@ def dashboard_view(request):
         tasks_timeline_to = date.today()
         tasks_timeline_from = tasks_timeline_to - timedelta(days=29)
 
+    # Unified dashboard time-range control (default 30d). A preset ?range= wins
+    # over explicit from/to unless range=custom (which uses the from/to params).
+    _range_days = {'30d': 29, 'month': 30, '3m': 90, '6m': 180}
+    active_range = (request.GET.get('range') or '').strip().lower()
+    if active_range in _range_days:
+        tasks_timeline_to = date.today()
+        tasks_timeline_from = tasks_timeline_to - timedelta(days=_range_days[active_range])
+    elif from_param_tasks or to_param_tasks:
+        active_range = 'custom'
+    else:
+        active_range = '30d'
+
     # Defect reporter timeline (separate filter)
     defects_timeline_to = date.today()
     defects_timeline_from = defects_timeline_to - timedelta(days=29)
@@ -1622,8 +1634,88 @@ def dashboard_view(request):
     except Exception as e:
         logger.error(f"ERROR: defect reporter metrics {e}")
         defect_reporter_summary = []
+
+    # ---------------- Unified dashboard extra sections ----------------
+    overdue_count = 0
+    workload = []
+    needs_attention = []
+    active_work = []
+    activity_feed = []
+    completion_rate = 0
+    try:
+        vids = list(visible_user_ids) if visible_user_ids else []
+        if vids:
+            ph = ','.join(['%s'] * len(vids))
+            try:
+                cur.execute(f"""SELECT COUNT(*) c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({ph})
+                    AND due_date IS NOT NULL AND due_date < CURDATE()
+                    AND {status_expr} NOT IN ('closed','completed','finished')""", tuple(vids))
+                overdue_count = scalar_from_row(cur.fetchone(), 'c')
+            except Exception:
+                overdue_count = 0
+            try:
+                cur.execute(f"""SELECT m.id, TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS name,
+                    COUNT(t.id) AS cnt FROM tasks t JOIN members m ON m.id=t.assigned_to
+                    WHERE t.assigned_type='member' AND t.assigned_to IN ({ph})
+                    AND {status_expr} NOT IN ('closed','completed','finished')
+                    GROUP BY m.id ORDER BY cnt DESC LIMIT 6""", tuple(vids))
+                rows = cur.fetchall() or []
+                mx = max([int(r.get('cnt') or 0) for r in rows], default=0) or 1
+                for r in rows:
+                    nm = (r.get('name') or '').strip() or ('Member #%s' % r.get('id'))
+                    c = int(r.get('cnt') or 0)
+                    workload.append({'name': nm, 'count': c, 'pct': round(100 * c / mx),
+                                     'initials': (''.join([p[0] for p in nm.split()[:2]]).upper() or '?')})
+            except Exception:
+                workload = []
+            try:
+                cur.execute(f"""SELECT t.id, t.title, t.work_type, t.status, t.due_date,
+                    TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS assignee
+                    FROM tasks t LEFT JOIN members m ON m.id=t.assigned_to
+                    WHERE t.assigned_type='member' AND t.assigned_to IN ({ph})
+                    AND ((t.due_date IS NOT NULL AND t.due_date < CURDATE() AND {status_expr} NOT IN ('closed','completed','finished'))
+                         OR {status_expr}='blocked')
+                    ORDER BY t.due_date ASC LIMIT 6""", tuple(vids))
+                needs_attention = cur.fetchall() or []
+            except Exception:
+                needs_attention = []
+            try:
+                cur.execute(f"""SELECT t.id, t.title, t.work_type, t.priority, t.status, t.due_date,
+                    TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS assignee
+                    FROM tasks t LEFT JOIN members m ON m.id=t.assigned_to
+                    WHERE t.assigned_type='member' AND t.assigned_to IN ({ph})
+                    AND {status_expr} NOT IN ('closed','completed','finished')
+                    ORDER BY t.updated_at DESC LIMIT 6""", tuple(vids))
+                active_work = cur.fetchall() or []
+            except Exception:
+                active_work = []
+        try:
+            cur.execute("""SELECT a.action, a.entity_type, a.entity_id, a.created_at,
+                TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS who
+                FROM activity_log a LEFT JOIN members m ON m.id=a.performed_by
+                ORDER BY a.created_at DESC LIMIT 6""")
+            activity_feed = cur.fetchall() or []
+        except Exception:
+            activity_feed = []
+        try:
+            _tot = int(assigned_count or 0)
+            _done = int(tasks_completed or 0) + int(tasks_finished or 0)
+            completion_rate = round(100 * _done / _tot) if _tot else 0
+        except Exception:
+            completion_rate = 0
+    except Exception as e:
+        logger.error(f"ERROR unified dashboard extras: {e}")
+
     ctx = {
         'user': request.session.get('user'),
+        'active_range': active_range,
+        'total_tasks': assigned_count,
+        'overdue_count': overdue_count,
+        'workload': workload,
+        'needs_attention': needs_attention,
+        'active_work': active_work,
+        'activity_feed': activity_feed,
+        'completion_rate': completion_rate,
         'assigned_count': assigned_count,
         'active_projects': active_projects,
         'projects_completed': projects_completed,

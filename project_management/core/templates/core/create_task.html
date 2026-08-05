@@ -1,540 +1,203 @@
 {% extends "core/base.html" %}
 {% load static %}
 
+{% block title %}Create Task | Trackline{% endblock %}
+
 {% block content %}
 <style>
-/* ========== MODERN CREATE TASK UI ========== */
-.create-task-page {
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 1.5rem;
-  background: var(--theme-bg);
-  min-height: 100vh;
-}
-
-/* Page Header */
-.page-header-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--theme-surface);
-  border-radius: 12px;
-  box-shadow: var(--theme-shadow);
-  border: 1px solid rgba(59, 130, 246, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.page-header-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-}
-
-.header-content .header-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 0.15rem 0;
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.3px;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.header-content .header-subtitle {
-  color: var(--theme-text-secondary);
-  font-size: 0.8rem;
-  font-weight: 500;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.header-actions .btn-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--theme-border);
-  background: var(--theme-surface);
-  color: var(--theme-text-secondary);
-  font-weight: 600;
-  font-size: 0.8rem;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  box-shadow: var(--theme-shadow);
-}
-
-.header-actions .btn-back:hover {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #3b82f6;
-  color: #1e40af;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-}
-
-/* Form Card */
-.form-main-card {
-  background: var(--theme-surface);
-  border-radius: 12px;
-  box-shadow: var(--theme-shadow);
-  border: 1px solid rgba(59, 130, 246, 0.08);
-  padding: 1.25rem 1.5rem;
-}
-
-/* Form Layout */
-.form-section {
-  margin-bottom: 1.25rem;
-}
-
-.form-grid-modern {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem;
-}
-
-.form-field-full {
-  grid-column: 1 / -1;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.field-label {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--theme-text);
-  letter-spacing: -0.1px;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.field-label .required {
-  color: #ef4444;
-  font-weight: 800;
-}
-
-.field-input,
-.field-select,
-.field-textarea {
-  width: 100%;
-  padding: 0.875rem 1rem;
-  border: 2px solid var(--theme-input-border);
-  border-radius: 10px;
-  font-size: 0.95rem;
-  background: var(--theme-input-bg);
-  color: var(--theme-text);
-  font-weight: 500;
-  transition: all 0.3s ease;
-  box-shadow: var(--theme-shadow);
-}
-
-.field-input:focus,
-.field-select:focus,
-.field-textarea:focus {
-  border-color: #3b82f6;
-  outline: none;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15), 0 2px 8px rgba(0, 0, 0, 0.05);
-  background: var(--theme-surface);
-  transform: translateY(-2px);
-}
-
-.field-hint {
-  font-size: 0.85rem;
-  color: var(--theme-text-muted);
-  font-weight: 500;
-}
-
-/* Description Section */
-.description-section {
-  background: var(--theme-bg-secondary);
-  border-radius: 16px;
-  padding: 1.5rem 2rem;
-  border: 2px solid var(--theme-border);
-  margin-top: 2rem;
-}
-
-.description-section .field-label {
-  margin-bottom: 0.75rem;
-}
-
-.field-textarea {
-  resize: vertical;
-  min-height: 140px;
-  font-family: inherit;
-}
-
-/* Action Buttons */
-.form-actions {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin: 2.5rem 0 1.5rem 0;
-  padding-top: 2rem;
-  border-top: 2px solid var(--theme-border-light);
-}
-
-.btn-modern {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.875rem 2rem;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: 0.2px;
-  min-width: 160px;
-  cursor: pointer;
-}
-
-.btn-modern.primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.btn-modern.primary:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15);
-  color: #ffffff;
-}
-
-.btn-modern.primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-modern.secondary {
-  background: var(--theme-surface);
-  color: var(--theme-text-secondary);
-  border: 2px solid var(--theme-border);
-  box-shadow: var(--theme-shadow);
-}
-
-.btn-modern.secondary:hover {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-color: #3b82f6;
-  color: #1e40af;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-}
-
-/* Responsive Design — Tablet */
-@media (max-width: 1024px) {
-  .form-grid-modern {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Responsive Design — Mobile */
-@media (max-width: 640px) {
-  .create-task-page {
-    padding: 1rem 0.75rem;
-  }
-
-  .page-header-card {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 1.25rem;
-  }
-
-  .header-content .header-title {
-    font-size: 1.35rem;
-  }
-
-  .header-actions {
-    width: 100%;
-  }
-
-  .header-actions .btn-back {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .form-main-card {
-    padding: 1.25rem 1rem;
-  }
-
-  .form-grid-modern {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-
-  .btn-modern {
-    width: 100%;
-  }
-
-  .description-section {
-    padding: 1.25rem;
-  }
-}
+  .tl-editor { max-width: 1080px; margin: 0 auto; padding: 0 20px 56px; }
+  .tl-actionbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 16px; padding: 16px 0 14px; margin-bottom: 20px; background: var(--tl-bg); border-bottom: 1px solid var(--tl-border); }
+  .tl-editor-grid { display: grid; grid-template-columns: minmax(0,1fr) 330px; gap: 20px; align-items: start; }
+  .tl-prop { display: flex; flex-direction: column; gap: 6px; }
+  .tl-side { position: sticky; top: 82px; }
+  .tl-crumb a { color: var(--tl-text-muted); } .tl-crumb a:hover { color: var(--tl-accent); }
+  .tl-select { appearance: none; -webkit-appearance: none; padding-right: 34px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center; }
+  @media (max-width: 860px) { .tl-editor-grid { grid-template-columns: 1fr; } .tl-side { position: static; } }
 </style>
 
-<div class="create-task-page">
-  <!-- Page Header -->
-  <div class="page-header-card">
-    <div class="header-content">
-      <h3 class="header-title"><i class="fa-solid fa-plus-circle"></i> Create Task</h3>
-      <p class="header-subtitle">Provide essential details below to create a new task for your project.</p>
+<div class="tl-scope tl-editor">
+  <form method="post" id="createTaskForm" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <!-- Sticky action bar -->
+    <div class="tl-actionbar">
+      <div style="min-width:0;">
+        <div class="tl-crumb" style="font-size:12px;font-weight:600;color:var(--tl-text-subtle);">
+          <a href="{% url 'task_board' %}">Tasks</a><span style="margin:0 6px;">/</span>Create
+        </div>
+        <h1 class="tl-page-title" style="margin:2px 0 0;">Create task</h1>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:10px;flex-shrink:0;">
+        <a href="{% url 'task_board' %}" class="tl-btn tl-btn-secondary">Cancel</a>
+        <button id="createBtn" type="submit" class="tl-btn tl-btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Create task
+        </button>
+      </div>
     </div>
-    <div class="header-actions">
-      <a href="{% url 'task_board' %}" class="btn-back">
-        <i class="fa-solid fa-arrow-left"></i> Back to Board
-      </a>
-    </div>
-  </div>
 
-  <!-- Form Card -->
-  <div class="form-main-card">
-    <form method="post" id="createTaskForm" enctype="multipart/form-data" novalidate>
-      {% csrf_token %}
-
-      <!-- Main Form Fields -->
-      <div class="form-section">
-        <div class="form-grid-modern">
-          <!-- Task Title (Full Width) -->
-          <div class="form-field form-field-full">
-            <label class="field-label">
-              Task Title <span class="required">*</span>
-            </label>
-            <input name="title" type="text" class="field-input" placeholder="e.g. Implement user authentication" required>
-            <span class="field-hint">Short, descriptive title for your task</span>
+    <div class="tl-editor-grid">
+      <!-- ===== MAIN COLUMN ===== -->
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0;">
+        <div class="tl-card tl-card-pad">
+          <div class="tl-prop">
+            <label class="tl-label" for="f-title">Title <span style="color:var(--tl-danger-solid);">*</span></label>
+            <input id="f-title" name="title" type="text" required class="tl-input"
+                   style="height:2.75rem;font-size:1rem;font-weight:550;" placeholder="e.g. Implement user authentication">
           </div>
-
-          <!-- Project -->
-          <div class="form-field">
-            <label class="field-label">Project</label>
-            <select name="project_id" id="projectSelect" class="field-select">
-              <option value="">-- Choose Project --</option>
-              {% for p in projects %}
-                <option value="{{ p.id }}">{{ p.name }}</option>
-              {% endfor %}
-            </select>
+          <div class="tl-prop" style="margin-top:20px;">
+            <label class="tl-label">Description</label>
+            <div class="tl-rte" data-rte data-rte-upload="{% url 'rte_image_upload' %}">
+              <div class="tl-rte-toolbar" role="toolbar" aria-label="Text formatting">
+                <button type="button" class="tl-rte-btn" data-cmd="bold" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="italic" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="underline" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="strikeThrough" title="Strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+                <span class="tl-rte-sep"></span>
+                <select class="tl-rte-select" data-cmd="fontName" title="Font"><option value="">Font</option><option value="Inter">Inter</option><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times</option><option value="Courier New">Mono</option></select>
+                <select class="tl-rte-select" data-cmd="fontSize" title="Font size"><option value="">Size</option><option value="2">Small</option><option value="3">Normal</option><option value="4">Large</option><option value="5">X-Large</option><option value="6">Huge</option></select>
+                <input type="color" class="tl-rte-color" data-cmd="foreColor" title="Text color" value="#111827">
+                <span class="tl-rte-sep"></span>
+                <button type="button" class="tl-rte-btn" data-cmd="insertUnorderedList" title="Bulleted list"><i class="fa-solid fa-list-ul"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="insertOrderedList" title="Numbered list"><i class="fa-solid fa-list-ol"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="outdent" title="Decrease indent"><i class="fa-solid fa-outdent"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="indent" title="Increase indent"><i class="fa-solid fa-indent"></i></button>
+                <span class="tl-rte-sep"></span>
+                <button type="button" class="tl-rte-btn" data-cmd="justifyLeft" title="Align left"><i class="fa-solid fa-align-left"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="justifyCenter" title="Align center"><i class="fa-solid fa-align-center"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="justifyRight" title="Align right"><i class="fa-solid fa-align-right"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="justifyFull" title="Justify"><i class="fa-solid fa-align-justify"></i></button>
+                <span class="tl-rte-sep"></span>
+                <button type="button" class="tl-rte-btn" data-cmd="createLink" title="Insert link"><i class="fa-solid fa-link"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="insertImageUpload" title="Insert image (or paste a screenshot)"><i class="fa-solid fa-image"></i></button>
+                <button type="button" class="tl-rte-btn" data-cmd="removeFormat" title="Clear formatting"><i class="fa-solid fa-text-slash"></i></button>
+              </div>
+              <div class="tl-rte-editor" contenteditable="true" data-placeholder="Add detailed notes, acceptance criteria, links, steps to reproduce…"></div>
+              <textarea name="description" hidden></textarea>
+            </div>
           </div>
+        </div>
 
-          <!-- Subproject -->
-          <div class="form-field">
-            <label class="field-label">Subproject (WBS)</label>
-            <select name="subproject_id" id="subprojectSelect" class="field-select">
-              <option value="">-- Optional Subproject --</option>
-            </select>
-          </div>
-
-          <!-- Priority -->
-          <div class="form-field">
-            <label class="field-label">Priority</label>
-            <select name="priority" class="field-select">
-              <option value="Low">Low</option>
-              <option value="Normal" selected>Normal</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
-          </div>
-
-          <!-- Work Type (NEW) -->
-          <div class="form-field">
-            <label class="field-label">
-              <i class="fa-solid fa-layer-group"></i> Work Type
-            </label>
-            <select name="work_type" id="workTypeSelect" class="field-select">
-              {% for wtype in work_types %}
-                <option value="{{ wtype }}" {% if wtype == 'Task' %}selected{% endif %}>{{ wtype }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <!-- Due Date -->
-          <div class="form-field">
-            <label class="field-label">Due Date</label>
-            <input type="date" name="due_date" class="field-input">
-          </div>
-
-          <!-- Assign To (Full Width) -->
-          <div class="form-field form-field-full">
-            <label class="field-label">Assign To</label>
-            <select name="assigned_to" id="assignSelect" class="field-select">
-              <option value="">Unassigned</option>
-              <optgroup label="Members">
-                {% for m in members %}
-                  <option value="member:{{ m.id }}">{{ m.first_name }} {{ m.last_name }} — {{ m.email }}</option>
-                {% endfor %}
-              </optgroup>
-              <optgroup label="Teams">
-                {% for t in teams %}
-                  <option value="team:{{ t.id }}">Team: {{ t.name }}</option>
-                {% endfor %}
-              </optgroup>
-            </select>
-          </div>
+        <div class="tl-card tl-card-pad">
+          <label class="tl-label" style="margin-bottom:10px;">Attachments</label>
+          {% include "core/_attachments.html" %}
         </div>
       </div>
 
-      <!-- Description Section -->
-      <div class="description-section">
-        <label class="field-label">Description (optional)</label>
-        <textarea name="description" rows="6" class="field-textarea" placeholder="Add detailed notes, acceptance criteria, links, steps to reproduce..."></textarea>
-        <span class="field-hint">
-          💡 <strong>Formatting Tips:</strong> Use <code>**text**</code> for bold headers, start lines with <code>-</code> for bullets. Example: <code>**Steps:** - Step one - Step two</code>
-        </span>
-      </div>
-
-      <!-- Attachments -->
-      {% include "core/_attachments.html" %}
-
-      <!-- System Information -->
-      {% include "core/_system_info.html" %}
-
-      <!-- Action Buttons -->
-      <div class="form-actions">
-        <a href="{% url 'task_board' %}" class="btn-modern secondary">Cancel</a>
-        <button id="createBtn" type="submit" class="btn-modern primary">
-          <i class="fa-solid fa-check"></i> Create Task
-        </button>
-      </div>
-    </form>
-  </div>
+      <!-- ===== PROPERTIES PANEL ===== -->
+      <aside class="tl-card tl-side" style="padding:0;">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--tl-border);"><span class="tl-eyebrow">Properties</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:16px;">
+          <div class="tl-prop">
+            <label class="tl-label" for="projectSelect">Project</label>
+            <select name="project_id" id="projectSelect" class="tl-select">
+              <option value="">— Choose project —</option>
+              {% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="tl-prop">
+            <label class="tl-label" for="subprojectSelect">Subproject (WBS)</label>
+            <select name="subproject_id" id="subprojectSelect" class="tl-select">
+              <option value="">— Optional subproject —</option>
+            </select>
+          </div>
+          <div class="tl-prop">
+            <label class="tl-label" for="workTypeSelect">Work type</label>
+            <select name="work_type" id="workTypeSelect" class="tl-select">
+              {% for wtype in work_types %}<option value="{{ wtype }}" {% if wtype == 'Task' %}selected{% endif %}>{{ wtype }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="tl-prop">
+            <label class="tl-label" for="f-priority">Priority</label>
+            <select name="priority" id="f-priority" class="tl-select">
+              <option value="Low">Low</option><option value="Normal" selected>Normal</option><option value="High">High</option><option value="Critical">Critical</option>
+            </select>
+          </div>
+          <div class="tl-prop">
+            <label class="tl-label" for="assignSelect">Assign to</label>
+            <select name="assigned_to" id="assignSelect" class="tl-select">
+              <option value="">Unassigned</option>
+              <optgroup label="Members">{% for m in members %}<option value="member:{{ m.id }}">{{ m.first_name }} {{ m.last_name }} — {{ m.email }}</option>{% endfor %}</optgroup>
+              <optgroup label="Teams">{% for t in teams %}<option value="team:{{ t.id }}">Team: {{ t.name }}</option>{% endfor %}</optgroup>
+            </select>
+          </div>
+          <div class="tl-prop">
+            <label class="tl-label" for="f-due">Due date</label>
+            <input id="f-due" type="date" name="due_date" class="tl-input">
+          </div>
+          <div style="border-top:1px solid var(--tl-border);padding-top:6px;">
+            {% include "core/_system_info.html" %}
+          </div>
+        </div>
+      </aside>
+    </div>
+  </form>
 </div>
-
-
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-  console.log('Page loaded - script initialized');
   const projectSelect = document.getElementById('projectSelect');
   const subprojectSelect = document.getElementById('subprojectSelect');
   const createBtn = document.getElementById('createBtn');
   const workTypeSelect = document.getElementById('workTypeSelect');
-  
-  console.log('projectSelect found:', !!projectSelect);
-  console.log('subprojectSelect found:', !!subprojectSelect);
 
-  // Load work types based on selected project
   async function loadProjectWorkTypes(projectId) {
     if (!workTypeSelect || !projectId) return;
-    
     try {
       const response = await fetch(`/tasks/api/project-work-types/?project_id=${projectId}`);
       const data = await response.json();
-      
       if (data.work_types && data.work_types.length > 0) {
         const currentValue = workTypeSelect.value;
         workTypeSelect.innerHTML = '';
-        
         data.work_types.forEach(wtype => {
           const option = document.createElement('option');
-          option.value = wtype;
-          option.textContent = wtype;
-          if (wtype === currentValue || wtype === 'Task') {
-            option.selected = true;
-          }
+          option.value = wtype; option.textContent = wtype;
+          if (wtype === currentValue || wtype === 'Task') option.selected = true;
           workTypeSelect.appendChild(option);
         });
-        console.log('Loaded work types for project:', data.work_types);
       }
-    } catch (error) {
-      console.error('Error loading work types:', error);
-    }
+    } catch (error) { console.error('Error loading work types:', error); }
   }
 
-  // Handle work type selection - redirect to specific form
   if(workTypeSelect) {
     workTypeSelect.addEventListener('change', function(e) {
       const selectedType = e.target.value;
-      console.log('Work type changed to:', selectedType);
-      
-      // Define URL mappings for each work type
       const workTypeUrls = {
-        'Bug': '{% url "create_bug" %}',
-        'Story': '{% url "create_story" %}',
-        'Defect': '{% url "create_defect" %}',
-        'Sub Task': '{% url "create_subtask" %}',
-        'Report': '{% url "create_report" %}',
-        'Change Request': '{% url "create_change_request" %}',
+        'Bug': '{% url "create_bug" %}', 'Story': '{% url "create_story" %}',
+        'Defect': '{% url "create_defect" %}', 'Sub Task': '{% url "create_subtask" %}',
+        'Report': '{% url "create_report" %}', 'Change Request': '{% url "create_change_request" %}',
         'Task': '{% url "create_task" %}'
       };
-      
-      // If a specific work type with its own page is selected, redirect
       if (workTypeUrls[selectedType] && selectedType !== 'Task') {
-        console.log('Redirecting to:', workTypeUrls[selectedType]);
-        // Store selected project in sessionStorage before redirect
-        if (projectSelect && projectSelect.value) {
-          sessionStorage.setItem('selectedProjectId', projectSelect.value);
-        }
+        if (projectSelect && projectSelect.value) sessionStorage.setItem('selectedProjectId', projectSelect.value);
         window.location.href = workTypeUrls[selectedType];
       }
     });
   }
 
   async function loadSubprojects(pid){
-    console.log('loadSubprojects called with project ID:', pid);
-    if(!subprojectSelect) {
-      console.error('subprojectSelect element not found!');
-      return;
-    }
-    subprojectSelect.innerHTML = '<option value="">Loading...</option>';
+    if(!subprojectSelect) return;
+    subprojectSelect.innerHTML = '<option value="">Loading…</option>';
     subprojectSelect.disabled = true;
     try {
-      const url = `/tasks/api/subprojects/?project_id=${pid}`;
-      console.log('Fetching from:', url);
-      const res = await fetch(url);
-      console.log('Response status:', res.status);
-      if(!res.ok) {
-        console.error('API response not ok:', res.status, res.statusText);
-        const errorText = await res.text();
-        console.error('Error response:', errorText);
-        throw new Error('API request failed');
-      }
+      const res = await fetch(`/tasks/api/subprojects/?project_id=${pid}`);
+      if(!res.ok) throw new Error('API request failed');
       const data = await res.json();
-      console.log('Subprojects loaded:', data);
-      
-      subprojectSelect.innerHTML = '<option value="">-- Optional Subproject --</option>';
-      
+      subprojectSelect.innerHTML = '<option value="">— Optional subproject —</option>';
       if(data.subprojects && data.subprojects.length > 0) {
-        console.log('Adding', data.subprojects.length, 'subprojects to dropdown');
         data.subprojects.forEach(sp => {
-          const o = document.createElement('option'); 
-          o.value = sp.id; 
-          o.textContent = sp.name;
+          const o = document.createElement('option'); o.value = sp.id; o.textContent = sp.name;
           subprojectSelect.appendChild(o);
-          console.log('Added subproject:', sp.name);
         });
       } else {
-        console.log('No subprojects found for this project');
-        const o = document.createElement('option');
-        o.value = '';
-        o.textContent = '(No subprojects available)';
-        o.disabled = true;
+        const o = document.createElement('option'); o.value = ''; o.textContent = '(No subprojects available)'; o.disabled = true;
         subprojectSelect.appendChild(o);
       }
       subprojectSelect.disabled = false;
     } catch (err) {
-      console.error('Error loading subprojects:', err);
-      subprojectSelect.innerHTML = '<option value="">-- Error loading subprojects --</option>';
+      subprojectSelect.innerHTML = '<option value="">— Error loading subprojects —</option>';
       subprojectSelect.disabled = false;
     }
   }
@@ -542,26 +205,15 @@ document.addEventListener('DOMContentLoaded', function(){
   if(projectSelect) {
     projectSelect.addEventListener('change', e => {
       const pid = e.target.value;
-      console.log('Project dropdown changed. Selected value:', pid);
-      if(pid) {
-        console.log('Loading subprojects for project:', pid);
-        loadSubprojects(pid);
-        // Load work types for selected project
-        loadProjectWorkTypes(pid);
-      } else {
-        console.log('No project selected, resetting subproject dropdown');
-        subprojectSelect.innerHTML = '<option value="">-- Optional Subproject --</option>';
-        subprojectSelect.disabled = false;
-      }
+      if(pid) { loadSubprojects(pid); loadProjectWorkTypes(pid); }
+      else { subprojectSelect.innerHTML = '<option value="">— Optional subproject —</option>'; subprojectSelect.disabled = false; }
     });
-  } else {
-    console.error('projectSelect element not found!');
   }
 
   document.getElementById('createTaskForm')?.addEventListener('submit', function(){
-    createBtn.disabled = true;
-    createBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
+    if(createBtn){ createBtn.disabled = true; createBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating…'; }
   });
 });
 </script>
+<script src="{% static 'core/js/rte.js' %}"></script>
 {% endblock %}

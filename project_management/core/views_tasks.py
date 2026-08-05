@@ -2143,7 +2143,7 @@ def api_get_subprojects(request):
 def task_detail_view(request, task_id):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
-    cur.execute("SELECT id, title, description, status, priority, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
+    cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
     print("Executing SQL for task detail:", task_id)
     task = cur.fetchone()
 
@@ -2176,6 +2176,7 @@ def edit_task_view(request, task_id):
         due_date = data.get("due_date") or None
         priority = data.get("priority") or "Normal"
         status = data.get("status") or "Open"
+        severity = data.get("severity") or None
 
         #Automatic set closure date when status is 'Closed'
         if status == "Closed":
@@ -2190,9 +2191,9 @@ def edit_task_view(request, task_id):
         # Perform update
         cur.execute(
             """UPDATE tasks
-               SET title=%s, description=%s, status=%s, priority=%s, due_date=%s, closure_date=%s, updated_at=NOW()
+               SET title=%s, description=%s, status=%s, priority=%s, severity=%s, due_date=%s, closure_date=%s, updated_at=NOW()
                WHERE id=%s""",
-            (title, description, status, priority, due_date, closure_date, task_id),
+            (title, description, status, priority, severity, due_date, closure_date, task_id),
         )
 
         # Log changes to activity_log for timeline
@@ -2263,7 +2264,7 @@ def edit_task_view(request, task_id):
             pass
 
         # Re-fetch updated task
-        cur.execute("SELECT id, title, description, status, priority, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
+        cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
         task = cur.fetchone()
         cur.close()
         if not task:
@@ -2271,7 +2272,7 @@ def edit_task_view(request, task_id):
         return redirect("my_tasks")
 
     # GET
-    cur.execute("SELECT id, title, description, status, priority, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
+    cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
     row = cur.fetchone()
     if not row:
         cur.close()
@@ -2619,17 +2620,18 @@ def create_bug_view(request):
         # INSERT
         cur.execute(
             """INSERT INTO tasks
-               (project_id, subproject_id, title, description, status, priority,
+               (project_id, subproject_id, title, description, status, priority, severity,
                 assigned_to, assigned_type, created_by, due_date, closure_date, work_type,
                 si_browser, si_resolution, si_os, si_timestamp, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())""",
             (
                 project_id,
                 subproject_id,
                 title,
                 full_description,
                 status,
-                severity,  # Use severity as priority for bugs
+                priority,
+                severity,
                 assigned_to,
                 assigned_type,
                 created_by,
@@ -3418,7 +3420,7 @@ def task_page_view(request, task_id):
     # Get task details with all system information
     query = f"""
         SELECT 
-            t.id, t.title, t.description, t.priority, t.status, t.work_type,
+            t.id, t.title, t.description, t.priority, t.severity, t.status, t.work_type,
             t.due_date, t.closure_date, t.created_at, t.created_by,
             t.project_id, t.subproject_id,
             t.assigned_type, t.assigned_to,
@@ -3463,7 +3465,7 @@ def task_page_view(request, task_id):
         'priority': issue['priority'],
         'status': issue['status'],
         'issue_type': issue['work_type'] or 'Task',
-        'severity': 'BLOCKER' if issue['priority'] == 'Critical' else 'MAJOR' if issue['priority'] == 'High' else 'MINOR',
+        'severity': (issue.get('severity') or '').upper() or ('BLOCKER' if issue['priority'] == 'Critical' else 'MAJOR' if issue['priority'] == 'High' else 'MINOR'),
         'module': issue['project_name'],
         'subproject_name': issue['subproject_name'],
         'resolution': 'PENDING' if issue['status'] in ['Open', 'New'] else 'FINISHED' if issue['status'] == 'Closed' else 'IN_PROGRESS',

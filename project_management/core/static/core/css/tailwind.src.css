@@ -675,6 +675,14 @@
 .btn-cancel:hover { background: var(--tl-surface-hover) !important; transform: none !important; }
 
 /* ============================================================
+   TWO-PANE EDITOR WIDTH — use the available space (premium)
+   Overrides the per-template 1080px cap; wider main + panel.
+   ============================================================ */
+.tl-editor { max-width: 1560px !important; }
+.tl-editor-grid { grid-template-columns: minmax(0,1fr) 360px !important; gap: 24px !important; }
+@media (max-width: 860px) { .tl-editor-grid { grid-template-columns: 1fr !important; } }
+
+/* ============================================================
    RICH TEXT EDITOR (self-contained, execCommand-based)
    ============================================================ */
 .tl-rte { border: 1px solid var(--tl-border-strong); border-radius: 8px; background: var(--tl-surface); overflow: hidden; }

@@ -1869,672 +1869,222 @@
 {% block page_subtitle %}Overview of your projects and tasks{% endblock %}
 
 {% block content %}
-<!-- Dashboard View Indicator -->
-{% if is_user_dashboard %}
-<div class="dashboard-view-banner personal-banner" style="background: var(--tl-surface); color: var(--tl-text); padding: 10px 16px; border-radius: var(--radius-tl); border: 1px solid var(--tl-border); border-left: 3px solid var(--tl-accent); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-  <div style="display: flex; align-items: center; gap: 8px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-      <circle cx="12" cy="7" r="4"></circle>
-    </svg>
+<style>
+  .tld{ }
+  .tld-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .tld-pill{font-size:11px;font-weight:600;color:var(--tl-text-muted);background:var(--tl-surface);border:1px solid var(--tl-border);padding:4px 10px;border-radius:99px}
+  .tld-pill.bad{color:var(--tl-danger-text);border-color:var(--tl-danger-border);background:var(--tl-danger-bg)}
+  .tld-pill.warn{color:var(--tl-warning-text);border-color:var(--tl-warning-border);background:var(--tl-warning-bg)}
+  /* range control */
+  .tld-range{position:relative}
+  .tld-range-btn{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:8px;background:var(--tl-surface);border:1px solid var(--tl-border);color:var(--tl-text);font-size:12.5px;font-weight:600;cursor:pointer}
+  .tld-range-menu{position:absolute;top:calc(100% + 6px);right:0;width:230px;background:var(--tl-surface);border:1px solid var(--tl-border);border-radius:10px;box-shadow:var(--tl-shadow-md);padding:6px;z-index:40;display:none}
+  .tld-range-menu.open{display:block}
+  .tld-range-menu a{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;color:var(--tl-text);font-size:12.5px;font-weight:550;text-decoration:none}
+  .tld-range-menu a:hover{background:var(--tl-surface-2)}
+  .tld-range-menu a.on{color:var(--tl-accent);background:var(--tl-accent-soft)}
+  .tld-range-custom{border-top:1px solid var(--tl-border);margin-top:6px;padding:10px;display:flex;flex-direction:column;gap:8px}
+  .tld-range-custom label{font-size:10.5px;font-weight:600;color:var(--tl-text-muted);text-transform:uppercase;letter-spacing:.04em}
+  .tld-range-custom input{height:32px;border:1px solid var(--tl-border-strong);border-radius:7px;background:var(--tl-surface);color:var(--tl-text);padding:0 8px;font-size:12px;font-family:inherit}
+  /* KPI strip with subtle semantic gradient */
+  .tld-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:12px}
+  .tld-kpi{position:relative;border-radius:var(--radius-tl,10px);border:1px solid var(--tl-border);padding:14px 15px;box-shadow:var(--tl-shadow-sm);display:flex;flex-direction:column;gap:8px;overflow:hidden;text-decoration:none}
+  .tld-kpi .kl{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--tl-text-muted)}
+  .tld-kpi .kv{font-size:24px;font-weight:730;letter-spacing:-.02em;line-height:1}
+  .tld-kpi .kc{position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:11px;color:#fff;font-weight:700}
+  .kpi-total{background:linear-gradient(135deg,color-mix(in srgb,#2563eb 10%,var(--tl-surface)),var(--tl-surface) 62%);border-color:color-mix(in srgb,#2563eb 22%,var(--tl-border))}.kpi-total .kv{color:#2563eb}.kpi-total .kc{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+  .kpi-open{background:linear-gradient(135deg,color-mix(in srgb,#ef4444 11%,var(--tl-surface)),var(--tl-surface) 62%);border-color:color-mix(in srgb,#ef4444 22%,var(--tl-border))}.kpi-open .kv{color:#dc2626}.kpi-open .kc{background:linear-gradient(135deg,#f87171,#dc2626)}
+  .kpi-prog{background:linear-gradient(135deg,color-mix(in srgb,#f59e0b 12%,var(--tl-surface)),var(--tl-surface) 62%);border-color:color-mix(in srgb,#f59e0b 24%,var(--tl-border))}.kpi-prog .kv{color:#b45309}.kpi-prog .kc{background:linear-gradient(135deg,#fbbf24,#d97706)}
+  .kpi-done{background:linear-gradient(135deg,color-mix(in srgb,#10b981 11%,var(--tl-surface)),var(--tl-surface) 62%);border-color:color-mix(in srgb,#10b981 22%,var(--tl-border))}.kpi-done .kv{color:#059669}.kpi-done .kc{background:linear-gradient(135deg,#34d399,#059669)}
+  .kpi-over{background:linear-gradient(135deg,color-mix(in srgb,#dc2626 15%,var(--tl-surface)),var(--tl-surface) 60%);border-color:color-mix(in srgb,#dc2626 30%,var(--tl-border))}.kpi-over .kv{color:#dc2626}.kpi-over .kc{background:linear-gradient(135deg,#ef4444,#b91c1c)}
+  .kpi-reopen{background:linear-gradient(135deg,color-mix(in srgb,#8b5cf6 11%,var(--tl-surface)),var(--tl-surface) 62%);border-color:color-mix(in srgb,#8b5cf6 22%,var(--tl-border))}.kpi-reopen .kv{color:#7c3aed}.kpi-reopen .kc{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
+  /* rows + cards */
+  .tld-row{display:grid;gap:12px;margin-bottom:12px}
+  .tld-card{background:var(--tl-surface);border:1px solid var(--tl-border);border-radius:var(--radius-tl,10px);padding:14px 15px;box-shadow:var(--tl-shadow-sm);min-width:0}
+  .tld-card h3{margin:0;font-size:12.5px;font-weight:640;color:var(--tl-text)}
+  .tld-card .sub{margin:2px 0 10px;font-size:11px;color:var(--tl-text-subtle)}
+  .tld-card-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+  .tld-link{color:var(--tl-accent);font-size:11px;font-weight:600;text-decoration:none}
+  .tld-chartbox{position:relative;width:100%}.tld-chartbox--line{height:230px}.tld-chartbox--donut{height:210px}.tld-chartbox--bar{height:230px}
+  .tld-chartbox>canvas{position:absolute!important;inset:0;width:100%!important;height:100%!important}
+  /* attention + active lists */
+  .tld-attn .r{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--tl-border)}.tld-attn .r:last-child{border-bottom:none}
+  .tld-attn .rt{font-size:12.5px;font-weight:550;color:var(--tl-text)}.tld-attn .rm{font-size:10.5px;color:var(--tl-text-subtle);margin-top:2px}
+  .tld-empty{padding:20px;text-align:center;color:var(--tl-text-subtle);font-size:12px}
+  /* workload */
+  .tld-arow{display:grid;grid-template-columns:24px 1fr 28px;align-items:center;gap:10px;margin:10px 0}
+  .tld-av{width:24px;height:24px;border-radius:99px;display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,#3b82f6,#2563eb)}
+  .tld-arow .an{font-size:12px;color:var(--tl-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tld-arow .amini{height:6px;background:var(--tl-surface-3,#eef2f7);border-radius:99px;overflow:hidden;margin-top:4px}
+  .tld-arow .amini>span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#60a5fa,#2563eb)}
+  .tld-arow .num{text-align:right;font-weight:640;font-size:12px;color:var(--tl-text)}
+  /* activity */
+  .tld-act{display:flex;gap:10px;margin:10px 0;font-size:11.5px}
+  .tld-act .d{width:8px;height:8px;border-radius:99px;background:linear-gradient(135deg,#60a5fa,#2563eb);margin-top:5px;flex-shrink:0}
+  .tld-act .tx{color:var(--tl-text);line-height:1.4}.tld-act .m{color:var(--tl-text-subtle);font-size:10.5px;margin-top:1px}
+  /* mini table */
+  .tld-table{width:100%;border-collapse:collapse;font-size:11.5px}
+  .tld-table th{text-align:left;font-size:9.5px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;color:var(--tl-text-muted);padding:0 8px 8px 0;border-bottom:1px solid var(--tl-border)}
+  .tld-table td{padding:9px 8px 9px 0;border-bottom:1px solid var(--tl-border);color:var(--tl-text)}.tld-table tr:last-child td{border-bottom:none}
+  .tld-table .tt{font-weight:550}
+  /* completion gauge */
+  .tld-gauge{width:150px;height:150px;border-radius:99px;display:grid;place-items:center;margin:6px auto;background:conic-gradient(var(--tl-accent) calc(var(--pct)*1%), var(--tl-surface-3,#eef2f7) 0)}
+  .tld-gauge .hole{width:112px;height:112px;border-radius:99px;background:var(--tl-surface);display:grid;place-items:center}
+  .tld-gauge .pct{font-size:26px;font-weight:750;color:var(--tl-text)}
+  @media(max-width:1024px){.tld-kpis{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:900px){.tld-row{grid-template-columns:1fr!important}}
+  @media(max-width:560px){.tld-kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<div class="tl-scope tld">
+  <!-- Top bar + range control -->
+  <div class="tld-bar">
     <div>
-      <div style="font-size: 13px; font-weight: 700;">My Personal Dashboard</div>
-      <div style="font-size: 11px; opacity: 0.9;">Showing only your assigned tasks and projects</div>
+      <h1 class="tl-page-title" style="margin:0;">Dashboard</h1>
+      <div class="tl-page-subtitle">{% if is_user_dashboard %}Your tasks and projects{% else %}All team tasks and projects{% endif %}</div>
     </div>
-  </div>
-  <!-- <a href="{% url 'dashboard' %}" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-    Switch to Admin View
-  </a> -->
-</div>
-{% else %}
-<div class="dashboard-view-banner admin-banner" style="background: var(--tl-surface); color: var(--tl-text); padding: 10px 16px; border-radius: var(--radius-tl); border: 1px solid var(--tl-border); border-left: 3px solid var(--tl-accent); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-  <div style="display: flex; align-items: center; gap: 8px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-      <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-      <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-      <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-    </svg>
-    <div>
-      <div style="font-size: 13px; font-weight: 700;">Admin Dashboard</div>
-      <div style="font-size: 11px; opacity: 0.9;">Showing all team tasks and projects</div>
-    </div>
-  </div>
-  <!-- <a href="{% url 'user_dashboard' %}" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-    Switch to My View
-  </a> -->
-</div>
-{% endif %}
-
-{% if is_tester %}
-<!-- <section class="qa-hero">
-  <div>
-    <div class="qa-eyebrow">Tester Command Center</div>
-    <h2>Execution-first dashboard for bugs, retests, verification, and test progress.</h2>
-    <p>Built for daily QA flow so you can see what needs action now, what is blocked, and where quality risk is building.</p>
-  </div>
-  <div class="qa-hero-badges">
-    <span class="qa-pill">Role: {{ user_role|default:"Tester" }}</span>
-    <span class="qa-pill qa-pill-strong">Execution {{ execution_rate|default:0 }}%</span>
-  </div>
-</section> -->
-
-<div class="qa-work-grid">
-  <a class="qa-work-card qa-card-blue" href="{% url 'metric_drilldown' 'tasks-assigned' %}{% if is_user_dashboard %}?personal=true{% endif %}">
-    <span class="qa-work-label">Total Assigned</span>
-    <span class="qa-work-value">{{ tester_work_assigned|default:0 }}</span>
-    <span class="qa-work-meta">Shows the total assigned bug and defect tasks.</span>
-  </a>
-  <a class="qa-work-card qa-card-amber" href="{% url 'metric_drilldown' 'tasks-reopened' %}{% if is_user_dashboard %}?personal=true{% endif %}">
-    <span class="qa-work-label">Reopen</span>
-    <span class="qa-work-value">{{ tester_work_reopened|default:0 }}</span>
-    <span class="qa-work-meta">Shows all assigned tasks with Reopen status.</span>
-  </a>
-  <a class="qa-work-card qa-card-cyan" href="{% url 'metric_drilldown' 'tasks-finished' %}{% if is_user_dashboard %}?personal=true{% endif %}">
-    <span class="qa-work-label">Finished</span>
-    <span class="qa-work-value">{{ tester_work_verification|default:0 }}</span>
-    <span class="qa-work-meta">Shows bug and defect tasks with Finished status.</span>
-  </a>
-  <a class="qa-work-card qa-card-rose" href="{% url 'metric_drilldown' 'tasks-completed' %}{% if is_user_dashboard %}?personal=true{% endif %}">
-    <span class="qa-work-label">Closed</span>
-    <span class="qa-work-value">{{ tester_work_closed|default:0 }}</span>
-    <span class="qa-work-meta">Shows bug and defect tasks with Closed status.</span>
-  </a>
-</div>
-
-<div class="qa-layout-grid">
-  <div class="chart-card qa-panel">
-    <div class="qa-panel-head">
-      <div>
-        <h3>Bug Status Overview</h3>
-        <p>Tracks lifecycle movement across your QA workload.</p>
-      </div>
-    </div>
-    <div class="qa-lifecycle-grid">
-      <div class="qa-lifecycle-list">
-        <div class="qa-stat-row"><span>Open</span><strong>{{ bug_status_new|default:0 }}</strong></div>
-        <div class="qa-stat-row"><span>In Progress</span><strong>{{ bug_status_in_progress|default:0 }}</strong></div>
-        <div class="qa-stat-row"><span>Finished</span><strong>{{ bug_status_fixed|default:0 }}</strong></div>
-        <div class="qa-stat-row"><span>Reopen</span><strong>{{ bug_status_retesting|default:0 }}</strong></div>
-        <div class="qa-stat-row"><span>Closed</span><strong>{{ bug_status_closed|default:0 }}</strong></div>
-        <div class="qa-stat-row"><span>Blocked</span><strong>{{ bug_status_rejected|default:0 }}</strong></div>
-      </div>
-      <div class="qa-chart-wrap">
-        <canvas id="testerLifecycleChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="chart-card qa-panel">
-    <div class="qa-panel-head">
-      <div>
-        <h3>Priority-Based Bugs</h3>
-        <p>Open bug pressure by severity, with a fast visual focus tool.</p>
-      </div>
-    </div>
-    <div class="qa-priority-filters" id="qaPriorityFilters">
-      <button type="button" class="qa-priority-chip is-active" data-priority="Critical" data-count="{{ tester_priority_critical|default:0 }}" data-note="Must-fix issues that need immediate QA attention.">Critical <strong>{{ tester_priority_critical|default:0 }}</strong></button>
-      <button type="button" class="qa-priority-chip" data-priority="High" data-count="{{ tester_priority_high|default:0 }}" data-note="High-impact issues that should move quickly through validation.">High <strong>{{ tester_priority_high|default:0 }}</strong></button>
-      <button type="button" class="qa-priority-chip" data-priority="Medium" data-count="{{ tester_priority_medium|default:0 }}" data-note="Medium-priority bugs that should be kept flowing through the queue.">Medium <strong>{{ tester_priority_medium|default:0 }}</strong></button>
-      <button type="button" class="qa-priority-chip" data-priority="Low" data-count="{{ tester_priority_low|default:0 }}" data-note="Low-priority issues that can be validated after urgent work clears.">Low <strong>{{ tester_priority_low|default:0 }}</strong></button>
-    </div>
-    <div class="qa-priority-summary">
-      <div id="qaPriorityTitle">Critical bugs</div>
-      <div id="qaPriorityValue">{{ tester_priority_critical|default:0 }}</div>
-      <p id="qaPriorityNote">Must-fix issues that need immediate QA attention.</p>
-    </div>
-    <div class="qa-chart-wrap qa-chart-short">
-      <canvas id="testerPriorityChart"></canvas>
-    </div>
-  </div>
-</div>
-
-<div class="qa-layout-grid">
-  <div class="chart-card qa-panel">
-    <div class="qa-panel-head">
-      <div>
-        <h3>Defect Reporter Metrics</h3>
-        <p>Bug and defect items assigned to this tester, grouped by reporter.</p>
-      </div>
-    </div>
-    <div class="qa-chart-wrap">
-      <canvas id="testerReporterChart"></canvas>
-    </div>
-    <div class="table-responsive-modern" style="max-height: 240px; overflow-y: auto; margin-top: 14px;">
-      <table class="modern-table">
-        <thead>
-          <tr>
-            <th>Reporter</th>
-            <th>Assigned</th>
-            <th>Closed</th>
-            <th>Open</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for reporter in tester_reporter_summary %}
-          <tr>
-            <td class="modern-td-title">{{ reporter.reporter_name }}</td>
-            <td>{{ reporter.assigned_count }}</td>
-            <td>{{ reporter.closed_count }}</td>
-            <td>{{ reporter.open_count }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4" class="modern-td-empty">No bug or defect reporters found for this tester yet.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="chart-card qa-panel">
-    <div class="qa-panel-head">
-      <div>
-        <h3>Task Assignment Chart</h3>
-        <p>Tasks created by this tester, grouped by assignee.</p>
-      </div>
-    </div>
-    <div class="qa-chart-wrap">
-      <canvas id="testerAssigneeChart"></canvas>
-    </div>
-    <div class="table-responsive-modern" style="max-height: 240px; overflow-y: auto; margin-top: 14px;">
-      <table class="modern-table">
-        <thead>
-          <tr>
-            <th>Assigned To</th>
-            <th>Task Count</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for assignee in tester_assignee_summary %}
-          <tr>
-            <td class="modern-td-title">{{ assignee.assignee_name }}</td>
-            <td>{{ assignee.assigned_count }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="2" class="modern-td-empty">No task assignments created by this tester yet.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<div class="qa-support-grid">
-  <div class="chart-card qa-panel">
-    <div class="qa-panel-head">
-      <div>
-        <h3>Today’s Focus</h3>
-        <p>Showing planned tasks for: <strong>{{ planned_start|date:'d M Y' }}</strong> - <strong>{{ planned_end|date:'d M Y' }}</strong></p>
-      </div>
-    </div>
-    <div class="table-responsive-modern" style="max-height: 320px; overflow-y: auto;">
-      <table class="modern-table">
-        <thead>
-          <tr>
-            <th>Task</th>
-            <th>Status</th>
-            <th>Due</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for task in planned_tasks %}
-          <tr>
-            <td class="modern-td-title">{{ task.title }}</td>
-            <td>
-              {% if task.status == 'Completed' %}
-                <span class="badge-status badge-completed">{{ task.status }}</span>
-              {% elif task.status == 'Pending' %}
-                <span class="badge-status badge-pending">{{ task.status }}</span>
-              {% elif task.status == 'In Progress' %}
-                <span class="badge-status badge-inprogress">{{ task.status }}</span>
-              {% else %}
-                <span class="badge-status badge-default">{{ task.status }}</span>
-              {% endif %}
-            </td>
-            <td class="modern-td-date">{{ task.due_date|date:'d M Y' }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="3" class="modern-td-empty">No planned tasks in the configured window.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="chart-card qa-panel">
-    <div class="qa-panel-head">
-      <div>
-        <h3>Task Type Breakdown</h3>
-        <p>Visible testing work grouped by the type chosen during task creation.</p>
-      </div>
-    </div>
-    <div class="qa-chart-wrap qa-chart-short">
-      <canvas id="testerWorkTypeChart"></canvas>
-    </div>
-    <div class="donut-legend" style="justify-content:flex-start; width:100%;">
-      {% for label, count in work_type_breakdown.items %}
-      <div class="item">
-        <span class="dot" style="background:{% cycle '#2563eb' '#ef4444' '#10b981' '#f59e0b' '#8b5cf6' '#06b6d4' '#64748b' %}"></span>
-        {{ label }} ({{ count }})
-      </div>
-      {% empty %}
-      <div class="modern-td-empty">No visible task types yet.</div>
-      {% endfor %}
-    </div>
-  </div>
-
-  <div class="chart-card qa-panel">
-    <div class="qa-panel-head">
-      <div>
-        <h3>Weekly Task Assignment Trend</h3>
-        <p>Daily task assignments by tester for the last 7 days.</p>
-      </div>
-    </div>
-    <div class="qa-chart-wrap qa-chart-short">
-      <canvas id="testerWeeklyAssignmentChart"></canvas>
-    </div>
-  </div>
-</div>
-
-<div class="qa-layout-grid">
-  <div class="chart-card qa-panel">
-    <div class="qa-panel-head">
-      <div>
-        <h3>Recent Activity</h3>
-        <p>Latest bug updates, comments, and status changes on your items.</p>
-      </div>
-    </div>
-    <div class="qa-feed-list">
-      {% for item in qa_recent_activity %}
-      <a class="qa-feed-item" href="{{ item.href }}">
-        <div class="qa-feed-kind">{{ item.kind }}</div>
-        <div class="qa-feed-body">
-          <strong>{{ item.title }}</strong>
-          <span>{{ item.description }}</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      {% if overdue_count %}<span class="tld-pill bad">{{ overdue_count }} overdue</span>{% endif %}
+      <div class="tld-range">
+        <button type="button" class="tld-range-btn" id="tldRangeBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>{% if active_range == 'month' %}Last month{% elif active_range == '3m' %}Last 3 months{% elif active_range == '6m' %}Last 6 months{% elif active_range == 'custom' %}{{ timeline_from }} → {{ timeline_to }}{% else %}Last 30 days{% endif %}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="tld-range-menu" id="tldRangeMenu">
+          <a href="?range=30d" class="{% if active_range == '30d' %}on{% endif %}">Last 30 days{% if active_range == '30d' %}<span>✓</span>{% endif %}</a>
+          <a href="?range=month" class="{% if active_range == 'month' %}on{% endif %}">Last month{% if active_range == 'month' %}<span>✓</span>{% endif %}</a>
+          <a href="?range=3m" class="{% if active_range == '3m' %}on{% endif %}">Last 3 months{% if active_range == '3m' %}<span>✓</span>{% endif %}</a>
+          <a href="?range=6m" class="{% if active_range == '6m' %}on{% endif %}">Last 6 months{% if active_range == '6m' %}<span>✓</span>{% endif %}</a>
+          <form method="get" class="tld-range-custom">
+            <div><label>From</label><input type="date" name="tasks_from_date" value="{{ timeline_from }}"></div>
+            <div><label>To</label><input type="date" name="tasks_to_date" value="{{ timeline_to }}"></div>
+            <button type="submit" class="tl-btn tl-btn-primary" style="justify-content:center;">Apply range</button>
+          </form>
         </div>
-        <div class="qa-feed-time">{{ item.created_at|date:'d M, H:i' }}</div>
+      </div>
+      <a href="{% url 'create_task' %}" class="tl-btn tl-btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> New task
       </a>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="tld-kpis">
+    <a class="tld-kpi kpi-total" href="{% url 'tasks_overview' %}"><span class="kc">▣</span><div class="kl">Total tasks</div><div class="kv">{{ total_tasks|default:0 }}</div></a>
+    <a class="tld-kpi kpi-open" href="{% url 'metric_drilldown' 'tasks-open' %}"><span class="kc">◔</span><div class="kl">Open</div><div class="kv">{{ progress_open|default:0 }}</div></a>
+    <div class="tld-kpi kpi-prog"><span class="kc">◑</span><div class="kl">In progress</div><div class="kv">{{ progress_inprogress|default:0 }}</div></div>
+    <a class="tld-kpi kpi-done" href="{% url 'metric_drilldown' 'tasks-finished' %}"><span class="kc">✓</span><div class="kl">Finished</div><div class="kv">{{ tasks_finished|default:0 }}</div></a>
+    <div class="tld-kpi kpi-over"><span class="kc">!</span><div class="kl">Overdue</div><div class="kv">{{ overdue_count|default:0 }}</div></div>
+    <a class="tld-kpi kpi-reopen" href="{% url 'metric_drilldown' 'tasks-reopened' %}"><span class="kc">↻</span><div class="kl">Reopened</div><div class="kv">{{ tasks_reopened|default:0 }}</div></a>
+  </div>
+
+  <!-- Throughput + Status -->
+  <div class="tld-row" style="grid-template-columns:1.9fr 1fr;">
+    <div class="tld-card">
+      <div class="tld-card-head"><div><h3>Throughput</h3><p class="sub" style="margin-bottom:0;">Created vs. closed · {% if active_range == 'month' %}last month{% elif active_range == '3m' %}last 3 months{% elif active_range == '6m' %}last 6 months{% elif active_range == 'custom' %}{{ timeline_from }} → {{ timeline_to }}{% else %}last 30 days{% endif %}</p></div></div>
+      <div class="tld-chartbox tld-chartbox--line"><canvas id="lineChart"></canvas></div>
+    </div>
+    <div class="tld-card">
+      <h3>Status breakdown</h3><p class="sub">All active tasks</p>
+      <div class="tld-chartbox tld-chartbox--donut"><canvas id="progressChart"></canvas></div>
+      <div class="donut-legend" style="justify-content:center;">
+        <div class="item"><span class="dot" style="background:#94a3b8"></span> Closed ({{ progress_closed|default:0 }})</div>
+        <div class="item"><span class="dot" style="background:#d97706"></span> In Progress ({{ progress_inprogress|default:0 }})</div>
+        <div class="item"><span class="dot" style="background:#dc2626"></span> Open ({{ progress_open|default:0 }})</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Needs attention + Priority -->
+  <div class="tld-row" style="grid-template-columns:1.9fr 1fr;">
+    <div class="tld-card">
+      <div class="tld-card-head"><h3>Needs attention</h3><a class="tld-link" href="{% url 'task_board' %}">Board →</a></div>
+      <div class="tld-attn">
+        {% for t in needs_attention %}
+        <div class="r">
+          <div>
+            <div class="rt"><a href="{% url 'task_page_view' t.id %}" style="color:inherit;text-decoration:none;">{{ t.title|truncatechars:52 }}</a></div>
+            <div class="rm"><span class="work-type-mini-badge work-type-{{ t.work_type|default:'Task'|lower|cut:' ' }}">{{ t.work_type|default:'Task' }}</span> · {{ t.assignee|default:'Unassigned' }}{% if t.due_date %} · due {{ t.due_date|date:'d M' }}{% endif %}</div>
+          </div>
+          <span class="status-badge status-{{ t.status|default:''|slugify }}">{{ t.status }}</span>
+        </div>
+        {% empty %}
+        <div class="tld-empty">Nothing needs attention — no overdue or blocked tasks. 🎉</div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="tld-card">
+      <h3>Priority load</h3><p class="sub">Open vs. closed by priority</p>
+      <div class="tld-chartbox tld-chartbox--bar"><canvas id="priorityChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Workload + Activity -->
+  <div class="tld-row" style="grid-template-columns:1fr 1fr;">
+    <div class="tld-card">
+      <div class="tld-card-head"><h3>Workload by assignee</h3><a class="tld-link" href="{% url 'people_page' %}">People →</a></div>
+      {% for w in workload %}
+      <div class="tld-arow">
+        <span class="tld-av">{{ w.initials }}</span>
+        <div><div class="an">{{ w.name }}</div><div class="amini"><span style="width:{{ w.pct }}%"></span></div></div>
+        <span class="num">{{ w.count }}</span>
+      </div>
       {% empty %}
-      <div class="modern-td-empty">No recent QA activity available yet.</div>
+      <div class="tld-empty">No active workload to show.</div>
+      {% endfor %}
+    </div>
+    <div class="tld-card">
+      <h3>Recent activity</h3><p class="sub">Across your team</p>
+      {% for a in activity_feed %}
+      <div class="tld-act"><span class="d"></span><div><div class="tx"><b>{{ a.who|default:'Someone' }}</b> {{ a.action|default:'updated' }} {{ a.entity_type|default:'task' }} #{{ a.entity_id }}</div>{% if a.created_at %}<div class="m">{{ a.created_at|timesince }} ago</div>{% endif %}</div></div>
+      {% empty %}
+      <div class="tld-empty">No recent activity recorded.</div>
       {% endfor %}
     </div>
   </div>
 
-  <div class="chart-card qa-panel">
-    <div class="qa-panel-head">
-      <div>
-        <h3>Notifications</h3>
-        <p>Assigned bugs, ready-for-retest alerts, and recent communication.</p>
+  <!-- Active work + Completion -->
+  <div class="tld-row" style="grid-template-columns:1.9fr 1fr;">
+    <div class="tld-card">
+      <div class="tld-card-head"><h3>Active work</h3><a class="tld-link" href="{% url 'tasks_overview' %}">All tasks →</a></div>
+      <div style="overflow-x:auto;">
+        <table class="tld-table">
+          <thead><tr><th>Task</th><th>Assignee</th><th>Priority</th><th>Status</th><th style="text-align:right;">Due</th></tr></thead>
+          <tbody>
+            {% for t in active_work %}
+            <tr>
+              <td><span class="work-type-mini-badge work-type-{{ t.work_type|default:'Task'|lower|cut:' ' }}">{{ t.work_type|default:'Task' }}</span> <a href="{% url 'task_page_view' t.id %}" class="tt" style="color:var(--tl-text);text-decoration:none;">{{ t.title|truncatechars:40 }}</a></td>
+              <td style="color:var(--tl-text-secondary);">{{ t.assignee|default:'—' }}</td>
+              <td><span class="priority-badge priority-{{ t.priority|default:'Normal'|lower }}">{{ t.priority|default:'Normal' }}</span></td>
+              <td><span class="status-badge status-{{ t.status|default:''|slugify }}">{{ t.status }}</span></td>
+              <td style="text-align:right;color:var(--tl-text-muted);">{% if t.due_date %}{{ t.due_date|date:'d M' }}{% else %}—{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="tld-empty">No active work.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
-    <div class="qa-feed-list">
-      {% for notification in tester_notifications %}
-      <a class="qa-feed-item {% if not notification.is_read %}qa-feed-unread{% endif %}" href="{{ notification.link|default:'/notifications/' }}">
-        <div class="qa-feed-kind">Alert</div>
-        <div class="qa-feed-body">
-          <strong>{{ notification.title }}</strong>
-          <span>{{ notification.message }}</span>
-        </div>
-        <div class="qa-feed-time">{{ notification.created_at|date:'d M, H:i' }}</div>
-      </a>
-      {% empty %}
-      <div class="modern-td-empty">No recent notifications for this tester.</div>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-{% else %}
-<div class="dashboard-grid">
-  {% if is_tester %}
-    <!-- TESTER-SPECIFIC DASHBOARD CARDS -->
-    <a href="{% url 'tasks_overview' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card total-tasks" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Bugs Assigned</div>
-        <div class="value">{{ bugs_assigned|default:0 }}</div>
-      </div>
-    </a>
-    <a href="{% url 'metric_drilldown' 'active-projects' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card active-projects" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Defects Assigned</div>
-        <div class="value">{{ defects_assigned|default:0 }}</div>
-      </div>
-    </a>
-    <a href="{% url 'metric_drilldown' 'tasks-completed' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card tasks-completed" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Bugs Closed</div>
-        <div class="value">{{ bugs_closed|default:0 }}</div>
-      </div>
-    </a>
-    <a href="{% url 'metric_drilldown' 'tasks-pending' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card tasks-pending" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Tests Assigned</div>
-        <div class="value">{{ tests_assigned|default:0 }}</div>
-      </div>
-    </a>
-  {% else %}
-    <!-- DEFAULT DASHBOARD CARDS (for Developers, Admin, etc.) -->
-    <a href="{% url 'tasks_overview' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card total-tasks" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Total Tasks Assigned</div>
-        <div class="value">{{ assigned_count|default:0 }}</div>
-      </div>
-    </a>
-    <a href="{% url 'metric_drilldown' 'active-projects' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card active-projects" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Active Projects</div>
-        <div class="value">{{ active_projects|default:0 }}</div>
-      </div>
-    </a>
-    <a href="{% url 'metric_drilldown' 'tasks-completed' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card tasks-completed" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Tasks Closed</div>
-        <div class="value">{{ tasks_completed|default:0 }}</div>
-      </div>
-    </a>
-    <a href="{% url 'metric_drilldown' 'tasks-pending' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card tasks-pending" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Tasks Open</div>
-        <div class="value">{{ tasks_open|default:0 }}</div>
-      </div>
-    </a>
-   <a href="{% url 'metric_drilldown' 'tasks-finished' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card tasks-finished" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Tasks Finished</div>
-        <div class="value">{{ tasks_finished|default:0 }}</div>
-      </div>
-    </a>
-
-   <a href="{%url 'metric_drilldown' 'tasks-reopened' %}{% if is_user_dashboard %}?personal=true{% endif %}" style="text-decoration: none; color: inherit;">
-      <div class="metric-card tasks-reopened" style="cursor: pointer; position: relative;">
-        <svg style="position: absolute; top: 0.6rem; right: 0.6rem; width: 14px; height: 14px; opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5l7 7-7 7"/>
-        </svg>
-        <div class="label">Tasks Reopened</div>
-        <div class="value">{{ tasks_reopened|default:0 }}</div>
-      </div>
-    </a>
-  {% endif %}
-</div>
-
-
-
-<div class="charts-row">
-  <!-- Combined Quick Actions + Task Breakdown -->
-  <div class="chart-card">
-    <div class="chart-split" style="margin-top:6px;">
-
-      <!-- Left: Quick Actions -->
-      <div class="shortcuts-area">
-        <h3>Quick Actions:</h3>
-        <div class="shortcuts" aria-hidden="false">
-
-          <button class="shortcut-btn shortcut-blue" data-action="{% url 'my_tasks' %}" aria-label="My tasks">
-            <span class="shortcut-badge">{{ assigned_count|default:0 }}</span>
-            <!-- task list icon -->
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 11H7V9h2v2zm0 4H7v-2h2v2zm4-4h-2V9h2v2zM5 5h14v2H5V5zm2 14h10v-8H7v8z" fill="currentColor"/></svg>
-            <div class="lbl">My Tasks</div>
-          </button>
-
-          <button class="shortcut-btn shortcut-green" data-action="{% url 'create_task' %}" aria-label="Create task">
-            <span class="shortcut-badge">{{ my_new_tasks_count|default:0 }}</span>
-            <!-- plus icon -->
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z" fill="currentColor"/></svg>
-            <div class="lbl">Create</div>
-          </button>
-
-          <button class="shortcut-btn shortcut-violet" data-action="{% url 'task_board' %}" aria-label="Task board">
-            <span class="shortcut-badge">{{ board_open_count|default:0 }}</span>
-            <!-- board icon -->
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 13h8V3H3v10zm10 8h8V3h-8v18zM3 21h8v-6H3v6z" fill="currentColor"/></svg>
-            <div class="lbl">Board</div>
-          </button>
-
-          <button class="shortcut-btn shortcut-orange" data-action="{% url 'projects_list' %}" aria-label="All projects">
-            <span class="shortcut-badge">{{ active_projects|default:0 }}</span>
-            <!-- projects icon -->
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 13h8V3H3v10zm10 8h8v-6h-8v6zM3 21h8v-6H3v6z" fill="currentColor" opacity="0.95"/></svg>
-            <div class="lbl">Projects</div>
-          </button>
-
-        </div>
-      </div>
-
-      <!-- Right: Task Breakdown -->
-      <div class="donut-pane">
-        <h3>Task Breakdown:</h3>
-        <div class="tl-chartbox tl-chartbox--donut"><canvas id="progressChart"></canvas></div>
-        <div class="donut-legend" style="justify-content:flex-start;">
-          <div class="item"><span class="dot" style="background:#94a3b8"></span> Closed ({{ progress_closed|default:0 }})</div>
-          <div class="item"><span class="dot" style="background:#60a5fa"></span> In Progress ({{ progress_inprogress|default:0 }})</div>
-          <div class="item"><span class="dot" style="background:#2563eb"></span> Open ({{ progress_open|default:0 }})</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Stacked horizontal bar: open vs closed per priority -->
-  <div class="chart-card">
-    <h3>Tasks by Priority (Open vs Closed)</h3>
-    <div class="tl-chartbox tl-chartbox--bar"><canvas id="priorityChart"></canvas></div>
-    <div style="margin-top:10px;color:var(--theme-text-muted);font-size:13px;">
-      Bars are stacked: <strong style="color:var(--theme-text);">Open</strong> (not closed) + <strong style="color:var(--theme-text);">Closed</strong>.
+    <div class="tld-card">
+      <h3>Completion rate</h3><p class="sub">Closed &amp; finished vs. total</p>
+      <div class="tld-gauge" style="--pct:{{ completion_rate|default:0 }};"><div class="hole"><span class="pct">{{ completion_rate|default:0 }}%</span></div></div>
+      <div style="text-align:center;font-size:11.5px;color:var(--tl-text-muted);">{{ tasks_completed|add:tasks_finished }} of {{ total_tasks|default:0 }} tasks closed or finished</div>
     </div>
   </div>
 </div>
 
-<!-- Additional Charts Row (moved directly after dashboard-grid) -->
-{% if not is_tester %}
-<div class="charts-row">
-  <!-- Line Chart Card -->
-  <div class="chart-card chart-card-modern">
-    <h3 class="chart-title-modern">Tasks Over Time</h3>
-    <form method="get" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px;">
-      <div>
-        <label for="fromDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">From</label>
-        <input id="fromDate" type="date" name="tasks_from_date" value="{{ timeline_from }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text);">
-      </div>
-      <div>
-        <label for="toDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">To</label>
-        <input id="toDate" type="date" name="tasks_to_date" value="{{ timeline_to }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text);">
-      </div>
-      <button type="submit" style="padding:9px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;">Apply</button>
-      <a href="{{ request.path }}" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid var(--tl-border-strong);border-radius:8px;background:var(--tl-surface);color:var(--tl-text);font-weight:600;text-decoration:none;cursor:pointer;">Reset</a>
-    </form>
-    <div class="chart-canvas-modern tl-chartbox tl-chartbox--line">
-      <canvas id="lineChart"></canvas>
-    </div>
-    <div class="chart-desc-modern">Default range is the last 30 days. Filters apply to line and defect metrics.</div>
-  </div>
-  <!-- Table Card -->
-  <div class="chart-card chart-card-modern">
-    <h3 class="chart-title-modern">Planned Tasks</h3>
-    <div style="font-size:13px;color:var(--theme-text-secondary);margin-bottom:8px;">
-      Showing planned tasks for: <strong>{{ planned_start|date:'d M Y' }}</strong> — <strong>{{ planned_end|date:'d M Y' }}</strong>
-      <span style="color:var(--theme-text-muted);font-weight:600;margin-left:8px;">(max {{ planned_limit }} items)</span>
-    </div>
-    <div class="table-responsive-modern" style="max-height: 400px; overflow-y: auto;">
-      <table class="modern-table">
-        <thead>
-          <tr>
-            <th>Task</th>
-            <th>Status</th>
-            <th>Due</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for task in planned_tasks %}
-          <tr>
-            <td class="modern-td-title">{{ task.title }}</td>
-            <td>
-              {% if task.status == 'Completed' %}
-                <span class="badge-status badge-completed">{{ task.status }}</span>
-              {% elif task.status == 'Pending' %}
-                <span class="badge-status badge-pending">{{ task.status }}</span>
-              {% elif task.status == 'In Progress' %}
-                <span class="badge-status badge-inprogress">{{ task.status }}</span>
-              {% else %}
-                <span class="badge-status badge-default">{{ task.status }}</span>
-              {% endif %}
-            </td>
-            <td class="modern-td-date">{{ task.due_date|date:'d M Y' }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="3" class="modern-td-empty">No planned tasks in the configured window.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-<div class="charts-row">
-  <div class="chart-card chart-card-modern">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
-      <div>
-        <h3 class="chart-title-modern" style="margin:0;padding:0;">Defect Reporter Metrics</h3>
-        <div id="defectRangeLabel" style="color:var(--theme-text-secondary);font-size:13px;margin-top:6px;">Bug/Defect reports by reporter from {{ defect_range_from|date:'d M Y' }} to {{ defect_range_to|date:'d M Y' }}.</div>
-      </div>
-      <form id="defectFilterForm" method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;margin:0;">
-        <div style="display:flex;flex-direction:column;">
-          <label for="defectFromDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">From</label>
-          <input id="defectFromDate" type="date" name="defect_from_date" value="{{ timeline_defect_from }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;width:140px;background:var(--theme-input-bg);color:var(--theme-text);">
-        </div>
-        <div style="display:flex;flex-direction:column;">
-          <label for="defectToDate" style="display:block;font-size:12px;color:var(--theme-text-secondary);font-weight:700;">To</label>
-          <input id="defectToDate" type="date" name="defect_to_date" value="{{ timeline_defect_to }}" style="padding:8px 10px;border:1px solid var(--theme-input-border);border-radius:8px;width:140px;background:var(--theme-input-bg);color:var(--theme-text);">
-        </div>
-        <div style="margin-top:20px;">
-          <button type="submit" style="padding:8px 12px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;">Apply</button>
-        </div>
-        <div style="margin-top:20px;">
-          <a href="{{ request.path }}" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid var(--tl-border-strong);border-radius:8px;background:var(--tl-surface);color:var(--tl-text);font-weight:600;text-decoration:none;cursor:pointer;">Reset</a>
-        </div>
-      </form>
-    </div>
-    <div class="chart-canvas-modern tl-chartbox tl-chartbox--defect">
-      <canvas id="defectReporterChart"></canvas>
-    </div>
-    <div class="chart-desc-modern">Defects reported by each reporter in the selected timeline.</div>
-  </div>
-  <div class="chart-card chart-card-modern">
-    <h3 class="chart-title-modern">Reporter Summary</h3>
-    <div class="table-responsive-modern" style="max-height: 360px; overflow-y: auto;">
-      <table class="modern-table">
-        <thead>
-          <tr>
-            <th>Reporter</th>
-            <th>Reported</th>
-            <th>Closed</th>
-            <th>Open</th>
-          </tr>
-        </thead>
-        <tbody id="reporterSummaryBody">
-          {% for r in defect_reporter_summary %}
-          <tr>
-            <td class="modern-td-title">{{ r.reporter_name }}</td>
-            <td>{{ r.reported_count }}</td>
-            <td>{{ r.closed_count }}</td>
-            <td>{{ r.open_count }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="4" class="modern-td-empty">No defects reported in this date range.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-{# Team modal only rendered for team leads #}
-{% if is_team_lead %}
-<div class="modal fade team-modal" id="teamModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Team Summary</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted small">Summary for team: <strong id="teamNameLabel">—</strong></p>
-
-        <div class="table-responsive mb-3">
-          <table class="team-table">
-            <thead>
-              <tr>
-                <th>Member</th>
-                <th>Assigned</th>
-                <th>Completed</th>
-                <th>Pending</th>
-                <th>Priority (C/H/N/L)</th>
-                <th class="text-end">Details</th>
-              </tr>
-            </thead>
-            <tbody id="teamRows">
-              <!-- filled by JS when team modal opens -->
-            </tbody>
-          </table>
-        </div>
-
-        <div class="row g-3">
-          <div class="col-md-6">
-            <div class="chart-card">
-              <h3 class="mb-2">Team Task Breakdown</h3>
-              <canvas id="teamProgressChart" class="team-chart"></canvas>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="chart-card">
-              <h3 class="mb-2">Team Priority (Open vs Closed)</h3>
-              <canvas id="teamPriorityChart" class="team-chart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline-gradient" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-<!-- Popup Notification Container -->
-<div class="popup-notification-container" id="popup-notification-container"></div>
-
+<script>
+  (function(){
+    var btn=document.getElementById('tldRangeBtn'), menu=document.getElementById('tldRangeMenu');
+    if(btn&&menu){
+      btn.addEventListener('click',function(e){e.stopPropagation();menu.classList.toggle('open');});
+      document.addEventListener('click',function(){menu.classList.remove('open');});
+      menu.addEventListener('click',function(e){e.stopPropagation();});
+    }
+  })();
+</script>
 {% endblock %}
 
 {% block extra_js %}
