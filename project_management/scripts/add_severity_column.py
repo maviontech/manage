@@ -43,7 +43,7 @@ def add_severity_column():
     ok, err = 0, 0
     try:
         with master_conn.cursor() as cur:
-            cur.execute("SELECT id, client_name, db_name, db_host, db_port, db_user, db_password FROM clients_master")
+            cur.execute("SELECT id, client_name, db_name, db_host, db_user, db_password FROM clients_master")
             tenants = cur.fetchall()
 
         if not tenants:
@@ -56,7 +56,7 @@ def add_severity_column():
             try:
                 tconn = pymysql.connect(
                     host=t.get('db_host') or MASTER_DB_CONFIG['db_host'],
-                    port=int(t.get('db_port') or MASTER_DB_CONFIG['db_port']),
+                    port=MASTER_DB_CONFIG['db_port'],
                     user=t.get('db_user'), password=t.get('db_password'),
                     database=db, autocommit=True,
                 )
