@@ -210,13 +210,16 @@
   }
 
   @media (max-width: 768px) {
-    .stats-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .tasks-table-container {
-      overflow-x: auto;
-    }
+    /* Compact 2x2 stat grid instead of full-width stacked cards */
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-card { padding: 12px 14px; }
+    .stat-card .label { font-size: 10px; }
+    .stat-card .value { font-size: 24px; }
+    .tasks-table-container { overflow-x: auto; }
+  }
+  @media (max-width: 380px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .stat-card .value { font-size: 21px; }
   }
 
   /* ===== DARK MODE ===== */

@@ -264,10 +264,10 @@
     font-size: 13px !important;
   }
 
-  /* Stats grid mobile */
+  /* Stats grid mobile: compact 2-up instead of full-width stacked */
   .stats-grid {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
   }
 
   /* Charts mobile */
@@ -939,6 +939,21 @@
   .tester-filter-form { grid-template-columns: 1fr !important; }
   .wl-chips { gap: 8px; }
   .wl-chips .wl-chip { min-width: calc(50% - 8px); flex: 1 1 calc(50% - 8px); }
+}
+
+/* Compact drill-down / list page headers on phones (were too bulky) */
+@media (max-width: 640px) {
+  .drilldown-header { padding: 14px 16px !important; margin-bottom: 12px !important; }
+  .drilldown-header h1 { font-size: 18px !important; }
+  .drilldown-header p { font-size: 12.5px !important; margin-top: 4px !important; }
+  /* Toolbar back/export/filter buttons: side-by-side, compact */
+  .toolbar { flex-direction: row !important; flex-wrap: wrap !important; align-items: stretch !important; gap: 8px !important; margin-bottom: 10px !important; }
+  .toolbar > .btn-main, .toolbar > a.btn-main { flex: 1 1 calc(50% - 4px); min-height: 0 !important; }
+  .btn-main, .btn-back, .btn-export, .btn-filter, .btn-clear { padding: 10px 12px !important; font-size: 13px !important; }
+  /* tasks_overview stat cards a touch tighter */
+  .stats-grid { gap: 10px !important; }
+  .stat-card { padding: 14px 16px !important; }
+  .stat-card .value { font-size: 26px !important; }
 }
 
 /* ==========================================
