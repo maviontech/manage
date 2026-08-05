@@ -1778,12 +1778,35 @@ def dashboard_view(request, personal=False):
         'user_role': user_role_name,
     }
     if is_tester:
-        ctx.update(_build_tester_dashboard_context(
+        tctx = _build_tester_dashboard_context(
             cur,
             member_id,
             scope_member_ids=visible_user_ids,
             include_all_testing_work=True,
-        ))
+        )
+        ctx.update(tctx)
+        # Testers work on bugs/defects they don't necessarily own as assignee, so
+        # the assigned-to-based KPIs come out empty. Map the QA workload numbers
+        # onto the unified dashboard's KPI / donut / priority variables.
+        _g = lambda k: int(tctx.get(k) or 0)
+        b_new, b_prog, b_fixed = _g('bug_status_new'), _g('bug_status_in_progress'), _g('bug_status_fixed')
+        b_closed, b_retest, b_rej = _g('bug_status_closed'), _g('bug_status_retesting'), _g('bug_status_rejected')
+        bug_total = b_new + b_prog + b_fixed + b_closed + b_retest + b_rej
+        ctx['progress_open'] = b_new
+        ctx['progress_inprogress'] = b_prog
+        ctx['progress_closed'] = b_closed
+        ctx['tasks_finished'] = b_fixed
+        ctx['tasks_reopened'] = b_retest
+        ctx['overdue_count'] = _g('today_overdue_bugs')
+        ctx['total_tasks'] = max(bug_total, b_new + b_prog + b_closed)
+        ctx['completion_rate'] = _g('execution_rate') or (round(100 * (b_fixed + b_closed) / bug_total) if bug_total else 0)
+        ctx['tasks_completed'] = b_closed
+        # priority load (open bugs by severity/priority)
+        ctx['pri_critical_open'] = _g('tester_priority_critical')
+        ctx['pri_high_open'] = _g('tester_priority_high')
+        ctx['pri_normal_open'] = _g('tester_priority_medium')
+        ctx['pri_low_open'] = _g('tester_priority_low')
+        ctx['pri_critical_closed'] = ctx['pri_high_closed'] = ctx['pri_normal_closed'] = ctx['pri_low_closed'] = 0
 
     cur.close()
     conn.close()
