@@ -1401,7 +1401,7 @@ function filterAllTeams() {
           <td class="task-team-member-cell">
             <div class="task-team-data" style="display:block;">
               {% if task.assigned_type == 'team' %}
-                <i class="fa fa-users" style="color: #8b5cf6;"></i> {{ task.assigned_name }}
+                <i class="fa fa-users" style="color: #14b8a6;"></i> {{ task.assigned_name }}
               {% else %}
                 <span style="color:#9ca3af; font-style:italic;">No Team</span>
               {% endif %}
@@ -1631,7 +1631,7 @@ function initializeCharts() {
       backgroundColor: [
         '#3b82f6',  // Blue for Active
         '#10b981',  // Green for Completed
-        '#8b5cf6',  // Purple for Planned
+        '#14b8a6',  // Purple for Planned
         '#f59e0b'   // Orange for On Hold
       ],
       borderWidth: 0,
@@ -1735,7 +1735,7 @@ function initializeCharts() {
       backgroundColor: [
         '#10b981',  // Green for Active
         '#f59e0b',  // Orange for Inactive
-        '#8b5cf6'   // Purple for On Leave
+        '#14b8a6'   // Purple for On Leave
       ],
       borderWidth: 0,
       hoverOffset: 10
