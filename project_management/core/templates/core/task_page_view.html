@@ -383,14 +383,39 @@
 
     /* responsive adjustments */
     @media (max-width: 900px) {
-        /* Stack the main column + Details panel on tablet/mobile */
+        /* Stack the main column + Details panel on tablet/mobile, with the
+           description/status FIRST (an external rule sets sidebar order:-1). */
         .detail-content { grid-template-columns: 1fr !important; }
-        .detail-side, .detail-sidebar { position: static !important; width: 100% !important; }
+        .detail-main { order: 0 !important; }
+        .detail-side, .detail-sidebar { position: static !important; width: 100% !important; order: 1 !important; }
     }
-    @media (max-width: 720px) {
-        .status-bar { gap: 10px; padding: 12px; flex-wrap: wrap; }
-        .badge { padding: 6px 10px; font-size: 12px; }
-        .description-card .card-header { flex-wrap: wrap; gap: 10px; }
+    @media (max-width: 640px) {
+        /* Compact, lighter task-detail header for phones */
+        .feedback-detail-container { padding: 12px 12px 24px !important; }
+        .detail-header { flex-direction: column !important; align-items: stretch !important; gap: 12px !important; padding: 0 !important; margin-bottom: 14px !important; border: none !important; }
+        .header-left { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+        .issue-title { font-size: 17px !important; line-height: 1.3 !important; font-weight: 700 !important; display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 8px !important; margin: 0 !important; }
+        .issue-id { font-size: 11px !important; padding: 3px 8px !important; }
+        .btn-back { font-size: 12px !important; padding: 7px 12px !important; align-self: flex-start; }
+        .header-actions { width: 100% !important; display: flex !important; gap: 8px !important; }
+        .header-actions .btn { flex: 1 1 auto !important; justify-content: center !important; font-size: 13px !important; padding: 10px 12px !important; }
+
+        /* Status bar: compact chips */
+        .status-bar { gap: 8px 14px !important; padding: 12px 14px !important; flex-wrap: wrap !important; }
+        .status-item { gap: 6px !important; }
+        .status-item .label { font-size: 11px !important; }
+        .badge { padding: 4px 9px !important; font-size: 11px !important; }
+
+        /* Cards: lighter padding/radius */
+        .card, .metadata-card, .description-card { padding: 14px !important; border-radius: 12px !important; }
+        .card .card-header { padding: 0 0 10px !important; }
+        .metadata-card .card-header h3, .card-header h3 { font-size: 14px !important; }
+        .metadata-group label { font-size: 10px !important; letter-spacing: .04em; }
+        .user-name { font-size: 13px !important; }
+        .user-email { font-size: 11px !important; }
+
+        /* Description header: wrap actions under the title */
+        .description-card .card-header { flex-wrap: wrap !important; gap: 10px !important; }
         .description-actions { width: 100%; justify-content: flex-start; }
     }
 
