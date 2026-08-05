@@ -132,8 +132,8 @@
                 </div>
               </div>
             </td>
-            <td class="desc-col">{{ p.description|default:"—"|truncatechars:100 }}</td>
-            <td class="date-cell">
+            <td class="desc-col" data-label="Description">{{ p.description|default:"—"|truncatechars:100 }}</td>
+            <td class="date-cell" data-label="Start">
               <span class="date-badge">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
                   <circle cx="12" cy="12" r="10"></circle>
@@ -142,7 +142,7 @@
                 {{ p.start_date|date:"M d, Y" }}
               </span>
             </td>
-            <td class="date-cell">
+            <td class="date-cell" data-label="Target end">
               <span class="date-badge date-target">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -153,7 +153,7 @@
                 {{ p.tentative_end_date|date:"M d, Y" }}
               </span>
             </td>
-            <td>
+            <td data-label="Status">
               {% if p.status == "Active" %}
                 <span class="status-badge status-active">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
@@ -181,7 +181,7 @@
                 <span class="status-badge status-unknown">{{ p.status|default:"—" }}</span>
               {% endif %}
             </td>
-            <td class="date-cell">
+            <td class="date-cell" data-label="Completed">
               {% if p.end_date %}
                 <span class="date-badge date-completed">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
@@ -194,7 +194,7 @@
                 <span class="date-badge date-empty">—</span>
               {% endif %}
             </td>
-            <td class="creator-cell">
+            <td class="creator-cell" data-label="Owner">
               <div class="creator-badge">
                 <div class="creator-avatar">{{ p.created_by_name|default:"?"|slice:":1"|upper }}</div>
                 <span>{{ p.created_by_name|default:"—" }}</span>
@@ -1176,43 +1176,46 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 @media (max-width: 768px) {
-  /* Make table scroll horizontally on mobile */
-  .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  /* Card-per-project layout: each row becomes a self-contained card so nothing
+     is cut off and the list adapts to any phone width. */
+  .table-responsive { overflow-x: visible !important; }
+  .projects-table { min-width: 0 !important; table-layout: auto; display: block; }
+  .projects-table thead { display: none !important; }
+  .projects-table tbody { display: block; }
+  .projects-table tr.project-row {
+    display: block; width: 100%;
+    background: var(--tl-surface, #fff);
+    border: 1px solid var(--tl-border, #e5e7eb);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;
   }
-
-  .projects-table {
-    table-layout: auto;
-    min-width: 600px;
-  }
-
-  /* Hide less important columns on mobile: Description, Start, Completed, Created By */
-  .projects-table th:nth-child(2),
-  .projects-table td:nth-child(2),
-  .projects-table th:nth-child(3),
-  .projects-table td:nth-child(3),
-  .projects-table th:nth-child(6),
-  .projects-table td:nth-child(6),
-  .projects-table th:nth-child(7),
-  .projects-table td:nth-child(7) {
-    display: none;
-  }
-
-  .projects-table {
-    min-width: unset;
-  }
-
-  /* Reduce font sizes */
-  .projects-table th {
-    font-size: 10px;
-    padding: 6px 6px;
-  }
-
+  .projects-table tr.project-row:hover { transform: none; }
   .projects-table td {
-    font-size: 11px;
-    padding: 6px 6px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    width: 100%; padding: 7px 0 !important; border: none !important; font-size: 13px;
+    text-align: right;
   }
+  .projects-table td::before {
+    content: attr(data-label);
+    font-weight: 700; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--tl-text-muted, #64748b); flex: 0 0 auto; text-align: left;
+  }
+  /* Project name cell: full-width card title, no label */
+  .projects-table td:first-child {
+    display: block; text-align: left;
+    padding: 0 0 10px !important; margin-bottom: 6px;
+    border-bottom: 1px solid var(--tl-border, #eef2f7) !important;
+  }
+  .projects-table td:first-child::before { content: none; }
+  /* Actions cell: full-width row of buttons, no label */
+  .projects-table td:last-child {
+    justify-content: flex-start; padding-top: 12px !important; margin-top: 4px;
+    border-top: 1px solid var(--tl-border, #eef2f7) !important;
+  }
+  .projects-table td:last-child::before { content: none; }
+  .projects-table td .action-buttons { width: 100%; }
+  /* Long text (Description): label on top, value wraps full-width below */
+  .projects-table td.desc-col { flex-direction: column; align-items: flex-start; text-align: left; gap: 4px; }
+  .projects-table td.desc-col { white-space: normal; word-break: break-word; }
 
   .project-name {
     font-size: 12px;
