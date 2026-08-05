@@ -78,6 +78,7 @@ urlpatterns = [
     path("api/team-members/", views.api_get_team_members, name="api_get_team_members"),
     path("tasks/api/subprojects/", views_tasks.api_get_subprojects, name="api_get_subprojects"),
     path("tasks/<int:task_id>/", views_tasks.task_detail_view, name="task_detail"),
+    path("dashboard/workload/<int:member_id>/", views_tasks.workload_drilldown_view, name="workload_drilldown"),
     path("tasks/<int:task_id>/view/", views_tasks.task_page_view, name="task_page_view"),
     path("tasks/<int:task_id>/edit/", views_tasks.edit_task_view, name="edit_task"),
     path("tasks/<int:task_id>/delete/", views_tasks.delete_task_view, name="delete_task"),

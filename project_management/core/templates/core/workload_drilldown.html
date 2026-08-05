@@ -1,0 +1,77 @@
+{% extends "core/base.html" %}
+{% block title %}{{ member_name }} · Workload — Trackline{% endblock %}
+{% block content %}
+<style>
+  .wl-wrap { max-width: 1120px; margin: 0 auto; }
+  .wl-chips { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px; }
+  .wl-chip { display:flex; flex-direction:column; gap:2px; min-width:104px; padding:12px 14px;
+             border:1px solid var(--tl-border); border-radius:12px; background:var(--tl-surface); }
+  .wl-chip .n { font-size:22px; font-weight:750; line-height:1; color:var(--tl-text); }
+  .wl-chip .l { font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--tl-text-muted); }
+  .wl-chip.is-over .n { color:#dc2626; }
+  .wl-chip.is-blocked .n { color:#b45309; }
+
+  .wl-table { width:100%; border-collapse:separate; border-spacing:0; }
+  .wl-table thead th { text-align:left; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+                       color:var(--tl-text-muted); padding:0 14px 10px; border-bottom:1px solid var(--tl-border); }
+  .wl-table tbody tr { cursor:pointer; transition:background .12s ease; }
+  .wl-table tbody tr:hover { background:var(--tl-surface-2); }
+  .wl-table tbody td { padding:13px 14px; border-bottom:1px solid var(--tl-border); font-size:13.5px; color:var(--tl-text); vertical-align:middle; }
+  .wl-table tbody tr:last-child td { border-bottom:none; }
+  .wl-id { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; font-weight:700; color:var(--tl-accent);
+           background:var(--tl-accent-soft); padding:3px 8px; border-radius:6px; white-space:nowrap; }
+  .wl-title { font-weight:600; color:var(--tl-text); }
+  .wl-title a { color:inherit; text-decoration:none; }
+  .wl-meta { color:var(--tl-text-muted); font-size:12px; }
+  .wl-due.over { color:#dc2626; font-weight:600; }
+  .wl-empty { padding:40px; text-align:center; color:var(--tl-text-muted); }
+  @media (max-width:720px){ .wl-hide-sm { display:none; } }
+</style>
+
+<div class="wl-wrap">
+  {% include "core/_settings_header.html" with icon="fa-solid fa-user-clock" eyebrow="Workload" title=member_name subtitle="Active tasks assigned to this member — click any row to open it." %}
+
+  <div class="wl-chips">
+    <div class="wl-chip"><span class="n">{{ task_count }}</span><span class="l">Active</span></div>
+    <div class="wl-chip"><span class="n">{{ tally.open }}</span><span class="l">Open</span></div>
+    <div class="wl-chip"><span class="n">{{ tally.in_progress }}</span><span class="l">In progress</span></div>
+    <div class="wl-chip is-over"><span class="n">{{ tally.overdue }}</span><span class="l">Overdue</span></div>
+    <div class="wl-chip is-blocked"><span class="n">{{ tally.blocked }}</span><span class="l">Blocked</span></div>
+  </div>
+
+  <div class="tl-card" style="padding:16px 18px;">
+    {% if tasks %}
+    <div style="overflow-x:auto;">
+      <table class="wl-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th class="wl-hide-sm">Type</th>
+            <th class="wl-hide-sm">Priority</th>
+            <th>Status</th>
+            <th class="wl-hide-sm">Project</th>
+            <th>Due</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tasks %}
+          <tr onclick="window.location='{% url 'task_page_view' t.id %}'">
+            <td><span class="wl-id">TASK-{{ t.id|stringformat:'04d' }}</span></td>
+            <td class="wl-title"><a href="{% url 'task_page_view' t.id %}">{{ t.title|default:'(untitled)'|truncatechars:64 }}</a></td>
+            <td class="wl-hide-sm"><span class="work-type-mini-badge work-type-{{ t.work_type|default:'Task'|lower|cut:' ' }}">{{ t.work_type|default:'Task' }}</span></td>
+            <td class="wl-hide-sm"><span class="priority-badge priority-{{ t.priority|default:'Normal'|lower }}">{{ t.priority|default:'Normal' }}</span></td>
+            <td><span class="status-badge status-{{ t.status|default:''|slugify }}">{{ t.status|default:'—' }}</span></td>
+            <td class="wl-hide-sm wl-meta">{{ t.project_name|default:'—' }}{% if t.subproject_name %} <span style="opacity:.6">› {{ t.subproject_name }}</span>{% endif %}</td>
+            <td>{% if t.due_date %}<span class="wl-due{% if t.due_date < today %} over{% endif %}">{{ t.due_date|date:'d M Y' }}</span>{% else %}<span class="wl-meta">—</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="wl-empty">No active tasks assigned to {{ member_name }}. 🎉</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

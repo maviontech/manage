@@ -1890,6 +1890,9 @@
   .tld-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:12px}
   .tld-kpi{position:relative;border-radius:var(--radius-tl,10px);border:1px solid var(--tl-border);padding:14px 15px;box-shadow:var(--tl-shadow-sm);display:flex;flex-direction:column;gap:8px;overflow:hidden;text-decoration:none}
   .tld-kpi .kl{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--tl-text-muted)}
+  .tld-kpi .ki{margin-left:4px;font-size:10px;opacity:.45;font-weight:400}
+  .tld-kpi:hover .ki{opacity:.85}
+  .tld-kpi[title]{cursor:help}
   .tld-kpi .kv{font-size:24px;font-weight:730;letter-spacing:-.02em;line-height:1}
   .tld-kpi .kc{position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:11px;color:#fff;font-weight:700}
   .kpi-total{background:linear-gradient(135deg,color-mix(in srgb,#2563eb 10%,var(--tl-surface)),var(--tl-surface) 62%);border-color:color-mix(in srgb,#2563eb 22%,var(--tl-border))}.kpi-total .kv{color:#2563eb}.kpi-total .kc{background:linear-gradient(135deg,#3b82f6,#2563eb)}
@@ -1908,11 +1911,16 @@
   .tld-chartbox{position:relative;width:100%}.tld-chartbox--line{height:230px}.tld-chartbox--donut{height:210px}.tld-chartbox--bar{height:230px}
   .tld-chartbox>canvas{position:absolute!important;inset:0;width:100%!important;height:100%!important}
   /* attention + active lists */
-  .tld-attn .r{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--tl-border)}.tld-attn .r:last-child{border-bottom:none}
-  .tld-attn .rt{font-size:12.5px;font-weight:550;color:var(--tl-text)}.tld-attn .rm{font-size:10.5px;color:var(--tl-text-subtle);margin-top:2px}
+  .tld-attn .r{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 6px;margin:0 -6px;border-radius:8px;border-bottom:1px solid var(--tl-border);transition:background .12s ease}.tld-attn .r:last-child{border-bottom:none}
+  .tld-attn .r:hover{background:var(--tl-surface-2)}
+  .tld-attn .rt{font-size:12.5px;font-weight:550;color:var(--tl-text)}.tld-attn .rm{font-size:10.5px;color:var(--tl-text-subtle);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .tld-attn .attn-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;font-weight:700;color:var(--tl-accent);background:var(--tl-accent-soft);padding:2px 6px;border-radius:5px}
   .tld-empty{padding:20px;text-align:center;color:var(--tl-text-subtle);font-size:12px}
   /* workload */
-  .tld-arow{display:grid;grid-template-columns:24px 1fr 28px;align-items:center;gap:10px;margin:10px 0}
+  .tld-arow{display:grid;grid-template-columns:24px 1fr 28px;align-items:center;gap:10px;margin:2px 0;padding:8px 6px;border-radius:8px}
+  .tld-arow--link{text-decoration:none;transition:background .12s ease;cursor:pointer}
+  .tld-arow--link:hover{background:var(--tl-surface-2)}
+  .tld-arow--link:hover .an{color:var(--tl-accent)}
   .tld-av{width:24px;height:24px;border-radius:99px;display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,#3b82f6,#2563eb)}
   .tld-arow .an{font-size:12px;color:var(--tl-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tld-arow .amini{height:6px;background:var(--tl-surface-3,#eef2f7);border-radius:99px;overflow:hidden;margin-top:4px}
@@ -1971,12 +1979,12 @@
 
   <!-- KPI strip -->
   <div class="tld-kpis">
-    <a class="tld-kpi kpi-total" href="{% url 'tasks_overview' %}"><span class="kc">▣</span><div class="kl">Total tasks</div><div class="kv">{{ total_tasks|default:0 }}</div></a>
-    <a class="tld-kpi kpi-open" href="{% url 'metric_drilldown' 'tasks-open' %}"><span class="kc">◔</span><div class="kl">Open</div><div class="kv">{{ progress_open|default:0 }}</div></a>
-    <div class="tld-kpi kpi-prog"><span class="kc">◑</span><div class="kl">In progress</div><div class="kv">{{ progress_inprogress|default:0 }}</div></div>
-    <a class="tld-kpi kpi-done" href="{% url 'metric_drilldown' 'tasks-finished' %}"><span class="kc">✓</span><div class="kl">Finished</div><div class="kv">{{ tasks_finished|default:0 }}</div></a>
-    <div class="tld-kpi kpi-over"><span class="kc">!</span><div class="kl">Overdue</div><div class="kv">{{ overdue_count|default:0 }}</div></div>
-    <a class="tld-kpi kpi-reopen" href="{% url 'metric_drilldown' 'tasks-reopened' %}"><span class="kc">↻</span><div class="kl">Reopened</div><div class="kv">{{ tasks_reopened|default:0 }}</div></a>
+    <a class="tld-kpi kpi-total" href="{% url 'tasks_overview' %}" title="{% if is_tester %}Bugs & defects you reported within the selected date range (all statuses).{% else %}All tasks in scope (My View = yours, Admin View = your team) that were created within the selected date range, across every status.{% endif %}"><span class="kc">▣</span><div class="kl">Total tasks <span class="ki">ⓘ</span></div><div class="kv">{{ total_tasks|default:0 }}</div></a>
+    <a class="tld-kpi kpi-open" href="{% url 'metric_drilldown' 'tasks-open' %}" title="{% if is_tester %}Your reported bugs still New / open, created in the selected range.{% else %}Tasks not yet started — status New or Open — created in the selected range.{% endif %}"><span class="kc">◔</span><div class="kl">Open <span class="ki">ⓘ</span></div><div class="kv">{{ progress_open|default:0 }}</div></a>
+    <a class="tld-kpi kpi-prog" href="{% url 'metric_drilldown' 'tasks-inprogress' %}" title="{% if is_tester %}Your reported bugs currently being worked on, in the selected range.{% else %}Tasks actively in progress or under review, created in the selected range.{% endif %}"><span class="kc">◑</span><div class="kl">In progress <span class="ki">ⓘ</span></div><div class="kv">{{ progress_inprogress|default:0 }}</div></a>
+    <a class="tld-kpi kpi-done" href="{% url 'metric_drilldown' 'tasks-finished' %}" title="{% if is_tester %}Your reported bugs marked Fixed, in the selected range.{% else %}Tasks marked Finished within the selected range.{% endif %}"><span class="kc">✓</span><div class="kl">Finished <span class="ki">ⓘ</span></div><div class="kv">{{ tasks_finished|default:0 }}</div></a>
+    <a class="tld-kpi kpi-over" href="{% url 'metric_drilldown' 'tasks-overdue' %}" title="{% if is_tester %}Your reported bugs past their due date and still open (excludes Closed / Fixed), created in the selected range.{% else %}Tasks past their due date and still open — excludes Closed and Finished — created in the selected range.{% endif %}"><span class="kc">!</span><div class="kl">Overdue <span class="ki">ⓘ</span></div><div class="kv">{{ overdue_count|default:0 }}</div></a>
+    <a class="tld-kpi kpi-reopen" href="{% url 'metric_drilldown' 'tasks-reopened' %}" title="{% if is_tester %}Your reported bugs sent back for retest / reopened, in the selected range.{% else %}Tasks reopened after being resolved, created in the selected range.{% endif %}"><span class="kc">↻</span><div class="kl">Reopened <span class="ki">ⓘ</span></div><div class="kv">{{ tasks_reopened|default:0 }}</div></a>
   </div>
 
   <!-- Throughput + Status -->
@@ -2002,10 +2010,10 @@
       <div class="tld-card-head"><h3>Needs attention</h3><a class="tld-link" href="{% url 'task_board' %}">Board →</a></div>
       <div class="tld-attn">
         {% for t in needs_attention %}
-        <div class="r">
+        <div class="r" onclick="window.location='{% url 'task_page_view' t.id %}'" style="cursor:pointer;">
           <div>
-            <div class="rt"><a href="{% url 'task_page_view' t.id %}" style="color:inherit;text-decoration:none;">{{ t.title|truncatechars:52 }}</a></div>
-            <div class="rm"><span class="work-type-mini-badge work-type-{{ t.work_type|default:'Task'|lower|cut:' ' }}">{{ t.work_type|default:'Task' }}</span> · {{ t.assignee|default:'Unassigned' }}{% if t.due_date %} · due {{ t.due_date|date:'d M' }}{% endif %}</div>
+            <div class="rt">{{ t.title|default:'(untitled)'|truncatechars:52 }}</div>
+            <div class="rm"><span class="attn-id">TASK-{{ t.id|stringformat:'04d' }}</span><span class="work-type-mini-badge work-type-{{ t.work_type|default:'Task'|lower|cut:' ' }}">{{ t.work_type|default:'Task' }}</span> · {{ t.assignee|default:'Unassigned' }}{% if t.due_date %} · due {{ t.due_date|date:'d M' }}{% endif %}</div>
           </div>
           <span class="status-badge status-{{ t.status|default:''|slugify }}">{{ t.status }}</span>
         </div>
@@ -2025,11 +2033,11 @@
     <div class="tld-card">
       <div class="tld-card-head"><h3>Workload by assignee</h3><a class="tld-link" href="{% url 'people_page' %}">People →</a></div>
       {% for w in workload %}
-      <div class="tld-arow">
+      {% if w.id %}<a class="tld-arow tld-arow--link" href="{% url 'workload_drilldown' w.id %}">{% else %}<div class="tld-arow">{% endif %}
         <span class="tld-av">{{ w.initials }}</span>
         <div><div class="an">{{ w.name }}</div><div class="amini"><span style="width:{{ w.pct }}%"></span></div></div>
         <span class="num">{{ w.count }}</span>
-      </div>
+      {% if w.id %}</a>{% else %}</div>{% endif %}
       {% empty %}
       <div class="tld-empty">No active workload to show.</div>
       {% endfor %}

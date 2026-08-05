@@ -1692,7 +1692,7 @@ def dashboard_view(request, personal=False):
             try:
                 cur.execute(f"""SELECT COUNT(*) c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({ph})
                     AND due_date IS NOT NULL AND due_date < CURDATE()
-                    AND {status_expr} NOT IN ('closed','completed','finished')""", tuple(vids))
+                    AND {status_expr} NOT IN ('closed','completed','finished')""" + DW, tuple(vids) + dwp)
                 overdue_count = scalar_from_row(cur.fetchone(), 'c')
             except Exception:
                 overdue_count = 0
@@ -1707,7 +1707,7 @@ def dashboard_view(request, personal=False):
                 for r in rows:
                     nm = (r.get('name') or '').strip() or ('Member #%s' % r.get('id'))
                     c = int(r.get('cnt') or 0)
-                    workload.append({'name': nm, 'count': c, 'pct': round(100 * c / mx),
+                    workload.append({'id': r.get('id'), 'name': nm, 'count': c, 'pct': round(100 * c / mx),
                                      'initials': (''.join([p[0] for p in nm.split()[:2]]).upper() or '?')})
             except Exception:
                 workload = []
@@ -1891,7 +1891,7 @@ def dashboard_view(request, personal=False):
                 ORDER BY t.due_date ASC LIMIT 6""", t_scope_params + _wp)
             ctx['needs_attention'] = cur.fetchall() or []
             # Workload: bugs grouped by reporter (who filed the most).
-            cur.execute(f"""SELECT TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS name,
+            cur.execute(f"""SELECT m.id AS id, TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS name,
                     COUNT(t.id) AS cnt
                 FROM tasks t JOIN members m ON m.id=t.created_by
                 WHERE {t_scope} AND {_bugf}{_win}
@@ -1900,6 +1900,7 @@ def dashboard_view(request, personal=False):
             _wl = cur.fetchall() or []
             _mx = max([int(r.get('cnt') or 0) for r in _wl], default=0) or 1
             ctx['workload'] = [{
+                'id': r.get('id'),
                 'name': (r.get('name') or '').strip() or 'Unknown',
                 'count': int(r.get('cnt') or 0),
                 'pct': round(100 * int(r.get('cnt') or 0) / _mx),

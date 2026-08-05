@@ -4270,6 +4270,18 @@ def _metric_page_context(metric_key):
             'table_type': 'tasks',
             'empty': 'No reopened tasks found.'
         },
+        'tasks-inprogress': {
+            'title': 'Tasks In Progress',
+            'subtitle': 'Tasks actively in progress or under review in your visibility scope',
+            'table_type': 'tasks',
+            'empty': 'No in-progress tasks found.'
+        },
+        'tasks-overdue': {
+            'title': 'Overdue Tasks',
+            'subtitle': 'Tasks past their due date and still open in your visibility scope',
+            'table_type': 'tasks',
+            'empty': 'No overdue tasks found.'
+        },
     }
     return mapping.get(metric_key)
 
@@ -4443,6 +4455,12 @@ def metric_drilldown_view(request, metric_key):
                     status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) = 'finished'"
                 elif metric_key == 'tasks-reopened':
                     status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('reopen', 'reopened', 're-opened')"
+                elif metric_key == 'tasks-inprogress':
+                    status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('in progress', 'in-progress', 'review')"
+                elif metric_key == 'tasks-overdue':
+                    status_clause = "t.due_date IS NOT NULL AND t.due_date < CURDATE() AND LOWER(TRIM(COALESCE(t.status, ''))) NOT IN ('closed','completed','finished','done')"
+                elif metric_key == 'tasks-open':
+                    status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('open', 'new')"
                 else:
                     status_clause = "LOWER(TRIM(COALESCE(t.status, ''))) IN ('open', 'review', 'in progress', 'in-progress')"
                 cur.execute(f"""
@@ -5176,3 +5194,69 @@ def rte_image_upload(request):
         for chunk in f.chunks():
             out.write(chunk)
     return JsonResponse({'url': settings.MEDIA_URL + name})
+
+
+def workload_drilldown_view(request, member_id):
+    """Premium per-assignee drill-down: all active (open) tasks assigned to a
+    member, opened from the dashboard's Workload-by-assignee list."""
+    if not request.session.get('member_id'):
+        return redirect('login_password')
+    import logging
+    logger = logging.getLogger('project_management')
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+
+    # Member identity
+    try:
+        cur.execute("""SELECT id, TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,''))) AS name, email
+                       FROM members WHERE id=%s""", (member_id,))
+        member = cur.fetchone()
+    except Exception:
+        member = None
+    member_name = (member.get('name') if member else '') or f"Member #{member_id}"
+    member_email = (member.get('email') if member else '') or ''
+
+    # Active tasks assigned to this member
+    rows = []
+    try:
+        cur.execute("""
+            SELECT t.id, t.title, t.work_type, t.priority, t.status, t.severity, t.due_date, t.created_at,
+                   p.name AS project_name, sp.name AS subproject_name
+            FROM tasks t
+            LEFT JOIN projects p ON p.id = t.project_id
+            LEFT JOIN subprojects sp ON sp.id = t.subproject_id
+            WHERE t.assigned_type='member' AND t.assigned_to=%s
+              AND LOWER(TRIM(COALESCE(t.status,''))) NOT IN ('closed','completed','finished','done')
+            ORDER BY (t.due_date IS NULL), t.due_date ASC, t.id DESC
+        """, (member_id,))
+        rows = cur.fetchall() or []
+    except Exception as e:
+        logger.error(f"workload_drilldown tasks error: {e}")
+        rows = []
+
+    # Small status tally for the header chips
+    tally = {'open': 0, 'in_progress': 0, 'overdue': 0, 'blocked': 0}
+    today = datetime.date.today()
+    for r in rows:
+        st = (r.get('status') or '').strip().lower()
+        if st in ('in progress', 'in-progress', 'review'):
+            tally['in_progress'] += 1
+        elif st == 'blocked':
+            tally['blocked'] += 1
+        else:
+            tally['open'] += 1
+        dd = r.get('due_date')
+        dv = dd.date() if hasattr(dd, 'date') else dd
+        if dv and dv < today:
+            tally['overdue'] += 1
+
+    cur.close(); conn.close()
+    return render(request, 'core/workload_drilldown.html', {
+        'page': 'dashboard',
+        'member_id': member_id,
+        'member_name': member_name,
+        'member_email': member_email,
+        'tasks': rows,
+        'task_count': len(rows),
+        'tally': tally,
+    })
