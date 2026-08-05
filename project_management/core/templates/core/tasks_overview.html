@@ -308,7 +308,7 @@
     <tbody>
       {% for task in tasks %}
       <tr>
-        <td data-sort-value="{{ task.id }}"><span class="id-chip">#{{ task.id }}</span></td>
+        <td data-sort-value="{{ task.id }}"><span class="id-chip">TASK-{{ task.id|stringformat:'04d' }}</span></td>
         <td data-sort-value="{{ task.title|default:''|lower }}">
           <a href="{% url 'task_page_view' task.id %}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">
             {{ task.title }}

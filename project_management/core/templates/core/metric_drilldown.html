@@ -388,7 +388,7 @@
     <tbody>
       {% for row in rows %}
       <tr>
-        <td><span class="id-chip">#{{ row.id }}</span></td>
+        <td><span class="id-chip">TASK-{{ row.id|stringformat:'04d' }}</span></td>
         <td><a class="cell-title" href="{% url 'task_detail' row.id %}">{{ row.title|default:'(untitled)'|truncatechars:70 }}</a></td>
         <td class="cell-mut">{{ row.project_name|default:"—" }}</td>
         <td><span class="st-badge st-{{ row.status|default:''|slugify }}">{{ row.status|default:"—" }}</span></td>
