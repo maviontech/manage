@@ -110,6 +110,23 @@
               <textarea name="description" hidden>{{ task.description }}</textarea>
             </div>
           </div>
+
+          {% if task.work_type == "Bug" or task.work_type == "Defect" %}
+          <div class="tl-prop" style="margin-top:20px;">
+            <label class="tl-label">Steps to reproduce</label>
+            {% include "core/_rte_field.html" with field="steps_to_reproduce" placeholder="List the exact steps that trigger the issue…" initial=task.steps_to_reproduce %}
+          </div>
+
+          <div class="tl-prop" style="margin-top:20px;">
+            <label class="tl-label">Expected behavior</label>
+            {% include "core/_rte_field.html" with field="expected_behavior" placeholder="What should happen instead…" initial=task.expected_behavior %}
+          </div>
+
+          <div class="tl-prop" style="margin-top:20px;">
+            <label class="tl-label">Actual behavior</label>
+            {% include "core/_rte_field.html" with field="actual_behavior" placeholder="What actually happens…" initial=task.actual_behavior %}
+          </div>
+          {% endif %}
         </div>
       </div>
 

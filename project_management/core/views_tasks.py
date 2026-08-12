@@ -16,6 +16,58 @@ from .notifications import NotificationManager
 from .rbac import require_permission, has_permission
 import json
 
+
+BUG_DESCRIPTION_SECTIONS = (
+    ("steps_to_reproduce", "Steps to Reproduce"),
+    ("expected_behavior", "Expected Behavior"),
+    ("actual_behavior", "Actual Behavior"),
+)
+
+
+def split_bug_description(value):
+    """Split the combined bug description used by the tasks table into edit fields."""
+    import re
+
+    value = value or ""
+    marker_pattern = re.compile(
+        r"\*\*\s*(Steps\s+to\s+Reproduce|Expected\s+Behaviou?r|Actual\s+Behaviou?r)\s*:?\s*\*\*",
+        re.IGNORECASE,
+    )
+    matches = list(marker_pattern.finditer(value))
+    sections = {
+        "description": value.strip(),
+        "steps_to_reproduce": "",
+        "expected_behavior": "",
+        "actual_behavior": "",
+    }
+    if not matches:
+        return sections
+
+    sections["description"] = value[:matches[0].start()].strip()
+    for index, match in enumerate(matches):
+        heading = match.group(1).lower()
+        if heading.startswith("steps"):
+            field = "steps_to_reproduce"
+        elif heading.startswith("expected"):
+            field = "expected_behavior"
+        else:
+            field = "actual_behavior"
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(value)
+        sections[field] = value[match.end():end].strip()
+    return sections
+
+
+def combine_bug_description(description, steps_to_reproduce, expected_behavior, actual_behavior):
+    """Rebuild the storage format shared by bug creation and the detail page."""
+    parts = []
+    if description and description.strip():
+        parts.append(description.strip())
+    values = (steps_to_reproduce, expected_behavior, actual_behavior)
+    for (_, heading), section_value in zip(BUG_DESCRIPTION_SECTIONS, values):
+        if section_value and section_value.strip():
+            parts.append(f"**{heading}:**\n{section_value.strip()}")
+    return "\n\n".join(parts)
+
 # PDF generation
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
@@ -2173,6 +2225,9 @@ def edit_task_view(request, task_id):
         data = request.POST
         title = data.get("title")
         description = data.get("description")
+        steps_to_reproduce = data.get("steps_to_reproduce")
+        expected_behavior = data.get("expected_behavior")
+        actual_behavior = data.get("actual_behavior")
         due_date = data.get("due_date") or None
         priority = data.get("priority") or "Normal"
         status = data.get("status") or "Open"
@@ -2185,8 +2240,17 @@ def edit_task_view(request, task_id):
             closure_date=None
 
         # Fetch existing meta before update so we can log and notify
-        cur.execute("SELECT id, title, description, status, priority, due_date, created_by, assigned_to, assigned_type FROM tasks WHERE id=%s LIMIT 1", (task_id,))
+        cur.execute("SELECT id, title, description, status, priority, due_date, created_by, assigned_to, assigned_type, work_type FROM tasks WHERE id=%s LIMIT 1", (task_id,))
         _existing = cur.fetchone()
+
+        existing_work_type = _existing.get('work_type') if isinstance(_existing, dict) else None
+        if existing_work_type in ('Bug', 'Defect'):
+            description = combine_bug_description(
+                description,
+                steps_to_reproduce,
+                expected_behavior,
+                actual_behavior,
+            )
 
         # Perform update
         cur.execute(
@@ -2272,7 +2336,7 @@ def edit_task_view(request, task_id):
         return redirect("my_tasks")
 
     # GET
-    cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
+    cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at, work_type FROM tasks WHERE id=%s", (task_id,))
     row = cur.fetchone()
     if not row:
         cur.close()
@@ -2289,6 +2353,9 @@ def edit_task_view(request, task_id):
     # Fix: If description is None, set to empty string
     if task.get('description') is None:
         task['description'] = ''
+
+    if task.get('work_type') in ('Bug', 'Defect'):
+        task.update(split_bug_description(task['description']))
 
     return render(request, "core/edit_task.html", {"task": task})
 
@@ -2599,14 +2666,13 @@ def create_bug_view(request):
         si_os = data.get("si_os") or None
         si_timestamp = data.get("si_timestamp") or None
 
-        # Combine bug-specific fields into description
-        full_description = f"{description}\n\n"
-        if steps_to_reproduce:
-            full_description += f"**Steps to Reproduce:**\n{steps_to_reproduce}\n\n"
-        if expected_behavior:
-            full_description += f"**Expected Behavior:**\n{expected_behavior}\n\n"
-        if actual_behavior:
-            full_description += f"**Actual Behavior:**\n{actual_behavior}\n\n"
+        # Store the sections in the same compatible format used by bug editing.
+        full_description = combine_bug_description(
+            description,
+            steps_to_reproduce,
+            expected_behavior,
+            actual_behavior,
+        )
         
         # Handle assignment
         assigned_raw = data.get("assigned_to") or None

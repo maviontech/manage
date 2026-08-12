@@ -5,7 +5,47 @@ from django.http import HttpResponse
 from django.test import RequestFactory, TestCase, override_settings
 
 from core.middleware import SessionTimeoutMiddleware
-from core.views_tasks import create_bug_view, create_story_view
+from core.views_tasks import (
+    combine_bug_description,
+    create_bug_view,
+    create_story_view,
+    split_bug_description,
+)
+
+
+class BugDescriptionSectionsTests(TestCase):
+    def test_split_combined_bug_description_for_editing(self):
+        combined = (
+            "A concise description.\n\n"
+            "**Steps to Reproduce:**\n1. Open the page\n2. Click Save\n\n"
+            "**Expected Behavior:**\nA validation message appears.\n\n"
+            "**Actual Behavior:**\nA system error appears."
+        )
+
+        sections = split_bug_description(combined)
+
+        self.assertEqual(sections["description"], "A concise description.")
+        self.assertEqual(sections["steps_to_reproduce"], "1. Open the page\n2. Click Save")
+        self.assertEqual(sections["expected_behavior"], "A validation message appears.")
+        self.assertEqual(sections["actual_behavior"], "A system error appears.")
+
+    def test_combining_edited_sections_preserves_storage_format(self):
+        combined = combine_bug_description(
+            "<p>A concise description.</p>",
+            "<ol><li>Open the page</li></ol>",
+            "<p>A validation message appears.</p>",
+            "<p>A system error appears.</p>",
+        )
+
+        self.assertEqual(
+            split_bug_description(combined),
+            {
+                "description": "<p>A concise description.</p>",
+                "steps_to_reproduce": "<ol><li>Open the page</li></ol>",
+                "expected_behavior": "<p>A validation message appears.</p>",
+                "actual_behavior": "<p>A system error appears.</p>",
+            },
+        )
 
 
 @override_settings(SESSION_COOKIE_AGE=1800)
