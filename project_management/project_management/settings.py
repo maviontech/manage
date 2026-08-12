@@ -14,20 +14,25 @@ from pathlib import Path
 import os
 import sys
 
+from project_management.env import env_bool, env_list, load_env
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_env(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-(7k*wa$1=pw)2a#hs(%lsfe(rmwoti*_8+ve$4-su$7f=tuv3+'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise RuntimeError('DJANGO_SECRET_KEY must be configured in .env or the environment.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool('DJANGO_DEBUG', False)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
 
 
 # Application definition
@@ -62,7 +67,7 @@ else:
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [("127.0.0.1", 6379)],
+                "hosts": [(os.environ.get('REDIS_HOST', '127.0.0.1'), int(os.environ.get('REDIS_PORT', '6379')))],
             },
         },
     }
@@ -137,30 +142,26 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = os.environ.get('DJANGO_TIME_ZONE', 'UTC')
 
 USE_I18N = True
 
 USE_TZ = True
 
-# EMAIL CONFIG
-# For development: prints emails to console
-# For production: configure SMTP settings below
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Email configuration is loaded from .env. The console backend is the local default.
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@trackline.com')
 
-# SMTP Configuration (uncomment and configure for production)
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# EMAIL_HOST = "smtp.gmail.com"  # or your SMTP server
-# EMAIL_PORT = 587
-# EMAIL_HOST_USER = "your-email@example.com"
-# EMAIL_HOST_PASSWORD = "your-app-password"
-# EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = "no-reply@trackline.com"
-
-MYSQL_ADMIN_HOST = '127.0.0.1'
-MYSQL_ADMIN_PORT = 3306
-MYSQL_ADMIN_USER = 'root'
-MYSQL_ADMIN_PWD = 'Casper@123'
+MYSQL_ADMIN_HOST = os.environ.get('MYSQL_ADMIN_HOST', '127.0.0.1')
+MYSQL_ADMIN_PORT = int(os.environ.get('MYSQL_ADMIN_PORT', '3306'))
+MYSQL_ADMIN_USER = os.environ.get('MYSQL_ADMIN_USER', 'root')
+MYSQL_ADMIN_PWD = os.environ.get('MYSQL_ADMIN_PWD', '')
+MASTER_DB_NAME = os.environ.get('MASTER_DB_NAME', 'master_db')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -291,6 +292,6 @@ LOGGING = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Session timeout: 30 minutes of inactivity
-SESSION_COOKIE_AGE = 1800
+SESSION_COOKIE_AGE = int(os.environ.get('SESSION_COOKIE_AGE', '1800'))
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_SAVE_EVERY_REQUEST = True

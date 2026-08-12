@@ -3,8 +3,14 @@ import os
 import pymysql
 import secrets
 import string
-from core.auth import hash_password
 import logging
+from pathlib import Path
+
+from project_management.env import load_env
+
+load_env(Path(__file__).resolve().parent.parent / '.env')
+
+from core.auth import hash_password
 
 # Use the 'utility' logger configured in settings.LOGGING
 logger = logging.getLogger('utility')
@@ -24,7 +30,7 @@ MASTER_DB = _admin_cfg('MASTER_DB_NAME', 'master_db')
 ADMIN_HOST = _admin_cfg('MYSQL_ADMIN_HOST', '127.0.0.1')
 ADMIN_PORT = int(_admin_cfg('MYSQL_ADMIN_PORT', 3306))
 ADMIN_USER = _admin_cfg('MYSQL_ADMIN_USER', 'root')
-ADMIN_PWD = _admin_cfg('MYSQL_ADMIN_PWD', 'Casper@123')
+ADMIN_PWD = _admin_cfg('MYSQL_ADMIN_PWD', '')
 
 
 def initialize_master_database():
