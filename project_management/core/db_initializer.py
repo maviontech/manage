@@ -24,7 +24,7 @@ MASTER_DB = _admin_cfg('MASTER_DB_NAME', 'master_db')
 ADMIN_HOST = _admin_cfg('MYSQL_ADMIN_HOST', '127.0.0.1')
 ADMIN_PORT = int(_admin_cfg('MYSQL_ADMIN_PORT', 3306))
 ADMIN_USER = _admin_cfg('MYSQL_ADMIN_USER', 'root')
-ADMIN_PWD = _admin_cfg('MYSQL_ADMIN_PWD', 'root')
+ADMIN_PWD = _admin_cfg('MYSQL_ADMIN_PWD', 'Casper@123')
 
 
 def initialize_master_database():
@@ -282,6 +282,7 @@ TENANT_DDL = [
       description TEXT,
       status VARCHAR(50),
       priority VARCHAR(20),
+      severity VARCHAR(20) DEFAULT NULL,
       assigned_type ENUM('member','team') DEFAULT 'member',
       assigned_to INT,
       created_by INT,

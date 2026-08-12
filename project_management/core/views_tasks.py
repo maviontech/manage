@@ -3718,12 +3718,16 @@ def update_task_status(request, task_id):
         task = cur.fetchone()
         old_status = task['status'] if task else None
         
+        # Keep closure_date in sync with the Edit Task flow: closing a task
+        # records today, while moving it to any other status reopens it.
+        closure_date = datetime.date.today() if new_status == "Closed" else None
+
         # Update task status
         cur.execute('''
             UPDATE tasks 
-            SET status = %s, updated_at = NOW()
+            SET status = %s, closure_date = %s, updated_at = NOW()
             WHERE id = %s
-        ''', (new_status, task_id))
+        ''', (new_status, closure_date, task_id))
         
         # Log activity
         user_id = request.session.get('user_id')
