@@ -1,0 +1,211 @@
+{% extends "core/base.html" %}
+
+{% block title %}Archived Tasks | Trackline{% endblock %}
+
+{% block content %}
+<div class="archive-page">
+  <section class="archive-hero">
+    <div class="archive-heading">
+      <span class="archive-heading-icon"><i class="fa-solid fa-box-archive"></i></span>
+      <div>
+        <h1>Archived Tasks</h1>
+        <p>Tasks stored safely outside the active workspace. Restore one to make it visible everywhere again.</p>
+      </div>
+    </div>
+    <a class="back-to-tasks" href="{% url 'my_tasks' %}"><i class="fa-solid fa-arrow-left"></i> Active Tasks</a>
+  </section>
+
+  <form method="get" id="archiveFilters" class="archive-filters">
+    <label class="archive-search" aria-label="Search archived tasks">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="search" name="q" value="{{ sel_query }}" placeholder="Search by ID, title or description…">
+    </label>
+    <select name="status" aria-label="Filter by status">
+      <option value="">All statuses</option>
+      <option value="Open" {% if sel_status == 'Open' %}selected{% endif %}>Open</option>
+      <option value="In Progress" {% if sel_status == 'In Progress' %}selected{% endif %}>In Progress</option>
+      <option value="Reopen" {% if sel_status == 'Reopen' %}selected{% endif %}>Reopen</option>
+      <option value="Review" {% if sel_status == 'Review' %}selected{% endif %}>Review</option>
+      <option value="Blocked" {% if sel_status == 'Blocked' %}selected{% endif %}>Blocked</option>
+      <option value="Finished" {% if sel_status == 'Finished' %}selected{% endif %}>Finished</option>
+      <option value="Closed" {% if sel_status == 'Closed' %}selected{% endif %}>Closed</option>
+    </select>
+    <select name="work_type" aria-label="Filter by work type">
+      <option value="">All work types</option>
+      <option value="Task" {% if sel_work_type == 'Task' %}selected{% endif %}>Task</option>
+      <option value="Bug" {% if sel_work_type == 'Bug' %}selected{% endif %}>Bug</option>
+      <option value="Story" {% if sel_work_type == 'Story' %}selected{% endif %}>Story</option>
+      <option value="Defect" {% if sel_work_type == 'Defect' %}selected{% endif %}>Defect</option>
+      <option value="Sub Task" {% if sel_work_type == 'Sub Task' %}selected{% endif %}>Sub Task</option>
+      <option value="Report" {% if sel_work_type == 'Report' %}selected{% endif %}>Report</option>
+      <option value="Change Request" {% if sel_work_type == 'Change Request' %}selected{% endif %}>Change Request</option>
+    </select>
+    <select name="project" aria-label="Filter by project">
+      <option value="">All projects</option>
+      {% for project in projects %}
+      <option value="{{ project.id }}" {% if sel_project == project.id|stringformat:"s" %}selected{% endif %}>{{ project.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="per_page" aria-label="Items per page">
+      <option value="10" {% if items_per_page == 10 %}selected{% endif %}>10 per page</option>
+      <option value="15" {% if items_per_page == 15 %}selected{% endif %}>15 per page</option>
+      <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25 per page</option>
+      <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50 per page</option>
+      <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100 per page</option>
+    </select>
+    <button type="submit" class="filter-button"><i class="fa-solid fa-filter"></i> Apply</button>
+    {% if sel_query or sel_status or sel_work_type or sel_project %}
+    <a href="{% url 'archived_tasks' %}" class="clear-button" title="Clear filters"><i class="fa-solid fa-rotate-left"></i></a>
+    {% endif %}
+  </form>
+
+  <section class="archive-card">
+    <header class="archive-summary">
+      <div>
+        <strong>{{ page_obj.paginator.count }}</strong>
+        archived task{{ page_obj.paginator.count|pluralize }}
+      </div>
+      {% if page_obj.paginator.count %}
+      <span>Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}</span>
+      {% endif %}
+    </header>
+
+    {% if tasks %}
+    <div class="archive-table-wrap">
+      <table class="archive-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Task</th>
+            <th>Project</th>
+            <th>Reporter</th>
+            <th>Status</th>
+            <th>Archived</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in tasks %}
+          <tr>
+            <td data-label="ID"><span class="archive-id">{{ task.id }}</span></td>
+            <td data-label="Task">
+              <div class="archive-task-title">
+                <span class="work-badge work-{{ task.work_type|slugify }}">{{ task.work_type }}</span>
+                <strong title="{{ task.title }}">{{ task.title }}</strong>
+              </div>
+            </td>
+            <td data-label="Project">{{ task.project_name|default:"—" }}</td>
+            <td data-label="Reporter">{{ task.reporter_name|default:"—" }}</td>
+            <td data-label="Status"><span class="status-pill status-{{ task.status|slugify }}">{{ task.status|default:"Open" }}</span></td>
+            <td data-label="Archived">
+              <div class="archive-meta">
+                <strong>{{ task.archived_at|date:"M d, Y" }}</strong>
+                <span>{% if task.archived_by_name %}by {{ task.archived_by_name }}{% else %}Time unavailable{% endif %}</span>
+              </div>
+            </td>
+            <td data-label="Action">
+              <form method="post" action="{% url 'restore_task' task.id %}" class="restore-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="restore-button"><i class="fa-solid fa-rotate-left"></i> Restore</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="archive-pagination" aria-label="Archived task pages">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}&per_page={{ items_per_page }}&q={{ sel_query|urlencode }}&status={{ sel_status|urlencode }}&work_type={{ sel_work_type|urlencode }}&project={{ sel_project|urlencode }}" aria-label="Previous page"><i class="fa-solid fa-chevron-left"></i></a>
+      {% endif %}
+      <span>Page <strong>{{ page_obj.number }}</strong> of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}&per_page={{ items_per_page }}&q={{ sel_query|urlencode }}&status={{ sel_status|urlencode }}&work_type={{ sel_work_type|urlencode }}&project={{ sel_project|urlencode }}" aria-label="Next page"><i class="fa-solid fa-chevron-right"></i></a>
+      {% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="archive-empty">
+      <span><i class="fa-solid fa-box-open"></i></span>
+      <h2>No archived tasks found</h2>
+      <p>{% if sel_query or sel_status or sel_work_type or sel_project %}Try clearing the filters.{% else %}Tasks you archive will be stored safely here.{% endif %}</p>
+      {% if sel_query or sel_status or sel_work_type or sel_project %}<a href="{% url 'archived_tasks' %}">Clear all filters</a>{% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+<style>
+.archive-page { padding: 28px; color: var(--theme-text); }
+.archive-hero, .archive-filters, .archive-card { background: var(--theme-surface); border: 1px solid var(--theme-border); box-shadow: var(--theme-shadow-sm); }
+.archive-hero { border-radius: 18px; padding: 26px 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.archive-heading { display: flex; align-items: center; gap: 16px; }
+.archive-heading-icon { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; color: #fff; font-size: 22px; background: linear-gradient(135deg,#64748b,#334155); box-shadow: 0 8px 18px rgba(51,65,85,.22); }
+.archive-heading h1 { margin: 0 0 5px; font-size: 27px; font-weight: 750; }
+.archive-heading p { margin: 0; color: var(--theme-text-secondary); }
+.back-to-tasks, .filter-button, .clear-button, .restore-button { border: 0; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.back-to-tasks { padding: 11px 16px; color: #2563eb; background: rgba(37,99,235,.1); white-space: nowrap; }
+.archive-filters { margin-top: 18px; padding: 16px; border-radius: 15px; display: grid; grid-template-columns: minmax(240px,1fr) repeat(4,minmax(135px,auto)) auto auto; gap: 10px; }
+.archive-filters select, .archive-search { min-height: 44px; border: 1px solid var(--theme-input-border); border-radius: 10px; background: var(--theme-input-bg); color: var(--theme-text); }
+.archive-filters select { padding: 0 34px 0 12px; font-weight: 600; }
+.archive-search { display: flex; align-items: center; gap: 10px; padding: 0 13px; }
+.archive-search i { color: var(--theme-text-muted); }
+.archive-search input { width: 100%; border: 0; outline: 0; background: transparent; color: inherit; }
+.filter-button { padding: 0 16px; color: #fff; background: #2563eb; }
+.clear-button { width: 44px; color: #64748b; background: var(--theme-bg-secondary); border: 1px solid var(--theme-border); }
+.archive-card { margin-top: 18px; border-radius: 16px; overflow: hidden; }
+.archive-summary { padding: 17px 22px; border-bottom: 1px solid var(--theme-border); display: flex; justify-content: space-between; color: var(--theme-text-secondary); }
+.archive-summary strong { color: var(--theme-text); }
+.archive-table-wrap { overflow-x: auto; }
+.archive-table { width: 100%; border-collapse: collapse; }
+.archive-table th { padding: 13px 16px; text-align: left; background: var(--theme-bg-secondary); color: var(--theme-text-secondary); text-transform: uppercase; letter-spacing: .05em; font-size: 11px; }
+.archive-table td { padding: 14px 16px; border-top: 1px solid var(--theme-border-light); color: var(--theme-text-secondary); vertical-align: middle; }
+.archive-table tbody tr:hover { background: var(--theme-surface-hover); }
+.archive-id { min-width: 34px; height: 30px; padding: 0 8px; display: inline-grid; place-items: center; border-radius: 8px; background: var(--theme-bg-secondary); border: 1px solid var(--theme-border); font-weight: 700; }
+.archive-task-title { display: flex; align-items: center; gap: 10px; min-width: 260px; }
+.archive-task-title strong { color: var(--theme-text); max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.work-badge, .status-pill { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.work-badge { color: #1d4ed8; background: #dbeafe; }
+.work-bug, .work-defect { color: #b91c1c; background: #fee2e2; }
+.status-pill { color: #475569; background: #e2e8f0; }
+.status-open, .status-finished { color: #047857; background: #d1fae5; }
+.status-in-progress, .status-review { color: #92400e; background: #fef3c7; }
+.status-blocked { color: #b91c1c; background: #fee2e2; }
+.archive-meta { display: flex; flex-direction: column; gap: 2px; white-space: nowrap; }
+.archive-meta strong { color: var(--theme-text); font-size: 13px; }
+.archive-meta span { color: var(--theme-text-muted); font-size: 11px; }
+.restore-form { margin: 0; }
+.restore-button { padding: 9px 13px; color: #047857; background: #d1fae5; border: 1px solid #a7f3d0; }
+.restore-button:hover { color: #fff; background: #059669; }
+.archive-pagination { padding: 16px 20px; border-top: 1px solid var(--theme-border); display: flex; justify-content: center; align-items: center; gap: 16px; color: var(--theme-text-secondary); }
+.archive-pagination a { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--theme-border); border-radius: 9px; color: #2563eb; text-decoration: none; }
+.archive-empty { padding: 74px 20px; text-align: center; }
+.archive-empty > span { width: 68px; height: 68px; margin: 0 auto 18px; display: grid; place-items: center; border-radius: 20px; background: var(--theme-bg-secondary); color: #94a3b8; font-size: 28px; }
+.archive-empty h2 { margin: 0 0 7px; font-size: 21px; }
+.archive-empty p { margin: 0 0 15px; color: var(--theme-text-secondary); }
+.archive-empty a { color: #2563eb; font-weight: 700; }
+@media (max-width: 1200px) { .archive-filters { grid-template-columns: repeat(3,1fr); } .archive-search { grid-column: span 2; } }
+@media (max-width: 760px) {
+  .archive-page { padding: 16px; } .archive-hero { align-items: flex-start; flex-direction: column; padding: 20px; } .archive-heading { align-items: flex-start; } .archive-heading p { font-size: 13px; }
+  .archive-filters { grid-template-columns: 1fr; } .archive-search { grid-column: auto; } .clear-button { width: 100%; }
+  .archive-table thead { display: none; } .archive-table, .archive-table tbody, .archive-table tr, .archive-table td { display: block; width: 100%; }
+  .archive-table tr { padding: 12px 15px; border-top: 1px solid var(--theme-border); } .archive-table td { border: 0; padding: 6px 0 6px 42%; position: relative; min-height: 32px; }
+  .archive-table td::before { content: attr(data-label); position: absolute; left: 0; width: 38%; color: var(--theme-text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .archive-task-title { min-width: 0; } .archive-task-title strong { white-space: normal; }
+}
+</style>
+
+<script>
+document.querySelectorAll('#archiveFilters select').forEach(function(select) {
+  select.addEventListener('change', function() { document.getElementById('archiveFilters').submit(); });
+});
+document.querySelectorAll('.restore-form').forEach(function(form) {
+  form.addEventListener('submit', function(event) {
+    if (!window.confirm('Restore this task? It will become visible again across tasks, boards, reports and search.')) event.preventDefault();
+  });
+});
+</script>
+{% endblock %}

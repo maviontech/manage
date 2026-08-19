@@ -108,7 +108,7 @@ def _load_defect_contributor_metrics(cur, start_date, end_date):
                 COUNT(*) AS reported_count,
                 SUM(CASE WHEN LOWER(TRIM(COALESCE(t.status, ''))) IN ('completed', 'closed') THEN 1 ELSE 0 END) AS closed_count,
                 SUM(CASE WHEN LOWER(TRIM(COALESCE(t.status, ''))) NOT IN ('completed', 'closed') THEN 1 ELSE 0 END) AS open_count
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN members m ON m.id = t.created_by
             LEFT JOIN users u ON u.id = t.created_by
             WHERE t.created_by IS NOT NULL
@@ -386,7 +386,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT COUNT(*) AS c
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
               AND LOWER(TRIM(COALESCE(work_type, ''))) = 'bug'
         """, assignee_params)
@@ -394,7 +394,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT COUNT(*) AS c
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
               AND LOWER(TRIM(COALESCE(work_type, ''))) = 'defect'
         """, assignee_params)
@@ -402,7 +402,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT COUNT(*) AS c
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
               AND {test_filter}
         """, assignee_params)
@@ -410,14 +410,14 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT COUNT(*) AS c
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
         """, assignee_params)
         total_assigned_work = scalar_from_row(cur.fetchone(), 'c')
 
         cur.execute(f"""
             SELECT COUNT(*) AS c
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
               AND LOWER(TRIM(COALESCE(work_type, ''))) = 'bug'
               AND {status_expr} IN ('closed', 'completed')
@@ -426,7 +426,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT COUNT(*) AS c
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
               AND LOWER(TRIM(COALESCE(work_type, ''))) = 'defect'
               AND {status_expr} IN ('closed', 'completed')
@@ -435,7 +435,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT COALESCE(work_type, 'Task') AS wtype, COUNT(*) AS c
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
             GROUP BY wtype
         """, assignee_params)
@@ -471,7 +471,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT status
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
         """, assignee_params)
         task_status_rows = cur.fetchall() or []
@@ -499,7 +499,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT id, title, status, priority, due_date, project_id, subproject_id
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
               AND {bug_filter}
         """, assignee_params)
@@ -549,7 +549,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT COUNT(*) AS c
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
               AND {status_expr} IN ('reopen', 'reopened', 're-opened')
         """, assignee_params)
@@ -601,7 +601,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                 COUNT(*) AS assigned_count,
                 SUM(CASE WHEN {status_expr} IN ('closed', 'completed') THEN 1 ELSE 0 END) AS closed_count,
                 SUM(CASE WHEN {status_expr} NOT IN ('closed', 'completed') THEN 1 ELSE 0 END) AS open_count
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN members m ON m.id = t.created_by
             LEFT JOIN users u ON u.id = t.created_by
             WHERE {rep_where}
@@ -660,7 +660,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                     ELSE 'Other'
                 END AS assignee_name,
                 COUNT(*) AS assigned_count
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN members assignee_m ON assignee_m.id = t.assigned_to
             LEFT JOIN users assignee_u ON assignee_u.id = t.assigned_to
             WHERE t.created_by = %s
@@ -689,7 +689,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
 
         cur.execute(f"""
             SELECT id, status
-            FROM tasks
+            FROM active_tasks
             WHERE {assignee_where}
               AND {test_filter}
         """, assignee_params)
@@ -727,7 +727,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                     al.timestamp AS created_at,
                     t.title
                 FROM activity_log al
-                JOIN tasks t ON al.entity_id = t.id
+                JOIN active_tasks t ON al.entity_id = t.id
                 WHERE al.entity_type = 'task'
                   AND {task_assignee_where}
                   AND ({bug_filter} OR {test_filter})
@@ -764,7 +764,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                         tc.created_at,
                         t.title
                     FROM task_comments tc
-                    JOIN tasks t ON tc.task_id = t.id
+                    JOIN active_tasks t ON tc.task_id = t.id
                     WHERE {task_assignee_where}
                       AND ({bug_filter} OR {test_filter})
                     ORDER BY tc.created_at DESC
@@ -830,7 +830,7 @@ def _build_tester_dashboard_context(cur, member_id, scope_member_ids=None, inclu
                         CONCAT('Tester #', COALESCE(CAST(t.created_by AS CHAR), '0'))
                     ) AS tester_name,
                     COUNT(*) AS task_count
-                FROM tasks t
+                FROM active_tasks t
                 LEFT JOIN members m ON m.id = t.created_by
                 LEFT JOIN users u ON u.id = t.created_by
                 WHERE t.created_by IN ({placeholders})
@@ -1191,7 +1191,7 @@ def dashboard_view(request, personal=False):
     try:
         if visible_user_ids:
             placeholders = ','.join(['%s'] * len(visible_user_ids))
-            cur.execute(f"""SELECT COUNT(*) AS c FROM tasks WHERE (
+            cur.execute(f"""SELECT COUNT(*) AS c FROM active_tasks WHERE (
                 (assigned_type='member' AND assigned_to IN ({placeholders}))
                 OR
                 (assigned_type='team' AND assigned_to IN (
@@ -1230,7 +1230,7 @@ def dashboard_view(request, personal=False):
             cur.execute(
                 f"""
                 SELECT COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} IN ('closed', 'completed')
@@ -1248,7 +1248,7 @@ def dashboard_view(request, personal=False):
             cur.execute(
                 f"""
                 SELECT COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress', 'new')
@@ -1268,7 +1268,7 @@ def dashboard_view(request, personal=False):
             cur.execute(
                 f"""
                 SELECT COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} = 'finished'
@@ -1287,7 +1287,7 @@ def dashboard_view(request, personal=False):
             cur.execute(
                 f"""
                 SELECT COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} IN ('reopen', 'reopened', 're-opened')
@@ -1305,7 +1305,7 @@ def dashboard_view(request, personal=False):
             placeholders = ','.join(['%s'] * len(visible_user_ids))
             cur.execute(f"""
                 SELECT status, COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE (
                     (assigned_type='member' AND assigned_to IN ({placeholders}))
                     OR
@@ -1339,7 +1339,7 @@ def dashboard_view(request, personal=False):
             placeholders = ','.join(['%s'] * len(visible_user_ids))
             cur.execute(f"""
                 SELECT COALESCE(priority,'Normal') AS p, COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE (
                     (assigned_type='member' AND assigned_to IN ({placeholders}))
                     OR
@@ -1369,7 +1369,7 @@ def dashboard_view(request, personal=False):
             placeholders = ','.join(['%s'] * len(visible_user_ids))
             cur.execute(f"""
                 SELECT COALESCE(priority,'Normal') AS p, status, COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE (
                     (assigned_type='member' AND assigned_to IN ({placeholders}))
                     OR
@@ -1419,7 +1419,7 @@ def dashboard_view(request, personal=False):
             cur.execute(
                 f"""
                 SELECT COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} IN ('open', 'review', 'in progress', 'in-progress', 'new')
@@ -1439,7 +1439,7 @@ def dashboard_view(request, personal=False):
             cur.execute(
                 f"""
                 SELECT COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE assigned_type='member'
                   AND assigned_to IN ({placeholders})
                   AND {status_expr} IN ('new', 'open')
@@ -1537,7 +1537,7 @@ def dashboard_view(request, personal=False):
             params = list(planned_scope_params) + [planned_start, planned_end]
             cur.execute(f"""
                 SELECT id, title, status, due_date, created_at
-                FROM tasks
+                FROM active_tasks
                 WHERE {planned_scope_sql}
                   AND {TASK_STATUS_SQL} NOT IN ('completed', 'closed')
                   AND due_date IS NOT NULL
@@ -1590,7 +1590,7 @@ def dashboard_view(request, personal=False):
             if timeline_scope_sql:
                 params = list(timeline_scope_params) + [day]
                 cur.execute(f"""
-                    SELECT COUNT(*) as cnt FROM tasks
+                    SELECT COUNT(*) as cnt FROM active_tasks
                     WHERE {timeline_scope_sql}
                       AND DATE(created_at) = %s
                 """, tuple(params))
@@ -1603,7 +1603,7 @@ def dashboard_view(request, personal=False):
                     line_chart_created.append(0)
 
                 cur.execute(f"""
-                    SELECT COUNT(*) as cnt FROM tasks
+                    SELECT COUNT(*) as cnt FROM active_tasks
                     WHERE {timeline_scope_sql}
                       AND {TASK_STATUS_SQL} IN ('completed', 'closed')
                       AND DATE(updated_at) = %s
@@ -1617,7 +1617,7 @@ def dashboard_view(request, personal=False):
                     line_chart_completed.append(0)
 
                 cur.execute(f"""
-                    SELECT COUNT(*) as cnt FROM tasks
+                    SELECT COUNT(*) as cnt FROM active_tasks
                     WHERE {timeline_scope_sql}
                       AND {TASK_STATUS_SQL} = 'finished'
                       AND DATE(updated_at) = %s
@@ -1656,7 +1656,7 @@ def dashboard_view(request, personal=False):
                 COUNT(*) AS reported_count,
                 SUM(CASE WHEN t.status IN ('Completed','Closed') THEN 1 ELSE 0 END) AS closed_count,
                 SUM(CASE WHEN t.status NOT IN ('Completed','Closed') THEN 1 ELSE 0 END) AS open_count
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN members m ON m.id = t.created_by
             LEFT JOIN users u ON u.id = t.created_by
                         WHERE (
@@ -1690,7 +1690,7 @@ def dashboard_view(request, personal=False):
         if vids:
             ph = ','.join(['%s'] * len(vids))
             try:
-                cur.execute(f"""SELECT COUNT(*) c FROM tasks WHERE assigned_type='member' AND assigned_to IN ({ph})
+                cur.execute(f"""SELECT COUNT(*) c FROM active_tasks WHERE assigned_type='member' AND assigned_to IN ({ph})
                     AND due_date IS NOT NULL AND due_date < CURDATE()
                     AND {status_expr} NOT IN ('closed','completed','finished')""" + DW, tuple(vids) + dwp)
                 overdue_count = scalar_from_row(cur.fetchone(), 'c')
@@ -1698,7 +1698,7 @@ def dashboard_view(request, personal=False):
                 overdue_count = 0
             try:
                 cur.execute(f"""SELECT m.id, TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS name,
-                    COUNT(t.id) AS cnt FROM tasks t JOIN members m ON m.id=t.assigned_to
+                    COUNT(t.id) AS cnt FROM active_tasks t JOIN members m ON m.id=t.assigned_to
                     WHERE t.assigned_type='member' AND t.assigned_to IN ({ph})
                     AND {status_expr} NOT IN ('closed','completed','finished')
                     GROUP BY m.id ORDER BY cnt DESC LIMIT 6""", tuple(vids))
@@ -1714,7 +1714,7 @@ def dashboard_view(request, personal=False):
             try:
                 cur.execute(f"""SELECT t.id, t.title, t.work_type, t.status, t.due_date,
                     TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS assignee
-                    FROM tasks t LEFT JOIN members m ON m.id=t.assigned_to
+                    FROM active_tasks t LEFT JOIN members m ON m.id=t.assigned_to
                     WHERE t.assigned_type='member' AND t.assigned_to IN ({ph})
                     AND ((t.due_date IS NOT NULL AND t.due_date < CURDATE() AND {status_expr} NOT IN ('closed','completed','finished'))
                          OR {status_expr}='blocked')
@@ -1725,7 +1725,7 @@ def dashboard_view(request, personal=False):
             try:
                 cur.execute(f"""SELECT t.id, t.title, t.work_type, t.priority, t.status, t.due_date,
                     TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS assignee
-                    FROM tasks t LEFT JOIN members m ON m.id=t.assigned_to
+                    FROM active_tasks t LEFT JOIN members m ON m.id=t.assigned_to
                     WHERE t.assigned_type='member' AND t.assigned_to IN ({ph})
                     AND {status_expr} NOT IN ('closed','completed','finished')
                     ORDER BY t.updated_at DESC LIMIT 6""", tuple(vids))
@@ -1875,7 +1875,7 @@ def dashboard_view(request, personal=False):
             # Active work: open bugs, most recently updated first.
             cur.execute(f"""SELECT t.id, t.title, t.work_type, t.priority, t.status, t.due_date,
                     TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS assignee
-                FROM tasks t LEFT JOIN members m ON m.id=t.created_by
+                FROM active_tasks t LEFT JOIN members m ON m.id=t.created_by
                 WHERE {t_scope} AND {_bugf}{_win}
                   AND {status_expr} NOT IN ('closed','completed','finished')
                 ORDER BY t.updated_at DESC LIMIT 6""", t_scope_params + _wp)
@@ -1883,7 +1883,7 @@ def dashboard_view(request, personal=False):
             # Needs attention: overdue or blocked bugs.
             cur.execute(f"""SELECT t.id, t.title, t.work_type, t.status, t.due_date,
                     TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS assignee
-                FROM tasks t LEFT JOIN members m ON m.id=t.created_by
+                FROM active_tasks t LEFT JOIN members m ON m.id=t.created_by
                 WHERE {t_scope} AND {_bugf}{_win}
                   AND ((t.due_date IS NOT NULL AND t.due_date < CURDATE()
                         AND {status_expr} NOT IN ('closed','completed','finished'))
@@ -1893,7 +1893,7 @@ def dashboard_view(request, personal=False):
             # Workload: bugs grouped by reporter (who filed the most).
             cur.execute(f"""SELECT m.id AS id, TRIM(CONCAT(COALESCE(m.first_name,''),' ',COALESCE(m.last_name,''))) AS name,
                     COUNT(t.id) AS cnt
-                FROM tasks t JOIN members m ON m.id=t.created_by
+                FROM active_tasks t JOIN members m ON m.id=t.created_by
                 WHERE {t_scope} AND {_bugf}{_win}
                   AND {status_expr} NOT IN ('closed','completed','finished')
                 GROUP BY m.id ORDER BY cnt DESC LIMIT 6""", t_scope_params + _wp)
@@ -2073,11 +2073,11 @@ def api_team_summary(request):
         mid = m['id']
         # counts: assigned total, completed, pending
         try:
-            cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to = %s", (mid,))
+            cur.execute("SELECT COUNT(*) AS c FROM active_tasks WHERE assigned_type='member' AND assigned_to = %s", (mid,))
             assigned = _scalar_from_row(cur.fetchone(), 'c')
-            cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to = %s AND status = 'Closed'", (mid,))
+            cur.execute("SELECT COUNT(*) AS c FROM active_tasks WHERE assigned_type='member' AND assigned_to = %s AND status = 'Closed'", (mid,))
             completed = _scalar_from_row(cur.fetchone(), 'c')
-            cur.execute("SELECT COUNT(*) AS c FROM tasks WHERE assigned_type='member' AND assigned_to = %s AND NOT (status = 'Closed')", (mid,))
+            cur.execute("SELECT COUNT(*) AS c FROM active_tasks WHERE assigned_type='member' AND assigned_to = %s AND NOT (status = 'Closed')", (mid,))
             pending = _scalar_from_row(cur.fetchone(), 'c')
         except Exception:
             assigned = completed = pending = 0
@@ -2086,7 +2086,7 @@ def api_team_summary(request):
         try:
             cur.execute("""
                 SELECT COALESCE(priority,'Normal') AS p, status, COUNT(*) AS c
-                FROM tasks
+                FROM active_tasks
                 WHERE assigned_type='member' AND assigned_to = %s
                 GROUP BY p, status
             """, (mid,))
@@ -2622,13 +2622,13 @@ def projects_report_view(request):
                 e.designation,
                 e.status AS employee_status,
                 u.full_name AS created_by_name,
-                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id) AS total_tasks,
-                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status = 'Completed') AS completed_tasks,
-                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status IN ('New', 'In Progress', 'Pending')) AS pending_tasks,
-                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status = 'In Progress') AS inprogress_tasks,
-                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND priority = 'Critical') AS critical_tasks,
-                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND priority = 'High') AS high_tasks,
-                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND due_date < CURDATE() AND status != 'Completed') AS overdue_tasks
+                (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id) AS total_tasks,
+                (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id AND status = 'Completed') AS completed_tasks,
+                (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id AND status IN ('New', 'In Progress', 'Pending')) AS pending_tasks,
+                (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id AND status = 'In Progress') AS inprogress_tasks,
+                (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id AND priority = 'Critical') AS critical_tasks,
+                (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id AND priority = 'High') AS high_tasks,
+                (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id AND due_date < CURDATE() AND status != 'Completed') AS overdue_tasks
             FROM projects p
             LEFT JOIN employees e ON p.employee_id = e.id
             LEFT JOIN users u ON p.created_by = u.id
@@ -2781,7 +2781,7 @@ def projects_report_view(request):
                 m.last_name AS member_last_name,
                 tm.name AS assigned_team_name,
                 creator.full_name AS created_by_name
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN projects p ON t.project_id = p.id
             LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
             LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
@@ -3703,8 +3703,9 @@ def api_timer_current(request):
         cur.execute("""
             SELECT ts.*, t.title as task_title
             FROM timer_sessions ts
-            LEFT JOIN tasks t ON ts.task_id = t.id
+            LEFT JOIN active_tasks t ON ts.task_id = t.id
             WHERE ts.user_id = %s AND ts.is_running = 1
+              AND (ts.task_id IS NULL OR t.id IS NOT NULL)
             ORDER BY ts.start_time DESC LIMIT 1
         """, (member_id,))
         
@@ -3759,8 +3760,9 @@ def api_timer_history(request):
         cur.execute("""
             SELECT ts.*, t.title as task_title, t.status as task_status
             FROM timer_sessions ts
-            LEFT JOIN tasks t ON ts.task_id = t.id
+            LEFT JOIN active_tasks t ON ts.task_id = t.id
             WHERE ts.user_id = %s
+              AND (ts.task_id IS NULL OR t.id IS NOT NULL)
             ORDER BY ts.start_time DESC
             LIMIT %s
         """, (member_id, limit))
@@ -3828,10 +3830,11 @@ def api_time_entries_list(request):
                 approver.last_name as approver_last_name
             FROM time_entries te
             LEFT JOIN members m ON te.user_id = m.id
-            LEFT JOIN tasks t ON te.task_id = t.id
+            LEFT JOIN active_tasks t ON te.task_id = t.id
             LEFT JOIN projects p ON t.project_id = p.id
             LEFT JOIN members approver ON te.approved_by = approver.id
             WHERE 1=1
+              AND (te.task_id IS NULL OR t.id IS NOT NULL)
         """
         params = []
         

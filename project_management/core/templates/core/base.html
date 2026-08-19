@@ -479,8 +479,8 @@
 
           <!-- Tasks -->
           {% load permission_tags %}
-          <li class="menu-item has-sub {% if page == 'tasks' or page == 'my_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' or page == 'task_analytics' %}open{% endif %}">
-            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page == 'tasks' or page == 'my_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' or page == 'task_analytics' %}true{% else %}false{% endif %}" aria-controls="submenu-tasks">
+          <li class="menu-item has-sub {% if page == 'tasks' or page == 'my_tasks' or page == 'archived_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' or page == 'task_analytics' %}open{% endif %}">
+            <button class="menu-link sub-toggle ripple" aria-expanded="{% if page == 'tasks' or page == 'my_tasks' or page == 'archived_tasks' or page == 'unassigned' or page == 'task_board' or page == 'bulk_import' or page == 'task_create' or page == 'task_analytics' %}true{% else %}false{% endif %}" aria-controls="submenu-tasks">
               <span class="icon" aria-hidden="true"><i class="fa-solid fa-tasks"></i></span>
               <span class="label">Tasks</span>
               <span class="caret" aria-hidden="true">▸</span>
@@ -488,6 +488,9 @@
             <ul id="submenu-tasks" class="submenu" role="menu" aria-label="Tasks submenu">
               <li role="none" class="{% if page == 'my_tasks' %}active{% endif %}">
                 <a href="{% url 'my_tasks' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-clipboard-list"></i><span>Tasks</span></a>
+              </li>
+              <li role="none" class="{% if page == 'archived_tasks' %}active{% endif %}">
+                <a href="{% url 'archived_tasks' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-box-archive"></i><span>Archived Tasks</span></a>
               </li>
               <li role="none" class="{% if page == 'unassigned' %}active{% endif %}">
                 <a href="{% url 'unassigned_tasks' %}" class="submenu-link ripple" role="menuitem"><i class="fa-solid fa-user-clock"></i><span>Unassigned Tasks</span></a>

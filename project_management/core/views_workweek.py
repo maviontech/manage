@@ -71,7 +71,7 @@ def work_week_view(request):
                 p.name AS project_name,
                 CONCAT(m.first_name, ' ', m.last_name) AS assigned_name,
                 tm.name AS team_name
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN projects p ON t.project_id = p.id
             LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
             LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
@@ -125,7 +125,7 @@ def work_week_view(request):
             SELECT 
                 status,
                 COUNT(*) as count
-            FROM tasks
+            FROM active_tasks
             WHERE assigned_type = 'member' 
                 AND assigned_to IN ({placeholders})
                 AND DATE(due_date) >= %s 
@@ -208,7 +208,7 @@ def api_work_week_tasks(request):
                 t.priority,
                 t.work_type,
                 p.name AS project_name
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN projects p ON t.project_id = p.id
             WHERE t.assigned_type = 'member' 
                 AND t.assigned_to IN ({placeholders})

@@ -300,9 +300,17 @@ TENANT_DDL = [
       si_timestamp VARCHAR(50) DEFAULT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      closure_date DATE
+      closure_date DATE,
+      is_archived TINYINT(1) NOT NULL DEFAULT 0,
+      archived_at DATETIME DEFAULT NULL,
+      archived_by INT DEFAULT NULL,
+      INDEX idx_tasks_is_archived (is_archived)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+    """,
+    """
+    CREATE OR REPLACE VIEW active_tasks AS
+    SELECT * FROM tasks WHERE is_archived = 0;
     """,
     """
     CREATE TABLE IF NOT EXISTS time_entries (

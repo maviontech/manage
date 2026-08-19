@@ -85,7 +85,7 @@ def export_projects_excel(request):
                     m.last_name AS member_last_name,
                     tm.name AS assigned_team_name,
                     creator.full_name AS created_by_name
-                FROM tasks t
+                FROM active_tasks t
                 LEFT JOIN projects p ON t.project_id = p.id
                 LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
                 LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
@@ -178,10 +178,10 @@ def export_projects_excel(request):
                     e.department,
                     e.designation,
                     u.full_name AS created_by_name,
-                    (SELECT COUNT(*) FROM tasks WHERE project_id = p.id) AS total_tasks,
-                    (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status = 'Completed') AS completed_tasks,
-                    (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status IN ('New', 'In Progress', 'Pending')) AS pending_tasks,
-                    (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND due_date < CURDATE() AND status != 'Completed') AS overdue_tasks
+                    (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id) AS total_tasks,
+                    (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id AND status = 'Completed') AS completed_tasks,
+                    (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id AND status IN ('New', 'In Progress', 'Pending')) AS pending_tasks,
+                    (SELECT COUNT(*) FROM active_tasks WHERE project_id = p.id AND due_date < CURDATE() AND status != 'Completed') AS overdue_tasks
                 FROM projects p
                 LEFT JOIN employees e ON p.employee_id = e.id
                 LEFT JOIN users u ON p.created_by = u.id

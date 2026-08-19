@@ -11,10 +11,15 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 
 # helper: get connection for current tenant
-from .db_helpers import get_tenant_conn, get_visible_task_user_ids, get_tenant_work_types, resolve_tenant_key_from_request
+from .db_helpers import get_tenant_conn, get_visible_task_user_ids, get_tenant_work_types, resolve_tenant_key_from_request, ensure_task_archive_schema
 from .notifications import NotificationManager
 from .rbac import require_permission, has_permission
 import json
+
+
+def _ensure_task_archive_columns(cur):
+    """Backward-compatible wrapper for callers created with archive support."""
+    ensure_task_archive_schema(cur.connection)
 
 
 BUG_DESCRIPTION_SECTIONS = (
@@ -313,6 +318,7 @@ def my_tasks_view(request):
 
     conn = get_tenant_conn(request)
     cur = conn.cursor()
+    _ensure_task_archive_columns(cur)
 
     # Ensure user_id is set in session (should be set at login)
     user_id = request.session.get("user_id")
@@ -353,7 +359,7 @@ def my_tasks_view(request):
                       t.assigned_to, t.project_id, p.name AS project_name,
                       t.subproject_id, sp.name AS subproject_name,
                       t.created_by, CONCAT(m.first_name, ' ', m.last_name) AS reporter_name
-               FROM tasks t
+               FROM active_tasks t
                LEFT JOIN projects p ON p.id = t.project_id
                LEFT JOIN subprojects sp ON sp.id = t.subproject_id
                LEFT JOIN members m ON m.id = t.created_by
@@ -364,6 +370,7 @@ def my_tasks_view(request):
                        SELECT team_id FROM team_memberships WHERE member_id = %s
                    ))
                )
+               AND COALESCE(t.is_archived, 0) = 0
         """
 
         params = list(visible_user_ids)
@@ -399,7 +406,7 @@ def my_tasks_view(request):
         tasks = cur.fetchall()
 
         visible_filter_sql = f"""
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN projects p ON p.id = t.project_id
             LEFT JOIN subprojects sp ON sp.id = t.subproject_id
             WHERE (
@@ -409,6 +416,7 @@ def my_tasks_view(request):
                     SELECT team_id FROM team_memberships WHERE member_id = %s
                 ))
             )
+            AND COALESCE(t.is_archived, 0) = 0
         """
         visible_params = list(visible_user_ids)
         visible_params.append(user_id)
@@ -507,6 +515,210 @@ def my_tasks_view(request):
     })
 
 
+@require_POST
+@require_permission('tasks.edit')
+def archive_task_view(request, task_id):
+    """Hide a task from the normal task list while retaining its backend data."""
+    from django.contrib import messages
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    try:
+        _ensure_task_archive_columns(cur)
+        archived_by = request.session.get('user_id') or request.session.get('member_id')
+        cur.execute(
+            """
+            UPDATE tasks
+               SET is_archived = 1,
+                   archived_at = NOW(),
+                   archived_by = %s,
+                   updated_at = NOW()
+             WHERE id = %s
+               AND COALESCE(is_archived, 0) = 0
+            """,
+            (archived_by, task_id),
+        )
+        if cur.rowcount == 0:
+            messages.warning(request, "Task was not found or is already archived.")
+        else:
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO activity_log
+                        (entity_type, entity_id, action, performed_by, timestamp)
+                    VALUES (%s, %s, %s, %s, NOW())
+                    """,
+                    ("task", task_id, "Archived task", archived_by),
+                )
+            except Exception:
+                pass
+            messages.success(request, "Task archived. Its backend data was retained.")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        messages.error(request, "The task could not be archived. Please try again.")
+    finally:
+        cur.close()
+
+    next_url = request.POST.get('next', '')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect('my_tasks')
+
+
+@require_permission('tasks.view')
+def archived_tasks_view(request):
+    """List archived tasks separately from every normal task surface."""
+    from django.core.paginator import Paginator
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    user_id = request.session.get('user_id') or request.session.get('member_id')
+    visible_user_ids = get_visible_task_user_ids(conn, user_id) if user_id else []
+
+    sel_query = request.GET.get('q', '').strip()
+    sel_status = request.GET.get('status', '').strip()
+    sel_work_type = request.GET.get('work_type', '').strip()
+    sel_project = request.GET.get('project', '').strip()
+    tasks = []
+    projects = []
+
+    if visible_user_ids:
+        placeholders = ','.join(['%s'] * len(visible_user_ids))
+        visibility_sql = f"""
+            (
+                (t.assigned_type = 'member' AND t.assigned_to IN ({placeholders}))
+                OR
+                (t.assigned_type = 'team' AND t.assigned_to IN (
+                    SELECT team_id FROM team_memberships WHERE member_id = %s
+                ))
+            )
+        """
+        params = list(visible_user_ids) + [user_id]
+        sql = f"""
+            SELECT t.id, t.title, t.status, t.priority, t.due_date,
+                   COALESCE(t.work_type, 'Task') AS work_type,
+                   t.project_id, p.name AS project_name,
+                   t.created_by, CONCAT(reporter.first_name, ' ', reporter.last_name) AS reporter_name,
+                   t.archived_at, t.archived_by,
+                   CONCAT(archiver.first_name, ' ', archiver.last_name) AS archived_by_name
+            FROM /* archive page intentionally reads retained rows */ tasks t
+            LEFT JOIN projects p ON p.id = t.project_id
+            LEFT JOIN members reporter ON reporter.id = t.created_by
+            LEFT JOIN members archiver ON archiver.id = t.archived_by
+            WHERE t.is_archived = 1 AND {visibility_sql}
+        """
+        if sel_query:
+            like = f"%{sel_query}%"
+            sql += " AND (CAST(t.id AS CHAR) LIKE %s OR t.title LIKE %s OR COALESCE(t.description, '') LIKE %s)"
+            params.extend([like, like, like])
+        if sel_status:
+            sql += " AND t.status = %s"
+            params.append(sel_status)
+        if sel_work_type:
+            sql += " AND COALESCE(t.work_type, 'Task') = %s"
+            params.append(sel_work_type)
+        if sel_project:
+            sql += " AND t.project_id = %s"
+            params.append(sel_project)
+        sql += " ORDER BY t.archived_at DESC, t.id DESC"
+        cur.execute(sql, tuple(params))
+        tasks = cur.fetchall() or []
+
+        project_params = list(visible_user_ids) + [user_id]
+        cur.execute(
+            f"""
+            SELECT DISTINCT p.id, p.name
+            FROM /* archive project filter */ tasks t
+            JOIN projects p ON p.id = t.project_id
+            WHERE t.is_archived = 1 AND {visibility_sql}
+            ORDER BY p.name
+            """,
+            tuple(project_params),
+        )
+        projects = cur.fetchall() or []
+    cur.close()
+
+    try:
+        items_per_page = int(request.GET.get('per_page', 15))
+    except (TypeError, ValueError):
+        items_per_page = 15
+    if items_per_page not in (10, 15, 25, 50, 100):
+        items_per_page = 15
+    page_obj = Paginator(tasks, items_per_page).get_page(request.GET.get('page', 1))
+
+    return render(request, 'core/tasks_archived.html', {
+        'page': 'archived_tasks',
+        'tasks': page_obj.object_list,
+        'page_obj': page_obj,
+        'items_per_page': items_per_page,
+        'projects': projects,
+        'sel_query': sel_query,
+        'sel_status': sel_status,
+        'sel_work_type': sel_work_type,
+        'sel_project': sel_project,
+    })
+
+
+@require_POST
+@require_permission('tasks.edit')
+def restore_task_view(request, task_id):
+    """Restore an archived task so it becomes available throughout the app."""
+    from django.contrib import messages
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    conn = get_tenant_conn(request)
+    cur = conn.cursor()
+    restored_by = request.session.get('user_id') or request.session.get('member_id')
+    try:
+        cur.execute(
+            """
+            UPDATE tasks
+               SET is_archived = 0,
+                   archived_at = NULL,
+                   archived_by = NULL,
+                   updated_at = NOW()
+             WHERE id = %s AND is_archived = 1
+            """,
+            (task_id,),
+        )
+        if cur.rowcount == 0:
+            messages.warning(request, 'Task was not found or is already active.')
+        else:
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO activity_log
+                        (entity_type, entity_id, action, performed_by, timestamp)
+                    VALUES (%s, %s, %s, %s, NOW())
+                    """,
+                    ('task', task_id, 'Restored archived task', restored_by),
+                )
+            except Exception:
+                pass
+            messages.success(request, 'Task restored and is visible throughout the application again.')
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        messages.error(request, 'The task could not be restored. Please try again.')
+    finally:
+        cur.close()
+
+    next_url = request.POST.get('next', '')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect('archived_tasks')
+
+
 # ==============================
 #  UNASSIGNED TASKS
 # ==============================
@@ -537,7 +749,7 @@ def unassigned_tasks_view(request):
             p.name AS project_name,
             sp.name AS subproject_name,
             CONCAT(m.first_name, ' ', m.last_name) AS reporter_name
-        FROM tasks t
+        FROM active_tasks t
         LEFT JOIN projects p ON p.id = t.project_id
         LEFT JOIN subprojects sp ON sp.id = t.subproject_id
         LEFT JOIN members m ON t.created_by = m.id
@@ -609,7 +821,7 @@ def board_data_api(request):
     offset = (page - 1) * per_page
 
     # ---- Total Count Query ----
-    count_sql = "SELECT COUNT(*) FROM tasks"
+    count_sql = "SELECT COUNT(*) FROM active_tasks"
     count_params = []
 
     # build optional filters
@@ -681,7 +893,7 @@ def board_data_api(request):
                 ELSE NULL
             END AS assigned_to_display
 
-        FROM tasks t
+        FROM active_tasks t
     """
 
     # ---- Apply Status Filter ----
@@ -772,12 +984,12 @@ def assign_task_api(request):
         assigned_type, assigned_to = "member", assignee
 
     # Get task details for notification
-    cur.execute("SELECT title FROM tasks WHERE id=%s", (task_id,))
+    cur.execute("SELECT title FROM active_tasks WHERE id=%s", (task_id,))
     task = cur.fetchone()
     task_title = task['title'] if task else 'A task'
     
     cur.execute(
-        "UPDATE tasks SET assigned_to=%s, assigned_type=%s, updated_at=NOW() WHERE id=%s",
+        "UPDATE active_tasks SET assigned_to=%s, assigned_type=%s, updated_at=NOW() WHERE id=%s",
         (assigned_to, assigned_type, task_id),
     )
     cur.execute(
@@ -854,7 +1066,7 @@ def api_update_status(request):
     # 2. SET CLOSURE DATE ONLY WHEN STATUS BECOMES 'Closed' or 'Finished'
     if new_status in ["Closed", "Finished"]:
         cur.execute("""
-            UPDATE tasks
+            UPDATE active_tasks
             SET status=%s,
                 closure_date=NOW(),
                 updated_at=NOW()
@@ -863,7 +1075,7 @@ def api_update_status(request):
     else:
         # 3. FOR ANY OTHER STATUS → remove closure date?
         cur.execute("""
-            UPDATE tasks
+            UPDATE active_tasks
             SET status=%s,
                 closure_date=NULL,
                 updated_at=NOW()
@@ -882,7 +1094,7 @@ def api_update_status(request):
         cur.execute("""
             SELECT t.title, t.created_by, t.assigned_to, t.assigned_type,
                    CONCAT(m.first_name, ' ', m.last_name) as updater_name
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN members m ON m.id = %s
             WHERE t.id = %s
         """, (user_id, task_id))
@@ -1645,7 +1857,7 @@ def bulk_import_csv_view(request):
                         parent_task_id = row.get("parent_task_id", "").strip()
                         if parent_task_id:
                             # Validate parent task exists
-                            cur.execute("SELECT id FROM tasks WHERE id=%s", (parent_task_id,))
+                            cur.execute("SELECT id FROM active_tasks WHERE id=%s", (parent_task_id,))
                             if not cur.fetchone():
                                 raise Exception(f"Invalid parent_task_id: {parent_task_id}. Parent task does not exist.")
                             full_description += f"\n\n**Parent Task ID:** {parent_task_id}"
@@ -1798,7 +2010,7 @@ def api_task_detail(request):
                 WHEN t.assigned_type = 'team' THEN (SELECT tm.name FROM teams tm WHERE tm.id = t.assigned_to)
                 ELSE NULL
               END AS assigned_to_display
-            FROM tasks t
+            FROM active_tasks t
             WHERE t.id = %s
             LIMIT 1
         """, (tid,))
@@ -1872,7 +2084,7 @@ def api_tasks_search(request):
                     ELSE NULL
                 END AS assigned_to_display,
                 (SELECT p.name FROM projects p WHERE p.id = t.project_id) AS project_name
-            FROM tasks t
+            FROM active_tasks t
             WHERE (CAST(t.id AS CHAR) LIKE %s OR t.title LIKE %s OR t.description LIKE %s)
             ORDER BY t.id DESC
             LIMIT 20
@@ -1948,7 +2160,7 @@ def api_task_update(request):
             return str(assigned_to)
 
         # check exists
-        cur.execute("SELECT id, title, status, priority, created_by, assigned_to, assigned_type FROM tasks WHERE id = %s LIMIT 1", (tid,))
+        cur.execute("SELECT id, title, status, priority, created_by, assigned_to, assigned_type FROM active_tasks WHERE id = %s LIMIT 1", (tid,))
         existing = cur.fetchone()
         if not existing:
             return JsonResponse({'ok': False, 'error': 'task not found'}, status=404)
@@ -2037,7 +2249,7 @@ def api_task_update(request):
         # build and execute update
         set_clause = ", ".join(updates)
         params.append(tid)
-        sql = f"UPDATE tasks SET {set_clause}, updated_at = NOW() WHERE id = %s"
+        sql = f"UPDATE active_tasks SET {set_clause}, updated_at = NOW() WHERE id = %s"
         cur.execute(sql, tuple(params))
 
         # optional: log activity
@@ -2195,7 +2407,7 @@ def api_get_subprojects(request):
 def task_detail_view(request, task_id):
     conn = get_tenant_conn(request)
     cur = conn.cursor()
-    cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
+    cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at FROM active_tasks WHERE id=%s", (task_id,))
     print("Executing SQL for task detail:", task_id)
     task = cur.fetchone()
 
@@ -2240,7 +2452,7 @@ def edit_task_view(request, task_id):
             closure_date=None
 
         # Fetch existing meta before update so we can log and notify
-        cur.execute("SELECT id, title, description, status, priority, due_date, created_by, assigned_to, assigned_type, work_type FROM tasks WHERE id=%s LIMIT 1", (task_id,))
+        cur.execute("SELECT id, title, description, status, priority, due_date, created_by, assigned_to, assigned_type, work_type FROM active_tasks WHERE id=%s LIMIT 1", (task_id,))
         _existing = cur.fetchone()
 
         existing_work_type = _existing.get('work_type') if isinstance(_existing, dict) else None
@@ -2254,7 +2466,7 @@ def edit_task_view(request, task_id):
 
         # Perform update
         cur.execute(
-            """UPDATE tasks
+            """UPDATE active_tasks
                SET title=%s, description=%s, status=%s, priority=%s, severity=%s, due_date=%s, closure_date=%s, updated_at=NOW()
                WHERE id=%s""",
             (title, description, status, priority, severity, due_date, closure_date, task_id),
@@ -2328,7 +2540,7 @@ def edit_task_view(request, task_id):
             pass
 
         # Re-fetch updated task
-        cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at FROM tasks WHERE id=%s", (task_id,))
+        cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at FROM active_tasks WHERE id=%s", (task_id,))
         task = cur.fetchone()
         cur.close()
         if not task:
@@ -2336,7 +2548,7 @@ def edit_task_view(request, task_id):
         return redirect("my_tasks")
 
     # GET
-    cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at, work_type FROM tasks WHERE id=%s", (task_id,))
+    cur.execute("SELECT id, title, description, status, priority, severity, due_date, created_at, work_type FROM active_tasks WHERE id=%s", (task_id,))
     row = cur.fetchone()
     if not row:
         cur.close()
@@ -2367,14 +2579,14 @@ def delete_task_view(request, task_id):
     cur = conn.cursor()
 
     # Check if task exists
-    cur.execute("SELECT id FROM tasks WHERE id=%s", (task_id,))
+    cur.execute("SELECT id FROM active_tasks WHERE id=%s", (task_id,))
     task = cur.fetchone()
     if not task:
         cur.close()
         return render(request, "core/404.html", status=404)
 
     # Delete the task
-    cur.execute("DELETE FROM tasks WHERE id=%s", (task_id,))
+    cur.execute("DELETE FROM active_tasks WHERE id=%s", (task_id,))
     conn.commit()
     cur.close()
 
@@ -2400,7 +2612,7 @@ def export_task_pdf(request, task_id):
                 ELSE NULL
             END AS assigned_to_display,
             (SELECT p.name FROM projects p WHERE p.id = t.project_id) AS project_name
-        FROM tasks t 
+        FROM active_tasks t
         WHERE t.id=%s
     """, (task_id,))
     
@@ -3077,7 +3289,7 @@ def create_subtask_view(request):
         # Add parent task info to description
         full_description = f"{description}\n\n"
         if parent_task_id:
-            cur.execute("SELECT title FROM tasks WHERE id=%s", (parent_task_id,))
+            cur.execute("SELECT title FROM active_tasks WHERE id=%s", (parent_task_id,))
             parent = cur.fetchone()
             if parent:
                 full_description += f"**Parent Task:** {parent['title']} (ID: {parent_task_id})\n\n"
@@ -3158,7 +3370,7 @@ def create_subtask_view(request):
     members = cur.fetchall()
     cur.execute("SELECT id, name FROM teams ORDER BY name")
     teams = cur.fetchall()
-    cur.execute("SELECT id, title FROM tasks WHERE work_type != 'Sub Task' ORDER BY created_at DESC")
+    cur.execute("SELECT id, title FROM active_tasks WHERE work_type != 'Sub Task' ORDER BY created_at DESC")
     parent_tasks = cur.fetchall()
     
     cur.close()
@@ -3505,7 +3717,7 @@ def task_page_view(request, task_id):
                 ELSE NULL
             END AS assignee_email,
             tm.name AS team_name
-        FROM tasks t
+        FROM active_tasks t
         LEFT JOIN projects p ON t.project_id = p.id
         LEFT JOIN subprojects sp ON t.subproject_id = sp.id
         LEFT JOIN members creator ON t.created_by = creator.id
@@ -3777,7 +3989,7 @@ def update_task_status(request, task_id):
         cur.execute('''
             SELECT t.status, t.title, t.created_by, t.assigned_to, t.assigned_type,
                    CONCAT(m.first_name, ' ', m.last_name) as updater_name
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN members m ON m.id = %s
             WHERE t.id = %s
         ''', (request.session.get('user_id'), task_id))
@@ -3790,7 +4002,7 @@ def update_task_status(request, task_id):
 
         # Update task status
         cur.execute('''
-            UPDATE tasks 
+            UPDATE active_tasks
             SET status = %s, closure_date = %s, updated_at = NOW()
             WHERE id = %s
         ''', (new_status, closure_date, task_id))
@@ -3863,13 +4075,13 @@ def update_task_priority(request, task_id):
         cur = conn.cursor()
         
         # Get old priority
-        cur.execute('SELECT priority FROM tasks WHERE id = %s', (task_id,))
+        cur.execute('SELECT priority FROM active_tasks WHERE id = %s', (task_id,))
         task = cur.fetchone()
         old_priority = task['priority'] if task else None
         
         # Update task priority
         cur.execute('''
-            UPDATE tasks 
+            UPDATE active_tasks
             SET priority = %s, updated_at = NOW()
             WHERE id = %s
         ''', (new_priority, task_id))
@@ -3968,7 +4180,7 @@ def upload_task_attachment(request, task_id):
         cur = conn.cursor()
 
         # Verify task exists
-        cur.execute('SELECT id FROM tasks WHERE id = %s', (task_id,))
+        cur.execute('SELECT id FROM active_tasks WHERE id = %s', (task_id,))
         task_exists = cur.fetchone()
         if not task_exists:
             cur.close()
@@ -4084,7 +4296,7 @@ def assign_member_to_task(request, task_id):
         
         cur.execute('''
             SELECT t.title, CONCAT(m.first_name, ' ', m.last_name) as assigner_name
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN members m ON m.id = %s
             WHERE t.id = %s
         ''', (user_id, task_id))
@@ -4092,7 +4304,7 @@ def assign_member_to_task(request, task_id):
         
         # Update task with member assignment
         cur.execute('''
-            UPDATE tasks 
+            UPDATE active_tasks
             SET assigned_type = 'member',
                 assigned_to = %s,
                 updated_at = NOW()
@@ -4190,7 +4402,7 @@ def task_analytics_view(request):
                 t.created_at,
                 t.assigned_to,
                 CONCAT(m.first_name, ' ', m.last_name) AS assigned_name
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN members m ON m.id = t.assigned_to
             WHERE (
                 (t.assigned_type='member' AND t.assigned_to IN ({placeholders}))
@@ -4210,7 +4422,7 @@ def task_analytics_view(request):
                 COALESCE(work_type, 'Task') AS work_type,
                 status,
                 COUNT(*) AS count
-            FROM tasks
+            FROM active_tasks
             WHERE (
                 (assigned_type='member' AND assigned_to IN ({placeholders}))
                 OR
@@ -4471,7 +4683,7 @@ def metric_drilldown_view(request, metric_key):
                         COUNT(t.id) AS total_tasks,
                         SUM(CASE WHEN t.status IN ('Completed','Closed') THEN 1 ELSE 0 END) AS completed_tasks
                     FROM projects p
-                    INNER JOIN tasks t ON t.project_id = p.id
+                    INNER JOIN active_tasks t ON t.project_id = p.id
                     WHERE p.status = 'Active'
                     AND (
                         (t.assigned_type = 'member' AND t.assigned_to = %s)
@@ -4498,7 +4710,7 @@ def metric_drilldown_view(request, metric_key):
                         COUNT(t.id) AS total_tasks,
                         SUM(CASE WHEN t.status IN ('Completed','Closed') THEN 1 ELSE 0 END) AS completed_tasks
                     FROM projects p
-                    LEFT JOIN tasks t ON t.project_id = p.id
+                    LEFT JOIN active_tasks t ON t.project_id = p.id
                     WHERE p.status = 'Active'
                     GROUP BY p.id, p.name, p.description, p.status, p.start_date, p.tentative_end_date, p.end_date, p.created_at
                     ORDER BY {sort_sql} {sort_dir}
@@ -4558,7 +4770,7 @@ def metric_drilldown_view(request, metric_key):
                             ELSE TRIM(CONCAT(COALESCE(m.first_name, ''), ' ', COALESCE(m.last_name, '')))
                         END AS assigned_name,
                         TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))) AS reporter_name
-                    FROM tasks t
+                    FROM active_tasks t
                     LEFT JOIN projects p ON t.project_id = p.id
                     LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
                     LEFT JOIN members c ON t.created_by = c.id
@@ -4756,7 +4968,7 @@ def export_metric_drilldown_excel(request):
                     status_clause = "LOWER(TRIM(COALESCE(status, ''))) IN ('open', 'review', 'in progress', 'in-progress')"
                 cur.execute(f"""
                     SELECT t.*
-                    FROM tasks t
+                    FROM active_tasks t
                     WHERE (
                         (t.assigned_type = 'member' AND t.assigned_to IN ({placeholders}))
                         OR
@@ -4886,7 +5098,7 @@ def tasks_overview_view(request):
         if filter_user_ids:
             placeholders = ','.join(['%s'] * len(filter_user_ids))
             cur.execute(
-                f"""SELECT COUNT(*) AS c FROM tasks WHERE (
+                f"""SELECT COUNT(*) AS c FROM active_tasks WHERE (
                     (assigned_type='member' AND assigned_to IN ({placeholders}))
                     OR
                     (assigned_type='team' AND assigned_to IN (
@@ -4904,7 +5116,7 @@ def tasks_overview_view(request):
             cur.execute("""
                 SELECT COUNT(DISTINCT p.id) AS c
                 FROM projects p
-                INNER JOIN tasks t ON t.project_id = p.id
+                INNER JOIN active_tasks t ON t.project_id = p.id
                 WHERE p.status = 'Active' 
                 AND (
                     (t.assigned_type = 'member' AND t.assigned_to = %s)
@@ -4925,7 +5137,7 @@ def tasks_overview_view(request):
         if filter_user_ids:
             placeholders = ','.join(['%s'] * len(filter_user_ids))
             cur.execute(
-                f"""SELECT COUNT(*) AS c FROM tasks WHERE (
+                f"""SELECT COUNT(*) AS c FROM active_tasks WHERE (
                     (assigned_type='member' AND assigned_to IN ({placeholders}))
                     OR
                     (assigned_type='team' AND assigned_to IN (
@@ -4943,7 +5155,7 @@ def tasks_overview_view(request):
             placeholders = ','.join(['%s'] * len(filter_user_ids))
             cur.execute(
                 f"""
-                SELECT COUNT(*) AS c FROM tasks 
+                SELECT COUNT(*) AS c FROM active_tasks
                 WHERE assigned_type='member' 
                 AND assigned_to IN ({placeholders})
                 AND due_date IS NOT NULL
@@ -4977,7 +5189,7 @@ def tasks_overview_view(request):
                     tm.name AS assigned_team_name,
                     c.first_name AS reporter_first_name,
                     c.last_name AS reporter_last_name
-                FROM tasks t
+                FROM active_tasks t
                 LEFT JOIN projects p ON t.project_id = p.id
                 LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
                 LEFT JOIN members c ON t.created_by = c.id
@@ -5114,7 +5326,7 @@ def export_tasks_excel(request):
                     c.first_name AS reporter_first_name,
                     c.last_name AS reporter_last_name,
                     tm.name AS assigned_team_name
-                FROM tasks t
+                FROM active_tasks t
                 LEFT JOIN projects p ON t.project_id = p.id
                 LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
                 LEFT JOIN members c ON t.created_by = c.id
@@ -5298,7 +5510,7 @@ def workload_drilldown_view(request, member_id):
         cur.execute("""
             SELECT t.id, t.title, t.work_type, t.priority, t.status, t.severity, t.due_date, t.created_at,
                    p.name AS project_name, sp.name AS subproject_name
-            FROM tasks t
+            FROM active_tasks t
             LEFT JOIN projects p ON p.id = t.project_id
             LEFT JOIN subprojects sp ON sp.id = t.subproject_id
             WHERE t.assigned_type='member' AND t.assigned_to=%s

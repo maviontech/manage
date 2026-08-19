@@ -144,7 +144,7 @@ def priorities_view(request):
                 SUM(CASE WHEN status = 'Closed' THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN status IN ('Open', 'New') THEN 1 ELSE 0 END) as open_tasks,
                 SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as in_progress
-            FROM tasks
+            FROM active_tasks
             GROUP BY priority
         """)
         priority_stats_raw = cur.fetchall()
@@ -180,7 +180,7 @@ def priorities_view(request):
         # Get high priority tasks
         cur.execute("""
             SELECT id, title, priority, status, due_date, assigned_to
-            FROM tasks
+            FROM active_tasks
             WHERE priority IN ('Critical', 'High')
             AND status NOT IN ('Closed', 'Completed')
             ORDER BY 

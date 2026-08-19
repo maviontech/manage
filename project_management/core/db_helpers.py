@@ -43,6 +43,36 @@ _tlocal = threading.local()
 _CONN_MAX_AGE = getattr(settings, "TENANT_CONN_MAX_AGE", 300)  # 5 minutes
 
 
+def ensure_task_archive_schema(conn):
+    """Keep archive columns and the globally filtered task view available."""
+    cur = conn.cursor()
+    try:
+        cur.execute("SHOW TABLES LIKE 'tasks'")
+        if not cur.fetchone():
+            return
+
+        archive_columns = (
+            ("is_archived", "TINYINT(1) NOT NULL DEFAULT 0"),
+            ("archived_at", "DATETIME DEFAULT NULL"),
+            ("archived_by", "INT DEFAULT NULL"),
+        )
+        for column_name, definition in archive_columns:
+            cur.execute(f"SHOW COLUMNS FROM tasks LIKE '{column_name}'")
+            if not cur.fetchone():
+                cur.execute(f"ALTER TABLE tasks ADD COLUMN {column_name} {definition}")
+
+        # Normal application queries use this view. Only the archive page reads
+        # the underlying table, which prevents archived tasks leaking elsewhere.
+        cur.execute(
+            """
+            CREATE OR REPLACE VIEW active_tasks AS
+            SELECT * FROM tasks WHERE is_archived = 0
+            """
+        )
+    finally:
+        cur.close()
+
+
 def get_alex_carter_id(conn):
     """
     Get the member ID for Alex Carter.
@@ -290,6 +320,9 @@ def get_tenant_conn(request: HttpRequest = None, tenant_key: str = None):
             if conn and conn.open and age < _CONN_MAX_AGE:
                 # ping to ensure it's alive; reconnect if needed
                 conn.ping(reconnect=True)
+                if not cached.get("archive_schema_ready"):
+                    ensure_task_archive_schema(conn)
+                    cached["archive_schema_ready"] = True
                 return conn
         except Exception:
             # connection dead or ping failed; close and remove
@@ -305,7 +338,8 @@ def get_tenant_conn(request: HttpRequest = None, tenant_key: str = None):
         raise RuntimeError("Tenant DB credentials could not be resolved. Ensure session or clients_master is set.")
 
     conn = _open_tenant_connection(creds)
-    cache[tenant_key] = {"conn": conn, "opened_at": now}
+    ensure_task_archive_schema(conn)
+    cache[tenant_key] = {"conn": conn, "opened_at": now, "archive_schema_ready": True}
     return conn
 
 
