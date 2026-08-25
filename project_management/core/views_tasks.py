@@ -5569,8 +5569,7 @@ def export_tasks_excel(request):
         output.seek(0)
         
         # Create response
-        from datetime import datetime
-        filename = f"Trackline_Tasks_Overview_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+        filename = f"Trackline_Tasks_Overview_{datetime.datetime.now().strftime('%Y-%m-%d')}.xlsx"
         response = HttpResponse(
             output.read(),
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
