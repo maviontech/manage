@@ -5092,6 +5092,103 @@ def tasks_overview_view(request):
         else:
             # Admin dashboard: show all visible tasks
             filter_user_ids = get_visible_task_user_ids(conn, member_id)
+
+        # Table filters.  Values are kept separate from the SQL so every user
+        # supplied value is passed through the database driver's parameters.
+        selected_filters = {
+            'status': (request.GET.get('status') or '').strip(),
+            'assigned': (request.GET.get('assigned') or '').strip(),
+            'project': (request.GET.get('project') or '').strip(),
+            'created_date': (request.GET.get('created_date') or '').strip(),
+        }
+        if selected_filters['created_date']:
+            try:
+                datetime.datetime.strptime(selected_filters['created_date'], '%Y-%m-%d')
+            except ValueError:
+                selected_filters['created_date'] = ''
+
+        filter_options = {'statuses': [], 'assignees': [], 'projects': []}
+        table_filter_sql = ''
+        table_filter_params = []
+
+        if selected_filters['status']:
+            table_filter_sql += " AND LOWER(TRIM(COALESCE(t.status, ''))) = LOWER(%s)"
+            table_filter_params.append(selected_filters['status'])
+
+        if ':' in selected_filters['assigned']:
+            assigned_type, assigned_id = selected_filters['assigned'].split(':', 1)
+            if assigned_type in ('member', 'team') and assigned_id.isdigit():
+                table_filter_sql += " AND t.assigned_type = %s AND t.assigned_to = %s"
+                table_filter_params.extend([assigned_type, assigned_id])
+            else:
+                selected_filters['assigned'] = ''
+
+        if selected_filters['project'].isdigit():
+            table_filter_sql += " AND t.project_id = %s"
+            table_filter_params.append(selected_filters['project'])
+        elif selected_filters['project']:
+            selected_filters['project'] = ''
+
+        if selected_filters['created_date']:
+            table_filter_sql += " AND DATE(t.created_at) = %s"
+            table_filter_params.append(selected_filters['created_date'])
+
+        # Populate choices from the complete visibility scope, not from the
+        # already-filtered result set, so users can freely change filters.
+        if filter_user_ids:
+            option_placeholders = ','.join(['%s'] * len(filter_user_ids))
+            cur.execute(
+                f"""
+                SELECT DISTINCT
+                    t.status, t.assigned_type, t.assigned_to, t.project_id,
+                    p.name AS project_name,
+                    m.first_name AS member_first_name,
+                    m.last_name AS member_last_name,
+                    tm.name AS assigned_team_name
+                FROM active_tasks t
+                LEFT JOIN projects p ON t.project_id = p.id
+                LEFT JOIN members m ON t.assigned_type = 'member' AND t.assigned_to = m.id
+                LEFT JOIN teams tm ON t.assigned_type = 'team' AND t.assigned_to = tm.id
+                WHERE (
+                    (t.assigned_type='member' AND t.assigned_to IN ({option_placeholders}))
+                    OR
+                    (t.assigned_type='team' AND t.assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                )
+                """,
+                tuple(list(filter_user_ids) + [member_id])
+            )
+            option_rows = cur.fetchall()
+            statuses = {r['status'] for r in option_rows if r.get('status')}
+            projects = {
+                str(r['project_id']): r['project_name']
+                for r in option_rows if r.get('project_id') and r.get('project_name')
+            }
+            assignees = {}
+            for r in option_rows:
+                assigned_type = r.get('assigned_type')
+                assigned_to = r.get('assigned_to')
+                if assigned_type not in ('member', 'team') or not assigned_to:
+                    continue
+                if assigned_type == 'member':
+                    label = f"{r.get('member_first_name') or ''} {r.get('member_last_name') or ''}".strip()
+                else:
+                    label = f"Team: {r.get('assigned_team_name') or ''}".strip()
+                if label and label != 'Team:':
+                    assignees[f'{assigned_type}:{assigned_to}'] = label
+
+            filter_options = {
+                'statuses': sorted(statuses, key=str.casefold),
+                'assignees': sorted(
+                    ({'value': value, 'label': label} for value, label in assignees.items()),
+                    key=lambda item: item['label'].casefold()
+                ),
+                'projects': sorted(
+                    ({'id': value, 'name': name} for value, name in projects.items()),
+                    key=lambda item: item['name'].casefold()
+                ),
+            }
         
         # Total tasks assigned
         total_tasks = 0
@@ -5201,10 +5298,11 @@ def tasks_overview_view(request):
                         SELECT team_id FROM team_memberships WHERE member_id = %s
                     ))
                 )
+                {table_filter_sql}
                 ORDER BY t.created_at DESC
                 LIMIT 100
                 """,
-                tuple(list(filter_user_ids) + [member_id])
+                tuple(list(filter_user_ids) + [member_id] + table_filter_params)
             )
             rows = cur.fetchall()
             
@@ -5234,7 +5332,10 @@ def tasks_overview_view(request):
             'active_projects': active_projects,
             'tasks_completed': tasks_completed,
             'tasks_ending_soon': tasks_ending_soon,
-            'tasks': tasks
+            'tasks': tasks,
+            'selected_filters': selected_filters,
+            'filter_options': filter_options,
+            'is_personal_view': is_personal_view,
         }
         
         return render(request, 'core/tasks_overview.html', context)
@@ -5273,8 +5374,35 @@ def export_tasks_excel(request):
     cur = conn.cursor()
     
     try:
-        # Get visible task user IDs
-        visible_user_ids = get_visible_task_user_ids(conn, member_id)
+        # Keep the export in the same visibility and filter scope as the page.
+        is_personal_view = request.GET.get('personal', '').lower() == 'true'
+        visible_user_ids = [member_id] if is_personal_view else get_visible_task_user_ids(conn, member_id)
+
+        export_filter_sql = ''
+        export_filter_params = []
+        status_filter = (request.GET.get('status') or '').strip()
+        assigned_filter = (request.GET.get('assigned') or '').strip()
+        project_filter = (request.GET.get('project') or '').strip()
+        created_date_filter = (request.GET.get('created_date') or '').strip()
+
+        if status_filter:
+            export_filter_sql += " AND LOWER(TRIM(COALESCE(t.status, ''))) = LOWER(%s)"
+            export_filter_params.append(status_filter)
+        if ':' in assigned_filter:
+            assigned_type, assigned_id = assigned_filter.split(':', 1)
+            if assigned_type in ('member', 'team') and assigned_id.isdigit():
+                export_filter_sql += " AND t.assigned_type = %s AND t.assigned_to = %s"
+                export_filter_params.extend([assigned_type, assigned_id])
+        if project_filter.isdigit():
+            export_filter_sql += " AND t.project_id = %s"
+            export_filter_params.append(project_filter)
+        if created_date_filter:
+            try:
+                datetime.datetime.strptime(created_date_filter, '%Y-%m-%d')
+                export_filter_sql += " AND DATE(t.created_at) = %s"
+                export_filter_params.append(created_date_filter)
+            except ValueError:
+                pass
         
         wb = Workbook()
         ws = wb.active
@@ -5338,9 +5466,10 @@ def export_tasks_excel(request):
                         SELECT team_id FROM team_memberships WHERE member_id = %s
                     ))
                 )
+                {export_filter_sql}
                 ORDER BY t.created_at DESC
                 """,
-                tuple(list(visible_user_ids) + [member_id])
+                tuple(list(visible_user_ids) + [member_id] + export_filter_params)
             )
             rows = cur.fetchall()
             

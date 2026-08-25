@@ -102,6 +102,75 @@
     gap: 1rem;
   }
 
+  .overview-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex: 1;
+  }
+
+  .overview-filters {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .overview-filter {
+    width: 145px;
+    height: 40px;
+    padding: 0 34px 0 11px;
+    border: 1px solid var(--tl-border-strong);
+    border-radius: 8px;
+    background: var(--tl-surface);
+    color: var(--tl-text);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+  }
+
+  .overview-filter:focus {
+    border-color: var(--tl-accent);
+    box-shadow: 0 0 0 3px var(--tl-accent-soft, rgba(37, 99, 235, .12));
+  }
+
+  input.overview-filter { padding-right: 10px; }
+
+  .btn-filter-apply,
+  .btn-filter-clear {
+    height: 40px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 650;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-filter-apply {
+    padding: 0 14px;
+    border: 1px solid var(--tl-accent);
+    color: #fff;
+    background: var(--tl-accent);
+    cursor: pointer;
+  }
+
+  .btn-filter-apply:hover { background: var(--primary-hover); }
+
+  .btn-filter-clear {
+    width: 40px;
+    border: 1px solid var(--tl-border-strong);
+    color: var(--tl-text-muted);
+    background: var(--tl-surface);
+  }
+
+  .btn-filter-clear:hover { color: var(--tl-accent); border-color: var(--tl-accent); }
+
   .btn-export {
     background: var(--tl-surface);
     color: var(--tl-text);
@@ -216,10 +285,16 @@
     .stat-card .label { font-size: 10px; }
     .stat-card .value { font-size: 24px; }
     .tasks-table-container { overflow-x: auto; }
+    .actions-bar { align-items: stretch; }
+    .overview-tools, .overview-filters { width: 100%; justify-content: stretch; }
+    .overview-tools { align-items: stretch; flex-direction: column; }
+    .overview-filter { width: calc(50% - 4px); flex: 1 1 calc(50% - 4px); }
+    .btn-export { justify-content: center; }
   }
   @media (max-width: 380px) {
     .stats-grid { grid-template-columns: 1fr 1fr; }
     .stat-card .value { font-size: 21px; }
+    .overview-filter { width: 100%; flex-basis: 100%; }
   }
 
   /* ===== DARK MODE ===== */
@@ -249,6 +324,12 @@
   [data-theme="dark"] .badge-closed { background: var(--theme-bg-secondary) !important; color: var(--theme-text-secondary) !important; }
   [data-theme="dark"] .empty-state { color: var(--theme-text-secondary) !important; }
   [data-theme="dark"] .empty-state h3 { color: var(--theme-text) !important; }
+  [data-theme="dark"] .overview-filter,
+  [data-theme="dark"] .btn-filter-clear {
+    background: var(--theme-surface) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+  }
 </style>
 {% endblock %}
 
@@ -282,14 +363,46 @@
 
 <div class="actions-bar">
   <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: var(--gray-800);">All Tasks</h2>
-  <a href="{% url 'export_tasks_excel' %}" class="btn-export">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-      <polyline points="7 10 12 15 17 10"></polyline>
-      <line x1="12" y1="15" x2="12" y2="3"></line>
-    </svg>
-    Export to Excel
-  </a>
+  <div class="overview-tools">
+    <form method="get" class="overview-filters" aria-label="Filter tasks">
+      {% if is_personal_view %}<input type="hidden" name="personal" value="true">{% endif %}
+      <select name="status" class="overview-filter" aria-label="Filter by status">
+        <option value="">All Statuses</option>
+        {% for status in filter_options.statuses %}
+          <option value="{{ status }}" {% if selected_filters.status == status %}selected{% endif %}>{{ status }}</option>
+        {% endfor %}
+      </select>
+      <select name="assigned" class="overview-filter" aria-label="Filter by assignee">
+        <option value="">All Assignees</option>
+        {% for assignee in filter_options.assignees %}
+          <option value="{{ assignee.value }}" {% if selected_filters.assigned == assignee.value %}selected{% endif %}>{{ assignee.label }}</option>
+        {% endfor %}
+      </select>
+      <select name="project" class="overview-filter" aria-label="Filter by project">
+        <option value="">All Projects</option>
+        {% for project in filter_options.projects %}
+          <option value="{{ project.id }}" {% if selected_filters.project == project.id %}selected{% endif %}>{{ project.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="date" name="created_date" value="{{ selected_filters.created_date }}" class="overview-filter" aria-label="Filter by created date" title="Created date">
+      <button type="submit" class="btn-filter-apply">
+        <i class="fa-solid fa-filter" aria-hidden="true"></i> Apply
+      </button>
+      {% if selected_filters.status or selected_filters.assigned or selected_filters.project or selected_filters.created_date %}
+        <a href="{% url 'tasks_overview' %}{% if is_personal_view %}?personal=true{% endif %}" class="btn-filter-clear" title="Clear filters" aria-label="Clear filters">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        </a>
+      {% endif %}
+    </form>
+    <a href="{% url 'export_tasks_excel' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn-export">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      Export to Excel
+    </a>
+  </div>
 </div>
 
 <div class="tasks-table-container">
@@ -346,7 +459,7 @@
       <path d="M9 11H7V9h2v2zm0 4H7v-2h2v2zm4-4h-2V9h2v2zM5 5h14v2H5V5zm2 14h10v-8H7v8z"/>
     </svg>
     <h3>No Tasks Found</h3>
-    <p>There are no tasks to display at the moment.</p>
+    <p>{% if selected_filters.status or selected_filters.assigned or selected_filters.project or selected_filters.created_date %}No tasks match the selected filters.{% else %}There are no tasks to display at the moment.{% endif %}</p>
   </div>
   {% endif %}
 </div>
