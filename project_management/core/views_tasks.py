@@ -345,18 +345,20 @@ def my_tasks_view(request):
     sel_status = request.GET.get('status', '').strip()
     sel_work_type = request.GET.get('work_type', '').strip()
     sel_assigned = request.GET.get('assigned', 'all').strip()  # 'all'|'mine'|'others'
+    sel_assignee = request.GET.get('assignee', '').strip()
     sel_query = request.GET.get('q', '').strip()
 
     tasks = []
     projects = []
     subprojects = []
     subprojects_by_project = {}
+    assignees = []
     if visible_user_ids:
         placeholders = ','.join(['%s'] * len(visible_user_ids))
         base_sql = f"""
                SELECT t.id, t.title, t.status, t.priority, t.due_date, t.closure_date,
                       COALESCE(t.work_type, 'Task') AS work_type,
-                      t.assigned_to, t.project_id, p.name AS project_name,
+                      t.assigned_type, t.assigned_to, t.project_id, p.name AS project_name,
                       t.subproject_id, sp.name AS subproject_name,
                       t.created_by, CONCAT(m.first_name, ' ', m.last_name) AS reporter_name
                FROM active_tasks t
@@ -399,6 +401,15 @@ def my_tasks_view(request):
         elif sel_assigned == 'others':
             base_sql += " AND t.assigned_to != %s"
             params.append(user_id)
+        if sel_assignee:
+            if ':' in sel_assignee:
+                assignee_type, assignee_id = sel_assignee.split(':', 1)
+                if assignee_type in ('member', 'team') and assignee_id:
+                    base_sql += " AND t.assigned_type = %s AND t.assigned_to = %s"
+                    params.extend([assignee_type, assignee_id])
+            elif sel_assignee.isdigit():
+                base_sql += " AND t.assigned_type = 'member' AND t.assigned_to = %s"
+                params.append(sel_assignee)
 
         base_sql += "\n               ORDER BY FIELD(t.status,'Open','In Progress','Reopen','Review','Blocked','Closed'),\n                        t.due_date IS NULL, t.due_date ASC"
 
@@ -436,6 +447,49 @@ def my_tasks_view(request):
                 projects.append({'id': str(row.get('id')), 'name': row.get('name') or ''})
             else:
                 projects.append({'id': str(row[0]), 'name': row[1] or ''})
+
+        cur.execute(
+            f"""
+                SELECT DISTINCT
+                    t.assigned_type,
+                    t.assigned_to,
+                    CASE
+                        WHEN t.assigned_type = 'member' THEN NULLIF(TRIM(CONCAT(COALESCE(am.first_name, ''), ' ', COALESCE(am.last_name, ''))), '')
+                        WHEN t.assigned_type = 'team' THEN tm.name
+                        ELSE NULL
+                    END AS assignee_name
+                FROM active_tasks t
+                LEFT JOIN members am ON t.assigned_type = 'member' AND am.id = t.assigned_to
+                LEFT JOIN teams tm ON t.assigned_type = 'team' AND tm.id = t.assigned_to
+                WHERE (
+                    (t.assigned_type='member' AND t.assigned_to IN ({placeholders}))
+                    OR
+                    (t.assigned_type='team' AND t.assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                )
+                AND COALESCE(t.is_archived, 0) = 0
+                AND t.assigned_type IS NOT NULL
+                AND t.assigned_to IS NOT NULL
+                ORDER BY assignee_name
+            """,
+            tuple(visible_params),
+        )
+        assignee_rows = cur.fetchall() or []
+        for row in assignee_rows:
+            if isinstance(row, dict):
+                assigned_type = row.get('assigned_type')
+                assigned_to = row.get('assigned_to')
+                label = row.get('assignee_name') or 'Unassigned'
+            else:
+                assigned_type = row[0]
+                assigned_to = row[1]
+                label = row[2] or 'Unassigned'
+            if assigned_type and assigned_to:
+                assignees.append({
+                    'value': f'{assigned_type}:{assigned_to}',
+                    'label': label,
+                })
 
         subproject_sql = f"""
             SELECT DISTINCT sp.id, sp.name, sp.project_id, p.name AS project_name
@@ -506,11 +560,13 @@ def my_tasks_view(request):
         "projects": projects,
         "subprojects": subprojects,
         "subprojects_by_project": subprojects_by_project,
+        "assignees": assignees,
         "sel_project": sel_project,
         "sel_subproject": sel_subproject,
         "sel_status": sel_status,
         "sel_work_type": sel_work_type,
         "sel_assigned": sel_assigned,
+        "sel_assignee": sel_assignee,
         "sel_query": sel_query,
     })
 
