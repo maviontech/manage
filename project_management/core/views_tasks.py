@@ -3193,6 +3193,8 @@ def create_defect_view(request):
         subproject_id = data.get("subproject_id") or None
         title = data.get("title")
         description = data.get("description")
+        expected_behavior = data.get("expected_behavior")
+        actual_behavior = data.get("actual_behavior")
         environment = data.get("environment")
         impact = data.get("impact") or "Medium"
         due_date = data.get("due_date") or None
@@ -3210,6 +3212,10 @@ def create_defect_view(request):
 
         # Combine defect-specific fields into description
         full_description = f"{description}\n\n"
+        if expected_behavior:
+            full_description += f"**Expected Behavior:**\n{expected_behavior}\n\n"
+        if actual_behavior:
+            full_description += f"**Actual Behavior:**\n{actual_behavior}\n\n"
         if environment:
             full_description += f"**Environment:**\n{environment}\n\n"
         full_description += f"**Impact:** {impact}\n\n"

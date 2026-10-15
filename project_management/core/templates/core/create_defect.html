@@ -86,6 +86,14 @@
             </div>
           </div>
           <div class="tl-prop" style="margin-top:18px;">
+            <label class="tl-label">Expected Behavior</label>
+            {% include "core/_rte_field.html" with field="expected_behavior" placeholder="What should happen instead..." %}
+          </div>
+          <div class="tl-prop" style="margin-top:18px;">
+            <label class="tl-label">Actual Behavior</label>
+            {% include "core/_rte_field.html" with field="actual_behavior" placeholder="What actually happens..." %}
+          </div>
+          <div class="tl-prop" style="margin-top:18px;">
             <label class="tl-label">Environment</label>
             {% include "core/_rte_field.html" with field="environment" placeholder="OS, browser, app version, environment (staging/prod), data set…" %}
           </div>
