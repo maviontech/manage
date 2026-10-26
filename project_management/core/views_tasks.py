@@ -5133,6 +5133,8 @@ def tasks_overview_view(request):
     - personal=true: Show only tasks assigned to current user (personal dashboard view)
     - (default): Show all visible tasks based on user permissions (admin dashboard view)
     """
+    from django.core.paginator import Paginator
+
     if not request.session.get('user'):
         return redirect('login_password')
     
@@ -5184,6 +5186,9 @@ def tasks_overview_view(request):
                 table_filter_params.extend([assigned_type, assigned_id])
             else:
                 selected_filters['assigned'] = ''
+
+        elif selected_filters['assigned']:
+            selected_filters['assigned'] = ''
 
         if selected_filters['project'].isdigit():
             table_filter_sql += " AND t.project_id = %s"
@@ -5326,7 +5331,30 @@ def tasks_overview_view(request):
             row = cur.fetchone()
             tasks_ending_soon = int(row['c']) if row else 0
         
-        # Get all tasks with details
+        # Count the filtered scope before fetching only the requested page.
+        filtered_count = 0
+        if filter_user_ids:
+            placeholders = ','.join(['%s'] * len(filter_user_ids))
+            cur.execute(
+                f"""SELECT COUNT(*) AS c FROM active_tasks t WHERE (
+                    (t.assigned_type='member' AND t.assigned_to IN ({placeholders}))
+                    OR (t.assigned_type='team' AND t.assigned_to IN (
+                        SELECT team_id FROM team_memberships WHERE member_id = %s
+                    ))
+                ) {table_filter_sql}""",
+                tuple(list(filter_user_ids) + [member_id] + table_filter_params),
+            )
+            row = cur.fetchone()
+            filtered_count = int(row['c']) if row else 0
+        page_size_options = (10, 25, 50, 100)
+        per_page_value = request.GET.get('per_page', '25')
+        per_page = int(per_page_value) if per_page_value in ('10', '25', '50', '100') else 25
+        paginator = Paginator(range(filtered_count), per_page)
+        page_obj = paginator.get_page(request.GET.get('page'))
+        offset = (page_obj.number - 1) * paginator.per_page
+        pagination_query = request.GET.copy()
+        pagination_query.pop('page', None)
+
         tasks = []
         if filter_user_ids:
             placeholders = ','.join(['%s'] * len(filter_user_ids))
@@ -5361,10 +5389,10 @@ def tasks_overview_view(request):
                     ))
                 )
                 {table_filter_sql}
-                ORDER BY t.created_at DESC
-                LIMIT 100
+                ORDER BY t.created_at DESC, t.id DESC
+                LIMIT %s OFFSET %s
                 """,
-                tuple(list(filter_user_ids) + [member_id] + table_filter_params)
+                tuple(list(filter_user_ids) + [member_id] + table_filter_params + [paginator.per_page, offset])
             )
             rows = cur.fetchall()
             
@@ -5395,6 +5423,12 @@ def tasks_overview_view(request):
             'tasks_completed': tasks_completed,
             'tasks_ending_soon': tasks_ending_soon,
             'tasks': tasks,
+            'page_obj': page_obj,
+            'pagination_query': pagination_query.urlencode(),
+            'page_size_options': page_size_options,
+            'per_page': per_page,
+            'page_size_query': [(key, value) for key, values in pagination_query.lists() if key != 'per_page' for value in values],
+            'page_numbers': paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1),
             'selected_filters': selected_filters,
             'filter_options': filter_options,
             'is_personal_view': is_personal_view,
