@@ -1146,6 +1146,27 @@ function renderAllColumns(tasks){
   initSearch(ALL_TASKS);
 }
 
+/* Display aliases in the existing workflow columns without changing stored status. */
+function getBoardStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  const statusColumns = {
+    'open': 'Open',
+    'new': 'Open',
+    'pending': 'Open',
+    'in progress': 'In Progress',
+    'reopen': 'Reopen',
+    'reopened': 'Reopen',
+    'review': 'Reopen',
+    'blocked': 'Blocked',
+    'closed': 'Closed',
+    'completed': 'Closed',
+    'finished': 'Closed',
+    'fixed': 'Closed',
+    'cancelled': 'Closed'
+  };
+  return Object.prototype.hasOwnProperty.call(statusColumns, normalized) ? statusColumns[normalized] : null;
+}
+
 /* Card render */
 function renderCard(t){
   if (!t || !t.id || !t.status) {
@@ -1153,8 +1174,13 @@ function renderCard(t){
     return;
   }
   
-  const col = document.querySelector(`[data-status="${t.status}"]`) || document.querySelector(".kanban-body");
-  if (!col) return;
+  const boardStatus = getBoardStatus(t.status);
+  const col = Array.from(document.querySelectorAll('.kanban-body'))
+    .find(column => column.dataset.status === boardStatus);
+  if (!col) {
+    console.warn('No board column for task status:', t.status, 'task:', t.id);
+    return;
+  }
   
   const card = document.createElement("div");
   card.className = "task-card";
