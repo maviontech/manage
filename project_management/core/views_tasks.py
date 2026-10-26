@@ -1159,8 +1159,8 @@ def api_update_status(request):
             SET status=%s,
                 closure_date=NOW(),
                 updated_at=NOW()
-            WHERE id=%s
-        """, (new_status, task_id))
+            WHERE id=%s AND (status IS NULL OR status <> %s)
+        """, (new_status, task_id, new_status))
     else:
         # 3. FOR ANY OTHER STATUS → remove closure date?
         cur.execute("""
@@ -1168,8 +1168,14 @@ def api_update_status(request):
             SET status=%s,
                 closure_date=NULL,
                 updated_at=NOW()
-            WHERE id=%s
-        """, (new_status, task_id))
+            WHERE id=%s AND (status IS NULL OR status <> %s)
+        """, (new_status, task_id, new_status))
+
+    # Identical retries must not reset dates or duplicate activity/notifications.
+    if cur.rowcount == 0:
+        conn.commit()
+        cur.close()
+        return JsonResponse({"ok": True, "changed": False})
 
     # 4. CREATE LOG ENTRY
     cur.execute("""

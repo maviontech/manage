@@ -1253,9 +1253,13 @@ function getWorkTypeInfo(workType) {
   return typeMap[workType] || { icon: 'fa-solid fa-check-circle', class: 'task' };
 }
 
-/* Drag & drop */
+/* Bind persistent columns once; newly rendered cards are bound as needed. */
+const dragDropBoundElements = new WeakSet();
+const pendingStatusUpdates = new Set();
 function initDragDrop(){
   document.querySelectorAll(".task-card").forEach(card=>{
+    if (dragDropBoundElements.has(card)) return;
+    dragDropBoundElements.add(card);
     card.addEventListener("dragstart", e=>{
       e.dataTransfer.setData("text/plain", card.dataset.id);
       try { e.dataTransfer.effectAllowed = "move"; } catch(err) {}
@@ -1267,6 +1271,8 @@ function initDragDrop(){
   });
 
   document.querySelectorAll(".kanban-body").forEach(col=>{
+    if (dragDropBoundElements.has(col)) return;
+    dragDropBoundElements.add(col);
     col.addEventListener("dragover", e=>{ e.preventDefault(); col.classList.add("drag-over"); e.dataTransfer.dropEffect = 'move'; });
     col.addEventListener("dragenter", e=>{ e.preventDefault(); col.classList.add("drag-over"); });
     col.addEventListener("dragleave", e=>{ col.classList.remove("drag-over"); });
@@ -1278,6 +1284,10 @@ function initDragDrop(){
         console.warn("Invalid drag data: id or status missing");
         return;
       }
+      const card = Array.from(document.querySelectorAll('.task-card'))
+        .find(element => element.dataset.id === id);
+      if (pendingStatusUpdates.has(id) || (card && card.parentElement === col)) return;
+      pendingStatusUpdates.add(id);
       try {
         const fd = new FormData();
         fd.append("task_id", id);
@@ -1289,8 +1299,9 @@ function initDragDrop(){
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        if(json.ok){ loadBoard(1); } else { console.error("Status update failed:", json.error); alert("Status update failed: " + (json.error || 'Unknown error')); }
+        if(json.ok){ await loadBoard(1); } else { console.error("Status update failed:", json.error); alert("Status update failed: " + (json.error || 'Unknown error')); }
       } catch (err) { console.error("Drag drop error:", err); alert("Network error while updating status."); }
+      finally { pendingStatusUpdates.delete(id); }
     });
   });
 }
