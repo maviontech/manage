@@ -129,6 +129,7 @@
         <select id="workTypeFilter" class="board-filter-select">
           <option value="">All work types</option>
           <option value="Task">Task</option>
+          <option value="Test Case">Test Case</option>
           <option value="Bug">Bug</option>
           <option value="Story">Story</option>
           <option value="Defect">Defect</option>
@@ -138,7 +139,7 @@
         </select>
         <select id="priorityFilter" class="board-filter-select">
           <option value="">All priorities</option>
-          <option>Critical</option><option>High</option><option>Normal</option><option>Low</option>
+          <option>Critical</option><option>High</option><option value="Medium">Medium</option><option>Normal</option><option>Low</option>
         </select>
         <button id="clearFilters" class="btn-clear-filter">Clear</button>
       </div>
@@ -1139,6 +1140,7 @@ async function loadBoard(page=1){
     const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
     ALL_TASKS = tasks;
     const pageNum = payload.page || 1;
+    CURRENT_BOARD_PAGE = pageNum;
     BOARD_PER_PAGE = Number.isInteger(payload.per_page) && payload.per_page > 0 ? payload.per_page : BOARD_PER_PAGE;
     const totalPages = payload.total_pages || 1;
     const totalCount = payload.total_count || tasks.length;
@@ -1299,7 +1301,7 @@ function initDragDrop(){
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        if(json.ok){ await loadBoard(1); } else { console.error("Status update failed:", json.error); alert("Status update failed: " + (json.error || 'Unknown error')); }
+        if(json.ok){ await loadBoard(CURRENT_BOARD_PAGE); } else { console.error("Status update failed:", json.error); alert("Status update failed: " + (json.error || 'Unknown error')); }
       } catch (err) { console.error("Drag drop error:", err); alert("Network error while updating status."); }
       finally { pendingStatusUpdates.delete(id); }
     });
