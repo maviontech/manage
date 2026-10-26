@@ -865,6 +865,32 @@ def board_data_api(request):
     assigned_to = request.GET.get("assigned_to")
     exclude_closed = request.GET.get("exclude_closed")  # For timer dropdown
 
+    # Apply the same search/filter predicates to the count and paginated rows.
+    search = (request.GET.get('q') or '').strip()
+    priority = (request.GET.get('priority') or '').strip()
+    work_type = (request.GET.get('work_type') or '').strip()
+    search_filters, search_params = [], []
+    if search:
+        search_filters.append("""(
+            LOCATE(LOWER(%s), LOWER(COALESCE(t.title, ''))) > 0
+            OR LOCATE(LOWER(%s), LOWER(COALESCE(t.priority, 'Normal'))) > 0
+            OR (t.assigned_type = 'member' AND EXISTS (
+                SELECT 1 FROM members sm WHERE sm.id = t.assigned_to
+                AND LOCATE(LOWER(%s), LOWER(CONCAT_WS(' ', sm.first_name, sm.last_name))) > 0
+            ))
+            OR (t.assigned_type = 'team' AND EXISTS (
+                SELECT 1 FROM teams st WHERE st.id = t.assigned_to
+                AND LOCATE(LOWER(%s), LOWER(st.name)) > 0
+            ))
+        )""")
+        search_params.extend([search] * 4)
+    if priority:
+        search_filters.append("COALESCE(t.priority, 'Normal') = %s")
+        search_params.append(priority)
+    if work_type:
+        search_filters.append("COALESCE(t.work_type, 'Task') = %s")
+        search_params.append(work_type)
+
     # ---- Pagination ----
     try:
         page = int(request.GET.get("page", "1"))
@@ -877,7 +903,7 @@ def board_data_api(request):
     offset = (page - 1) * per_page
 
     # ---- Total Count Query ----
-    count_sql = "SELECT COUNT(*) FROM active_tasks"
+    count_sql = "SELECT COUNT(*) FROM active_tasks t"
     count_params = []
 
     # build optional filters
@@ -908,6 +934,8 @@ def board_data_api(request):
         # Exclude closed, cancelled, and completed tasks (for timer dropdown)
         count_filters.append("status NOT IN ('Closed', 'Cancelled', 'Completed')")
 
+    count_filters.extend(search_filters)
+    count_params.extend(search_params)
     if count_filters:
         count_sql += " WHERE " + " AND ".join(count_filters)
 
@@ -922,6 +950,9 @@ def board_data_api(request):
 
     # Calculate total pages
     total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
+
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
 
     # ---- MAIN QUERY ----
     sql = """
@@ -981,6 +1012,8 @@ def board_data_api(request):
         # Exclude closed, cancelled, and completed tasks (for timer dropdown)
         main_filters.append("t.status NOT IN ('Closed', 'Cancelled', 'Completed')")
 
+    main_filters.extend(search_filters)
+    params.extend(search_params)
     if main_filters:
         sql += " WHERE " + " AND ".join(main_filters)
 

@@ -1118,13 +1118,24 @@ const TASK_UPDATE_API = "{% url 'api_task_update' %}";
 const BOARD_DATA_API = "{% url 'board_data' %}";
 const CSRF_TOKEN = "{{ csrf_token }}";
 
-/* Load board (unchanged) */
+let boardRequestVersion = 0;
+
+/* Search is evaluated by the server before pagination. */
 async function loadBoard(page=1){
+  const requestVersion = ++boardRequestVersion;
   try {
     CURRENT_BOARD_PAGE = page;
-    const res = await fetch(BOARD_DATA_API + "?page=" + page);
+    const params = new URLSearchParams({ page: String(page) });
+    const filters = {
+      q: document.getElementById('taskSearch')?.value.trim() || '',
+      priority: document.getElementById('priorityFilter')?.value || '',
+      work_type: document.getElementById('workTypeFilter')?.value || ''
+    };
+    Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
+    const res = await fetch(BOARD_DATA_API + '?' + params.toString());
     if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load board`);
     const payload = await res.json();
+    if (requestVersion !== boardRequestVersion) return;
     const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
     ALL_TASKS = tasks;
     const pageNum = payload.page || 1;
@@ -1135,6 +1146,7 @@ async function loadBoard(page=1){
     renderPagination(pageNum, totalPages);
     updateSummary(pageNum, totalCount, totalPages);
   } catch (err) {
+    if (requestVersion !== boardRequestVersion) return;
     console.error("Board load failed", err);
     document.querySelectorAll(".kanban-body").forEach(c => c.innerHTML = '<div class="text-muted text-center p-3">Error loading tasks</div>');
   }
@@ -1143,7 +1155,7 @@ function renderAllColumns(tasks){
   document.querySelectorAll(".kanban-body").forEach(c => c.innerHTML = "");
   tasks.forEach(t => renderCard(t));
   initDragDrop();
-  initSearch(ALL_TASKS);
+
 }
 
 /* Display aliases in the existing workflow columns without changing stored status. */
@@ -1301,35 +1313,24 @@ function initDragDrop(){
 })();
 
 /* Search / filter */
-function initSearch(allTasks){
-  const searchInput = document.getElementById("taskSearch");
-  const priorityFilter = document.getElementById("priorityFilter");
-  const workTypeFilter = document.getElementById("workTypeFilter");
-  const clearBtn = document.getElementById("clearFilters");
+function initSearch(){
+  const searchInput = document.getElementById('taskSearch');
+  const priorityFilter = document.getElementById('priorityFilter');
+  const workTypeFilter = document.getElementById('workTypeFilter');
+  const clearBtn = document.getElementById('clearFilters');
+  let searchTimer;
   function applyFilter(){
-    if (!Array.isArray(allTasks)) return;
-    const term = (searchInput?.value || '').trim().toLowerCase();
-    const pri = priorityFilter?.value || '';
-    const workType = workTypeFilter?.value || '';
-    document.querySelectorAll(".task-card").forEach(card => card.style.display = "none");
-    allTasks.forEach(t => {
-      if (!t || !t.id) return;
-      const titleMatch = t.title ? t.title.toLowerCase().includes(term) : false;
-      const priorityMatch = t.priority ? t.priority.toLowerCase().includes(term) : false;
-      const assigneeMatch = t.assigned_to_display ? t.assigned_to_display.toLowerCase().includes(term) : false;
-      const matchTerm = (titleMatch || priorityMatch || assigneeMatch);
-      const matchPri = !pri || (t.priority === pri);
-      const matchWorkType = !workType || (t.work_type === workType);
-      if ((term === "" || matchTerm) && matchPri && matchWorkType) {
-        const cardEl = document.querySelector(`.task-card[data-id="${t.id}"]`);
-        if (cardEl) cardEl.style.display = "";
-      }
-    });
+    clearTimeout(searchTimer);
+    loadBoard(1);
   }
-  if (searchInput) searchInput.addEventListener('input', applyFilter);
+  if (searchInput) searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    ++boardRequestVersion;
+    searchTimer = setTimeout(applyFilter, 250);
+  });
   if (priorityFilter) priorityFilter.addEventListener('change', applyFilter);
   if (workTypeFilter) workTypeFilter.addEventListener('change', applyFilter);
-  if (clearBtn) clearBtn.addEventListener('click', function(){ 
+  if (clearBtn) clearBtn.addEventListener('click', () => {
     if (searchInput) searchInput.value = '';
     if (priorityFilter) priorityFilter.value = '';
     if (workTypeFilter) workTypeFilter.value = '';
@@ -1796,6 +1797,8 @@ document.addEventListener("DOMContentLoaded", function(){
       }
     });
   }
+
+  initSearch();
 
   // preload lists to speed up modal
   loadProjects().catch(err => console.warn('Failed to preload projects:', err));
